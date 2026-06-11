@@ -118,6 +118,10 @@ New Features
 
   Implemented device unplug operation to allow runtime removal of DPAA devices.
 
+* **bus/vmbus: Added unplug operation support.**
+
+  Implemented device unplug operation to allow runtime removal of VMBUS devices.
+
 * **Added selective Rx in ethdev API.**
 
   Some parts of packets may be discarded in Rx
