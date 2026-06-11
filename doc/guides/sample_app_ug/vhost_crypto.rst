@@ -4,24 +4,24 @@
 Vhost_Crypto Sample Application
 ===============================
 
-The vhost_crypto sample application implemented a simple Crypto device,
-which used as the  backend of Qemu vhost-user-crypto device. Similar with
-vhost-user-net and vhost-user-scsi device, the sample application used
-domain socket to communicate with Qemu, and the virtio ring was processed
-by vhost_crypto sample application.
+The vhost_crypto sample application implements a Crypto device,
+which serves as the backend for the QEMU vhost-user-crypto device.
+Similar to vhost-user-net and vhost-user-scsi devices, the application uses
+a domain socket to communicate with QEMU, and processes the virtio rings
+to provide cryptographic services to the guest.
 
-Testing steps
--------------
-
-This section shows the steps how to start a VM with the crypto device as
+This section shows the steps to start a VM with the crypto device as
 fast data path for critical application.
 
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``examples`` sub-directory.
+
+Running the Application
+-----------------------
 
 Start the vhost_crypto example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,33 +37,35 @@ Start the vhost_crypto example
 
 where,
 
-* config (lcore,cdev-id,queue-id): build the lcore-cryptodev id-queue id
-  connection. Once specified, the specified lcore will only work with
-  specified cryptodev's queue.
+* config (lcore,cdev-id,queue-id): builds the lcore-cryptodev id-queue id
+  connection. When specified, the lcore only works with the
+  specified cryptodev queue.
 
-* socket-file lcore,PATH: the path of UNIX socket file to be created and
-  the lcore id that will deal with the all workloads of the socket. Multiple
-  instances of this config item is supported and one lcore supports processing
+* socket-file lcore,PATH: specifies the path of the UNIX socket file to be created and
+  the lcore id that handles all workloads of the socket. Multiple
+  instances of this config item are supported and one lcore can process
   multiple sockets.
 
-* zero-copy: the presence of this item means the ZERO-COPY feature will be
-  enabled. Otherwise it is disabled. PLEASE NOTE the ZERO-COPY feature is still
-  in experimental stage and may cause the problem like segmentation fault. If
-  the user wants to use LKCF in the guest, this feature shall be turned off.
+* zero-copy: when present, indicates the zero-copy feature will be
+  enabled. Otherwise it is disabled.
 
-* guest-polling: the presence of this item means the application assumes the
-  guest works in polling mode, thus will NOT notify the guest completion of
+* guest-polling: when present, assumes the guest works in polling
+  mode and does not notify the guest upon completion of
   processing.
 
-* asymmetric-crypto: the presence of this item means
-  the application can handle the asymmetric crypto requests.
-  When this option is used,
-  symmetric crypto requests can not be handled by the application.
+* asymmetric-crypto: when present, indicates the application handles
+  asymmetric crypto requests. When this option is used, the application
+  cannot handle symmetric crypto requests.
 
-The application requires that crypto devices capable of performing
-the specified crypto operation are available on application initialization.
-This means that HW crypto device/s must be bound to a DPDK driver or
-a SW crypto device/s (virtual crypto PMD) must be created (using --vdev).
+.. note::
+   The zero-copy feature is experimental and may cause segmentation faults.
+   If you want to use LKCF in the guest, disable this feature.
+
+.. note::
+   The application requires that crypto devices capable of performing
+   the specified crypto operation are available on application initialization.
+   HW crypto devices must be bound to a DPDK driver or an SW crypto device
+   (virtual crypto PMD) must be created using --vdev.
 
 .. _vhost_crypto_app_run_vm:
 
@@ -83,4 +85,4 @@ Start the VM
         ...
 
 .. note::
-    You must check whether your Qemu can support "vhost-user-crypto" or not.
+   You must verify that your QEMU supports vhost-user-crypto.
