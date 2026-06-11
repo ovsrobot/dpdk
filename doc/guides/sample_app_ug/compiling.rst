@@ -5,79 +5,97 @@ Compiling the Sample Applications
 =================================
 
 This section explains how to compile the DPDK sample applications.
+Sample applications are located in ``dpdk/examples/``.
 
-To compile all the sample applications
---------------------------------------
+To Compile All the Sample Applications
+---------------------------------------
 
-Go to DPDK build directory:
+Set up the build directory (if not already done):
 
-    .. code-block:: console
+.. code-block:: console
 
-       cd dpdk/<build_dir>
+   cd dpdk
+   meson setup build
 
-Enable examples compilation:
+.. note::
 
-   .. code-block:: console
+   The build directory name (``build`` in this example) can be chosen freely.
+   Replace ``<build_dir>`` in subsequent commands with your chosen directory name.
 
-      meson configure -Dexamples=all
+Go to the build directory:
 
-Build:
+.. code-block:: console
 
-   .. code-block:: console
+   cd build
 
-      ninja
+.. code-block:: console
+
+   meson configure -Dexamples=all
+
+Compile:
+
+.. code-block:: console
+
+   ninja
 
 For additional information on compiling see
 :ref:`Compiling DPDK on Linux <linux_gsg_compiling_dpdk>` or
 :ref:`Compiling DPDK on FreeBSD <building_from_source>`.
-Applications are output to: ``dpdk/<build_dir>/examples``.
+
+Compiled applications are output to ``dpdk/<build_dir>/examples``.
 
 
-To compile a single application
--------------------------------
+To Compile a Single Application
+--------------------------------
 
+A single application can be compiled using meson during the DPDK build,
+or standalone using make with an installed DPDK.
 
 Using meson
 ~~~~~~~~~~~
 
-Go to DPDK build directory:
+Go to the build directory (after ``meson setup`` as shown above):
 
-    .. code-block:: console
+.. code-block:: console
 
-       cd dpdk/<build_dir>
+   cd dpdk/build
 
 Enable example app compilation:
 
-   .. code-block:: console
+.. code-block:: console
 
-      meson configure -Dexamples=helloworld
+   meson configure -Dexamples=helloworld
 
-Build:
+Compile:
 
-   .. code-block:: console
+.. code-block:: console
 
-      ninja
+   ninja
 
 
-Using Make
-~~~~~~~~~~
+Using make (standalone)
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Pkg-config is used when building an example app standalone using make, please
-see :ref:`building_app_using_installed_dpdk` for more information.
+To compile a sample application standalone using make, DPDK must first
+be installed on the system and pkg-config must be configured.
+See :ref:`building_app_using_installed_dpdk` for installation instructions.
 
-Go to the sample application directory. Unless otherwise specified the sample
-applications are located in ``dpdk/examples/``.
+Go to the sample application directory:
+
+.. code-block:: console
+
+   cd dpdk/examples/helloworld
 
 Build the application:
 
-    .. code-block:: console
+.. code-block:: console
 
-        make
+   make
 
 To build the application for debugging use the ``DEBUG`` option.
 This option adds some extra flags, disables compiler optimizations and
-sets verbose output.
+sets verbose output:
 
-    .. code-block:: console
+.. code-block:: console
 
-       make DEBUG=1
+   make DEBUG=1
