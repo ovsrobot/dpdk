@@ -519,7 +519,7 @@ fslmc_bus_probe_device(struct rte_driver *driver, struct rte_device *rte_dev)
 }
 
 static int
-fslmc_bus_unplug(struct rte_device *rte_dev)
+fslmc_bus_unplug_device(struct rte_device *rte_dev)
 {
 	struct rte_dpaa2_device *dev = RTE_BUS_DEVICE(rte_dev, *dev);
 	const struct rte_dpaa2_driver *drv = RTE_BUS_DRIVER(rte_dev->driver, *drv);
@@ -528,7 +528,6 @@ fslmc_bus_unplug(struct rte_device *rte_dev)
 		drv->remove(dev);
 		rte_intr_instance_free(dev->intr_handle);
 		dev->intr_handle = NULL;
-		dev->device.driver = NULL;
 		DPAA2_BUS_INFO("%s Un-Plugged",  dev->device.name);
 		return 0;
 	}
@@ -546,7 +545,7 @@ struct rte_bus rte_fslmc_bus = {
 	.get_iommu_class = rte_dpaa2_get_iommu_class,
 	.match = fslmc_bus_match,
 	.probe_device = fslmc_bus_probe_device,
-	.unplug = fslmc_bus_unplug,
+	.unplug_device = fslmc_bus_unplug_device,
 	.dev_iterate = rte_bus_generic_dev_iterate,
 };
 
