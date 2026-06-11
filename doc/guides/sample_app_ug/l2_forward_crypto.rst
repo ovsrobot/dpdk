@@ -1,18 +1,18 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2016-2017 Intel Corporation.
 
-L2 Forwarding with Crypto Sample Application
+L2 forwarding with crypto sample application
 ============================================
 
 The L2 Forwarding with Crypto (l2fwd-crypto) sample application
 is a simple example of packet processing
-using the Data Plane Development Kit (DPDK)
-in conjunction with the cryptodev library.
+using the Data Plane Development Kit (DPDK),
+in conjunction with the Cryptodev library.
 
 Overview
 --------
 
-The L2 Forwarding with Crypto sample application performs a crypto operation (cipher/hash)
+The L2 Forwarding with Crypto sample application performs crypto operations (cipher/hash)
 specified by the user from the command line (or using the default values),
 with a crypto device capable of doing that operation,
 for each packet that is received on an RX_PORT and performs L2 forwarding.
@@ -20,10 +20,9 @@ for each packet that is received on an RX_PORT and performs L2 forwarding.
 The destination port is the adjacent port from the enabled portmask.
 If the first four ports are enabled (portmask 0xf),
 ports 0 and 1 forward into each other, and ports 2 and 3 forward into each other.
-If the MAC addresses updating is enabled, the MAC addresses are affected as follows:
+If MAC address updating is enabled, the MAC addresses are affected as follows:
 
 *   The source MAC address is replaced by the TX_PORT MAC address
-
 *   The destination MAC address is replaced by  02:00:00:00:00:TX_PORT_ID
 
 Compiling the Application
@@ -40,17 +39,17 @@ The application requires a number of command line options:
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-l2fwd-crypto [EAL options] -- [-p PORTMASK] [-q NQ] [-s] [-T PERIOD] /
-    [--cdev_type HW/SW/ANY] [--chain HASH_CIPHER/CIPHER_HASH/CIPHER_ONLY/HASH_ONLY/AEAD] /
-    [--cipher_algo ALGO] [--cipher_op ENCRYPT/DECRYPT] [--cipher_dataunit_len SIZE] /
-    [--cipher_key KEY] [--cipher_key_random_size SIZE] [--cipher_iv IV] /
-    [--cipher_iv_random_size SIZE] /
-    [--auth_algo ALGO] [--auth_op GENERATE/VERIFY] [--auth_key KEY] /
-    [--auth_key_random_size SIZE] [--auth_iv IV] [--auth_iv_random_size SIZE] /
-    [--aead_algo ALGO] [--aead_op ENCRYPT/DECRYPT] [--aead_key KEY] /
-    [--aead_key_random_size SIZE] [--aead_iv] [--aead_iv_random_size SIZE] /
-    [--aad AAD] [--aad_random_size SIZE] /
-    [--digest size SIZE] [--sessionless] [--cryptodev_mask MASK] /
+    ./<build_dir>/examples/dpdk-l2fwd-crypto [EAL options] -- [-p PORTMASK] [-q NQ] [-s] [-T PERIOD] \
+    [--cdev_type HW/SW/ANY] [--chain HASH_CIPHER/CIPHER_HASH/CIPHER_ONLY/HASH_ONLY/AEAD] \
+    [--cipher_algo ALGO] [--cipher_op ENCRYPT/DECRYPT] [--cipher_dataunit_len SIZE] \
+    [--cipher_key KEY] [--cipher_key_random_size SIZE] [--cipher_iv IV] \
+    [--cipher_iv_random_size SIZE] \
+    [--auth_algo ALGO] [--auth_op GENERATE/VERIFY] [--auth_key KEY] \
+    [--auth_key_random_size SIZE] [--auth_iv IV] [--auth_iv_random_size SIZE] \
+    [--aead_algo ALGO] [--aead_op ENCRYPT/DECRYPT] [--aead_key KEY] \
+    [--aead_key_random_size SIZE] [--aead_iv] [--aead_iv_random_size SIZE] \
+    [--aad AAD] [--aad_random_size SIZE] \
+    [--digest size SIZE] [--sessionless] [--cryptodev_mask MASK] \
     [--mac-updating] [--no-mac-updating]
 
 where,
@@ -143,7 +142,7 @@ where,
 
 *   aad_random_size: set the size of the AAD, which will be generated randomly.
 
-    Note that if --aad is used, this will be ignored.
+    Note that if ``--aad`` is used, this will be ignored.
 
 *   digest_size: set the size of the digest to be generated/verified.
 
@@ -159,10 +158,10 @@ where,
 
 The application requires that crypto devices capable of performing
 the specified crypto operation are available on application initialization.
-This means that HW crypto device/s must be bound to a DPDK driver or
+This means that HW crypto devices must be bound to a DPDK driver or
 a SW crypto device/s (virtual crypto PMD) must be created (using --vdev).
 
-To run the application in Linux environment with 2 lcores, 2 ports and 2 crypto devices, issue the command:
+To run the application in the Linux environment with 2 lcores, 2 ports and 2 crypto devices, issue the command:
 
 .. code-block:: console
 
@@ -178,7 +177,7 @@ and the Environment Abstraction Layer (EAL) options.
 
 .. Note::
 
-    * The ``l2fwd-crypto`` sample application requires IPv4 packets for crypto operation.
+    * The ``l2fwd-crypto`` sample application requires IPv4 packets for crypto operations.
 
     * If multiple Ethernet ports are passed, then equal number of crypto devices are to be passed.
 
@@ -200,17 +199,15 @@ from reception until transmission.
    Encryption flow through the L2 Forwarding with Crypto Application
 
 
-The following sections provide explanation of the application.
+The following sections provide an explanation of the application.
 
 Crypto operation specification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All the packets received in all the ports get transformed by the crypto devices
 (ciphering and/or authentication).
-The crypto operation to be performed on the packet is parsed from the command line.
-(Go to "Running the Application" section for all the options.)
-
-If no parameter is passed, the default crypto operation is:
+The crypto operation to be performed on the packet is parsed from the command line (see "Running the Application" for all options).
+If no parameters are passed, the default crypto operation is:
 
 * Encryption with AES-CBC with 128 bit key.
 
@@ -218,7 +215,7 @@ If no parameter is passed, the default crypto operation is:
 
 * Keys, IV and AAD are generated randomly.
 
-There are two methods to pass keys, IV and ADD from the command line:
+There are two methods to pass keys, IV and AAD from the command line:
 
 * Passing the full key, separated bytes by ":"::
 
@@ -236,7 +233,7 @@ The size of these keys are checked (regardless of the method) before starting th
 to make sure that it is supported by the crypto devices.
 
 Crypto device initialization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once the encryption operation is defined, the crypto devices are initialized.
 The crypto devices must be either bound to a DPDK driver (if they are physical devices)
@@ -245,9 +242,9 @@ when running the application.
 
 The initialize_cryptodevs() function performs the device initialization.
 It iterates through the list of the available crypto devices and
-checks which ones are capable of performing the operation.
-Each device has a set of capabilities associated with it,
-which are stored in the device info structure, so the function checks if the operation
+checks which are capable of performing the operation.
+Each device has a set of capabilities associated with it
+that are stored in the device info structure, so the function checks if the operation
 is within the structure of each device.
 
 The following code checks if the device supports the specified cipher algorithm
@@ -273,14 +270,15 @@ crypto device list.
 
 **Note**:
    The number of crypto devices that supports the specified crypto operation
-   must be at least the number of ports to be used.
+   must be at least equal to the number of Ethernet ports in use. If using
+   multiple Ethernet ports, an equal number of crypto devices must be provided.
 
 Session creation
 ~~~~~~~~~~~~~~~~
 
 The crypto operation has a crypto session associated to it, which contains
-information such as the transform chain to perform (e.g. ciphering then hashing)
-pointers to the keys, lengths... etc.
+information such as the transform chain to perform (e.g. ciphering then hashing),
+pointers to the keys, lengths, etc.
 
 This session is created and is later attached to the crypto operation:
 
@@ -306,7 +304,7 @@ the mbuf which will be transformed is attached to it::
 
    op->sym->m_src = m;
 
-Since no destination mbuf is set, the source mbuf will be overwritten
+Since no destination mbuf is set, the source mbuf is overwritten
 after the operation is done (in-place).
 
 Crypto operation enqueuing/dequeuing
@@ -315,7 +313,7 @@ Crypto operation enqueuing/dequeuing
 Once the operation has been created, it has to be enqueued in one of the crypto devices.
 Before doing so, for performance reasons, the operation stays in a buffer.
 When the buffer has enough operations (MAX_PKT_BURST), they are enqueued in the device,
-which will perform the operation at that moment:
+which performs the operation at that moment:
 
 .. literalinclude:: ../../../examples/l2fwd-crypto/main.c
     :language: c

@@ -14,22 +14,22 @@ Overview
 
 This app is intended as a demonstration of the basic components
 of a DPDK forwarding application
-and use of the libpqos library to the program CAT.
+and the use of the libpqos library to program CAT.
 For more detailed implementations, see the L2 and L3 forwarding sample applications.
 
-CAT and Code Data Prioritization (CDP) features allow management of the CPU's
-last level cache. CAT introduces classes of service (COS) that are essentially
+The CAT and Code Data Prioritization (CDP) features allow management of the CPU's
+last level cache. CAT introduces Classes of Service (COS) that are essentially
 bitmasks. In current CAT implementations, a bit in a COS bitmask corresponds to
 one cache way in last level cache.
 
 A CPU core is always assigned to one of the CAT classes.
 By programming CPU core assignment and COS bitmasks, applications can be given
 exclusive, shared, or mixed access to the CPU's last level cache.
-CDP extends CAT so that there are two bitmasks per COS,
+The CDP feature extends CAT so that there are two bitmasks per COS,
 one for data and one for code.
 The number of classes and number of valid bits in a COS bitmask is CPU model
 specific and COS bitmasks need to be contiguous. Sample code calls this bitmask
-``cbm`` or capacity bitmask.
+a ``cbm`` or capacity bitmask.
 By default, after reset, all CPU cores are assigned to COS 0 and all classes
 are programmed to allow fill into all cache ways.
 CDP is off by default.
@@ -47,7 +47,7 @@ Compiling the Application
 
 .. note::
 
-    Requires ``libpqos`` from Intel's
+    Requires the ``libpqos`` library from Intel's
     `intel-cmt-cat software package <https://github.com/01org/intel-cmt-cat>`_
     hosted on GitHub repository. For installation notes, please see ``README`` file.
 
@@ -70,7 +70,7 @@ The application is located in the ``l2fwd-cat`` sub-directory.
 Running the Application
 -----------------------
 
-To run the example in a ``linux`` environment and enable CAT on cpus 0-2:
+To run the example in a Linux environment and enable CAT on CPUs 0-2:
 
 .. code-block:: console
 
@@ -87,7 +87,7 @@ If CDP is not supported, it will fail with following error message:
 .. code-block:: console
 
     PQOS: CDP requested but not supported.
-    PQOS: Requested CAT configuration is not valid!
+    PQOS: Requested CAT configuration is not valid.
     PQOS: Shutting down PQoS library...
     EAL: Error - exiting with code: 1
       Cause: PQOS: L3CA init failed!
@@ -99,7 +99,7 @@ The option to enable CAT is:
   where ``cbm`` stands for capacity bitmask and must be expressed in
   hexadecimal form.
 
-  ``common_cbm`` is a single mask, for a CDP enabled system, a group of two
+  ``common_cbm`` is a single mask; for a CDP-enabled system, a group of two
   masks (``code_cbm`` and ``data_cbm``) is used.
 
   ``(`` and ``)`` are necessary if it's a group.
@@ -125,7 +125,7 @@ The option to enable CAT is:
     data ways are not overlapping.
 
 
-Refer to *DPDK Getting Started Guide* for general information on running
+Refer to the *DPDK Getting Started Guide* for general information on running
 applications and the Environment Abstraction Layer (EAL) options.
 
 
@@ -133,7 +133,7 @@ To reset or list CAT configuration and control CDP please use ``pqos`` tool
 from Intel's
 `intel-cmt-cat software package <https://github.com/01org/intel-cmt-cat>`_.
 
-To enabled or disable CDP:
+To enable or disable CDP:
 
 .. code-block:: console
 
@@ -141,7 +141,7 @@ To enabled or disable CDP:
 
     sudo ./pqos -S cdp-off
 
-to reset CAT configuration:
+To reset CAT configuration:
 
 .. code-block:: console
 
@@ -193,11 +193,11 @@ function. The value returned is the number of parsed arguments:
     :end-before: >8 End of initialization of PQoS.
     :dedent: 1
 
-``cat_init()`` is a wrapper function which parses the command, validates
+The ``cat_init()`` function is a wrapper function which parses the command, validates
 the requested parameters and configures CAT accordingly.
 
-The parsing of command line arguments is done in ``parse_args(...)``.
-Libpqos is then initialized with the ``pqos_init(...)`` call.
+The parsing of command line arguments is done in the ``parse_args(...)`` function.
+The libpqos library is then initialized with the ``pqos_init(...)`` call.
 Next, libpqos is
 queried for system CPU information and L3CA capabilities via
 ``pqos_cap_get(...)`` and ``pqos_cap_get_type(..., PQOS_CAP_TYPE_L3CA, ...)``
@@ -207,6 +207,6 @@ for a sufficient number of un-associated COS. COS are selected and
 configured via the ``pqos_l3ca_set(...)`` call. Finally, COS are associated to
 relevant CPUs via ``pqos_l3ca_assoc_set(...)`` calls.
 
-``atexit(...)`` is used to register ``cat_exit(...)`` to be called on
-a clean exit. ``cat_exit(...)`` performs a simple CAT clean-up, by associating
+The ``atexit(...)`` function is used to register ``cat_exit(...)`` to be called on
+a clean exit. The ``cat_exit(...)`` function performs a simple CAT clean-up, by associating
 COS 0 to all involved CPUs via ``pqos_l3ca_assoc_set(...)`` calls.

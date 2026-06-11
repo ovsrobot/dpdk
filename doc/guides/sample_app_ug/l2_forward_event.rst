@@ -17,7 +17,7 @@ The destination port is the adjacent port from the enabled portmask.
 If the first four ports are enabled (portmask=0x0f),
 ports 1 and 2 forward into each other,
 and ports 3 and 4 forward into each other.
-Also, if MAC address updating is enabled,
+Also, if MAC addresses updating is enabled,
 the MAC addresses are affected as follows:
 
 *   The source MAC address is replaced by the Tx port MAC address
@@ -26,7 +26,7 @@ the MAC addresses are affected as follows:
 Application receives packets from Rx port using these methods:
 
 *   Poll mode
-*   Eventdev mode (default)
+*   Eventdev mode (by default)
 
 This application can be used to benchmark performance using a traffic-generator,
 as shown in the :numref:`figure_l2fwd_event_benchmark_setup`.
@@ -64,7 +64,7 @@ where,
 
 *   q NQ: Maximum number of queues per lcore (default is 1)
 
-*   --[no-]mac-updating: Enable or disable MAC addresses updating (enabled by default).
+*   --[no-]mac-updating: Enable or disable MAC addresses updating (enabled by default)
 
 *   --mode=MODE: Packet transfer mode for I/O, poll or eventdev. Eventdev by default.
 
@@ -374,9 +374,9 @@ is assigned that is either the next or previous enabled port from the portmask.
 If the number of ports are odd in portmask, then the packet from the last port will be
 forwarded to first port i.e. if portmask=0x07, then forwarding will take place
 like p0--->p1, p1--->p2, p2--->p0.
+If MAC address updating is enabled, the source and destination MAC addresses are updated.
 
-Also, to optimize enqueue operation, ``l2fwd_simple_forward()`` stores incoming mbufs
-up to ``MAX_PKT_BURST``.
+To optimize enqueue operation, ``l2fwd_simple_forward()`` stores incoming mbufs up to ``MAX_PKT_BURST``.
 Once it reaches the limit, all packets are transmitted to destination ports.
 
 .. literalinclude:: ../../../examples/l2fwd/main.c
@@ -420,15 +420,15 @@ to ensure the correct allowed deq length by the eventdev.
 The ``rte_event_dequeue_burst()`` function writes the mbuf pointers in a local table
 and returns the number of available mbufs in the table.
 
-Then, each mbuf in the table is processed by the ``l2fwd_eventdev_forward()``
-function. The processing is very simple: process the TX port from the RX port,
-then replace the source and destination MAC addresses if MAC address updating
-is enabled.
+Then, each mbuf in the table is processed by the ``l2fwd_eventdev_forward()`` function.
+The processing is very simple: determine the TX port from the RX port,
+then replace the source and destination MAC addresses if MAC addresses updating is enabled.
 
 During the initialization process, a static array of destination ports
 (``l2fwd_dst_ports[]``) is filled so that for each source port, a destination port
 is assigned that is either the next or previous enabled port from the portmask.
-If number of ports are odd in portmask then packet from last port will be
+If the number of ports are odd in portmask,
+then the packet from the last port will be
 forwarded to first port i.e. if portmask=0x07, then forwarding will take place
 like p0--->p1, p1--->p2, p2--->p0.
 

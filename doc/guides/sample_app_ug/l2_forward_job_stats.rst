@@ -10,8 +10,8 @@ also takes advantage of Single Root I/O Virtualization (SR-IOV) features in a vi
 
 .. note::
 
-    This application is a variation of L2 Forwarding sample application. It demonstrate possible
-    scheme of job stats library usage therefore some parts of this document is identical with original
+    This application is a variation of the L2 Forwarding sample application. It demonstrates a possible
+    scheme of job stats library usage therefore some parts of this document are identical with the original
     L2 forwarding application.
 
 Overview
@@ -92,7 +92,7 @@ where,
 
 *   q NQ: Maximum number of queues per lcore (default is 1)
 
-*   l: Use locale thousands separator when formatting big numbers.
+*   l: Use a locale thousands separator when formatting big numbers.
 
 To run the application in a Linux environment with 4 lcores, 16 ports, 8 RX queues per lcore
 and thousands separator printing, issue the command:
@@ -157,14 +157,14 @@ but it is possible to extend this code to allocate one mbuf pool per socket.
 The ``rte_pktmbuf_pool_create()`` function uses the default mbuf pool and mbuf
 initializers, respectively ``rte_pktmbuf_pool_init()`` and ``rte_pktmbuf_init()``.
 An advanced application may want to use the mempool API to create the
-mbuf pool with more control.
+mbuf pool with greater control.
 
 Driver Initialization
 ~~~~~~~~~~~~~~~~~~~~~
 
 The main part of the code in the ``main()`` function relates to the initialization of the driver.
 To fully understand this code, it is recommended to study the chapters that related to the Poll Mode Driver
-in the *DPDK Programmer's Guide* and the *DPDK API Reference*.
+To fully understand this code, it is recommended to study the chapters related to the Poll Mode Driver in the *DPDK Programmer's Guide* and the *DPDK API Reference*.
 
 .. literalinclude:: ../../../examples/l2fwd-jobstats/main.c
     :language: c
@@ -211,7 +211,7 @@ Values of struct lcore_queue_conf:
 *   n_rx_port and rx_port_list[] are used in the main packet processing loop
     (see Section `Receive, Process and Transmit Packets`_ later in this chapter).
 
-*   rx_timers and flush_timer are used to ensure forced TX on low packet rate.
+*   rx_timers and flush_timer are used to force TX on low packet rate.
 
 *   flush_job, idle_job and jobs_context are librte_jobstats objects used for managing l2fwd jobs.
 
@@ -228,9 +228,9 @@ Each lcore should be able to transmit on any port. For every port, a single TX q
     :end-before: >8 End of init one TX queue on each port.
     :dedent: 2
 
-Jobs statistics initialization
+Job Statistics Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-There are several statistics objects available:
+Several statistics objects are available:
 
 *   Flush job statistics
 
@@ -260,7 +260,7 @@ Main loop
 ~~~~~~~~~
 
 The forwarding path is reworked comparing to original L2 Forwarding application.
-In the ``l2fwd_main_loop()`` function, three loops are placed.
+In the ``l2fwd_main_loop()`` function, three loop iterations are used.
 
 .. literalinclude:: ../../../examples/l2fwd-jobstats/main.c
     :language: c
@@ -268,13 +268,13 @@ In the ``l2fwd_main_loop()`` function, three loops are placed.
     :end-before: >8 End of minimize impact of stats reading.
     :dedent: 1
 
-The first infinite for loop is to minimize impact of stats reading.
+The first infinite loop minimizes the impact of statistics reading.
 Lock is only locked/unlocked when asked.
 
-Second inner while loop do the whole jobs management.
-When any job is ready, the use ``rte_timer_manage()`` is used to call the job handler.
+The second inner while loop performs the whole jobs management.
+When any job is ready, ``rte_timer_manage()`` is used to call the job handler.
 
-In this place, functions ``l2fwd_fwd_job()`` and ``l2fwd_flush_job()`` are called when needed.
+At this point, functions ``l2fwd_fwd_job()`` and ``l2fwd_flush_job()`` are called when needed.
 Then, ``rte_jobstats_context_finish()`` is called to mark loop end -
 no other jobs are ready to execute.
 By this time, stats are ready to be read
@@ -283,11 +283,11 @@ and if stats_read_pending is set, loop breaks allowing stats to be read.
 Third do-while loop is the idle job (idle stats counter).
 Its only purpose is monitoring if any job is ready
 or stats job read is pending for this lcore.
-Statistics from this part of the code is considered as
+Statistics from this part of the code are considered as
 the headroom available for additional processing.
 
-Receive, Process and Transmit Packets
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Receive, Process, and Transmit Packets
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The main task of ``l2fwd_fwd_job()`` function is to read ingress packets
 from the Rx queue of particular port and forward it.
@@ -354,18 +354,12 @@ However, in real-life applications (such as, L3 routing),
 packet N is not necessarily forwarded on the same port as packet N-1.
 The application is implemented to illustrate that, so the same approach can be reused in a more complex application.
 
-The ``l2fwd_send_packet()`` function stores the packet in a per-lcore and per-txport table.
-If the table is full, the whole packets table is transmitted
-using the ``l2fwd_send_burst()`` function:
+The ``l2fwd_simple_forward()`` function uses ``rte_eth_tx_buffer()`` to buffer packets
+for transmission. When the buffer is full, packets are automatically transmitted.
 
-.. literalinclude:: ../../../examples/l2fwd-crypto/main.c
-    :language: c
-    :start-after: Enqueue packets for TX and prepare them to be sent. 8<
-    :end-before: >8 End of Enqueuing packets for TX.
-
-To ensure that no packets remain in the tables, the flush job exists.
+To ensure that no packets remain in the buffers, the flush job exists.
 The ``l2fwd_flush_job()``
-is called periodically to for each lcore draining TX queue of each port.
+is called periodically for each lcore to drain the TX queue of each port.
 This technique introduces some latency when there are not many packets to send,
 however it improves performance:
 
