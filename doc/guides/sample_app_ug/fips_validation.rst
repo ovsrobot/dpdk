@@ -7,19 +7,20 @@ Federal Information Processing Standards (FIPS) CryptoDev Validation
 Overview
 --------
 
+This application parses and performs symmetric cryptography computations
+using test vectors from the NIST Cryptographic Algorithm Validation Program
+(CAVP) and Automated Crypto Validation Protocol (ACVP).
+
 Federal Information Processing Standards (FIPS) are publicly announced standards
 developed by the United States federal government for use in computer systems by
-non-military government agencies and government contractors.
-
-This application is used to parse and perform symmetric cryptography
-computation to the NIST Cryptographic Algorithm Validation Program (CAVP) and
-Automated Crypto Validation Protocol (ACVP) test vectors.
+non-military agencies and government contractors.
 
 For an algorithm implementation to be listed on a cryptographic module
 validation certificate as an Approved security function, the algorithm
 implementation must meet all the requirements of FIPS 140-2 (in case of CAVP)
 and FIPS 140-3 (in case of ACVP) and must successfully complete the
 cryptographic algorithm validation process.
+
 
 Limitations
 -----------
@@ -28,17 +29,17 @@ CAVP
 ----
 
 * The version of request file supported is ``CAVS 21.0``.
-* If the header comment in a ``.req`` file does not contain a Algo tag
-  i.e ``AES,TDES,GCM`` you need to manually add it into the header comment for
-  example::
+* If the header comment in a ``.req`` file does not contain an algorithm tag
+  (i.e., ``AES``, ``TDES``, ``GCM``), you must manually add it to the header
+  comment, for example::
 
       # VARIABLE KEY - KAT for CBC / # TDES VARIABLE KEY - KAT for CBC
 
-* The application does not supply the test vectors. The user is expected to
-  obtain the test vector files from `CAVP
+* The application does not supply the test vectors. Users must obtain the
+  test vector files from the `CAVP
   <https://csrc.nist.gov/projects/cryptographic-algorithm-validation-
-  program/block-ciphers>`_ website. To obtain the ``.req`` files you need to
-  email a person from the NIST website and pay for the ``.req`` files.
+  program/block-ciphers>`_ website. To obtain the ``.req`` files, you need to
+  contact a representative from the NIST website and pay for the ``.req`` files.
   The ``.rsp`` files from the site can be used to validate and compare with
   the ``.rsp`` files created by the FIPS application.
 
@@ -54,7 +55,7 @@ CAVP
 ACVP
 ----
 
-* The application does not supply the test vectors. The user is expected to
+* The application does not supply the test vectors. Users must
   obtain the test vector files from `ACVP  <https://pages.nist.gov/ACVP>`_
   website.
 * Supported test vectors
@@ -78,19 +79,17 @@ ACVP
 Application Information
 -----------------------
 
-If a ``.req`` is used as the input file after the application is finished
-running it will generate a response file or ``.rsp``. Differences between the
-two files are, the ``.req`` file has missing information for instance if doing
-encryption you will not have the cipher text and that will be generated in the
-response file. Also if doing decryption it will not have the plain text until it
-finished the work and in the response file it will be added onto the end of each
-operation.
+If a ``.req`` file is used as input, the application generates a response
+file (``.rsp``) after completion. The ``.req`` file has missing fields that
+the application fills in. For example, when
+performing encryption the cipher text is absent; when performing decryption
+the plain text is absent. These are computed and added to the ``.rsp`` file
+at the end of each operation.
 
-The application can be run with a ``.rsp`` file and what the outcome of that
-will be is it will add a extra line in the generated ``.rsp`` which should be
-the same as the ``.rsp`` used to run the application, this is useful for
-validating if the application has done the operation correctly.
-
+The application can also run with a ``.rsp`` file as input. In this case,
+it generates a new ``.rsp`` with an additional verification line. The output
+should match the input ``.rsp``, which is useful for validating that the
+application performed the operations correctly.
 
 Compiling the Application
 -------------------------
@@ -125,23 +124,23 @@ The application requires a number of command line options:
          --mbuf-dataroom DATAROOM_SIZE
 
 where,
-  * req-file: The path of the request file or folder, separated by
+  * req-file: The path of the request file or folder, indicated by
     ``path-is-folder`` option.
 
-  * rsp-file: The path that the response file or folder is stored. separated by
+  * rsp-file: The path where the response file or folder is stored, indicated by
     ``path-is-folder`` option.
 
   * cryptodev: The name of the target DPDK Crypto device to be validated.
 
   * cryptodev-id: The id of the target DPDK Crypto device to be validated.
 
-  * path-is-folder: If presented the application expects req-file and rsp-file
-    are folder paths.
+  * path-is-folder: If present, the application treats req-file and rsp-file
+    as folder paths.
 
   * mbuf-dataroom: By default the application creates mbuf pool with maximum
-    possible data room (65535 bytes). If the user wants to test scatter-gather
-    list feature of the PMD he or she may set this value to reduce the dataroom
-    size so that the input data may be divided into multiple chained mbufs.
+    possible data room (65535 bytes). To test the scatter-gather
+    list feature of a PMD, this value may be set to reduce the dataroom
+    size so that the input data is divided into multiple chained mbufs.
 
 
 To run the application in linux environment to test one AES FIPS test data

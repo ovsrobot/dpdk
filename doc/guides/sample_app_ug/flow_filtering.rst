@@ -7,11 +7,11 @@ Flow Filtering Sample Application
 Overview
 --------
 
-The flow filtering sample application provides a simple example of creating flow rules.
+The flow filtering sample application is a simple example of creating flow rules.
 
 It serves as a demonstration of the fundamental components of flow rules.
 
-It demonstrates how to create rules and configure them, using both template and non template API.
+It demonstrates how to create and configure rules using both template and non-template APIs.
 
 
 Compiling the Application
@@ -25,7 +25,7 @@ The application is located in the ``flow_filtering`` sub-directory.
 Running the Application
 -----------------------
 
-To run the example in a ``linux`` environment:
+To run the example in a Linux environment:
 
 .. code-block:: console
 
@@ -34,7 +34,7 @@ To run the example in a ``linux`` environment:
 where,
 
 ``--[non-]template``
-  Specify whether to use the template API (default is template API).
+  Specifies whether to use the template API (default is template API).
 
 For more details on template API please refer to :ref:`flow_template_api`.
 
@@ -50,7 +50,7 @@ The example is built from 2 main files:
 - ``main.c``: Contains the application logic, including initializations and the main loop.
 - ``flow_skeleton.c``: Implements the creation of flow rules.
 
-Additionally, the ``snippets`` directory includes code snippets showcasing various features
+Additionally, the ``snippets`` directory contains code snippets showcasing various features
 that can override the basic ``flow_skeleton.c`` implementation.
 
 
@@ -87,7 +87,7 @@ those configuration are defined in the snippet file.
    :end-before: >8 End of snippet-specific configuration.
    :dedent: 1
 
-Initialize the ports using the user-defined ``init_port()`` function,
+Initialize the ports using the ``init_port()`` function,
 configuring Ethernet ports with default settings, including both Rx and Tx queues for a single port:
 
 .. literalinclude:: ../../../examples/flow_filtering/main.c
@@ -96,7 +96,7 @@ configuring Ethernet ports with default settings, including both Rx and Tx queue
    :end-before: >8 End of Initializing the ports using user defined init_port().
    :dedent: 1
 
-For template API, the flow API requires preallocating resources.
+For the template API, the flow API requires preallocating resources.
 The function ``rte_flow_configure()`` should be called after configuring the Ethernet device
 and before creating any flow rules to set up flow queues for asynchronous operations.
 
@@ -109,14 +109,14 @@ and before creating any flow rules to set up flow queues for asynchronous operat
 Creating the Flow Rule
 ~~~~~~~~~~~~~~~~~~~~~~
 
-This section is the core of the flow filtering functionality involves creating flow rules.
-The flow rules are created using two primary approaches: template API and non-template API.
-Both template and non-template API configure flow rules using attributes (like ingress or egress),
-pattern items (for matching packet data), and actions (for operations on matched packets).
-However, template API extend this by introducing pattern templates and actions templates,
+This section covers the core of the flow filtering functionality: creating flow rules.
+Flow rules are created using two primary approaches: template API and non-template API.
+Both APIs configure flow rules using the same components: attributes (such as ingress or egress),
+pattern items (for matching packet data), and actions (to perform operations on matched packets).
+However, the template API extends this by introducing pattern templates and action templates,
 which define reusable matching criteria and action lists, respectively.
-These templates are then combined in a template table to optimize resource allocation and management.
-In contrast, non-template API handle each rule individually without such shared templates.
+The pattern and action templates are combined in a template table to optimize resource allocation.
+In contrast, the non-template API handles each rule individually without such shared templates.
 
 This is handled by the ``generate_flow_skeleton()`` function in ``flow_skeleton.c``.
 
@@ -127,8 +127,8 @@ This is handled by the ``generate_flow_skeleton()`` function in ``flow_skeleton.
    :dedent: 1
 
 This part of the code defines necessary data structures,
-as well as configures action and pattern structures for the rule.
-Common for both template and non-template API.
+and configures action and pattern structures for the rule.
+This is common to both template and non-template APIs.
 
 .. literalinclude:: ../../../examples/flow_filtering/flow_skeleton.c
    :language: c
@@ -136,7 +136,7 @@ Common for both template and non-template API.
    :end-before: >8 End of setting the common action and pattern structures.
    :dedent: 1
 
-For template API, this part of the code creates the necessary template tables and finally create the rule.
+For the template API, the code creates pattern and action templates, combines them in a template table, and creates the rule.
 
 .. literalinclude:: ../../../examples/flow_filtering/flow_skeleton.c
    :language: c
@@ -144,7 +144,7 @@ For template API, this part of the code creates the necessary template tables an
    :end-before: >8 End of creating a flow rule using template API.
    :dedent: 1
 
-For non-template API, validate the rule and create it.
+For the non-template API, the code validates and creates the rule directly.
 
 .. literalinclude:: ../../../examples/flow_filtering/flow_skeleton.c
    :language: c
@@ -156,7 +156,7 @@ Main Loop Execution
 ~~~~~~~~~~~~~~~~~~~
 
 Launch the ``main_loop()`` function from ``main.c``,
-which reading the packets from all queues and printing for each packet the destination queue:
+which reads packets from all queues and prints the destination queue for each packet:
 
 .. literalinclude:: ../../../examples/flow_filtering/main.c
    :language: c
@@ -186,18 +186,19 @@ Using Snippets
 
 Developers can customize flow rules by modifying ``flow_skeleton.c``
 and utilizing functions from ``snippets`` directory.
-For example, within ``snippet_match_ipv4_flow.c``, developers can find the functions:
+For example, ``snippet_match_ipv4_flow.c`` provides:
 
 - ``snippet_ipv4_flow_create_actions()`` for defining actions,
 - ``snippet_ipv4_flow_create_patterns()`` for setting packet matching patterns,
 - ``snippet_ipv4_flow_create_table()`` for creating the patterns and actions template table.
 
-To use a different snippet, simply update the include statement in ``flow_skeleton.c``
-to point to the desired snippet file, this will change the default created flow.
+To use a different snippet, update the include statement in ``flow_skeleton.c``
+to point to the desired snippet file. This will change the default flow rule created.
 
-Some snippets may require different configuration,
-those configuration are defined in the snippet file:
+Some snippets require additional port or flow configuration.
+These are defined in the snippet header file, for example:
 
 - ``snippet_init_ipv4`` for configuration of the port and flow attributes.
 
-In order to use them the developer should include the snippet header file in main.c
+To apply these configurations, include the snippet header file in ``main.c``
+so that the snippet-specific initialization is called during port setup.
