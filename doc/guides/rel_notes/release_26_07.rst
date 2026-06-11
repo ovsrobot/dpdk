@@ -114,6 +114,10 @@ New Features
 
   Added no-IOMMU mode for devices without or not enabling IOMMU/SVA.
 
+* **bus/dpaa: Added unplug operation support.**
+
+  Implemented device unplug operation to allow runtime removal of DPAA devices.
+
 * **Added selective Rx in ethdev API.**
 
   Some parts of packets may be discarded in Rx
