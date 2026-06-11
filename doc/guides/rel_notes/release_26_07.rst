@@ -223,6 +223,27 @@ ABI Changes
 * No ABI change that would break compatibility with 25.11.
 
 
+Fixed Issues
+------------
+
+.. This section should contain fixed issues in this release. Sample format:
+
+   * **Add a title in the past tense with a full stop.**
+
+     Add a short 1-2 sentence description of the fix in the past tense.
+
+   This section is a comment. Do not overwrite or remove it.
+   Also, make sure to start the actual text at the margin.
+   =======================================================
+
+* **net/mlx5: Fixed counter TAILQ race between free and query callback.**
+
+  Fixed a race condition where concurrent counter free operations and async
+  query completions could corrupt the counter free list, causing counter leaks.
+  The issue occurred when non-PMD threads were preempted between reading
+  ``query_gen`` and inserting into the counter list.
+
+
 Known Issues
 ------------
 
