@@ -32,21 +32,32 @@ vfio_mp_primary(const struct rte_mp_msg *msg, const void *peer)
 
 	switch (m->req) {
 	case SOCKET_REQ_GROUP:
+	{
+		struct container *cfg = vfio_cfg.default_cfg;
+		struct vfio_group *grp;
+
+		if (vfio_cfg.mode != RTE_VFIO_MODE_GROUP &&
+				vfio_cfg.mode != RTE_VFIO_MODE_NOIOMMU) {
+			EAL_LOG(ERR, "VFIO not initialized in group mode");
+			r->result = SOCKET_ERR;
+			break;
+		}
+
 		r->req = SOCKET_REQ_GROUP;
 		r->group_num = m->group_num;
-		fd = vfio_get_group_fd_by_num(m->group_num);
-		if (fd < 0 && fd != -ENOENT)
-			r->result = SOCKET_ERR;
-		else if (fd == -ENOENT)
-			/* if VFIO group exists but isn't bound to VFIO driver */
+		grp = vfio_group_get_by_num(cfg, m->group_num);
+		if (grp == NULL) {
+			/* group doesn't exist in primary */
 			r->result = SOCKET_NO_FD;
-		else {
-			/* if group exists and is bound to VFIO driver */
+		} else {
+			/* group exists and is bound to VFIO driver */
+			fd = grp->fd;
 			r->result = SOCKET_OK;
 			reply.num_fds = 1;
 			reply.fds[0] = fd;
 		}
 		break;
+	}
 	case SOCKET_REQ_CONTAINER:
 		r->req = SOCKET_REQ_CONTAINER;
 		fd = rte_vfio_get_container_fd();
@@ -54,6 +65,7 @@ vfio_mp_primary(const struct rte_mp_msg *msg, const void *peer)
 			r->result = SOCKET_ERR;
 		else {
 			r->result = SOCKET_OK;
+			r->mode = vfio_cfg.mode;
 			reply.num_fds = 1;
 			reply.fds[0] = fd;
 		}
@@ -61,6 +73,13 @@ vfio_mp_primary(const struct rte_mp_msg *msg, const void *peer)
 	case SOCKET_REQ_IOMMU_TYPE:
 	{
 		int iommu_type_id;
+
+		if (vfio_cfg.mode != RTE_VFIO_MODE_GROUP &&
+				vfio_cfg.mode != RTE_VFIO_MODE_NOIOMMU) {
+			EAL_LOG(ERR, "VFIO not initialized in group mode");
+			r->result = SOCKET_ERR;
+			break;
+		}
 
 		r->req = SOCKET_REQ_IOMMU_TYPE;
 
@@ -90,8 +109,11 @@ vfio_mp_sync_setup(void)
 {
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		int ret = rte_mp_action_register(EAL_VFIO_MP, vfio_mp_primary);
-		if (ret && rte_errno != ENOTSUP)
+		if (ret && rte_errno != ENOTSUP) {
+			EAL_LOG(ERR, "Multiprocess sync setup failed: %d (%s)",
+					rte_errno, rte_strerror(rte_errno));
 			return -1;
+		}
 	}
 
 	return 0;
