@@ -73,7 +73,7 @@ Mbufs are the packet buffer structure used by DPDK. They are explained in
 detail in the "Mbuf Library" section of the *DPDK Programmer's Guide*.
 
 The ``main()`` function also initializes all the ports using the user defined
-``port_init()`` function which is explained in the next section:
+``port_init()`` function, which is explained in the next section:
 
 .. literalinclude:: ../../../examples/skeleton/basicfwd.c
     :language: c
@@ -129,10 +129,10 @@ Finally, the Rx port is set in promiscuous mode:
         :dedent: 1
 
 
-The Lcores Main
+The Lcore Main
 ~~~~~~~~~~~~~~~
 
-As we saw above, the ``main()`` function calls an application function
+As shown above, the ``main()`` function calls an application function
 on the available lcores.
 For the basic forwarding application, the lcore function
 looks like the following:
@@ -152,7 +152,7 @@ The main work of the application is done within the loop:
 
 Packets are received in bursts on the RX ports and transmitted in bursts on
 the TX ports. The ports are grouped in pairs with a simple mapping scheme
-using the an XOR on the port number::
+using XOR on the port number::
 
     0 -> 1
     1 -> 0

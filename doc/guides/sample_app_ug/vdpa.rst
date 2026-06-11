@@ -4,27 +4,30 @@
 Vdpa Sample Application
 =======================
 
-The vdpa sample application creates vhost-user sockets by using the
-vDPA backend. vDPA stands for vhost Data Path Acceleration which utilizes
-virtio ring compatible devices to serve virtio driver directly to enable
-datapath acceleration. As vDPA driver can help to set up vhost datapath,
-this application doesn't need to launch dedicated worker threads for vhost
+Overview
+--------
+
+The vDPA sample application creates vhost-user sockets by using the
+vDPA backend. vDPA (vhost Data Path Acceleration) utilizes
+virtio ring-compatible devices to serve a virtio driver directly to enable
+datapath acceleration. A vDPA driver can help to set up the vhost datapath.
+This application does not need to launch dedicated worker threads for vhost
 enqueue/dequeue operations.
 
-Testing steps
--------------
-
-This section shows the steps of how to start VMs with vDPA vhost-user
+The following shows how to start VMs with vDPA vhost-user
 backend and verify network connection & live migration.
 
-Build
-~~~~~
+Compiling the Application
+-------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``vdpa`` sub-directory.
 
-Start the vdpa example
+Running the Application
+-----------------------
+
+Start the vDPA example
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: console
@@ -40,7 +43,7 @@ where
   (n starts from 0).
 * --interactive means run the vDPA sample in interactive mode:
 
-  #. help: show help message
+  #. help: show the help message
 
   #. list: list all available vDPA devices
 
@@ -50,7 +53,7 @@ where
 
   #. quit: unregister vhost driver and exit the application
 
-Take IFCVF driver for example:
+Take IFCVF driver, for example:
 
 .. code-block:: console
 
@@ -62,10 +65,11 @@ Take IFCVF driver for example:
     Here 0000:06:00.3 and 0000:06:00.4 refer to virtio ring compatible devices,
     and we need to bind vfio-pci to them before running vdpa sample.
 
-    * modprobe vfio-pci
-    * ./usertools/dpdk-devbind.py -b vfio-pci 06:00.3 06:00.4
+    .. code-block:: console
 
-Then we can create 2 vdpa ports in interactive cmdline.
+        modprobe vfio-pci
+        ./usertools/dpdk-devbind.py -b vfio-pci 06:00.3 06:00.4
+Then, we can create 2 vdpa ports in interactive cmdline.
 
 .. code-block:: console
 
@@ -92,7 +96,7 @@ Start the VMs
        -netdev type=vhost-user,id=vdpa,chardev=char0 \
        -device virtio-net-pci,netdev=vdpa,mac=00:aa:bb:cc:dd:ee,page-per-vq=on \
 
-After the VMs launches, we can login the VMs and configure the ip, verify the
+After the VMs launch, we can log into the VMs and configure the IP, verify the
 network connection via ping or netperf.
 
 .. note::
@@ -100,11 +104,12 @@ network connection via ping or netperf.
 
 Live Migration
 ~~~~~~~~~~~~~~
-vDPA supports cross-backend live migration, user can migrate SW vhost backend
-VM to vDPA backend VM and vice versa. Here are the detailed steps. Assume A is
-the source host with SW vhost VM and B is the destination host with vDPA.
+vDPA supports cross-backend live migration. A user can migrate SW vhost backend
+VM to vDPA backend VM and vice versa. Here are the detailed steps.
+Assume A is the source host with SW vhost VM and B is the destination host with vDPA.
 
-#. Start vdpa sample and launch a VM with exact same parameters as the VM on A,
+#. On the destination host (B), start the vdpa sample application and launch a VM
+   with the exact same parameters as the VM on A,
    in migration-listen mode:
 
    .. code-block:: console

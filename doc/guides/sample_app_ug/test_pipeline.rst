@@ -30,7 +30,7 @@ The application uses three CPU cores:
 
 Compiling the Application
 -------------------------
-To compile the sample application see :doc:`compiling`
+To compile the sample application, see :doc:`compiling`
 
 The application is located in the ``dpdk/<build_dir>/app`` directory.
 
@@ -95,7 +95,7 @@ For hash tables, the following parameters can be selected:
    |       |                        |                                                          | [4-byte index, 4 bytes of 0]                          |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | The action configured for all table entries is        |
-   |       |                        |                                                          | "Sendto output port", with the output port index      |
+   |       |                        |                                                          | "send to output port", with the output port index     |
    |       |                        |                                                          | uniformly distributed for the range of output ports.  |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | The default table rule (used in the case of a lookup  |
@@ -118,7 +118,7 @@ For hash tables, the following parameters can be selected:
    |       |                        |                                                          | [4-byte index, 12 bytes of 0]                         |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | The action configured for all table entries is        |
-   |       |                        |                                                          | "Send to output port", with the output port index     |
+   |       |                        |                                                          | "send to output port", with the output port index     |
    |       |                        |                                                          | uniformly distributed for the range of output ports.  |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | The default table rule (used in the case of a lookup  |
@@ -141,7 +141,7 @@ For hash tables, the following parameters can be selected:
    |       |                        |                                                          | [4-byte index, 28 bytes of 0].                        |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | The action configured for all table entries is        |
-   |       |                        |                                                          | "Send to output port", with the output port index     |
+   |       |                        |                                                          | "send to output port", with the output port index     |
    |       |                        |                                                          | uniformly distributed for the range of output ports.  |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | The default table rule (used in the case of a lookup  |
@@ -149,7 +149,7 @@ For hash tables, the following parameters can be selected:
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | At run time, core A is creating the following lookup  |
    |       |                        |                                                          | key and storing it into the packet meta data for      |
-   |       |                        |                                                          | Lpmcore B to use for table lookup:                    |
+   |       |                        |                                                          | core B to use for table lookup:                       |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | [destination IPv4 address, 28 bytes of 0]             |
    |       |                        |                                                          |                                                       |
@@ -177,8 +177,8 @@ For hash tables, the following parameters can be selected:
    |       |                        |                                                          | [0.192.0.0/10 => send to output port 3]               |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | The default table rule (used in the case of a lookup  |
-   |       |                        |                                                          | miss) is to drop the packet.                          |
    |       |                        |                                                          |                                                       |
+   |       |                        |                                                          | miss) is to drop the packet.                          |
    |       |                        |                                                          | At run time, core A is storing the IPv4 destination   |
    |       |                        |                                                          | within the packet meta data to be later used by core  |
    |       |                        |                                                          | B as the lookup key.                                  |
@@ -201,11 +201,9 @@ For hash tables, the following parameters can be selected:
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | => send to output port 0]                             |
    |       |                        |                                                          |                                                       |
-   |       |                        |                                                          |                                                       |
    |       |                        |                                                          | [priority = 0 (highest),                              |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | IPv4 source = ANY,                                    |
-   |       |                        |                                                          |                                                       |
    |       |                        |                                                          | IPv4 destination = 0.128.0.0/9,                       |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | L4 protocol = ANY,                                    |
@@ -214,8 +212,7 @@ For hash tables, the following parameters can be selected:
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | TCP destination port = ANY                            |
    |       |                        |                                                          |                                                       |
-   |       |                        |                                                          | => send to output port 0].                            |
-   |       |                        |                                                          |                                                       |
+   |       |                        |                                                          | => send to output port 1]                             |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | The default table rule (used in the case of a lookup  |
    |       |                        |                                                          | miss) is to drop the packet.                          |
