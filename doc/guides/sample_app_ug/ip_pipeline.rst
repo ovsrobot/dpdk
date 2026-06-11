@@ -4,15 +4,15 @@
 Internet Protocol (IP) Pipeline Application
 ===========================================
 
-Application overview
---------------------
+Overview
+--------
 
-The *Internet Protocol (IP) Pipeline* application is intended to be a vehicle for rapid development of packet processing
+The *Internet Protocol (IP) Pipeline* application is a vehicle for rapid development of packet processing
 applications on multi-core CPUs.
 
-Following OpenFlow and P4 design principles, the application can be used to create functional blocks called pipelines out
-of input/output ports, tables and actions in a modular way. Multiple pipelines can be inter-connected through packet queues
-to create complete applications (super-pipelines).
+Following OpenFlow and P4 design principles, the application can be used to create functional blocks called pipelines
+from input/output ports, tables and actions in a modular way. Multiple pipelines can be inter-connected through packet
+queues to create complete applications (super-pipelines).
 
 The pipelines are mapped to application threads, with each pipeline executed by a single thread and each thread able to run
 one or several pipelines. The possibilities of creating pipelines out of ports, tables and actions, connecting multiple
@@ -21,13 +21,14 @@ a true application generator.
 
 Pipelines are created and managed through Command Line Interface (CLI):
 
- * Any standard TCP client (e.g. telnet, netcat, custom script, etc) is typically able to connect to the application, send
+ * Any standard TCP client (e.g. telnet, netcat, custom script, etc.) is typically able to connect to the application, send
    commands through the network and wait for the response before pushing the next command.
 
  * All the application objects are created and managed through CLI commands:
-    * 'Primitive' objects used to create pipeline ports: memory pools, links (i.e. network interfaces), SW queues, traffic managers, etc.
-    * Action profiles: used to define the actions to be executed by pipeline input/output ports and tables.
-    * Pipeline components: input/output ports, tables, pipelines, mapping of pipelines to execution threads.
+
+   * 'Primitive' objects used to create pipeline ports: memory pools, links (i.e. network interfaces), SW queues, traffic managers, etc.
+   * Action profiles: used to define the actions to be executed by pipeline input/output ports and tables.
+   * Pipeline components: input/output ports, tables, pipelines, mapping of pipelines to execution threads.
 
 Running the application
 -----------------------
@@ -85,7 +86,7 @@ The application should start successfully and display as follows:
     EAL:   probe driver: 8086:10fb net_ixgbe
     ...
 
-To run remote client (e.g. telnet) to communicate with the ip pipeline application:
+To run a remote client (for example, telnet) to communicate with the IP pipeline application:
 
 .. code-block:: console
 
@@ -103,19 +104,21 @@ When running a telnet client as above, command prompt is displayed:
 
     pipeline>
 
-Once application and telnet client start running, messages can be sent from client to application.
-At any stage, telnet client can be terminated using the quit command.
+Once the application and telnet client start running, messages can be sent from the client to the application.
+At any stage, the telnet client can be terminated using the ``quit`` command.
 
 
-Application stages
-------------------
+Explanation
+-----------
+
+The following explains the stages of the application.
 
 Initialization
 ~~~~~~~~~~~~~~
 
-During this stage, EAL layer is initialised and application specific arguments are parsed. Furthermore, the data structures
-(i.e. linked lists) for application objects are initialized. In case of any initialization error, an error message
-is displayed and the application is terminated.
+During this stage, the EAL layer is initialized and application-specific arguments are parsed.
+Furthermore, the data structures (linked lists) for application objects are initialized.
+In case of any initialization error, an error message is displayed and the application is terminated.
 
 .. _ip_pipeline_runtime:
 
@@ -124,17 +127,18 @@ Run-time
 
 The main thread is creating and managing all the application objects based on CLI input.
 
-Each data plane thread runs one or several pipelines previously assigned to it in round-robin order. Each data plane thread
-executes two tasks in time-sharing mode:
+Each data plane thread runs one or more pipelines previously assigned to it in round-robin order.
+Each data plane thread executes two tasks in time-sharing mode:
 
 #. *Packet processing task*: Process bursts of input packets read from the pipeline input ports.
 
-#. *Message handling task*: Periodically, the data plane thread pauses the packet processing task and polls for request
-   messages send by the main thread. Examples: add/remove pipeline to/from current data plane thread, add/delete rules
-   to/from given table of a specific pipeline owned by the current data plane thread, read statistics, etc.
+#. *Message handling task*: Periodically, the data plane thread pauses the packet processing task and polls for
+   request messages sent by the main thread. Examples include adding or removing pipelines from the current
+   data plane thread, adding or deleting rules in a table of a specific pipeline owned by the current data
+   plane thread, reading statistics, and similar operations.
 
 Examples
---------
+~~~~~~~~
 
 .. _table_examples:
 
@@ -207,7 +211,7 @@ Link
 
  Link configuration ::
 
-   link <link_name>
+  link <link_name>
     dev <device_name>|port <port_id>
     rxq <n_queues> <queue_size> <mempool_name>
     txq <n_queues> <queue_size> promiscuous on | off
@@ -236,7 +240,7 @@ Software queue
 Traffic manager
 ~~~~~~~~~~~~~~~
 
- Add traffic manager subport profile ::
+Add traffic manager subport profile ::
 
   tmgr subport profile
    <tb_rate> <tb_size>
@@ -245,7 +249,7 @@ Traffic manager
    <tc9_rate> <tc10_rate> <tc11_rate> <tc12_rate>
    <tc_period>
 
- Add traffic manager pipe profile ::
+Add traffic manager pipe profile ::
 
   tmgr pipe profile
    <tb_rate> <tb_size>
@@ -256,7 +260,7 @@ Traffic manager
    <tc_ov_weight>
    <wrr_weight0..3>
 
- Create traffic manager port ::
+Create traffic manager port ::
 
   tmgr <tmgr_name>
    rate <rate>
@@ -266,16 +270,16 @@ Traffic manager
    mtu <mtu>
    cpu <cpu_id>
 
- Configure traffic manager subport ::
+Configure traffic manager subport ::
 
   tmgr <tmgr_name>
    subport <subport_id>
    profile <subport_profile_id>
 
- Configure traffic manager pipe ::
+Configure traffic manager pipe ::
 
   tmgr <tmgr_name>
-   subport <subport_id>
+  subport <subport_id>
    pipe from <pipe_id_first> to <pipe_id_last>
    profile <pipe_profile_id>
 
@@ -291,7 +295,7 @@ Tap
 Cryptodev
 ~~~~~~~~~
 
-  Create cryptodev port ::
+Create cryptodev port ::
 
    cryptodev <cryptodev_name>
     dev <DPDK Cryptodev PMD name>
@@ -300,13 +304,13 @@ Cryptodev
 Action profile
 ~~~~~~~~~~~~~~
 
- Create action profile for pipeline input port ::
+Create action profile for pipeline input port ::
 
   port in action profile <profile_name>
    [filter match | mismatch offset <key_offset> mask <key_mask> key <key_value> port <port_id>]
    [balance offset <key_offset> mask <key_mask> port <port_id0> ... <port_id15>]
 
- Create action profile for the pipeline table ::
+Create action profile for the pipeline table ::
 
   table action profile <profile_name>
    ipv4 | ipv6
@@ -389,18 +393,18 @@ Connect pipeline input port to table ::
 
   pipeline <pipeline_name> port in <port_id> table <table_id>
 
-Display statistics for specific pipeline input port, output port
+Display statistics for specific pipeline input port, output port,
 or table ::
 
   pipeline <pipeline_name> port in <port_id> stats read [clear]
   pipeline <pipeline_name> port out <port_id> stats read [clear]
   pipeline <pipeline_name> table <table_id> stats read [clear]
 
-Enable given input port for specific pipeline instance ::
+Enable given output port for specific pipeline instance ::
 
-  pipeline <pipeline_name> port out <port_id> disable
+  pipeline <pipeline_name> port out <port_id> enable
 
-Disable given input port for specific pipeline instance ::
+Disable given output port for specific pipeline instance ::
 
   pipeline <pipeline_name> port out <port_id> disable
 
@@ -408,9 +412,9 @@ Add default rule to table for specific pipeline instance ::
 
   pipeline <pipeline_name> table <table_id> rule add
      match
-        default
+       default
      action
-        fwd
+       fwd
            drop
            | port <port_id>
            | meta
@@ -484,9 +488,10 @@ Add bulk rules to table for specific pipeline instance ::
 
   pipeline <pipeline_name> table <table_id> rule add bulk <file_name> <n_rules>
 
-  Where:
-  - file_name = path to file
-  - File line format = match <match> action <action>
+Where:
+
+- ``file_name`` = path to file
+- File line format = ``match <match> action <action>``
 
 Delete table rule for specific pipeline instance ::
 
@@ -497,9 +502,9 @@ Delete default table rule for specific pipeline instance ::
 
   pipeline <pipeline_name> table <table_id> rule delete
      match
-        default
+       default
 
-Add meter profile to the table for specific pipeline instance ::
+Add meter profile to table for specific pipeline instance ::
 
   pipeline <pipeline_name> table <table_id> meter profile <meter_profile_id>
    add srtcm cir <cir> cbs <cbs> ebs <ebs>
@@ -512,24 +517,24 @@ Delete meter profile from the table for specific pipeline instance ::
 
 
 Update the dscp table for meter or traffic manager action for specific
-pipeline instance ::
+pipeline instance::
 
    pipeline <pipeline_name> table <table_id> dscp <file_name>
 
-   Where:
-      - file_name = path to file
-      - exactly 64 lines
-      - File line format = <tc_id> <tc_queue_id> <color>, with <color> as: g | y | r
+Where:
 
+- ``file_name`` = path to file
+- exactly 64 lines
+- File line format = ``<tc_id> <tc_queue_id> <color>``, with ``<color>`` as: g | y | r
 
 Pipeline enable/disable
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-   Enable given pipeline instance for specific data plane thread ::
+Enable given pipeline instance for specific data plane thread::
 
     thread <thread_id> pipeline <pipeline_name> enable
 
 
-   Disable given pipeline instance for specific data plane thread ::
+Disable given pipeline instance for specific data plane thread::
 
     thread <thread_id> pipeline <pipeline_name> disable

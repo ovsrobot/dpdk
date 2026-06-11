@@ -4,9 +4,9 @@
 Introduction to the DPDK Sample Applications
 ============================================
 
-The DPDK Sample Applications are small standalone applications that
-demonstrate various features of DPDK. They can be considered as a cookbook of
-DPDK features. Users interested in getting started with DPDK can take the
+The DPDK sample applications are small standalone applications that
+demonstrate various features of DPDK. They serve as practical examples of
+DPDK functionality. Users interested in getting started with DPDK can take the
 applications, try out the features, and then extend them to fit their needs.
 
 
@@ -30,7 +30,7 @@ examples are highlighted below.
 
 
 * :doc:`Hello World<hello_world>`: As with most introductions to a
-  programming framework, a good place to start is with the Hello World
+  programming framework, a good place to start is the Hello World
   application. The Hello World example sets up the DPDK Environment Abstraction
   Layer (EAL), and prints a simple "Hello World" message to each of the DPDK
   enabled cores. This application doesn't do any packet forwarding, but it is a
@@ -38,32 +38,32 @@ examples are highlighted below.
 
 * :doc:`Basic Forwarding/Skeleton Application<skeleton>`: The Basic
   Forwarding/Skeleton contains the minimum amount of code required to enable
-  basic packet forwarding with DPDK. This allows you to test if your network
+  basic packet forwarding with DPDK. This allows you to test whether your network
   interfaces are working with DPDK.
 
 * :doc:`Network Layer 2 forwarding<l2_forward_real_virtual>`: The Network Layer 2
   forwarding, or ``l2fwd`` application does forwarding based on Ethernet MAC
   addresses like a simple switch.
 
-* :doc:`Network Layer 2 forwarding<l2_forward_event>`: The Network Layer 2
-  forwarding, or ``l2fwd-event`` application does forwarding based on Ethernet MAC
-  addresses like a simple switch. It demonstrates usage of poll and event mode
-  IO mechanism under a single application.
+* :doc:`Network Layer 2 forwarding with event mode<l2_forward_event>`: The
+  ``l2fwd-event`` application does forwarding based on Ethernet MAC addresses
+  like a simple switch. It demonstrates usage of poll and event mode IO
+  mechanisms under a single application.
 
-* :doc:`Network Layer 3 forwarding<l3_forward>`: The Network Layer3
+* :doc:`Network Layer 3 forwarding<l3_forward>`: The Network Layer 3
   forwarding, or ``l3fwd`` application does forwarding based on Internet
   Protocol, IPv4 or IPv6 like a simple router.
 
-* :doc:`Network Layer 3 forwarding Graph<l3_forward_graph>`: The Network Layer3
+* :doc:`Network Layer 3 forwarding Graph<l3_forward_graph>`: The Network Layer 3
   forwarding Graph, or ``l3fwd_graph`` application does forwarding based on IPv4
-  like a simple router with DPDK Graph framework.
+  like a simple router with the DPDK Graph framework.
 
 * :doc:`Hardware packet copying<dma>`: The Hardware packet copying,
-  or ``dmafwd`` application demonstrates how to use DMAdev library for
+  or ``dmafwd`` application demonstrates how to use the DMAdev library for
   copying packets between two threads.
 
 * :doc:`Packet Distributor<dist_app>`: The Packet Distributor
-  demonstrates how to distribute packets arriving on an Rx port to different
+  demonstrates how to distribute packets arriving on a receive port to different
   cores for processing and transmission.
 
 * :doc:`Multi-Process Application<multi_process>`: The
@@ -78,9 +78,9 @@ examples are highlighted below.
   and TX packet processing functions.
 
 * :doc:`IPsec Security Gateway<ipsec_secgw>`: The IPsec Security
-  Gateway application is a minimal example of something closer to a real world
-  example. This is also a good example of an application using the DPDK
-  Cryptodev framework.
+  Gateway application demonstrates a minimal implementation that is closer to
+  a real-world use case. This is also a good example of an application using
+  the DPDK Cryptodev framework.
 
 * :doc:`Precision Time Protocol (PTP) client<ptpclient>`: The PTP
   client is another minimal implementation of a real world application.

@@ -9,7 +9,7 @@ Overview
 --------
 
 The Hello World sample application is an example of the simplest DPDK application that can be written.
-The application simply prints an "helloworld" message on every enabled lcore.
+The application simply prints a "helloworld" message on every enabled lcore.
 
 Compiling the Application
 -------------------------
@@ -21,7 +21,7 @@ The application is located in the ``helloworld`` sub-directory.
 Running the Application
 -----------------------
 
-To run the example in a linux environment:
+To run the example in a Linux environment:
 
 .. code-block:: console
 
@@ -50,7 +50,7 @@ This call finishes the initialization process that was started before main() is 
 The argc and argv arguments are provided to the rte_eal_init() function.
 The value returned is the number of parsed arguments.
 
-Starting Application Unit Lcores
+Starting Application on Lcores
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once the EAL is initialized, the application is ready to launch a function on an lcore.
