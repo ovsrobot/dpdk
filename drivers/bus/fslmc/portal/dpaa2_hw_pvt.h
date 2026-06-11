@@ -133,6 +133,8 @@ struct dpaa2_dpio_dev {
 	struct rte_intr_handle *intr_handle; /* Interrupt related info */
 	int32_t	epoll_fd; /**< File descriptor created for interrupt polling */
 	int32_t hw_id; /**< An unique ID of this DPIO device instance */
+	uint8_t intr_enabled; /**< DQRI portal interrupt already set up */
+	uint16_t ethrx_intr_refcnt; /**< rx queues currently armed on this portal */
 	struct dpaa2_portal_dqrr dpaa2_held_bufs;
 };
 
@@ -164,6 +166,20 @@ typedef void (dpaa2_queue_cb_dqrr_t)(struct qbman_swp *swp,
 typedef void (dpaa2_queue_cb_eqresp_free_t)(uint16_t eqresp_ci,
 					struct dpaa2_queue *dpaa2_q);
 
+#define DPAA2_NAPI_FD_STASH_SIZE 64	/*!< power of 2; >= 2x rx burst so the
+					 * peer port's frames fit before HW
+					 * backpressure (2 ports/worker)
+					 */
+
+/* Lcore-local FIFO of raw FDs demuxed to this queue by another queue's burst
+ * on the same portal (see dpaa2_queue::napi_stash).
+ */
+struct dpaa2_napi_stash {
+	uint16_t head;	/*!< pop index (drain) */
+	uint16_t tail;	/*!< push index (park) */
+	struct qbman_fd fd[DPAA2_NAPI_FD_STASH_SIZE];
+};
+
 struct __rte_cache_aligned dpaa2_queue {
 	struct rte_mempool *mb_pool; /**< mbuf pool to populate RX ring. */
 	union {
@@ -176,7 +192,7 @@ struct __rte_cache_aligned dpaa2_queue {
 	uint8_t cgid;		/*! < Congestion Group id for this queue */
 	uint64_t rx_pkts;
 	uint64_t tx_pkts;
-	uint64_t err_pkts;
+	uint64_t err_pkts;	/*!< also counts NAPI stash-full drops (imissed) */
 	union {
 		/**Ingress*/
 		struct queue_storage_info_t *q_storage[RTE_MAX_LCORE];
@@ -195,6 +211,15 @@ struct __rte_cache_aligned dpaa2_queue {
 	uint64_t offloads;
 	uint64_t lpbk_cntx;
 	uint8_t data_stashing_off;
+	/* NAPI rx-interrupt: per-queue DPCON bound to this FQ at dev_start
+	 * (DEST_DPCON, static); the polling worker subscribes its ethrx portal
+	 * to the channel and arms the DQRI, rx_dqrr drains+demuxes by fqd_ctx.
+	 */
+	struct dpaa2_dpcon_dev *napi_dpcon;	/*!< notif channel, NULL = napi off */
+	RTE_ATOMIC(struct dpaa2_dpio_dev *) napi_sub_dpio;	/*!< subscribed portal or NULL */
+	uint8_t napi_channel_index;		/*!< portal-local static-dequeue idx */
+	uint8_t napi_armed;			/*!< this queue requests DQRI wakeups */
+	struct dpaa2_napi_stash napi_stash;	/*!< NAPI/DQRR demux FDs (~2 KB) */
 };
 
 struct swp_active_dqs {

@@ -143,6 +143,7 @@ New Features
 * **Updated NXP dpaa2 driver.**
 
   * Added RSS RETA query and update support.
+  * Added Rx queue interrupt support.
 
 * **Updated PCAP ethernet driver.**
 

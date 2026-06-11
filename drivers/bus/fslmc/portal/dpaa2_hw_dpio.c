@@ -204,12 +204,17 @@ dpaa2_affine_dpio_intr_to_respective_core(int32_t dpio_id, int cpu_id)
 
 	fclose(file);
 }
+#endif /* RTE_EVENT_DPAA2 */
 
-static int dpaa2_dpio_intr_init(struct dpaa2_dpio_dev *dpio_dev, bool build_epoll)
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_dpio_intr_init)
+int dpaa2_dpio_intr_init(struct dpaa2_dpio_dev *dpio_dev, bool build_epoll)
 {
 	struct epoll_event epoll_ev;
 	int eventfd, dpio_epoll_fd, ret;
 	int threshold = 0x3, timeout = 0xFF;
+
+	if (dpio_dev->intr_enabled)
+		return 0;
 
 	ret = rte_dpaa2_intr_enable(dpio_dev->intr_handle, 0);
 	if (ret) {
@@ -259,9 +264,12 @@ static int dpaa2_dpio_intr_init(struct dpaa2_dpio_dev *dpio_dev, bool build_epol
 		dpio_dev->epoll_fd = dpio_epoll_fd;
 	}
 
+	dpio_dev->intr_enabled = 1;
+
 	return 0;
 }
 
+#ifdef RTE_EVENT_DPAA2
 static void dpaa2_dpio_intr_deinit(struct dpaa2_dpio_dev *dpio_dev)
 {
 	int ret;
@@ -274,6 +282,7 @@ static void dpaa2_dpio_intr_deinit(struct dpaa2_dpio_dev *dpio_dev)
 		close(dpio_dev->epoll_fd);
 		dpio_dev->epoll_fd = -1;
 	}
+	dpio_dev->intr_enabled = 0;
 }
 #endif
 

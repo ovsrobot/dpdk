@@ -922,6 +922,128 @@ dpaa2_dev_prefetch_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	return num_rx;
 }
 
+/* Convert a DQRR'd FD (single or scatter-gather) to an mbuf and apply software
+ * VLAN strip, like the poll path.
+ */
+static inline struct rte_mbuf *
+dpaa2_dqrr_fd_to_mbuf(const struct qbman_fd *fd,
+		      struct rte_eth_dev_data *eth_data)
+{
+	struct rte_mbuf *m;
+
+	if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
+		m = eth_sg_fd_to_mbuf(fd, eth_data->port_id);
+	else
+		m = eth_fd_to_mbuf(fd, eth_data->port_id);
+	if (eth_data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+		rte_vlan_strip(m);
+	return m;
+}
+
+/* prefetch a DQRR'd FD's HW annotation (parse area) ahead of conversion */
+static inline void
+dpaa2_dqrr_prefetch_annot(const struct qbman_fd *fd)
+{
+	rte_prefetch0((void *)((size_t)DPAA2_IOVA_TO_VADDR(DPAA2_GET_FD_ADDR(fd))
+			       + DPAA2_FD_PTA_SIZE));
+}
+
+/* Free FDs a sibling burst parked in this queue's stash but that were never
+ * drained (queue released/freed while the lcore still held its frames).
+ */
+void
+dpaa2_dev_rx_queue_napi_stash_drain(struct dpaa2_queue *dpaa2_q)
+{
+	struct dpaa2_napi_stash *stash = &dpaa2_q->napi_stash;
+	const struct qbman_fd *fd;
+
+	while (stash->head != stash->tail) {
+		fd = &stash->fd[stash->head & (DPAA2_NAPI_FD_STASH_SIZE - 1)];
+		rte_pktmbuf_free(dpaa2_dqrr_fd_to_mbuf(fd, dpaa2_q->eth_data));
+		stash->head++;
+	}
+	stash->head = 0;
+	stash->tail = 0;
+}
+
+/* rx interrupt/DQRR path: the FQ is scheduled to a channel the lcore's ethrx
+ * portal statically dequeues -- a VDQ on a scheduled FQ never completes, so DQRR
+ * is the only model compatible with interrupt sleep. One portal serves every
+ * queue the lcore owns, so the burst demuxes by fqd_ctx: own frames are
+ * returned, foreign ones have their raw FD parked in the target queue's stash.
+ *
+ * The application must therefore poll all queues assigned to the lcore after a
+ * wakeup -- the same scheduling contract as plain DPDK polling. When a foreign
+ * queue's stash is full the FD is dropped (freed) rather than left on the shared
+ * DQRR ring, which would head-of-line block every other queue on the portal.
+ */
+uint16_t __rte_hot
+dpaa2_dev_rx_dqrr(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
+{
+	struct dpaa2_queue *dpaa2_q = queue;
+	struct rte_eth_dev_data *eth_data = dpaa2_q->eth_data;
+	struct dpaa2_napi_stash *stash = &dpaa2_q->napi_stash;
+	const struct qbman_result *dq;
+	const struct qbman_fd *fd;
+	struct dpaa2_queue *rxq;
+	struct qbman_swp *swp;
+	uint16_t num_rx = 0;
+
+	if (unlikely(!DPAA2_PER_LCORE_ETHRX_DPIO)) {
+		if (dpaa2_affine_qbman_ethrx_swp()) {
+			DPAA2_PMD_ERR("Failure in affining portal");
+			return 0;
+		}
+	}
+	swp = DPAA2_PER_LCORE_ETHRX_PORTAL;
+
+	/* our frames parked by another queue's burst -- convert now (hot) */
+	while (num_rx < nb_pkts && stash->head != stash->tail) {
+		fd = &stash->fd[stash->head & (DPAA2_NAPI_FD_STASH_SIZE - 1)];
+		if (dpaa2_svr_family != SVR_LX2160A &&
+		    (uint16_t)(stash->head + 1) != stash->tail)
+			dpaa2_dqrr_prefetch_annot(&stash->fd[(stash->head + 1) &
+					(DPAA2_NAPI_FD_STASH_SIZE - 1)]);
+		bufs[num_rx++] = dpaa2_dqrr_fd_to_mbuf(fd, eth_data);
+		stash->head++;
+	}
+
+	while (num_rx < nb_pkts) {
+		dq = qbman_swp_dqrr_next(swp);
+		if (!dq)
+			break;			/* ring momentarily empty */
+		qbman_swp_prefetch_dqrr_next(swp);
+		fd = qbman_result_DQ_fd(dq);
+		/* parse summary is in the FRC on LX2160A; annotation is HW-stashed */
+		if (dpaa2_svr_family != SVR_LX2160A)
+			dpaa2_dqrr_prefetch_annot(fd);
+		rxq = (struct dpaa2_queue *)(size_t)qbman_result_DQ_fqd_ctx(dq);
+		if (unlikely(!rxq))
+			rxq = dpaa2_q;
+		if (rxq == dpaa2_q) {
+			bufs[num_rx++] = dpaa2_dqrr_fd_to_mbuf(fd, eth_data);
+		} else {
+			struct dpaa2_napi_stash *fs = &rxq->napi_stash;
+
+			if (unlikely((uint16_t)(fs->tail - fs->head) >=
+						DPAA2_NAPI_FD_STASH_SIZE)) {
+				/* stash full: drop rather than leave it on the ring
+				 * and head-of-line block the shared portal
+				 */
+				rte_pktmbuf_free(dpaa2_dqrr_fd_to_mbuf(fd, rxq->eth_data));
+				rxq->err_pkts++;
+			} else {
+				fs->fd[fs->tail & (DPAA2_NAPI_FD_STASH_SIZE - 1)] = *fd;
+				fs->tail++;
+			}
+		}
+		qbman_swp_dqrr_consume(swp, dq);
+	}
+
+	dpaa2_q->rx_pkts += num_rx;
+	return num_rx;
+}
+
 void __rte_hot
 dpaa2_dev_process_parallel_event(struct qbman_swp *swp,
 				 const struct qbman_fd *fd,
