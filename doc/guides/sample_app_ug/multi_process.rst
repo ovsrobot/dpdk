@@ -16,7 +16,7 @@ The multi-process example applications are built the same way as other sample ap
 and as documented in the *DPDK Getting Started Guide*.
 
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The applications are located in the ``multi_process`` sub-directory.
 

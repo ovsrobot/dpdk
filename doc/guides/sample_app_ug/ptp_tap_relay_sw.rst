@@ -75,7 +75,7 @@ This minimises the gap between the measured timestamp and the actual wire egress
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``ptp_tap_relay_sw`` sub-directory.
 

@@ -58,7 +58,7 @@ synchronizes the PTP PHC clock with the Linux kernel clock.
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``ptpclient`` sub-directory.
 

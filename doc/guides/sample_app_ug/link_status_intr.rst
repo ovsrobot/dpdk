@@ -50,7 +50,7 @@ where,
 
 *   -T PERIOD: statistics will be refreshed each PERIOD seconds (0 to disable, 10 default)
 
-To run the application in a linux environment with 4 lcores, 16 ports and 8 RX queues per lcore,
+To run the application in a Linux environment with 4 lcores, 16 ports and 8 RX queues per lcore,
 issue the command:
 
 .. code-block:: console

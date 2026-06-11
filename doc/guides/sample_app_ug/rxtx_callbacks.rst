@@ -33,7 +33,7 @@ The application is located in the ``rxtx_callbacks`` sub-directory.
 Running the Application
 -----------------------
 
-To run the example in a ``linux`` environment:
+To run the example in a ``Linux`` environment:
 
 .. code-block:: console
 

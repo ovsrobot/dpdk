@@ -89,7 +89,7 @@ The application supports two modes of operation: poll mode and event mode.
   **Currently the application provides non-burst, internal port worker threads.**
   It also provides infrastructure for non-internal ports but does not define any worker threads.
 
-  Event mode also supports event vectorization. The event devices, ethernet device
+  Event mode also supports event vectorization. The event devices, Ethernet device
   pairs which support the capability ``RTE_EVENT_ETH_RX_ADAPTER_CAP_EVENT_VECTOR`` can
   aggregate packets based on flow characteristics and generate a ``rte_event``
   containing ``rte_event_vector``.
@@ -245,9 +245,9 @@ Where:
     Zero value disables reassembly functionality.
     Default value: 0.
 
-*   ``--mtu MTU``: MTU value (in bytes) on all attached ethernet ports.
-    Outgoing packets with length bigger then MTU will be fragmented.
-    Incoming packets with length bigger then MTU will be discarded.
+*   ``--mtu MTU``: MTU value (in bytes) on all attached Ethernet ports.
+    Outgoing packets with length bigger than MTU will be fragmented.
+    Incoming packets with length bigger than MTU will be discarded.
     Default value: 1500.
 
 *   ``--frag-ttl FRAG_TTL_NS``: fragment lifetime (in nanoseconds).
@@ -694,10 +694,10 @@ where each options means:
 
 ``<type>``
 
- * Action type to specify the security action. This option specify
+ * Action type to specify the security action. This option specifies
    the SA to be performed with look aside protocol offload to HW
-   accelerator or protocol offload on ethernet device or inline
-   crypto processing on the ethernet device during transmission.
+   accelerator or protocol offload on Ethernet device or inline
+   crypto processing on the Ethernet device during transmission.
 
  * Optional: Yes, default type *no-offload*
 
@@ -1083,7 +1083,7 @@ The test directory contains scripts for testing the various encryption
 algorithms.
 
 The purpose of the scripts is to automate ipsec-secgw testing
-using another system running linux as a DUT.
+using another system running Linux as a DUT.
 
 The user must setup the following environment variables:
 
@@ -1127,11 +1127,11 @@ key to the DUT. It will ask for credentials so that it can upload the public key
 
 The SUT and DUT are connected through at least 2 NIC ports.
 
-One NIC port is expected to be managed by linux on both machines and will be
+One NIC port is expected to be managed by Linux on both machines and will be
 used as a control path.
 
 The second NIC port (test-port) should be bound to DPDK on the SUT, and should
-be managed by linux on the DUT.
+be managed by Linux on the DUT.
 
 The script starts ``ipsec-secgw`` with 2 NIC devices: ``test-port`` and
 ``tap vdev``.

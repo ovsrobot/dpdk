@@ -96,7 +96,7 @@ Compiling the Application
 
 * Compile Application
 
-    To compile the sample application see :doc:`compiling`.
+    To compile the sample application, see :doc:`compiling`.
 
 *  Run ``dos2unix`` on the request files
 

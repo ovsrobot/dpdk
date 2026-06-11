@@ -20,7 +20,7 @@ This sample supports 4 types of packet forwarding mode.
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``ntb`` sub-directory.
 

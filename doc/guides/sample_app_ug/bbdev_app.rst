@@ -25,7 +25,7 @@ The MAC header is preserved in the packet throughout the loop-back operation.
 Limitations
 -----------
 
-* Only one baseband device and one ethernet port can be used.
+* Only one baseband device and one Ethernet port can be used.
 
 Compiling the Application
 -------------------------
@@ -34,7 +34,7 @@ DPDK needs to be built with ``baseband_turbo_sw`` PMD enabled along
 with ``FLEXRAN SDK`` Libraries. Refer to *SW Turbo Poll Mode Driver*
 documentation for more details.
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 
 Running the Application

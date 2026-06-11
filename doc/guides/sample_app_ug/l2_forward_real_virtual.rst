@@ -111,14 +111,14 @@ where,
 
 *   --portmap="(port,port)[,(port,port)]": Determines forwarding ports mapping.
 
-To run the application in linux environment with 4 lcores, 16 ports and 8 RX queues per lcore and MAC address
+To run the application in Linux environment with 4 lcores, 16 ports and 8 RX queues per lcore and MAC address
 updating enabled, issue the command:
 
 .. code-block:: console
 
     $ ./<build_dir>/examples/dpdk-l2fwd -l 0-3 -- -q 8 -p ffff
 
-To run the application in linux environment with 4 lcores, 4 ports, 8 RX queues
+To run the application in Linux environment with 4 lcores, 4 ports, 8 RX queues
 per lcore, to forward RX traffic of ports 0 & 1 on ports 2 & 3 respectively and
 vice versa, issue the command:
 

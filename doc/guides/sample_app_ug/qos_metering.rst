@@ -38,7 +38,7 @@ all the incoming packets are colored as green.
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``qos_meter`` sub-directory.
 

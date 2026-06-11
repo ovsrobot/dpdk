@@ -47,7 +47,7 @@ There are three simple commands:
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``cmd_line`` sub-directory.
 

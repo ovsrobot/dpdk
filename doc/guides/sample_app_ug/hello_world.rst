@@ -14,7 +14,7 @@ The application simply prints a "helloworld" message on every enabled lcore.
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``helloworld`` sub-directory.
 
