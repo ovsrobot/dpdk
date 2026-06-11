@@ -158,6 +158,15 @@ uint32_t qbman_swp_intr_timeout_read_status(struct qbman_swp *p);
 void qbman_swp_intr_timeout_write(struct qbman_swp *p, uint32_t mask);
 
 /**
+ * qbman_swp_dqrr_size() - Get the HW DQRR ring depth of a software portal.
+ * @p: the given software portal object.
+ *
+ * Returns the number of DQRR entries (4 on QBMan < 4.1, 8 on >= 4.1). Useful
+ * as the upper bound for the DQRR interrupt coalescing threshold.
+ */
+uint8_t qbman_swp_dqrr_size(struct qbman_swp *p);
+
+/**
  * qbman_swp_interrupt_get_trigger() - Get the data in software portal
  * interrupt enable register.
  * @p: the given software portal object.

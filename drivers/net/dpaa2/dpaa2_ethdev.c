@@ -36,6 +36,9 @@
 #define DRIVER_ERROR_QUEUE  "drv_err_queue"
 #define DRIVER_NO_TAILDROP  "drv_no_taildrop"
 #define DRIVER_NO_DATA_STASHING "drv_no_data_stashing"
+#define DRIVER_RX_INTR_HOLDOFF_US "drv_rx_intr_holdoff_us"
+#define DPAA2_RX_INTR_HOLDOFF_US_DEF 100
+#define DRIVER_RX_INTR_THRESHOLD "drv_rx_intr_threshold"
 #define CHECK_INTERVAL         100  /* 100ms */
 #define MAX_REPEAT_TIME        90   /* 9s (90 * 100ms) in total */
 
@@ -3078,7 +3081,7 @@ dpaa2_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 	struct dpaa2_dev_priv *priv = dev->data->dev_private;
 	struct dpaa2_queue *dpaa2_q = priv->rx_vq[queue_id];
 	struct dpaa2_dpio_dev *dpio, *old;
-	int ret;
+	int ret, threshold, timeout, dqrr_max;
 
 	if (!dpaa2_q->napi_dpcon)
 		return -ENOTSUP;	/* no channel -> caller keeps polling */
@@ -3087,10 +3090,22 @@ dpaa2_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 		return -EIO;
 	dpio = DPAA2_PER_LCORE_ETHRX_DPIO;
 
+	/* threshold from drv_rx_intr_threshold (0 = ring-1), holdoff from
+	 * drv_rx_intr_holdoff_us. idempotent: no-op if the dpio is already
+	 * armed (e.g. event driver)
+	 */
+	dqrr_max = qbman_swp_dqrr_size(dpio->sw_portal) - 1;
+	threshold = priv->rx_intr_threshold ? (int)priv->rx_intr_threshold : dqrr_max;
+	if (threshold < 1 || threshold > dqrr_max) {
+		DPAA2_PMD_WARN("drv_rx_intr_threshold %d out of [1, %d], clamping",
+			       threshold, dqrr_max);
+		threshold = threshold < 1 ? 1 : dqrr_max;
+	}
+	timeout = dpaa2_dpio_holdoff_to_itp(dpio, priv->rx_intr_holdoff_us);
 	/* build_epoll=false: the generic ethdev rx-intr API waits on the
 	 * application epoll, not the portal's private one (event PMD only).
 	 */
-	ret = dpaa2_dpio_intr_init(dpio, false);	/* VFIO eventfd, no MC */
+	ret = dpaa2_dpio_intr_init(dpio, threshold, timeout, false);
 	if (ret)
 		return ret;
 
@@ -3347,6 +3362,35 @@ dpaa2_get_devargs(struct rte_devargs *devargs, const char *key)
 }
 
 static int
+u32_devarg_handler(__rte_unused const char *key, const char *value, void *opaque)
+{
+	char *end;
+	unsigned long v = strtoul(value, &end, 0);
+
+	if (*value == '\0' || *end != '\0' || v > UINT32_MAX)
+		return -1;
+	*(uint32_t *)opaque = (uint32_t)v;
+
+	return 0;
+}
+
+/* Read a u32-valued devarg into *out, leaving *out untouched if absent. */
+static void
+dpaa2_get_devargs_u32(struct rte_devargs *devargs, const char *key, uint32_t *out)
+{
+	struct rte_kvargs *kvlist;
+
+	if (!devargs)
+		return;
+	kvlist = rte_kvargs_parse(devargs->args, NULL);
+	if (!kvlist)
+		return;
+	if (rte_kvargs_count(kvlist, key))
+		rte_kvargs_process(kvlist, key, u32_devarg_handler, out);
+	rte_kvargs_free(kvlist);
+}
+
+static int
 dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct rte_device *dev = eth_dev->device;
@@ -3372,6 +3416,14 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 		priv->flags |= DPAA2_NO_PREFETCH_RX;
 		DPAA2_PMD_INFO("No RX prefetch mode");
 	}
+
+	priv->rx_intr_holdoff_us = DPAA2_RX_INTR_HOLDOFF_US_DEF;
+	dpaa2_get_devargs_u32(dev->devargs, DRIVER_RX_INTR_HOLDOFF_US,
+			      &priv->rx_intr_holdoff_us);
+
+	priv->rx_intr_threshold = 0;
+	dpaa2_get_devargs_u32(dev->devargs, DRIVER_RX_INTR_THRESHOLD,
+			      &priv->rx_intr_threshold);
 
 	if (dpaa2_get_devargs(dev->devargs, DRIVER_LOOPBACK_MODE)) {
 		priv->flags |= DPAA2_RX_LOOPBACK_MODE;
@@ -3888,5 +3940,7 @@ RTE_PMD_REGISTER_PARAM_STRING(NET_DPAA2_PMD_DRIVER_NAME,
 		DRIVER_RX_PARSE_ERR_DROP "=<int>"
 		DRIVER_ERROR_QUEUE "=<int>"
 		DRIVER_NO_TAILDROP "=<int>"
-		DRIVER_NO_DATA_STASHING "=<int>");
+		DRIVER_NO_DATA_STASHING "=<int> "
+		DRIVER_RX_INTR_HOLDOFF_US "=<uint32> "
+		DRIVER_RX_INTR_THRESHOLD "=<uint32>");
 RTE_LOG_REGISTER_DEFAULT(dpaa2_logtype_pmd, NOTICE);

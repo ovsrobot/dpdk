@@ -412,6 +412,13 @@ struct dpaa2_dev_priv {
 	uint8_t max_cgs;
 	uint8_t cgid_in_use[MAX_RX_QUEUES];
 
+	/* DQRI holdoff (us) for rx-queue interrupts (drv_rx_intr_holdoff_us) */
+	uint32_t rx_intr_holdoff_us;
+	/* DQRI threshold for rx-queue interrupts (drv_rx_intr_threshold);
+	 * 0 = auto (DQRR ring depth - 1)
+	 */
+	uint32_t rx_intr_threshold;
+
 	/* Current hash distribution size per RX TC, written by
 	 * dpaa2_setup_flow_dist_size() and read by reta_query / reta_update.
 	 * Zero means "use default" (= nb_rx_queues clamped to dist_queues).

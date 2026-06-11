@@ -433,6 +433,12 @@ void qbman_swp_intr_timeout_write(struct qbman_swp *p, uint32_t mask)
 	qbman_cinh_write(&p->sys, QBMAN_CINH_SWP_ITPR, mask);
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_size)
+uint8_t qbman_swp_dqrr_size(struct qbman_swp *p)
+{
+	return p->dqrr.dqrr_size;
+}
+
 uint32_t qbman_swp_interrupt_get_trigger(struct qbman_swp *p)
 {
 	return qbman_cinh_read(&p->sys, QBMAN_CINH_SWP_IER);

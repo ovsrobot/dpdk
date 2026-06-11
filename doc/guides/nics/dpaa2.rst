@@ -492,6 +492,16 @@ for details.
   packets, so that user can check what is wrong with those packets.
   e.g. ``fslmc:dpni.1,drv_error_queue=1``
 
+* Use dev arg option ``drv_rx_intr_holdoff_us=<uint32>`` to set the Rx queue
+  interrupt coalescing holdoff in microseconds (default 100). Only applies in
+  Rx queue interrupt mode.
+  e.g. ``fslmc:dpni.1,drv_rx_intr_holdoff_us=50``
+
+* Use dev arg option ``drv_rx_intr_threshold=<uint32>`` to set the Rx queue
+  interrupt coalescing frame threshold; 0 (default) means the DQRR ring depth
+  minus one.
+  e.g. ``fslmc:dpni.1,drv_rx_intr_threshold=4``
+
 Enabling logs
 -------------
 
