@@ -346,7 +346,7 @@ dsa_addr_parse(const char *name, void *addr)
 	return 0;
 }
 
-RTE_REGISTER_BUS(dsa, dsa_bus);
+RTE_REGISTER_BUS(dsa, dsa_bus, struct rte_dsa_device);
 RTE_INIT(dsa_bus_init)
 {
 	rte_bus_add_driver(&dsa_bus, &dsa_driver);

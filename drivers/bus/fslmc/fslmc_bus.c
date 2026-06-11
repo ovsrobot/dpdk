@@ -414,7 +414,7 @@ fslmc_bus_match(const struct rte_driver *drv, const struct rte_device *dev)
 }
 
 static int
-rte_fslmc_close(void)
+rte_fslmc_close(struct rte_bus *bus __rte_unused)
 {
 	int ret = 0;
 
@@ -549,5 +549,5 @@ struct rte_bus rte_fslmc_bus = {
 	.dev_iterate = rte_bus_generic_dev_iterate,
 };
 
-RTE_REGISTER_BUS(fslmc, rte_fslmc_bus);
+RTE_REGISTER_BUS(fslmc, rte_fslmc_bus, struct rte_dpaa2_device);
 RTE_LOG_REGISTER_DEFAULT(dpaa2_logtype_bus, NOTICE);

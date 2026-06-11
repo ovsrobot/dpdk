@@ -317,29 +317,10 @@ pci_unplug_device(struct rte_device *rte_dev)
 	return 0;
 }
 
-static int
-pci_cleanup(void)
+static void
+pci_free_device(void *dev)
 {
-	struct rte_pci_device *dev;
-	int error = 0;
-
-	RTE_BUS_FOREACH_DEV(dev, &rte_pci_bus) {
-		int ret = 0;
-
-		if (rte_dev_is_probed(&dev->device)) {
-			ret = pci_unplug_device(&dev->device);
-			if (ret < 0) {
-				rte_errno = errno;
-				error = -1;
-			}
-		}
-
-		rte_devargs_remove(dev->device.devargs);
-		rte_bus_remove_device(&rte_pci_bus, &dev->device);
-		pci_free(RTE_PCI_DEVICE_INTERNAL(dev));
-	}
-
-	return error;
+	pci_free(RTE_PCI_DEVICE_INTERNAL(dev));
 }
 
 /* dump one device */
@@ -743,7 +724,8 @@ struct rte_bus rte_pci_bus = {
 	.allow_multi_probe = true,
 	.scan = rte_pci_scan,
 	.probe = rte_bus_generic_probe,
-	.cleanup = pci_cleanup,
+	.free_device = pci_free_device,
+	.cleanup = rte_bus_generic_cleanup,
 	.find_device = rte_bus_generic_find_device,
 	.match = pci_bus_match,
 	.probe_device = pci_probe_device,
@@ -759,5 +741,5 @@ struct rte_bus rte_pci_bus = {
 	.sigbus_handler = pci_sigbus_handler,
 };
 
-RTE_REGISTER_BUS(pci, rte_pci_bus);
+RTE_REGISTER_BUS(pci, rte_pci_bus, struct rte_pci_device);
 RTE_LOG_REGISTER_DEFAULT(pci_bus_logtype, NOTICE);

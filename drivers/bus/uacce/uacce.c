@@ -403,31 +403,6 @@ uacce_unplug_device(struct rte_device *rte_dev)
 }
 
 static int
-uacce_cleanup(void)
-{
-	struct rte_uacce_device *dev;
-	int error = 0;
-
-	RTE_BUS_FOREACH_DEV(dev, &uacce_bus) {
-		int ret = 0;
-
-		if (rte_dev_is_probed(&dev->device)) {
-			ret = uacce_unplug_device(&dev->device);
-			if (ret < 0) {
-				rte_errno = errno;
-				error = -1;
-			}
-		}
-
-		rte_devargs_remove(dev->device.devargs);
-		rte_bus_remove_device(&uacce_bus, &dev->device);
-		free(dev);
-	}
-
-	return error;
-}
-
-static int
 uacce_parse(const char *name, void *addr)
 {
 	const char **out = addr;
@@ -551,7 +526,8 @@ rte_uacce_unregister(struct rte_uacce_driver *driver)
 static struct rte_bus uacce_bus = {
 	.scan = uacce_scan,
 	.probe = rte_bus_generic_probe,
-	.cleanup = uacce_cleanup,
+	.free_device = free,
+	.cleanup = rte_bus_generic_cleanup,
 	.match = uacce_bus_match,
 	.probe_device = uacce_probe_device,
 	.unplug_device = uacce_unplug_device,
@@ -560,5 +536,5 @@ static struct rte_bus uacce_bus = {
 	.dev_iterate = rte_bus_generic_dev_iterate,
 };
 
-RTE_REGISTER_BUS(uacce, uacce_bus);
+RTE_REGISTER_BUS(uacce, uacce_bus, struct rte_uacce_device);
 RTE_LOG_REGISTER_DEFAULT(uacce_bus_logtype, NOTICE);

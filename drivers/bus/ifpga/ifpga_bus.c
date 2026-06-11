@@ -295,35 +295,6 @@ ifpga_unplug_device(struct rte_device *dev)
 	return 0;
 }
 
-/*
- * Cleanup the content of the Intel FPGA bus, and call the remove() function
- * for all registered devices.
- */
-static int
-ifpga_cleanup(void)
-{
-	struct rte_afu_device *afu_dev;
-	int error = 0;
-
-	RTE_BUS_FOREACH_DEV(afu_dev, &rte_ifpga_bus) {
-		int ret = 0;
-
-		if (rte_dev_is_probed(&afu_dev->device)) {
-			ret = ifpga_unplug_device(&afu_dev->device);
-			if (ret < 0) {
-				rte_errno = errno;
-				error = -1;
-			}
-		}
-
-		rte_devargs_remove(afu_dev->device.devargs);
-		rte_bus_remove_device(&rte_ifpga_bus, &afu_dev->device);
-		free(afu_dev);
-	}
-
-	return error;
-}
-
 static int
 ifpga_parse(const char *name, void *addr)
 {
@@ -371,7 +342,8 @@ ifpga_parse(const char *name, void *addr)
 static struct rte_bus rte_ifpga_bus = {
 	.scan        = ifpga_scan,
 	.probe       = rte_bus_generic_probe,
-	.cleanup     = ifpga_cleanup,
+	.free_device = free,
+	.cleanup     = rte_bus_generic_cleanup,
 	.find_device = rte_bus_generic_find_device,
 	.match       = ifpga_bus_match,
 	.probe_device = ifpga_probe_device,
@@ -379,7 +351,7 @@ static struct rte_bus rte_ifpga_bus = {
 	.parse       = ifpga_parse,
 };
 
-RTE_REGISTER_BUS(ifpga, rte_ifpga_bus);
+RTE_REGISTER_BUS(ifpga, rte_ifpga_bus, struct rte_afu_device);
 RTE_INIT(ifpga_bus_init)
 {
 	RTE_VERIFY(strcmp(rte_ifpga_bus.name, RTE_STR(IFPGA_BUS_NAME)) == 0);

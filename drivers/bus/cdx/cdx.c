@@ -439,5 +439,5 @@ static struct rte_bus rte_cdx_bus = {
 	.dev_iterate = rte_bus_generic_dev_iterate,
 };
 
-RTE_REGISTER_BUS(cdx, rte_cdx_bus);
+RTE_REGISTER_BUS(cdx, rte_cdx_bus, struct rte_cdx_device);
 RTE_LOG_REGISTER_DEFAULT(cdx_logtype_bus, NOTICE);
