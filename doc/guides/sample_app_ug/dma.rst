@@ -13,16 +13,15 @@ This sample is intended as a demonstration of the basic components of a DPDK
 forwarding application and an example of how to use the DMAdev API to make a packet
 copy application.
 
-Also, while forwarding, the MAC addresses are affected as follows:
+While forwarding, the application modifies MAC addresses:
 
-*   The source MAC address is replaced by the TX port MAC address
+*   Source MAC address: replaced with the Tx port MAC address
+*   Destination MAC address: replaced with ``02:00:00:00:00:TX_PORT_ID``
 
-*   The destination MAC address is replaced by  02:00:00:00:00:TX_PORT_ID
-
-This application can be used to compare performance of using software packet
-copy with copy done using a DMA device for different sizes of packets.
-The example will print out statistics each second. The stats shows
-received/send packets and packets dropped or failed to copy.
+This application can be used to compare the performance of using software packet
+copy versus DMA device copy for different packet sizes.
+The application prints statistics at a configurable interval.
+The statistics show received/sent packets and packets dropped or failed to copy.
 
 Compiling the Application
 -------------------------
@@ -35,7 +34,7 @@ The application is located in the ``dma`` sub-directory.
 Running the Application
 -----------------------
 
-In order to run the hardware copy application, the copying device
+To run the hardware copy application, the copying device
 needs to be bound to user-space IO driver.
 
 Refer to the :doc:`../prog_guide/dmadev` for information on using the library.
@@ -54,10 +53,10 @@ where,
 *   q NQ: Number of Rx queues used per port equivalent to DMA channels
     per port (default is 1)
 
-*   c CT: Performed packet copy type: software (sw) or hardware using
+*   c CT: Packet copy type: software (``sw``) or hardware using
     DMA (hw) (default is hw)
 
-*   s RS: Size of dmadev descriptor ring for hardware copy mode or rte_ring for
+*   s RS: Size of DMAdev descriptor ring for hardware copy mode or rte_ring for
     software copy mode (default is 2048)
 
 *   --[no-]mac-updating: Whether MAC address of packets should be changed
@@ -71,9 +70,9 @@ where,
 
 The application can be launched in various configurations depending on the
 provided parameters. The app can use up to 2 lcores: one of them receives
-incoming traffic and makes a copy of each packet. The second lcore then
+incoming traffic and makes a copy of each packet, and the second lcore
 updates the MAC address and sends the copy. If one lcore per port is used,
-both operations are done sequentially. For each configuration, an additional
+both operations are performed sequentially. For each configuration, an additional
 lcore is needed since the main lcore does not handle traffic but is
 responsible for configuration, statistics printing and safe shutdown of
 all ports and devices.
@@ -89,7 +88,7 @@ updating issue the command:
     $ ./<build_dir>/examples/dpdk-dma -l 0-2 -n 2 -- -p 0x1 --mac-updating -c sw
 
 To run the application in a Linux environment with 2 lcores (the main lcore,
-plus one forwarding core), 2 ports (ports 0 and 1), hardware copying and no MAC
+plus one forwarding core), 2 ports (ports 0 and 1), hardware copying, and no MAC
 updating issue the command:
 
 .. code-block:: console
@@ -146,7 +145,7 @@ The ``main()`` function also initializes the ports:
     :end-before: >8 End of initializing each port.
     :dedent: 1
 
-Each port is configured using ``port_init()`` function. The Ethernet
+Each port is configured using the ``port_init()`` function. The Ethernet
 ports are configured with local settings using the ``rte_eth_dev_configure()``
 function and the ``port_conf`` struct. The RSS is enabled so that
 multiple Rx queues could be used for packet receiving and copying by
@@ -198,7 +197,7 @@ and HW copy modes.
     :dedent: 0
 
 
-When using hardware copy each Rx queue of the port is assigned a DMA device
+When using hardware copy, each Rx queue of the port is assigned a DMA device
 (``assign_dmadevs()``) using DMAdev library API functions:
 
 .. literalinclude:: ../../../examples/dma/dmafwd.c
@@ -220,7 +219,7 @@ using ``rte_dma_start()`` function. Each of the above operations is done in
     :end-before: >8 End of configuration of device.
     :dedent: 0
 
-If initialization is successful, memory for hardware device
+If initialization is successful, memory for the hardware device
 statistics is allocated.
 
 Finally, the ``main()`` function starts all packet handling lcores and starts
@@ -228,7 +227,7 @@ printing stats in a loop on the main lcore. The application can be
 interrupted and closed using ``Ctrl-C``. The main lcore waits for
 all worker lcores to finish, deallocates resources and exits.
 
-The processing lcores launching function are described below.
+The processing lcore launching functions are described below.
 
 The Lcores Launching Functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -259,10 +258,10 @@ corresponding to ports and lcores configuration provided by the user.
 The Lcores Processing Functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For receiving packets on each port, the ``dma_rx_port()`` function is used.
-The function receives packets on each configured Rx queue. Depending on the
+The ``dma_rx_port()`` function receives packets on each port.
+It receives packets on each configured Rx queue. Depending on the
 mode the user chose, it will enqueue packets to DMA channels and
-then invoke copy process (hardware copy), or perform software copy of each
+then invoke the copy process (hardware copy), or perform software copy of each
 packet using ``pktmbuf_sw_copy()`` function and enqueue them to an rte_ring:
 
 .. literalinclude:: ../../../examples/dma/dmafwd.c
@@ -271,13 +270,13 @@ packet using ``pktmbuf_sw_copy()`` function and enqueue them to an rte_ring:
     :end-before: >8 End of receive packets on one port and enqueue to dmadev or rte_ring.
     :dedent: 0
 
-The packets are received in burst mode using ``rte_eth_rx_burst()``
-function. When using hardware copy mode the packets are enqueued in the
-copying device's buffer using ``dma_enqueue_packets()`` which calls
+Packets are received in burst mode using the ``rte_eth_rx_burst()``
+function. When using hardware copy mode, packets are enqueued in the
+DMA device buffer using ``dma_enqueue_packets()``, which calls
 ``rte_dma_copy()``. When all received packets are in the
 buffer, the copy operations are started by calling ``rte_dma_submit()``.
-Function ``rte_dma_copy()`` operates on physical address of
-the packet. Structure ``rte_mbuf`` contains only physical address to
+The ``rte_dma_copy()`` function operates on the physical address of
+the packet. The ``rte_mbuf`` structure contains only the physical address to the
 start of the data buffer (``buf_iova``). Thus, the ``rte_pktmbuf_iova()`` API is
 used to get the address of the start of the data within the mbuf.
 
@@ -287,12 +286,11 @@ used to get the address of the start of the data within the mbuf.
     :end-before: >8 End of receive packets on one port and enqueue to dmadev or rte_ring.
     :dedent: 0
 
-
-Once the copies have been completed (this includes gathering the completions in
+Once the copies have been completed (which includes gathering the completions in
 HW copy mode), the copied packets are enqueued to the ``rx_to_tx_ring``, which
 is used to pass the packets to the Tx function.
 
-All completed copies are processed by ``dma_tx_port()`` function. This function
+All completed copies are processed by the ``dma_tx_port()`` function. This function
 dequeues copied packets from the ``rx_to_tx_ring``. Then, each packet MAC address is changed
 if it was enabled. After that, copies are sent in burst mode using ``rte_eth_tx_burst()``.
 
@@ -306,7 +304,7 @@ if it was enabled. After that, copies are sent in burst mode using ``rte_eth_tx_
 The Packet Copying Functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In order to perform SW packet copy, there are user-defined functions to the first copy
+To perform software packet copy, the user-defined functions first copy
 the packet metadata (``pktmbuf_metadata_copy()``) and then the packet data
 (``pktmbuf_sw_copy()``):
 
@@ -319,5 +317,5 @@ the packet metadata (``pktmbuf_metadata_copy()``) and then the packet data
 The metadata in this example is copied from ``rx_descriptor_fields1`` marker of
 ``rte_mbuf`` struct up to ``buf_len`` member.
 
-In order to understand why software packet copying is done as shown
+To understand why software packet copying is performed as shown
 above, please refer to the :doc:`../prog_guide/mbuf_lib`.
