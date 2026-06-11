@@ -63,7 +63,7 @@ where,
 
 *   -p PORTMASK: Hexadecimal bitmask of ports to configure
 
-*   -q NQ: determines the number of queues per lcore
+*   -q NQ: number of queues per lcore
 
 .. note::
 
@@ -125,7 +125,7 @@ Forwarding
 ~~~~~~~~~~
 
 All forwarding is done inside the ``mcast_forward()`` function.
-Firstly, the Ethernet* header is removed from the packet and the IPv4 address is extracted from the IPv4 header:
+Firstly, the Ethernet header is removed from the packet and the IPv4 address is extracted from the IPv4 header:
 
 .. literalinclude:: ../../../examples/ipv4_multicast/main.c
     :language: c
@@ -170,7 +170,7 @@ with the Ethernet address 01:00:5e:00:00:00, as per RFC 1112:
     :start-after: Construct Ethernet multicast address from IPv4 multicast Address. 8<
     :end-before: >8 End of Construction of multicast address from IPv4 multicast address.
 
-Packets are then dispatched to the destination ports according to the portmask associated with a multicast group:
+Packets are then dispatched to the destination ports according to the port mask associated with the multicast group:
 
 .. literalinclude:: ../../../examples/ipv4_multicast/main.c
     :language: c
@@ -190,12 +190,11 @@ Buffer Cloning
 
 This is the most important part of the application
 since it demonstrates the use of zero-copy buffer cloning.
-There are two approaches for creating the outgoing packet.
-Although both are based on the data zero-copy idea,
-there are some differences in the details.
+There are two approaches for creating outgoing packets.
+Both are based on the zero-copy idea, but they differ in implementation details.
 
-The first approach creates a clone of the input packet. For example,
-walk though all segments of the input packet and for each of segment,
+The first approach creates a clone of the input packet:
+walk through all segments of the input packet and for each segment,
 create a new buffer and attach that new buffer to the segment
 (refer to ``rte_pktmbuf_clone()`` in the mbuf library for more details).
 A new buffer is then allocated for the packet header and is prepended to the cloned buffer.
@@ -205,18 +204,19 @@ It simply increments the reference counter for all input packet segments,
 allocates a new buffer for the packet header and prepends it to the input packet.
 
 Basically, the first approach reuses only the input packet's data, but creates its own copy of packet's metadata.
-The second approach reuses both input packet's data and metadata.
+The second approach reuses both the input packet's data and metadata.
 
-The advantage of the first approach is that each outgoing packet has its own copy of the metadata,
+The advantage of the first approach is that each outgoing packet has its own copy of metadata,
 so we can safely modify the data pointer of the input packet.
-That allows us to skip creation if the output packet is for the last destination port
+That allows us to skip packet creation if the output packet is for the last destination port
 and, instead, modify the input packet's header in place.
 For example, for N destination ports, we need to invoke ``mcast_out_pkt()`` (N-1) times.
 
 The advantage of the second approach is that there is less work to be done for each outgoing packet.
 The "clone" operation is skipped completely.
-However, there is a price to pay.
-The input packet's metadata must remain intact. For N destination ports,
+However, there is a price to pay:
+the input packet's metadata must remain intact.
+For N destination ports,
 we need to invoke ``mcast_out_pkt()`` (N) times.
 
 Therefore, for a small number of outgoing ports (and segments in the input packet),

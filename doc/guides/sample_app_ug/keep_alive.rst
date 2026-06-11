@@ -5,7 +5,7 @@ Keep Alive Sample Application
 =============================
 
 The Keep Alive application is a simple example of a
-heartbeat/watchdog for packet processing cores. It demonstrates how
+heartbeat and watchdog for packet processing cores. It demonstrates how
 to detect 'failed' DPDK cores and notify a fault management entity
 of this failure. Its purpose is to ensure the failure of the core
 does not result in a fault that is not detectable by a management
@@ -19,7 +19,7 @@ The application demonstrates how to protect against 'silent outages'
 on packet processing cores. A Keep Alive Monitor Agent Core (main)
 monitors the state of packet processing cores (worker cores) by
 dispatching pings at a regular time interval (default is 5ms) and
-monitoring the state of the cores. Cores states are: Alive, MIA, Dead
+monitoring the state of the cores. Core states are: Alive, MIA, Dead
 or Buried. MIA indicates a missed ping, and Dead indicates two missed
 pings within the specified time interval. When a core is Dead, a
 callback function is invoked to restart the packet processing core;
@@ -80,16 +80,16 @@ Explanation
 
 The following sections provide explanation of the
 Keep-Alive/'Liveliness' conceptual scheme. As mentioned in the
-overview section, the initialization and run-time paths are very
+Overview section, the initialization and run-time paths are very
 similar to those of the :doc:`l2_forward_real_virtual`.
 
 The Keep-Alive/'Liveliness' conceptual scheme:
 
-* A Keep- Alive Agent Runs every N Milliseconds.
+* A keep-alive agent runs every N milliseconds.
 
-* DPDK Cores respond to the keep-alive agent.
+* DPDK cores respond to the keep-alive agent.
 
-* If a keep-alive agent detects time-outs, it notifies the
+* If a keep-alive agent detects timeouts, it notifies the
   fault management entity through a callback function.
 
 The following sections provide explanation of the code aspects

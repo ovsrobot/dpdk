@@ -4,15 +4,15 @@
 IP Reassembly Sample Application
 ================================
 
-The L3 Forwarding application is a simple example of packet processing using the DPDK.
-The application performs L3 forwarding with reassembly for fragmented IPv4 and IPv6 packets.
+The IP Reassembly application is a simple example of packet processing using the DPDK.
+The application performs L3 forwarding with reassembly of fragmented IPv4 and IPv6 packets.
 
 Overview
 --------
 
 The application demonstrates the use of the DPDK libraries to implement packet forwarding
 with reassembly for IPv4 and IPv6 fragmented packets.
-The initialization and run- time paths are very similar to those of the :doc:`l2_forward_real_virtual`.
+The initialization and run-time paths are very similar to those of the :doc:`l2_forward_real_virtual`.
 The main difference from the L2 Forwarding sample application is that
 it reassembles fragmented IPv4 and IPv6 packets before forwarding.
 The maximum allowed size of reassembled packet is 9.5 KB.
@@ -21,11 +21,11 @@ There are two key differences from the L2 Forwarding sample application:
 
 *   The first difference is that the forwarding decision is taken based on information read from the input packet's IP header.
 
-*   The second difference is that the application differentiates between IP and non-IP traffic by means of offload flags.
+*   The second difference is that the applications differentiate between IP and non-IP traffic by means of offload flags.
 
 The Longest Prefix Match (LPM for IPv4, LPM6 for IPv6) table is used to store/lookup an outgoing port number,
-associated with that IPv4 address. Any unmatched packets are forwarded to the originating port.
-
+associated with that IPv4 address.
+Any unmatched packets are forwarded to the originating port.
 
 Compiling the Application
 -------------------------
@@ -46,15 +46,20 @@ The application has a number of command line options:
 
 where:
 
-*   -p PORTMASK: Hexadecimal bitmask of ports to configure
+``-p PORTMASK``
+    Hexadecimal bitmask of ports to configure
 
-*   -q NQ: Number of RX queues per lcore
+``-q NQ``
+    Number of RX queues per lcore
 
-*   --maxflows=FLOWS: determines maximum number of active fragmented flows (1-65535). Default value: 4096.
+``--maxflows=FLOWS``
+    Determines the maximum number of active fragmented flows (1-65535).
+    Default value: 4096.
 
-*   --flowttl=TTL[(s|ms)]: determines maximum Time To Live for fragmented packet.
-    If all fragments of the packet wouldn't appear within given time-out,
-    then they are considered as invalid and will be dropped.
+``--flowttl=TTL[(s|ms)]``
+    Determines the maximum Time To Live for fragmented packets.
+    If all fragments of the packet do not appear within the given timeout,
+    then they are considered invalid and will be dropped.
     Valid range is 1ms - 3600s. Default value: 1s.
 
 To run the example in a Linux environment with 2 lcores (2,4) over 2 ports(0,2)
@@ -69,7 +74,7 @@ with 1 Rx queue per lcore:
     Skipping disabled port 1
     Initializing port 2 on lcore 4... Address:00:1B:21:5C:FF:54, rxq=0 txq=2,0 txq=4,1
     done: Link Up - speed 10000 Mbps - full-duplex
-    Skipping disabled port 3IP_FRAG: Socket 0: adding route 100.10.0.0/16 (port 0)
+    Skipping disabled port 3 IP_FRAG: Socket 0: adding route 100.10.0.0/16 (port 0)
     IP_RSMBL: Socket 0: adding route 100.20.0.0/16 (port 1)
     ...
     IP_RSMBL: Socket 0: adding route 0101:0101:0101:0101:0101:0101:0101:0101/48 (port 0)
@@ -110,7 +115,7 @@ The default l3fwd_ipv6_route_array table is:
     :end-before: >8 End of default l3fwd_ipv6_route_array table.
 
 For example, for the fragmented input IPv4 packet with destination address: 100.10.1.1,
-a reassembled IPv4 packet be sent out from port #0 to the destination address 100.10.1.1
+a reassembled IPv4 packet will be sent out from port #0 to the destination address 100.10.1.1
 once all the fragments are collected.
 
 Explanation
@@ -119,12 +124,12 @@ Explanation
 The following sections provide in-depth explanation of the sample application code.
 As mentioned in the overview section, the initialization and run-time paths
 are very similar to those of the :doc:`l2_forward_real_virtual`.
-The following sections describe aspects that are specific to the IP reassemble sample application.
+The following sections describe aspects that are specific to the IP reassembly sample application.
 
 IPv4 Fragment Table Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This application uses the :doc:`../prog_guide/ip_fragment_reassembly_lib` library.
+This application uses the IP Fragment and Reassembly Library (:doc:`../prog_guide/ip_fragment_reassembly_lib`).
 The fragment table maintains information about already received fragments of the packet.
 Each IP packet is uniquely identified by triple <Source IP address>, <Destination IP address>, <ID>.
 To avoid lock contention, each Rx queue has its own fragment table.
@@ -144,7 +149,7 @@ Mempools Initialization
 
 The reassembly application demands a lot of mbuf's to be allocated.
 At any given time, up to (2 \* max_flow_num \* RTE_LIBRTE_IP_FRAG_MAX_FRAG \* <maximum number of mbufs per packet>)
-can be stored inside the fragment table waiting for remaining fragments.
+can be stored inside the fragment table, waiting for remaining fragments.
 To keep mempool size under reasonable limits
 and to avoid a situation when one Rx queue can starve other queues,
 each Rx queue uses its own mempool.
@@ -161,8 +166,8 @@ Packet Reassembly and Forwarding
 For each input packet, the packet forwarding operation is done by the l3fwd_simple_forward() function.
 If the packet is an IPv4 or IPv6 fragment, then it calls ``rte_ipv4_reassemble_packet()`` for IPv4 packets,
 or ``rte_ipv6_reassemble_packet()`` for IPv6 packets.
-These functions either return a pointer to a valid mbuf that contains a reassembled packet,
-or NULL (if the packet can't be reassembled for some reason).
+These functions return either a pointer to a valid mbuf that contains a reassembled packet,
+or NULL (if the packet cannot be reassembled for some reason).
 Then, ``l3fwd_simple_forward()`` continues with the code for the packet forwarding decision
 (that is, the identification of the output interface for the packet) and
 actual transmit of the packet.
@@ -171,25 +176,25 @@ The ``rte_ipv4_reassemble_packet()`` or ``rte_ipv6_reassemble_packet()`` are res
 
 #.  Searching the fragment table for entry with packet's <IP Source Address, IP Destination Address, Packet ID>
 
-#.  If the entry is found, then check if that entry already timed-out.
+#.  If the entry is found, then check whether that entry has already timed out.
     If yes, then free all previously received fragments,
     and remove information about them from the entry.
 
 #.  If no entry with such key is found, then try to create a new one by one of two ways:
 
-    #.  Use as empty entry
+    #.  Use an empty entry
 
-    #.  Delete a timed-out entry, free mbufs associated with it mbufs and store a new entry with specified key in it.
+    #.  Delete a timed-out entry, free mbufs associated with it, and store a new entry with the specified key in it.
 
-#.  Update the entry with new fragment information and check
-    if a packet can be reassembled (the packet's entry contains all fragments).
+#.  Update the entry with new fragment information and check whether
+    the packet can be reassembled (the packet's entry contains all fragments).
 
     #.  If yes, then, reassemble the packet, mark table's entry as empty and return the reassembled mbuf to the caller.
 
     #.  If no, then just return a NULL to the caller.
 
-If at any stage of packet processing a reassembly function encounters an error
-(can't insert new entry into the Fragment table, or invalid/timed-out fragment),
+If at any stage of packet processing, a reassembly function encounters an error
+(cannot insert new entry into the Fragment table, or invalid/timed-out fragment),
 then it will free all associated with the packet fragments,
 mark the table entry as invalid and return NULL to the caller.
 
