@@ -188,7 +188,6 @@ vdev_probe_device(struct rte_driver *drv, struct rte_device *dev)
 	struct rte_vdev_driver *vdev_drv = RTE_BUS_DRIVER(drv, *vdev_drv);
 	const char *name;
 	enum rte_iova_mode iova_mode;
-	int ret;
 
 	name = rte_vdev_device_name(vdev_dev);
 	VDEV_LOG(DEBUG, "Search driver to probe device %s", name);
@@ -200,10 +199,7 @@ vdev_probe_device(struct rte_driver *drv, struct rte_device *dev)
 		return -1;
 	}
 
-	ret = vdev_drv->probe(vdev_dev);
-	if (ret == 0)
-		vdev_dev->device.driver = &vdev_drv->driver;
-	return ret;
+	return vdev_drv->probe(vdev_dev);
 }
 
 /* The caller shall be responsible for thread-safe */
@@ -337,6 +333,8 @@ next_driver:
 			free(dev);
 		} else if (ret > 0) {
 			goto next_driver;
+		} else {
+			dev->device.driver = drv;
 		}
 	}
 	rte_spinlock_recursive_unlock(&vdev_device_list_lock);
