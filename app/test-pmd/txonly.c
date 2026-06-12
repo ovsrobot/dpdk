@@ -192,8 +192,8 @@ pkt_burst_prepare(struct rte_mbuf *pkt, struct rte_mempool *mbp,
 	pkt->ol_flags |= ol_flags;
 	pkt->vlan_tci = vlan_tci;
 	pkt->vlan_tci_outer = vlan_tci_outer;
-	pkt->l2_len = sizeof(struct rte_ether_hdr);
-	pkt->l3_len = sizeof(struct rte_ipv4_hdr);
+	pkt->l2_len = tx_pkt_pad_mode ? 0 : sizeof(struct rte_ether_hdr);
+	pkt->l3_len = tx_pkt_pad_mode ? 0 : sizeof(struct rte_ipv4_hdr);
 
 	pkt_len = pkt->data_len;
 	pkt_seg = pkt;
@@ -204,6 +204,19 @@ pkt_burst_prepare(struct rte_mbuf *pkt, struct rte_mempool *mbp,
 		pkt_len += pkt_seg->data_len;
 	}
 	pkt_seg->next = NULL; /* Last segment of packet. */
+
+	if (tx_pkt_pad_mode) {
+		static const char pad_pattern[] = "0123456789abcdef";
+		uint32_t j;
+		char *pad;
+
+		pad = rte_pktmbuf_mtod(pkt, char *);
+		for (j = 0; j < pkt->data_len; j++)
+			pad[j] = pad_pattern[j % 16];
+
+		goto out;
+	}
+
 	/*
 	 * Copy headers in first packet segment(s).
 	 */
@@ -295,6 +308,7 @@ pkt_burst_prepare(struct rte_mbuf *pkt, struct rte_mempool *mbp,
 			sizeof(struct rte_ipv4_hdr) +
 			sizeof(pkt_udp_hdr));
 	}
+out:
 	/*
 	 * Complete first mbuf of packet and append it to the
 	 * burst of packets to be transmitted.

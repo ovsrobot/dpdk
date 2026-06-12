@@ -296,6 +296,9 @@ uint32_t tx_pkt_times_inter;
 uint32_t tx_pkt_times_intra;
 /**< Timings for send scheduling in TXONLY mode, time between packets. */
 
+uint8_t tx_pkt_pad_mode;
+/**< Whether packet padding mode is enabled. */
+
 uint16_t nb_pkt_per_burst = DEF_PKT_BURST; /**< Number of packets per burst. */
 uint16_t nb_pkt_flowgen_clones; /**< Number of Tx packet clones to send in flowgen mode. */
 int nb_flows_flowgen = 1024; /**< Number of flows in flowgen mode. */

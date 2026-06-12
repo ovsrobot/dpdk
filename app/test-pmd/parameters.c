@@ -195,6 +195,8 @@ enum {
 	TESTPMD_OPT_TXONLY_MULTI_FLOW_NUM,
 #define TESTPMD_OPT_TXONLY_FLOWS "txonly-flows"
 	TESTPMD_OPT_TXONLY_FLOWS_NUM,
+#define TESTPMD_OPT_TX_PKT_PAD_MODE "tx-pkt-pad-mode"
+	TESTPMD_OPT_TX_PKT_PAD_MODE_NUM,
 #define TESTPMD_OPT_RXQ_SHARE "rxq-share"
 	TESTPMD_OPT_RXQ_SHARE_NUM,
 #define TESTPMD_OPT_ETH_LINK_SPEED "eth-link-speed"
@@ -351,6 +353,7 @@ static const struct option long_options[] = {
 	NO_ARG(TESTPMD_OPT_MULTI_RX_MEMPOOL),
 	NO_ARG(TESTPMD_OPT_TXONLY_MULTI_FLOW),
 	REQUIRED_ARG(TESTPMD_OPT_TXONLY_FLOWS),
+	NO_ARG(TESTPMD_OPT_TX_PKT_PAD_MODE),
 	NO_ARG(TESTPMD_OPT_RXQ_SHARE),
 	REQUIRED_ARG(TESTPMD_OPT_ETH_LINK_SPEED),
 	NO_ARG(TESTPMD_OPT_DISABLE_LINK_CHECK),
@@ -504,6 +507,7 @@ usage(char* progname)
 	printf("  --txonly-multi-flow: generate multiple flows in txonly mode\n");
 	printf("  --txonly-nb-flows=N: number of flows per lcore in txonly"
 	       " multi-flow mode (1-64, default 64)\n");
+	printf("  --tx-pkt-pad-mode: enable padding mode in txonly mode\n");
 	printf("  --tx-ip=src,dst: IP addresses in Tx-only mode\n");
 	printf("  --tx-udp=src[,dst]: UDP ports in Tx-only mode\n");
 	printf("  --eth-link-speed: force link speed.\n");
@@ -1576,6 +1580,9 @@ launch_args_parse(int argc, char** argv)
 				txonly_flows = (uint16_t)n;
 			else
 				rte_exit(EXIT_FAILURE, "txonly-flows must be >= 1 and <= 64\n");
+			break;
+		case TESTPMD_OPT_TX_PKT_PAD_MODE_NUM:
+			tx_pkt_pad_mode = 1;
 			break;
 		case TESTPMD_OPT_RXQ_SHARE_NUM:
 			rxq_share = 1;

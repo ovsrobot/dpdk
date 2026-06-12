@@ -6341,7 +6341,7 @@ set_tx_pkt_segments(unsigned int *seg_lengths, unsigned int nb_segs)
 		}
 		tx_pkt_len = (uint16_t)(tx_pkt_len + seg_lengths[i]);
 	}
-	if (tx_pkt_len < (sizeof(struct rte_ether_hdr) + 20 + 8)) {
+	if (tx_pkt_len < (sizeof(struct rte_ether_hdr) + 20 + 8) && !tx_pkt_pad_mode) {
 		fprintf(stderr, "total packet length=%u < %d - give up\n",
 				(unsigned) tx_pkt_len,
 				(int)(sizeof(struct rte_ether_hdr) + 20 + 8));
