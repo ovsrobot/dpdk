@@ -1241,12 +1241,18 @@ void print_valid_ports(void)
 }
 
 static int
-vlan_id_is_invalid(uint16_t vlan_id)
+vlan_id_is_invalid(uint16_t vlan_id, int vlan_priority_ena)
 {
-	if (vlan_id < 4096)
-		return 0;
-	fprintf(stderr, "Invalid vlan_id %d (must be < 4096)\n", vlan_id);
-	return 1;
+	if (!vlan_priority_ena && vlan_id >= 4096) {
+		fprintf(stderr, "Invalid vlan_id %d (must be < 4096)\n", vlan_id);
+		return 1;
+	}
+
+	/*
+	 * When vlan_priority_ena is enabled, allow any 16-bit value
+	 * to pass priority and CFI bits to the driver.
+	 */
+	return 0;
 }
 
 static uint32_t
@@ -6876,7 +6882,7 @@ rx_vft_set(portid_t port_id, uint16_t vlan_id, int on)
 
 	if (port_id_is_invalid(port_id, ENABLED_WARN))
 		return 1;
-	if (vlan_id_is_invalid(vlan_id))
+	if (vlan_id_is_invalid(vlan_id, vlan_priority_insert_ena))
 		return 1;
 	diag = rte_eth_dev_vlan_filter(port_id, vlan_id, on);
 	if (diag == 0)
@@ -6923,7 +6929,7 @@ tx_vlan_set(portid_t port_id, uint16_t vlan_id)
 	struct rte_eth_dev_info dev_info;
 	int ret;
 
-	if (vlan_id_is_invalid(vlan_id))
+	if (vlan_id_is_invalid(vlan_id, vlan_priority_insert_ena))
 		return;
 
 	if (ports[port_id].dev_conf.txmode.offloads &
@@ -6954,9 +6960,9 @@ tx_qinq_set(portid_t port_id, uint16_t vlan_id, uint16_t vlan_id_outer)
 	struct rte_eth_dev_info dev_info;
 	int ret;
 
-	if (vlan_id_is_invalid(vlan_id))
+	if (vlan_id_is_invalid(vlan_id, vlan_priority_insert_ena))
 		return;
-	if (vlan_id_is_invalid(vlan_id_outer))
+	if (vlan_id_is_invalid(vlan_id_outer, vlan_priority_insert_ena))
 		return;
 
 	ret = eth_dev_info_get_print_err(port_id, &dev_info);

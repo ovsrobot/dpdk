@@ -117,6 +117,8 @@ enum {
 	TESTPMD_OPT_ENABLE_HW_VLAN_EXTEND_NUM,
 #define TESTPMD_OPT_ENABLE_HW_QINQ_STRIP "enable-hw-qinq-strip"
 	TESTPMD_OPT_ENABLE_HW_QINQ_STRIP_NUM,
+#define TESTPMD_OPT_ENABLE_VLAN_PRIORITY "enable-vlan-priority"
+	TESTPMD_OPT_ENABLE_VLAN_PRIORITY_NUM,
 #define TESTPMD_OPT_ENABLE_DROP_EN "enable-drop-en"
 	TESTPMD_OPT_ENABLE_DROP_EN_NUM,
 #define TESTPMD_OPT_DISABLE_RSS "disable-rss"
@@ -458,6 +460,7 @@ usage(char* progname)
 	printf("  --enable-hw-vlan-strip: enable hardware vlan strip.\n");
 	printf("  --enable-hw-vlan-extend: enable hardware vlan extend.\n");
 	printf("  --enable-hw-qinq-strip: enable hardware qinq strip.\n");
+	printf("  --enable-vlan-priority: enable vlan priority insert.\n");
 	printf("  --enable-drop-en: enable per queue packet drop.\n");
 	printf("  --disable-rss: disable rss.\n");
 	printf("  --enable-rss: Force rss even for single-queue operation.\n");
@@ -1254,6 +1257,9 @@ launch_args_parse(int argc, char** argv)
 			break;
 		case TESTPMD_OPT_ENABLE_HW_QINQ_STRIP_NUM:
 			rx_offloads |= RTE_ETH_RX_OFFLOAD_QINQ_STRIP;
+			break;
+		case TESTPMD_OPT_ENABLE_VLAN_PRIORITY_NUM:
+			vlan_priority_insert_ena = 1;
 			break;
 		case TESTPMD_OPT_ENABLE_DROP_EN_NUM:
 			rx_drop_en = 1;

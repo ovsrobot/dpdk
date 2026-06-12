@@ -305,6 +305,11 @@ uint16_t mb_mempool_cache = DEF_MBUF_CACHE; /**< Size of mbuf mempool cache. */
 uint8_t dcb_config = 0;
 
 /*
+ * Configurable value of vlan priority insert enable.
+ */
+uint8_t vlan_priority_insert_ena;
+
+/*
  * Configurable number of RX/TX queues.
  */
 queueid_t nb_rxq = 1; /**< Number of RX queues per port. */
