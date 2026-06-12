@@ -19,6 +19,7 @@ from datetime import date
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Iterator
+from itertools import tee, islice, chain
 
 from _common import (
     PROVIDERS,
@@ -147,19 +148,37 @@ def classify_review(review_text: str, output_format: str) -> int:
             pass  # Fall through to text scanning
 
     if not has_errors and not has_warnings:
-        # Scan review text for severity indicators.
-        # Match section headers and inline markers across text/markdown/html.
-        for line in review_text.splitlines():
-            stripped = line.strip().lower()
+        # Matches against error or warning section headers
+        rgx_should_match: str = r"#+\s(\*+)?{err_or_warn}"
+        # Matches against headers followed only by filler text, formatting, or no additional text
+        rgx_should_not_match: str = r"#+\s(\*+)?{err_or_warn}(s?)(\*+)?(none(.)?$| \(must fix\)$|$)"
+        
+        curr_lines: iter[str]
+        next_lines: iter[str | None]
+        next_next_lines: iter[str | None]
+        curr_lines, next_lines, next_next_lines = tee(review_text.splitlines(), 3)
+        next_lines = chain(islice(next_lines, 1, None), [None])
+        next_next_lines = chain(islice(next_next_lines, 2, None), [None, None])
+        
+        curr_lines: str
+        next_lines: str | None
+        next_next_lines: str | None
+        for curr_line, next_line, next_next_line in zip(curr_lines, next_lines, next_next_lines):
+            stripped: str = curr_line.strip().lower() + str(
+                next_line or '').strip().lower() + str(next_next_line or '').strip().lower()
             # Skip quoted patch context lines
             if stripped.startswith(">") or stripped.startswith("diff --git"):
                 continue
-            if re.match(r"^(#{1,3}\s+)?(\*{0,2})error", stripped) or re.match(
-                r"^<h[1-3]>\s*error", stripped
+
+            elif re.match(rgx_should_match.format(err_or_warn='error'),
+                          stripped) and not re.match(
+                rgx_should_not_match.format(err_or_warn='error'), stripped
             ):
                 has_errors = True
-            elif re.match(r"^(#{1,3}\s+)?(\*{0,2})warning", stripped) or re.match(
-                r"^<h[1-3]>\s*warning", stripped
+
+            elif re.match(rgx_should_match.format(err_or_warn='warning'),
+                          stripped) and not re.match(
+                rgx_should_not_match.format(err_or_warn='warning'), stripped
             ):
                 has_warnings = True
 
