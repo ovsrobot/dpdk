@@ -158,7 +158,10 @@ New Features
 * **Added a common macro to verify lcore ID in power core.**
 
   Added the ``RTE_POWER_VALID_LCOREID_OR_ERR_RET`` macro to verify lcore ID
-  in power core.
+  in power core. The power QoS library also updated its lcore validation to
+  use this macro, so service cores (``ROLE_SERVICE``) are now permitted.
+
+
 
 Removed Items
 -------------
