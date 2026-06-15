@@ -155,6 +155,10 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Added a common macro to verify lcore ID in power core.**
+
+  Added the ``RTE_POWER_VALID_LCOREID_OR_ERR_RET`` macro to verify lcore ID
+  in power core.
 
 Removed Items
 -------------
