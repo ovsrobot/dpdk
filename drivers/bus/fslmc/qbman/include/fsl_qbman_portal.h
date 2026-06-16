@@ -189,6 +189,7 @@ int qbman_swp_interrupt_get_inhibit(struct qbman_swp *p);
  * @p: the given software portal object.
  * @mask: The value to set in SWP_IIR register.
  */
+__rte_internal
 void qbman_swp_interrupt_set_inhibit(struct qbman_swp *p, int inhibit);
 
 	/************/

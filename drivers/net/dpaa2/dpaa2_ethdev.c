@@ -623,6 +623,8 @@ dpaa2_clear_queue_active_dps(struct dpaa2_queue *q, int num_lcores)
 	}
 }
 
+static void dpaa2_dev_rx_queue_intr_unbind(struct dpaa2_queue *dpaa2_q);
+
 static void
 dpaa2_free_rx_tx_queues(struct rte_eth_dev *dev)
 {
@@ -640,6 +642,12 @@ dpaa2_free_rx_tx_queues(struct rte_eth_dev *dev)
 		/* cleaning up queue storage */
 		for (i = 0; i < priv->nb_rx_queues; i++) {
 			dpaa2_q = priv->rx_vq[i];
+			if (dpaa2_q->napi_dpcon) {	/* release the rx-intr channel */
+				dpaa2_dev_rx_queue_intr_unbind(dpaa2_q);
+				rte_dpaa2_free_dpcon_dev(dpaa2_q->napi_dpcon);
+				dpaa2_q->napi_dpcon = NULL;
+				dpaa2_q->napi_sub_dpio = NULL;
+			}
 			dpaa2_clear_queue_active_dps(dpaa2_q,
 						RTE_MAX_LCORE);
 			dpaa2_queue_storage_free(dpaa2_q,
@@ -845,6 +853,19 @@ dpaa2_eth_dev_configure(struct rte_eth_dev *dev)
 		}
 	}
 
+	if (dev->data->dev_conf.intr_conf.rxq) {
+		if (!dev->intr_handle)
+			dev->intr_handle = rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_PRIVATE);
+		if (!dev->intr_handle ||
+		    rte_intr_vec_list_alloc(dev->intr_handle, "rxq_intr",
+				dev->data->nb_rx_queues) ||
+		    rte_intr_nb_efd_set(dev->intr_handle, dev->data->nb_rx_queues) ||
+		    rte_intr_type_set(dev->intr_handle, RTE_INTR_HANDLE_EXT)) {
+			DPAA2_PMD_ERR("Failed to set up rx-queue interrupts");
+			return -rte_errno;
+		}
+	}
+
 	dpaa2_tm_init(dev);
 
 	return 0;
@@ -863,6 +884,7 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 {
 	struct dpaa2_dev_priv *priv = dev->data->dev_private;
 	struct fsl_mc_io *dpni = dev->process_private;
+	bool dpcon_allocated = false;
 	struct dpaa2_queue *dpaa2_q;
 	struct dpni_queue cfg;
 	uint8_t options = 0;
@@ -903,12 +925,31 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	dpaa2_q->bp_array = rte_dpaa2_bpid_info;
 	dpaa2_q->offloads = rx_conf->offloads;
 
+	/* NAPI: grab a DPCON channel so dev_start can bind this FQ statically.
+	 * The DQRR burst replaces the poll path for every queue at once, so a
+	 * missing channel is fatal rather than a silent per-queue fallback.
+	 */
+	dpaa2_q->napi_sub_dpio = NULL;
+	if (dev->data->dev_conf.intr_conf.rxq && !dpaa2_q->napi_dpcon) {
+		dpaa2_q->napi_dpcon = rte_dpaa2_alloc_dpcon_dev();
+		if (!dpaa2_q->napi_dpcon) {
+			DPAA2_PMD_ERR("rxq %d: no DPCON for rx-queue interrupts",
+				      rx_queue_id);
+			return -ENODEV;
+		}
+		dpcon_allocated = true;
+	}
+
 	/*Get the flow id from given VQ id*/
 	flow_id = dpaa2_q->flow_id;
 	memset(&cfg, 0, sizeof(struct dpni_queue));
 
 	options = options | DPNI_QUEUE_OPT_USER_CTX;
 	cfg.user_context = (size_t)(dpaa2_q);
+
+	/* clear any stale DPIO dest left scheduled by a prior rx-intr run */
+	options |= DPNI_QUEUE_OPT_DEST;
+	cfg.destination.type = DPNI_DEST_NONE;
 
 	/* check if a private cgr available. */
 	for (i = 0; i < priv->max_cgs; i++) {
@@ -950,7 +991,7 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 			dpaa2_q->tc_index, flow_id, options, &cfg);
 	if (ret) {
 		DPAA2_PMD_ERR("Error in setting the rx flow: = %d", ret);
-		return ret;
+		goto err_free_dpcon;
 	}
 
 	dpaa2_q->nb_desc = nb_rx_desc;
@@ -991,7 +1032,7 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 		if (ret) {
 			DPAA2_PMD_ERR("Error in setting taildrop. err=(%d)",
 				ret);
-			return ret;
+			goto err_free_dpcon;
 		}
 	} else { /* Disable tail Drop */
 		struct dpni_taildrop taildrop = {0};
@@ -1011,12 +1052,22 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 		if (ret) {
 			DPAA2_PMD_ERR("Error in setting taildrop. err=(%d)",
 				ret);
-			return ret;
+			goto err_free_dpcon;
 		}
 	}
 
 	dev->data->rx_queues[rx_queue_id] = dpaa2_q;
 	return 0;
+
+err_free_dpcon:
+	/* free only the DPCON this call allocated; a pre-existing one belongs to
+	 * an earlier setup and is released at dev_close
+	 */
+	if (dpcon_allocated) {
+		rte_dpaa2_free_dpcon_dev(dpaa2_q->napi_dpcon);
+		dpaa2_q->napi_dpcon = NULL;
+	}
+	return ret;
 }
 
 static int
@@ -1175,6 +1226,62 @@ dpaa2_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	return 0;
 }
 
+/* Fully release a queue's rx-interrupt state: detach the FQ from its DPCON,
+ * unbind the static dequeue channel from the portal and free any stashed FDs.
+ * Teardown only: the port is stopped and the portal quiesced; not a runtime
+ * rx_queue_intr_disable() replacement. Call before freeing the DPCON.
+ */
+static void
+dpaa2_dev_rx_queue_intr_unbind(struct dpaa2_queue *dpaa2_q)
+{
+	struct dpaa2_dev_priv *priv;
+	struct dpaa2_dpio_dev *dpio;
+	struct fsl_mc_io *dpni;
+	struct dpni_queue cfg;
+	int ret;
+
+	if (!dpaa2_q || !dpaa2_q->napi_dpcon)
+		return;
+
+	/* detach the FQ from its DPCON so it no longer points at a channel
+	 * about to be returned to the pool (dpni is disabled at teardown)
+	 */
+	priv = dpaa2_q->eth_data->dev_private;
+	dpni = priv->eth_dev->process_private;
+	memset(&cfg, 0, sizeof(cfg));
+	cfg.destination.type = DPNI_DEST_NONE;
+	ret = dpni_set_queue(dpni, CMD_PRI_LOW, priv->token, DPNI_QUEUE_RX,
+			     dpaa2_q->tc_index, dpaa2_q->flow_id,
+			     DPNI_QUEUE_OPT_DEST, &cfg);
+	if (ret)
+		DPAA2_PMD_ERR("napi: DEST_NONE rxq flow %u: %d",
+			      dpaa2_q->flow_id, ret);
+
+	/* unbind the static dequeue channel from the portal it was armed on */
+	dpio = rte_atomic_load_explicit(&dpaa2_q->napi_sub_dpio,
+			rte_memory_order_acquire);
+	if (dpio) {
+		qbman_swp_push_set(dpio->sw_portal,
+				dpaa2_q->napi_channel_index, 0);
+		if (dpaa2_q->napi_armed) {
+			dpaa2_q->napi_armed = 0;
+			if (dpio->ethrx_intr_refcnt > 0 &&
+			    --dpio->ethrx_intr_refcnt == 0)
+				qbman_swp_interrupt_set_inhibit(dpio->sw_portal, 1);
+		}
+		ret = dpio_remove_static_dequeue_channel(dpio->dpio, CMD_PRI_LOW,
+				dpio->token, dpaa2_q->napi_dpcon->dpcon_id);
+		if (ret)
+			DPAA2_PMD_ERR("napi: remove DPCON %d static dequeue channel: %d",
+				      dpaa2_q->napi_dpcon->dpcon_id, ret);
+		rte_atomic_store_explicit(&dpaa2_q->napi_sub_dpio, NULL,
+				rte_memory_order_release);
+	}
+
+	/* free FDs parked for this queue but never drained by a burst */
+	dpaa2_dev_rx_queue_napi_stash_drain(dpaa2_q);
+}
+
 static void
 dpaa2_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 {
@@ -1203,6 +1310,12 @@ dpaa2_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 					dpaa2_q->fqid, ret);
 		priv->cgid_in_use[dpaa2_q->cgid] = 0;
 		dpaa2_q->cgid = DPAA2_INVALID_CGID;
+	}
+
+	if (dpaa2_q->napi_dpcon) {
+		dpaa2_dev_rx_queue_intr_unbind(dpaa2_q);
+		rte_dpaa2_free_dpcon_dev(dpaa2_q->napi_dpcon);
+		dpaa2_q->napi_dpcon = NULL;
 	}
 }
 
@@ -1354,6 +1467,36 @@ dpaa2_dev_start(struct rte_eth_dev *dev)
 	intr_handle = dpaa2_dev->intr_handle;
 
 	PMD_INIT_FUNC_TRACE();
+
+	/* NAPI: bind each rx FQ to its own DPCON channel while the dpni is still
+	 * disabled (a DEST set_queue on an enabled dpni wedges the shared MC).
+	 * Static, affinity-free; the polling worker subscribes its portal later.
+	 */
+	if (dev->data->dev_conf.intr_conf.rxq) {
+		for (i = 0; i < data->nb_rx_queues; i++) {
+			dpaa2_q = data->rx_queues[i];
+			if (!dpaa2_q->napi_dpcon)
+				continue;
+			memset(&cfg, 0, sizeof(cfg));
+			cfg.destination.type = DPNI_DEST_DPCON;
+			cfg.destination.id = dpaa2_q->napi_dpcon->dpcon_id;
+			cfg.user_context = (size_t)dpaa2_q;
+			ret = dpni_set_queue(dpni, CMD_PRI_LOW, priv->token,
+					DPNI_QUEUE_RX, dpaa2_q->tc_index,
+					dpaa2_q->flow_id,
+					DPNI_QUEUE_OPT_DEST | DPNI_QUEUE_OPT_USER_CTX,
+					&cfg);
+			if (ret) {
+				DPAA2_PMD_ERR("napi: DPCON bind rxq %d: %d", i, ret);
+				return ret;
+			}
+		}
+		/* DQRR burst for all queues; a queue only yields frames once
+		 * rx_queue_intr_enable() has subscribed its portal
+		 */
+		dev->rx_pkt_burst = dpaa2_dev_rx_dqrr;
+	}
+
 	ret = dpni_enable(dpni, CMD_PRI_LOW, priv->token);
 	if (ret) {
 		DPAA2_PMD_ERR("Failure in enabling dpni %d device: err=%d",
@@ -1824,6 +1967,13 @@ dpaa2_dev_stats_get(struct rte_eth_dev *dev,
 	stats->oerrors = value.page_2.egress_discarded_frames;
 	stats->imissed = value.page_2.ingress_nobuffer_discards;
 
+	/* software Rx drops (full napi stash) are not in the HW counters */
+	for (i = 0; i < priv->nb_rx_queues; i++) {
+		dpaa2_rxq = priv->rx_vq[i];
+		if (dpaa2_rxq != NULL)
+			stats->imissed += dpaa2_rxq->err_pkts;
+	}
+
 	/* Fill in per queue stats */
 	if (qstats != NULL) {
 		for (i = 0; (i < RTE_ETHDEV_QUEUE_STAT_CNTRS) &&
@@ -2137,8 +2287,10 @@ dpaa2_dev_stats_reset(struct rte_eth_dev *dev)
 	/* Reset the per queue stats in dpaa2_queue structure */
 	for (i = 0; i < priv->nb_rx_queues; i++) {
 		dpaa2_q = priv->rx_vq[i];
-		if (dpaa2_q)
+		if (dpaa2_q) {
 			dpaa2_q->rx_pkts = 0;
+			dpaa2_q->err_pkts = 0;
+		}
 	}
 
 	for (i = 0; i < priv->nb_tx_queues; i++) {
@@ -2698,6 +2850,135 @@ rte_pmd_dpaa2_thread_init(void)
 	}
 }
 
+/* Arm rx-queue interrupts on the worker lcore: subscribe its ethrx portal to
+ * the queue's DPCON channel (one-shot per-portal MC) and unmask the portal DQRI
+ * (pure QBMan).
+ *
+ * Affinity is static queue-to-lcore; a lcore may own several rx queues. The
+ * DQRI and the eventfd are portal-wide, so frames are demuxed by fqd_ctx in the
+ * burst and the portal's inhibit bit is reference-counted by the number of its
+ * queues currently armed (ethrx_intr_refcnt) -- disabling one queue must not
+ * mask wakeups still wanted by its siblings. napi_armed and ethrx_intr_refcnt
+ * are plain (not atomic): these ops run on the queue's owner lcore against its
+ * own portal (one portal per lcore), so per-portal isolation keeps them from
+ * racing, not control-plane serialization.
+ *
+ * A re-home reclaims the channel by poking the old portal, so the caller must
+ * have quiesced the previous owner and disabled the queue there; napi_armed is
+ * then 0 and only the new portal is counted.
+ */
+static int
+dpaa2_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
+{
+	struct dpaa2_dev_priv *priv = dev->data->dev_private;
+	struct dpaa2_queue *dpaa2_q = priv->rx_vq[queue_id];
+	struct dpaa2_dpio_dev *dpio, *old;
+	int ret;
+
+	if (!dpaa2_q->napi_dpcon)
+		return -ENOTSUP;	/* no channel -> caller keeps polling */
+
+	if (dpaa2_affine_qbman_ethrx_swp())
+		return -EIO;
+	dpio = DPAA2_PER_LCORE_ETHRX_DPIO;
+
+	/* build_epoll=false: the generic ethdev rx-intr API waits on the
+	 * application epoll, not the portal's private one (event PMD only).
+	 */
+	ret = dpaa2_dpio_intr_init(dpio, false);	/* VFIO eventfd, no MC */
+	if (ret)
+		return ret;
+
+	old = rte_atomic_load_explicit(&dpaa2_q->napi_sub_dpio, rte_memory_order_acquire);
+	if (old && old != dpio && dpaa2_q->napi_armed) {
+		DPAA2_PMD_ERR("rxq %d still armed on another portal; disable it first",
+			      queue_id);
+		return -EBUSY;
+	}
+	if (old != dpio) {
+		if (old) {	/* reclaim from old portal (quiesced; QBMan MMIO unsynced) */
+			qbman_swp_push_set(old->sw_portal,
+					dpaa2_q->napi_channel_index, 0);
+			ret = dpio_remove_static_dequeue_channel(old->dpio,
+					CMD_PRI_LOW, old->token,
+					dpaa2_q->napi_dpcon->dpcon_id);
+			/* push_set(0) above already stops the old portal from
+			 * dequeuing; a failed unbind only leaks a static-channel
+			 * slot on the old DPIO, so warn and proceed
+			 */
+			if (ret)
+				DPAA2_PMD_WARN("napi: reclaim rxq %d: %d",
+					       queue_id, ret);
+			/* on no portal until the add below succeeds */
+			rte_atomic_store_explicit(&dpaa2_q->napi_sub_dpio, NULL,
+					rte_memory_order_release);
+		}
+		ret = dpio_add_static_dequeue_channel(dpio->dpio, CMD_PRI_LOW,
+				dpio->token, dpaa2_q->napi_dpcon->dpcon_id,
+				&dpaa2_q->napi_channel_index);
+		if (ret) {
+			DPAA2_PMD_ERR("napi: subscribe rxq %d: %d", queue_id, ret);
+			return ret;
+		}
+		qbman_swp_push_set(dpio->sw_portal,
+				dpaa2_q->napi_channel_index, 1);
+		/* point this queue's eventfd at the portal's DQRI fd so the
+		 * generic rte_eth_dev_rx_intr_ctl_q epoll wakes on it
+		 */
+		if (rte_intr_vec_list_index_set(dev->intr_handle, queue_id, queue_id) ||
+		    rte_intr_efds_index_set(dev->intr_handle, queue_id,
+				rte_intr_fd_get(dpio->intr_handle))) {
+			DPAA2_PMD_ERR("napi: efd wiring rxq %d", queue_id);
+			/* unwind the half-done subscription so HW and driver
+			 * state stay consistent
+			 */
+			qbman_swp_push_set(dpio->sw_portal,
+					dpaa2_q->napi_channel_index, 0);
+			dpio_remove_static_dequeue_channel(dpio->dpio,
+					CMD_PRI_LOW, dpio->token,
+					dpaa2_q->napi_dpcon->dpcon_id);
+			return -EIO;
+		}
+		rte_atomic_store_explicit(&dpaa2_q->napi_sub_dpio, dpio, rte_memory_order_release);
+	}
+
+	/* arm this queue; the portal DQRI is unmasked only on the 0 -> 1 edge
+	 * of its armed-queue count
+	 */
+	if (!dpaa2_q->napi_armed) {
+		dpaa2_q->napi_armed = 1;
+		if (dpio->ethrx_intr_refcnt++ == 0) {
+			qbman_swp_interrupt_clear_status(dpio->sw_portal,
+					0xffffffff);
+			qbman_swp_interrupt_set_inhibit(dpio->sw_portal, 0);
+		}
+	}
+
+	return 0;
+}
+
+/* Disarm rx-queue interrupts for this queue. The portal DQRI is masked only
+ * once the last of its queues disarms; act on the portal the queue is actually
+ * subscribed to, not the caller's current portal.
+ */
+static int
+dpaa2_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
+{
+	struct dpaa2_dev_priv *priv = dev->data->dev_private;
+	struct dpaa2_queue *dpaa2_q = priv->rx_vq[queue_id];
+	struct dpaa2_dpio_dev *dpio;
+
+	dpio = rte_atomic_load_explicit(&dpaa2_q->napi_sub_dpio, rte_memory_order_acquire);
+	if (dpio && dpaa2_q->napi_armed) {
+		dpaa2_q->napi_armed = 0;
+		if (dpio->ethrx_intr_refcnt > 0 &&
+		    --dpio->ethrx_intr_refcnt == 0)
+			qbman_swp_interrupt_set_inhibit(dpio->sw_portal, 1);
+	}
+
+	return 0;
+}
+
 static struct eth_dev_ops dpaa2_ethdev_ops = {
 	.dev_configure	  = dpaa2_eth_dev_configure,
 	.dev_start	      = dpaa2_dev_start,
@@ -2726,6 +3007,8 @@ static struct eth_dev_ops dpaa2_ethdev_ops = {
 	.vlan_tpid_set	      = dpaa2_vlan_tpid_set,
 	.rx_queue_setup    = dpaa2_dev_rx_queue_setup,
 	.rx_queue_release  = dpaa2_dev_rx_queue_release,
+	.rx_queue_intr_enable = dpaa2_dev_rx_queue_intr_enable,
+	.rx_queue_intr_disable = dpaa2_dev_rx_queue_intr_disable,
 	.tx_queue_setup    = dpaa2_dev_tx_queue_setup,
 	.rx_burst_mode_get = dpaa2_dev_rx_burst_mode_get,
 	.tx_burst_mode_get = dpaa2_dev_tx_burst_mode_get,
