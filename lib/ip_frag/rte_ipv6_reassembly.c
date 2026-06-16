@@ -180,6 +180,19 @@ rte_ipv6_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 		return NULL;
 	}
 
+	/*
+	 * Only a fragment header directly following the IPv6 header is
+	 * supported. Other extension headers in the unfragmentable part are
+	 * not handled: ipv6_frag_reassemble() assumes l3_len covers exactly
+	 * the IPv6 and fragment headers when it patches the next-header field
+	 * and removes the fragment header. Drop the fragment rather than
+	 * produce a corrupt datagram.
+	 */
+	if (mb->l3_len != sizeof(struct rte_ipv6_hdr) + sizeof(*frag_hdr)) {
+		IP_FRAG_MBUF2DR(dr, mb);
+		return NULL;
+	}
+
 	if (unlikely(trim > 0))
 		rte_pktmbuf_trim(mb, trim);
 
