@@ -1120,15 +1120,26 @@ tx_vlan set
 
 Set hardware insertion of VLAN IDs in packets sent on a port::
 
-   testpmd> tx_vlan set (port_id) vlan_id[, vlan_id_outer]
+   testpmd> tx_vlan set (port_id) vlan_tci[, vlan_tci_outer]
+
+The ``vlan_tci`` parameter accepts the full 16-bit VLAN Tag Control Information (TCI)
+format, which includes:
+
+* Bits 0-11:  VLAN ID (0-4095)
+* Bit 12:    CFI (Canonical Format Indicator)
+* Bits 13-15: Priority (0-7, 802.1p CoS)
 
 For example, set a single VLAN ID (5) insertion on port 0::
 
-   tx_vlan set 0 5
+   testpmd> tx_vlan set 0 5
+
+Or, set a VLAN ID with priority (priority=3, VLAN ID=6) insertion on port 0::
+
+   testpmd> tx_vlan set 0 0x6006
 
 Or, set double VLAN ID (inner: 2, outer: 3) insertion on port 1::
 
-   tx_vlan set 1 2 3
+   testpmd> tx_vlan set 1 2 3
 
 
 tx_vlan set pvid
