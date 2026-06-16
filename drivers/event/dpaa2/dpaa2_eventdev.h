@@ -85,8 +85,9 @@ struct dpaa2_eventdev {
 	uint32_t event_dev_cfg;
 };
 
-struct dpaa2_dpcon_dev *rte_dpaa2_alloc_dpcon_dev(void);
-void rte_dpaa2_free_dpcon_dev(struct dpaa2_dpcon_dev *dpcon);
+/* rte_dpaa2_alloc_dpcon_dev()/rte_dpaa2_free_dpcon_dev() now live in the fslmc
+ * bus (portal/dpaa2_hw_pvt.h), which this header's includers already pull in.
+ */
 
 int test_eventdev_dpaa2(void);
 
