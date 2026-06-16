@@ -143,6 +143,9 @@ New Features
 * **Updated NXP dpaa2 driver.**
 
   * Added Rx queue interrupt support.
+  * Removed the software VLAN strip offload: ``RTE_ETH_RX_OFFLOAD_VLAN_STRIP``
+    is no longer advertised, as no hardware strip backs it. An application
+    that needs the tag removed must now strip it itself.
 
 * **Updated PCAP ethernet driver.**
 

@@ -890,10 +890,6 @@ dpaa2_dev_prefetch_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		}
 #endif
 
-		if (eth_data->dev_conf.rxmode.offloads &
-				RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
-			rte_vlan_strip(bufs[num_rx]);
-
 		dq_storage++;
 		num_rx++;
 	} while (pending);
@@ -922,22 +918,14 @@ dpaa2_dev_prefetch_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	return num_rx;
 }
 
-/* Convert a DQRR'd FD (single or scatter-gather) to an mbuf and apply software
- * VLAN strip, like the poll path.
- */
+/* Convert a DQRR'd FD (single or scatter-gather) to an mbuf. */
 static inline struct rte_mbuf *
 dpaa2_dqrr_fd_to_mbuf(const struct qbman_fd *fd,
 		      struct rte_eth_dev_data *eth_data)
 {
-	struct rte_mbuf *m;
-
 	if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
-		m = eth_sg_fd_to_mbuf(fd, eth_data->port_id);
-	else
-		m = eth_fd_to_mbuf(fd, eth_data->port_id);
-	if (eth_data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
-		rte_vlan_strip(m);
-	return m;
+		return eth_sg_fd_to_mbuf(fd, eth_data->port_id);
+	return eth_fd_to_mbuf(fd, eth_data->port_id);
 }
 
 /* prefetch a DQRR'd FD's HW annotation (parse area) ahead of conversion */
@@ -1221,11 +1209,6 @@ dpaa2_dev_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 				*dpaa2_timestamp_dynfield(bufs[num_rx]);
 		}
 #endif
-
-		if (eth_data->dev_conf.rxmode.offloads &
-				RTE_ETH_RX_OFFLOAD_VLAN_STRIP) {
-			rte_vlan_strip(bufs[num_rx]);
-		}
 
 			dq_storage++;
 			num_rx++;
