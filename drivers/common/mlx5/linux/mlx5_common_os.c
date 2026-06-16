@@ -997,6 +997,7 @@ int
 mlx5_os_wrapped_mkey_create(void *ctx, void *pd, uint32_t pdn, void *addr,
 			    size_t length, struct mlx5_pmd_wrapped_mr *pmd_mr)
 {
+	struct mlx5_hca_attr hca_attr = { 0 };
 	struct mlx5_klm klm = {
 		.byte_count = length,
 		.address = (uintptr_t)addr,
@@ -1019,6 +1020,11 @@ mlx5_os_wrapped_mkey_create(void *ctx, void *pd, uint32_t pdn, void *addr,
 	klm.mkey = ibv_mr->lkey;
 	mkey_attr.addr = (uintptr_t)addr;
 	mkey_attr.size = length;
+	if (mlx5_devx_cmd_query_hca_attr(ctx, &hca_attr))
+		return -1;
+	/* If only relaxed order is allowed. */
+	if (hca_attr.mkc_order_write_after_write_ro_only)
+		mlx5_devx_mkey_attr_set_ordering(&mkey_attr, &hca_attr);
 	mkey = mlx5_devx_cmd_mkey_create(ctx, &mkey_attr);
 	if (!mkey) {
 		claim_zero(mlx5_glue->dereg_mr(ibv_mr));
