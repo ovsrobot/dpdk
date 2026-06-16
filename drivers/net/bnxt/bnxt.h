@@ -333,6 +333,10 @@ struct bnxt_link_info {
 	uint8_t                 active_lanes;
 	uint8_t			option_flags;
 	uint16_t                pmd_speed_lanes;
+	uint8_t			autoneg;
+#define BNXT_AUTONEG_SPEED		1
+#define BNXT_AUTONEG_FLOW_CTRL		2
+	bool			force_link_chng;
 };
 
 #define BNXT_COS_QUEUE_COUNT	8
