@@ -143,6 +143,7 @@ New Features
 * **Updated NXP dpaa2 driver.**
 
   * Added inner RSS level support for tunnelled traffic.
+  * Added RSS RETA query and update support.
 
 * **Updated PCAP ethernet driver.**
 
