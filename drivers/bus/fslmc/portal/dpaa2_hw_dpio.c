@@ -206,12 +206,35 @@ dpaa2_affine_dpio_intr_to_respective_core(int32_t dpio_id, int cpu_id)
 }
 #endif /* RTE_EVENT_DPAA2 */
 
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_dpio_intr_init)
-int dpaa2_dpio_intr_init(struct dpaa2_dpio_dev *dpio_dev, bool build_epoll)
+/* holdoff (us) -> QBMan ITP units (256 cycles each), capped at the 12-bit field */
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_dpio_holdoff_to_itp)
+int dpaa2_dpio_holdoff_to_itp(struct dpaa2_dpio_dev *dpio_dev, uint32_t holdoff_us)
 {
-	struct epoll_event epoll_ev;
+	uint32_t qman_mhz = 0;
+	struct dpio_attr attr;
+	uint64_t itp;
+
+	if (dpio_get_attributes(dpio_dev->dpio, CMD_PRI_LOW, dpio_dev->token, &attr) == 0)
+		qman_mhz = attr.clk / 1000000;
+	itp = qman_mhz ? ((uint64_t)holdoff_us * qman_mhz) / 256 : 0xFF;
+	if (itp > 0xfff)	/* 12-bit ITP field */
+		itp = 0xfff;
+
+	return (int)itp;
+}
+
+/* threshold: DQRR fill raising DQRI (< ring depth); timeout: holdoff in ITP units.
+ * Per-mode values from the caller (eventdev vs rx-queue intr); no env override.
+ * The DQRI config is portal-wide and this is idempotent: the first caller to
+ * arm a portal wins, a later caller's values are ignored (a portal normally
+ * serves a single mode).
+ */
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_dpio_intr_init)
+int dpaa2_dpio_intr_init(struct dpaa2_dpio_dev *dpio_dev, int threshold,
+			 int timeout, bool build_epoll)
+{
 	int eventfd, dpio_epoll_fd, ret;
-	int threshold = 0x3, timeout = 0xFF;
+	struct epoll_event epoll_ev;
 
 	if (dpio_dev->intr_enabled)
 		return 0;
@@ -221,12 +244,6 @@ int dpaa2_dpio_intr_init(struct dpaa2_dpio_dev *dpio_dev, bool build_epoll)
 		DPAA2_BUS_ERR("Interrupt registration failed");
 		return -1;
 	}
-
-	if (getenv("DPAA2_PORTAL_INTR_THRESHOLD"))
-		threshold = atoi(getenv("DPAA2_PORTAL_INTR_THRESHOLD"));
-
-	if (getenv("DPAA2_PORTAL_INTR_TIMEOUT"))
-		sscanf(getenv("DPAA2_PORTAL_INTR_TIMEOUT"), "%x", &timeout);
 
 	qbman_swp_interrupt_set_trigger(dpio_dev->sw_portal,
 					QBMAN_SWP_INTERRUPT_DQRI);
@@ -238,9 +255,9 @@ int dpaa2_dpio_intr_init(struct dpaa2_dpio_dev *dpio_dev, bool build_epoll)
 	dpio_dev->epoll_fd = -1;
 
 	/* The event PMD dequeues by sleeping on a private epoll instance owned
-	 * by the portal, so build it here. A caller that waits on another
-	 * epoll (the net rx-queue-interrupt path uses the application's) skips
-	 * this.
+	 * by the portal, so build it here. The net rx-queue-interrupt path
+	 * exposes the raw eventfd through the generic ethdev API and waits on
+	 * the application's own epoll instead, so it skips this.
 	 */
 	if (build_epoll) {
 		dpio_epoll_fd = epoll_create(1);
@@ -269,10 +286,13 @@ int dpaa2_dpio_intr_init(struct dpaa2_dpio_dev *dpio_dev, bool build_epoll)
 	return 0;
 }
 
-#ifdef RTE_EVENT_DPAA2
-static void dpaa2_dpio_intr_deinit(struct dpaa2_dpio_dev *dpio_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_dpio_intr_deinit)
+void dpaa2_dpio_intr_deinit(struct dpaa2_dpio_dev *dpio_dev)
 {
 	int ret;
+
+	if (!dpio_dev->intr_enabled)
+		return;
 
 	ret = rte_dpaa2_intr_disable(dpio_dev->intr_handle, 0);
 	if (ret)
@@ -284,7 +304,6 @@ static void dpaa2_dpio_intr_deinit(struct dpaa2_dpio_dev *dpio_dev)
 	}
 	dpio_dev->intr_enabled = 0;
 }
-#endif
 
 static int
 dpaa2_configure_stashing(struct dpaa2_dpio_dev *dpio_dev, int cpu_id)
@@ -306,9 +325,18 @@ dpaa2_configure_stashing(struct dpaa2_dpio_dev *dpio_dev, int cpu_id)
 	}
 
 #ifdef RTE_EVENT_DPAA2
-	if (dpaa2_dpio_intr_init(dpio_dev, true)) {
-		DPAA2_BUS_ERR("Interrupt registration failed for dpio");
-		return -1;
+	{
+		int threshold = 3, timeout = 0xFF;
+
+		if (getenv("DPAA2_PORTAL_INTR_THRESHOLD"))
+			threshold = atoi(getenv("DPAA2_PORTAL_INTR_THRESHOLD"));
+		if (getenv("DPAA2_PORTAL_INTR_TIMEOUT"))
+			sscanf(getenv("DPAA2_PORTAL_INTR_TIMEOUT"), "%x", &timeout);
+
+		if (dpaa2_dpio_intr_init(dpio_dev, threshold, timeout, true)) {
+			DPAA2_BUS_ERR("Interrupt registration failed for dpio");
+			return -1;
+		}
 	}
 	dpaa2_affine_dpio_intr_to_respective_core(dpio_dev->hw_id, cpu_id);
 #endif
@@ -319,9 +347,11 @@ dpaa2_configure_stashing(struct dpaa2_dpio_dev *dpio_dev, int cpu_id)
 static void dpaa2_put_qbman_swp(struct dpaa2_dpio_dev *dpio_dev)
 {
 	if (dpio_dev) {
-#ifdef RTE_EVENT_DPAA2
+		/* rx-queue interrupts (net PMD) can arm a portal without the
+		 * event driver; tear it down unconditionally. Safe when never
+		 * armed: intr_deinit returns early if intr is not enabled.
+		 */
 		dpaa2_dpio_intr_deinit(dpio_dev);
-#endif
 		rte_atomic16_clear(&dpio_dev->ref_count);
 	}
 }
@@ -511,6 +541,8 @@ dpaa2_create_dpio_device(int vdev_fd,
 		DPAA2_BUS_ERR("DPIO Get attribute failed");
 		goto err;
 	}
+
+	DPAA2_BUS_DEBUG("QBMAN clk = %u Hz (%u MHz)", attr.clk, attr.clk / 1000000);
 
 	/* find the SoC type for the first time */
 	if (!dpaa2_svr_family) {

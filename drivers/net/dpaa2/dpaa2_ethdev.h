@@ -412,6 +412,13 @@ struct dpaa2_dev_priv {
 	uint8_t max_cgs;
 	uint8_t cgid_in_use[MAX_RX_QUEUES];
 
+	/* DQRI holdoff (us) for rx-queue interrupts (drv_rx_intr_holdoff_us) */
+	uint32_t rx_intr_holdoff_us;
+	/* DQRI threshold for rx-queue interrupts (drv_rx_intr_threshold);
+	 * 0 = auto (DQRR ring depth - 1)
+	 */
+	uint32_t rx_intr_threshold;
+
 	uint16_t dpni_ver_major;
 	uint16_t dpni_ver_minor;
 	uint32_t speed_capa;
