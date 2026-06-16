@@ -29,6 +29,7 @@ Features of the CNXK Ethdev PMD are:
 - Port hardware statistics
 - Link state information
 - Link flow control
+- Forward Error Correction (FEC)
 - MTU update
 - Scatter-Gather IO support
 - Vector Poll mode driver
@@ -512,6 +513,50 @@ Runtime Config Options
    Above devarg parameters are configurable per device, user needs to pass the
    parameters to all the PCIe devices if application requires to configure on
    all the ethdev ports.
+
+Forward Error Correction (FEC)
+------------------------------
+
+The CNXK PMD supports the DPDK FEC ethdev APIs on physical function (PF) ports
+for links where firmware reports FEC support (typically high-speed Ethernet
+interfaces such as 25G, 50G and 100G).
+
+Supported FEC modes exposed through the ethdev API are:
+
+- ``RTE_ETH_FEC_NOFEC``: FEC disabled
+- ``RTE_ETH_FEC_AUTO``: maps to Reed-Solomon (RS) FEC on set
+- ``RTE_ETH_FEC_BASER``: Base-R FEC
+- ``RTE_ETH_FEC_RS``: Reed-Solomon FEC
+
+``rte_eth_fec_get_capability()`` reports the FEC modes supported by firmware for
+the current link speed. ``rte_eth_fec_get()`` returns the active FEC mode from
+link information. ``rte_eth_fec_set()`` configures the FEC mode on the link.
+
+.. note::
+
+   ``rte_eth_fec_get_capability()`` and ``rte_eth_fec_set()`` are supported on
+   PF ports only. SR-IOV virtual function (VF) ports can use
+   ``rte_eth_fec_get()`` to read the current FEC mode from link status.
+
+Example usage:
+
+.. code-block:: c
+
+   struct rte_eth_fec_capa capa[1];
+   uint32_t fec_capa;
+   int num, ret;
+
+   num = rte_eth_fec_get_capability(port_id, capa, RTE_DIM(capa));
+   if (num > 0)
+       printf("FEC capa 0x%x at speed %u\n", capa[0].capa, capa[0].speed);
+
+   ret = rte_eth_fec_get(port_id, &fec_capa);
+   if (ret == 0)
+       printf("Current FEC capa 0x%x\n", fec_capa);
+
+   ret = rte_eth_fec_set(port_id, RTE_ETH_FEC_MODE_CAPA_MASK(RS));
+   if (ret)
+       printf("FEC set failed: %s\n", rte_strerror(-ret));
 
 Limitations
 -----------
