@@ -155,6 +155,26 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Added extensible BPF loading API.**
+
+  Added an extensible BPF loading API comprising the function
+  ``rte_bpf_load_ex`` and struct ``rte_bpf_prm_ex``. This enables new features
+  such as loading classic BPF (cBPF), loading ELF images directly from memory
+  buffers, and executing multi-argument programs, while avoiding future ABI
+  breakages.
+
+* **Added support for executing BPF programs with multiple arguments.**
+
+  Added support for loading and executing BPF programs with up to 5 arguments.
+  This introduces new API functions ``rte_bpf_exec_ex``,
+  ``rte_bpf_exec_burst_ex``, and ``rte_bpf_get_jit_ex``.
+
+* **Added BPF port callback installation API.**
+
+  Added new API functions ``rte_bpf_eth_rx_install`` and
+  ``rte_bpf_eth_tx_install`` for installing already loaded BPF programs as
+  port callbacks (as opposed to loading them directly from ELF files).
+
 
 Removed Items
 -------------
