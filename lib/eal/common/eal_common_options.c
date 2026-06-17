@@ -898,10 +898,10 @@ eal_parse_service_coremask(const char *coremask)
 					return -1;
 				}
 
-				if (cfg->lcore_role[idx] == ROLE_RTE)
+				if (cfg->lcore_role[idx] == RTE_LCORE_ROLE_RTE)
 					taken_lcore_count++;
 
-				lcore_config[idx].core_role = ROLE_SERVICE;
+				lcore_config[idx].core_role = RTE_LCORE_ROLE_SERVICE;
 				count++;
 			}
 		}
@@ -938,7 +938,7 @@ update_lcore_config(const rte_cpuset_t *cpuset, bool remap, uint16_t remap_base)
 
 	/* set everything to disabled first, then set up values */
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		cfg->lcore_role[i] = ROLE_OFF;
+		cfg->lcore_role[i] = RTE_LCORE_ROLE_OFF;
 		lcore_config[i].core_index = -1;
 	}
 
@@ -966,7 +966,7 @@ update_lcore_config(const rte_cpuset_t *cpuset, bool remap, uint16_t remap_base)
 				continue;
 			}
 
-			cfg->lcore_role[lcore_id] = ROLE_RTE;
+			cfg->lcore_role[lcore_id] = RTE_LCORE_ROLE_RTE;
 			lcore_config[lcore_id].core_index = count;
 			CPU_ZERO(&lcore_config[lcore_id].cpuset);
 			CPU_SET(i, &lcore_config[lcore_id].cpuset);
@@ -1138,12 +1138,12 @@ eal_parse_service_corelist(const char *corelist)
 			if (min == RTE_MAX_LCORE)
 				min = idx;
 			for (idx = min; idx <= max; idx++) {
-				if (cfg->lcore_role[idx] != ROLE_SERVICE) {
-					if (cfg->lcore_role[idx] == ROLE_RTE)
+				if (cfg->lcore_role[idx] != RTE_LCORE_ROLE_SERVICE) {
+					if (cfg->lcore_role[idx] == RTE_LCORE_ROLE_RTE)
 						taken_lcore_count++;
 
 					lcore_config[idx].core_role =
-							ROLE_SERVICE;
+							RTE_LCORE_ROLE_SERVICE;
 					count++;
 				}
 			}
@@ -1166,7 +1166,7 @@ eal_parse_service_corelist(const char *corelist)
 	rte_cpuset_t service_cpuset;
 	CPU_ZERO(&service_cpuset);
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		if (lcore_config[i].core_role == ROLE_SERVICE)
+		if (lcore_config[i].core_role == RTE_LCORE_ROLE_SERVICE)
 			CPU_SET(i, &service_cpuset);
 	}
 	if (CPU_COUNT(&service_cpuset) > 0) {
@@ -1195,12 +1195,12 @@ eal_parse_main_lcore(const char *arg)
 		return -1;
 
 	/* ensure main core is not used as service core */
-	if (lcore_config[cfg->main_lcore].core_role == ROLE_SERVICE) {
+	if (lcore_config[cfg->main_lcore].core_role == RTE_LCORE_ROLE_SERVICE) {
 		EAL_LOG(ERR, "Error: Main lcore is used as a service core");
 		return -1;
 	}
 	/* check that we have the core recorded in the core list */
-	if (cfg->lcore_role[cfg->main_lcore] != ROLE_RTE) {
+	if (cfg->lcore_role[cfg->main_lcore] != RTE_LCORE_ROLE_RTE) {
 		EAL_LOG(ERR, "Error: Main lcore is not enabled for DPDK");
 		return -1;
 	}
@@ -1389,7 +1389,7 @@ eal_parse_lcores(const char *lcores)
 
 	/* Reset lcore config */
 	for (idx = 0; idx < RTE_MAX_LCORE; idx++) {
-		cfg->lcore_role[idx] = ROLE_OFF;
+		cfg->lcore_role[idx] = RTE_LCORE_ROLE_OFF;
 		lcore_config[idx].core_index = -1;
 		CPU_ZERO(&lcore_config[idx].cpuset);
 	}
@@ -1451,9 +1451,9 @@ eal_parse_lcores(const char *lcores)
 				continue;
 			set_count--;
 
-			if (cfg->lcore_role[idx] != ROLE_RTE) {
+			if (cfg->lcore_role[idx] != RTE_LCORE_ROLE_RTE) {
 				lcore_config[idx].core_index = count;
-				cfg->lcore_role[idx] = ROLE_RTE;
+				cfg->lcore_role[idx] = RTE_LCORE_ROLE_RTE;
 				count++;
 			}
 
@@ -2432,7 +2432,7 @@ compute_ctrl_threads_cpuset(struct internal_config *internal_cfg)
 	unsigned int lcore_id;
 
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		if (rte_lcore_has_role(lcore_id, ROLE_OFF))
+		if (rte_lcore_has_role(lcore_id, RTE_LCORE_ROLE_OFF))
 			continue;
 		RTE_CPU_OR(cpuset, cpuset, &lcore_config[lcore_id].cpuset);
 	}
