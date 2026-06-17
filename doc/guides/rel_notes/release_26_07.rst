@@ -150,6 +150,21 @@ New Features
   * Added ``eof`` devarg to use link state to signal end of receive file input.
   * Added unit test suite.
 
+* **Updated testpmd application.**
+
+  Added support for setting VLAN priority and CFI/DEI bits in ``tx_vlan set``
+  and ``tx_qinq set`` commands. The ``vlan_tci`` parameter now accepts the
+  full 16-bit VLAN Tag Control Information (TCI) format:
+
+  Priority (bits 13-15)
+     802.1p Class of Service value (0-7).
+
+  CFI/DEI (bit 12)
+     Canonical Format Indicator / Drop Eligible Indicator.
+
+  VLAN ID (bits 0-11)
+     VLAN identifier (0-4095).
+
 * **Added AI review helpers.**
 
   Added AGENTS.md file for AI review
