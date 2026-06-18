@@ -139,6 +139,8 @@ New Features
 * **Updated NVIDIA mlx5 ethernet driver.**
 
   * Added support for selective Rx in scalar SPRQ Rx path.
+  * Fixed counter free list corruption when counter free operations race with
+    asynchronous query completions.
 
 * **Updated PCAP ethernet driver.**
 
