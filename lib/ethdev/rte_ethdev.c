@@ -7316,6 +7316,23 @@ rte_eth_ip_reassembly_conf_set(uint16_t port_id,
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_hdrs_set_mbuf_callback, 26.07)
+int
+rte_eth_hdrs_set_mbuf_callback(uint16_t port_id, uint16_t rx_queue_id,
+	void *priv, rte_eth_hdrs_mbuf_callback_fn cb)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (dev->dev_ops->hdrs_mbuf_set_cb == NULL)
+		return -ENOTSUP;
+
+	return eth_err(port_id,
+		dev->dev_ops->hdrs_mbuf_set_cb(dev, rx_queue_id, priv, cb));
+}
+
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_priv_dump, 22.03)
 int
 rte_eth_dev_priv_dump(uint16_t port_id, FILE *file)
