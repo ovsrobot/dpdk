@@ -198,6 +198,10 @@ Removed Items
   Similar behavior in mlx5 PMD can be achieved without this device argument,
   by using ``RTE_FLOW_ACTION_TYPE_RSS`` in transfer flow rules.
 
+* telemetry: As previously announced in the deprecation notices,
+  the functions ``rte_tel_data_add_array_u64`` and ``rte_tel_data_add_dict_u64`` are removed.
+  They are replaced by ``rte_tel_data_add_array_uint`` and ``rte_tel_data_add_dict_uint`` respectively.
+
 
 API Changes
 -----------
