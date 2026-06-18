@@ -1173,9 +1173,11 @@ rxa_intr_thread(void *arg)
 	while (1) {
 		n = rte_epoll_wait(rx_adapter->epd, epoll_events,
 				RTE_EVENT_ETH_INTR_RING_SIZE, -1);
-		if (unlikely(n < 0))
-			RTE_EDEV_LOG_ERR("rte_epoll_wait returned error %d",
-					n);
+		if (unlikely(n < 0)) {
+			RTE_EDEV_LOG_ERR("rte_epoll_wait returned error %d", n);
+			break;
+		}
+
 		for (i = 0; i < n; i++) {
 			rxa_intr_ring_enqueue(rx_adapter,
 					epoll_events[i].epdata.data);
@@ -1642,10 +1644,12 @@ rxa_destroy_intr_thread(struct event_eth_rx_adapter *rx_adapter)
 {
 	int err;
 
-	err = pthread_cancel((pthread_t)rx_adapter->rx_intr_thread.opaque_id);
-	if (err)
-		RTE_EDEV_LOG_ERR("Can't cancel interrupt thread err = %d",
-				err);
+	/*
+	 * close the epoll fd used in the interrupt thread
+	 * this will unblock the rte_epoll_wait().
+	 */
+	close(rx_adapter->epd);
+	rx_adapter->epd = INIT_FD;
 
 	err = rte_thread_join(rx_adapter->rx_intr_thread, NULL);
 	if (err)
@@ -1669,9 +1673,6 @@ rxa_free_intr_resources(struct event_eth_rx_adapter *rx_adapter)
 	ret = rxa_destroy_intr_thread(rx_adapter);
 	if (ret)
 		return ret;
-
-	close(rx_adapter->epd);
-	rx_adapter->epd = INIT_FD;
 
 	return ret;
 }

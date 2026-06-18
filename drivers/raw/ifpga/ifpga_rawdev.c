@@ -573,13 +573,7 @@ ifpga_monitor_stop_func(struct ifpga_rawdev *dev)
 
 	dev->poll_enabled = 0;
 
-	if (!(rte_atomic_fetch_sub_explicit(&ifpga_monitor_refcnt, 1,
-			rte_memory_order_relaxed) - 1) &&
-		ifpga_monitor_start_thread.opaque_id != 0) {
-		ret = pthread_cancel((pthread_t)ifpga_monitor_start_thread.opaque_id);
-		if (ret)
-			IFPGA_RAWDEV_PMD_ERR("Can't cancel the thread");
-
+	if (rte_atomic_fetch_sub_explicit(&ifpga_monitor_refcnt, 1, rte_memory_order_relaxed) == 1) {
 		ret = rte_thread_join(ifpga_monitor_start_thread, NULL);
 		if (ret)
 			IFPGA_RAWDEV_PMD_ERR("Can't join the thread");
