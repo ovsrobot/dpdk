@@ -9,7 +9,7 @@ endif
 
 cflags += ['-g']
 
-deps += ['common_sxe2', 'hash','cryptodev','security']
+deps += ['common_sxe2', 'hash', 'cryptodev', 'security']
 
 includes += include_directories('../../common/sxe2')
 
@@ -79,5 +79,4 @@ sources += files(
         'sxe2_flow_parse_engine.c',
         'sxe2_dump.c',
         'sxe2_txrx_check_mbuf.c',
-
 )
