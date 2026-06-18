@@ -2360,7 +2360,8 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 		PMD_INIT_LOG(ERR,
 			     "Failed to allocate %d bytes needed to "
 			     "store MAC addresses", len);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_mac;
 	}
 
 	if (!rte_is_valid_assigned_ether_addr(&pdata->mac_addr))
@@ -2406,8 +2407,10 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 					  pdata->vdata->rx_max_fifo_size);
 	/* Issue software reset to DMA */
 	ret = pdata->hw_if.exit(pdata);
-	if (ret)
+	if (ret) {
 		PMD_DRV_LOG_LINE(ERR, "hw_if->exit EBUSY error");
+		goto err_hash;
+	}
 
 	/* Set default configuration data */
 	axgbe_default_config(pdata);
@@ -2426,20 +2429,32 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 	rte_thread_mutex_init_shared(&pdata->phy_mutex);
 
 	ret = pdata->phy_if.phy_init(pdata);
-	if (ret) {
-		rte_free(eth_dev->data->mac_addrs);
-		eth_dev->data->mac_addrs = NULL;
-		return ret;
-	}
+	if (ret)
+		goto err_mutex;
 
-	rte_intr_callback_register(pci_dev->intr_handle,
-				   axgbe_dev_interrupt_handler,
-				   (void *)eth_dev);
+	ret = rte_intr_callback_register(pci_dev->intr_handle,
+					 axgbe_dev_interrupt_handler,
+					 (void *)eth_dev);
+	if (ret)
+		goto err_mutex;
 	PMD_INIT_LOG(DEBUG, "port %d vendorID=0x%x deviceID=0x%x",
 		     eth_dev->data->port_id, pci_dev->id.vendor_id,
 		     pci_dev->id.device_id);
 
 	return 0;
+
+err_mutex:
+	pthread_mutex_destroy(&pdata->phy_mutex);
+	pthread_mutex_destroy(&pdata->an_mutex);
+	pthread_mutex_destroy(&pdata->i2c_mutex);
+	pthread_mutex_destroy(&pdata->xpcs_mutex);
+err_hash:
+	rte_free(eth_dev->data->hash_mac_addrs);
+	eth_dev->data->hash_mac_addrs = NULL;
+err_mac:
+	rte_free(eth_dev->data->mac_addrs);
+	eth_dev->data->mac_addrs = NULL;
+	return ret;
 }
 
 static int
