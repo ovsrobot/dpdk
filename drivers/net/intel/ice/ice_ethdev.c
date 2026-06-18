@@ -282,6 +282,7 @@ static const struct eth_dev_ops ice_eth_dev_ops = {
 	.dev_set_link_down            = ice_dev_set_link_down,
 	.dev_led_on                   = ice_dev_led_on,
 	.dev_led_off                  = ice_dev_led_off,
+	.hdrs_mbuf_set_cb             = ice_hdrs_mbuf_set_cb,
 	.rx_queue_start               = ice_rx_queue_start,
 	.rx_queue_stop                = ice_rx_queue_stop,
 	.tx_queue_start               = ice_tx_queue_start,

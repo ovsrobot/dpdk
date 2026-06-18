@@ -487,6 +487,17 @@ ice_alloc_rx_queue_mbufs(struct ci_rx_queue *rxq)
 				return -ENOMEM;
 			}
 
+			if (rxq->hdrs_mbuf_cb) {
+				struct rte_eth_hdrs_mbuf hdrs_mbuf = {0};
+				int ret = rxq->hdrs_mbuf_cb(rxq->hdrs_mbuf_cb_priv,
+					&hdrs_mbuf);
+
+				if (ret >= 0) {
+					mbuf_pay->buf_addr = hdrs_mbuf.buf_addr;
+					mbuf_pay->buf_iova = hdrs_mbuf.buf_iova;
+				}
+			}
+
 			mbuf_pay->next = NULL;
 			mbuf_pay->data_off = RTE_PKTMBUF_HEADROOM;
 			mbuf_pay->nb_segs = 1;
@@ -2126,6 +2137,16 @@ ice_rx_alloc_bufs(struct ci_rx_queue *rxq)
 			rxdp[i].read.pkt_addr = dma_addr;
 		} else {
 			mb->next = rxq->sw_split_buf[i].mbuf;
+			if (rxq->hdrs_mbuf_cb && mb->next) {
+				struct rte_eth_hdrs_mbuf hdrs_mbuf = {0};
+				int ret = rxq->hdrs_mbuf_cb(rxq->hdrs_mbuf_cb_priv,
+					&hdrs_mbuf);
+
+				if (ret >= 0) {
+					mb->next->buf_addr = hdrs_mbuf.buf_addr;
+					mb->next->buf_iova = hdrs_mbuf.buf_iova;
+				}
+			}
 			pay_addr = rte_cpu_to_le_64(rte_mbuf_data_iova_default(mb->next));
 			rxdp[i].read.hdr_addr = dma_addr;
 			rxdp[i].read.pkt_addr = pay_addr;
@@ -2808,6 +2829,17 @@ ice_recv_pkts(void *rx_queue,
 				rx_id--;
 				rte_pktmbuf_free(nmb);
 				break;
+			}
+
+			if (rxq->hdrs_mbuf_cb) {
+				struct rte_eth_hdrs_mbuf hdrs_mbuf = {0};
+				int ret = rxq->hdrs_mbuf_cb(rxq->hdrs_mbuf_cb_priv,
+					&hdrs_mbuf);
+
+				if (ret >= 0) {
+					nmb_pay->buf_addr = hdrs_mbuf.buf_addr;
+					nmb_pay->buf_iova = hdrs_mbuf.buf_iova;
+				}
 			}
 
 			nmb->next = nmb_pay;
@@ -4532,4 +4564,35 @@ ice_fdir_programming(struct ice_pf *pf, struct ice_fltr_desc *fdir_desc)
 	return -ETIMEDOUT;
 
 
+}
+
+int
+ice_hdrs_mbuf_set_cb(struct rte_eth_dev *dev, uint16_t rx_queue_id,
+	void *priv, rte_eth_hdrs_mbuf_callback_fn cb)
+{
+	struct ci_rx_queue *rxq;
+
+	if (rx_queue_id >= dev->data->nb_rx_queues) {
+		PMD_DRV_LOG(ERR, "RX queue %u out of range", rx_queue_id);
+		return -EINVAL;
+	}
+
+	rxq = dev->data->rx_queues[rx_queue_id];
+	if (rxq == NULL) {
+		PMD_DRV_LOG(ERR, "RX queue %u not available or setup", rx_queue_id);
+		return -EINVAL;
+	}
+
+	if (rxq->hdrs_mbuf_cb) {
+		PMD_DRV_LOG(ERR, "RX queue %u has hdrs mbuf cb already",
+			rx_queue_id);
+		return -EEXIST;
+	}
+
+	rxq->hdrs_mbuf_cb_priv = priv;
+	rxq->hdrs_mbuf_cb = cb;
+	PMD_DRV_LOG(NOTICE, "RX queue %u register hdrs mbuf cb at %p",
+		rx_queue_id, cb);
+
+	return 0;
 }

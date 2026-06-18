@@ -113,6 +113,8 @@ struct ci_rx_queue {
 			uint32_t hw_time_low; /* low 32 bits of timestamp */
 			int ts_offset; /* dynamic mbuf timestamp field offset */
 			uint64_t ts_flag; /* dynamic mbuf timestamp flag */
+			rte_eth_hdrs_mbuf_callback_fn hdrs_mbuf_cb; /* hdr split mbuf cb */
+			void *hdrs_mbuf_cb_priv; /* hdr split mbuf cb priv */
 		};
 		struct { /* iavf specific values */
 			const struct iavf_rxq_ops *ops; /**< queue ops */
