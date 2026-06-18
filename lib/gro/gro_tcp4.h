@@ -33,6 +33,8 @@ struct gro_tcp4_tbl {
 	struct gro_tcp_item *items;
 	/* flow array */
 	struct gro_tcp4_flow *flows;
+	/* flow hash table */
+	struct rte_hash *flow_hash;
 	/* current item number */
 	uint32_t item_num;
 	/* current flow num */
