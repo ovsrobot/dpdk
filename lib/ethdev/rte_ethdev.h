@@ -6987,6 +6987,52 @@ rte_eth_tx_buffer(uint16_t port_id, uint16_t queue_id,
 
 /**
  * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice.
+ *
+ * Buffer descriptor for header split payload mbuf callback.
+ */
+struct rte_eth_hdrs_mbuf {
+	void *buf_addr;       /**< Virtual address of payload buffer. */
+	rte_iova_t buf_iova;  /**< IOVA of payload buffer. */
+};
+
+/**
+ * Callback function type for providing custom payload mbufs
+ * in header split mode.
+ *
+ * @param priv
+ *   User-provided private context.
+ * @param mbuf
+ *   Pointer to buffer descriptor to be filled by the callback.
+ * @return
+ *   0 on success, negative errno on failure.
+ */
+typedef int (*rte_eth_hdrs_mbuf_callback_fn)(void *priv,
+	struct rte_eth_hdrs_mbuf *mbuf);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice.
+ *
+ * Register a callback to provide custom payload mbufs for header split RX.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param rx_queue_id
+ *   The index of the receive queue.
+ * @param priv
+ *   User-provided private context passed to the callback.
+ * @param cb
+ *   Callback function that provides payload buffer descriptors.
+ * @return
+ *   0 on success, negative errno on failure.
+ */
+__rte_experimental
+int rte_eth_hdrs_set_mbuf_callback(uint16_t port_id, uint16_t rx_queue_id,
+		void *priv, rte_eth_hdrs_mbuf_callback_fn cb);
+
+/**
+ * @warning
  * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
  *
  * Recycle used mbufs from a transmit queue of an Ethernet device, and move
