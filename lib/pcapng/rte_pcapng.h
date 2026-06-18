@@ -109,7 +109,7 @@ enum rte_pcapng_direction {
 };
 
 /**
- * Format an mbuf for writing to file.
+ * Format an mbuf with time stamp for writing to file.
  *
  * @param port_id
  *   The Ethernet port on which packet was received
@@ -129,16 +129,55 @@ enum rte_pcapng_direction {
  * @param comment
  *   Optional per packet comment.
  *   Truncated to UINT16_MAX characters.
+ * @param ts
+ *   Packet timestamp in nanoseconds since the Unix epoch. If zero, the
+ *   current TSC is captured and converted to epoch ns by
+ *   rte_pcapng_write_packets() when the packet is written.
  *
  * @return
  *   - The pointer to the new mbuf formatted for pcapng_write
  *   - NULL on error such as invalid port or out of memory.
  */
 struct rte_mbuf *
+rte_pcapng_copy_ts(uint16_t port_id, uint32_t queue,
+		const struct rte_mbuf *m, struct rte_mempool *mp,
+		uint32_t length,
+		enum rte_pcapng_direction direction, const char *comment, uint64_t ts);
+
+/**
+ * Format an mbuf for writing to file.
+ *
+ * @param port_id
+ *   The Ethernet port on which packet was received
+ *   or is going to be transmitted.
+ * @param queue
+ *   The queue on the Ethernet port where packet was received
+ *   or is going to be transmitted.
+ * @param mp
+ *   The mempool from which the "clone" mbufs are allocated.
+ * @param m
+ *   The mbuf to copy
+ * @param length
+ *   The upper limit on bytes to copy.  Passing UINT32_MAX
+ *   means all data (after offset).
+ * @param direction
+ *   The direction of the packer: receive, transmit or unknown.
+ * @param comment
+ *   Packet comment.
+ *
+ * @return
+ *   - The pointer to the new mbuf formatted for pcapng_write
+ *   - NULL if allocation fails.
+ */
+static inline struct rte_mbuf *
 rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *m, struct rte_mempool *mp,
 		uint32_t length,
-		enum rte_pcapng_direction direction, const char *comment);
+		enum rte_pcapng_direction direction, const char *comment)
+{
+	return rte_pcapng_copy_ts(port_id, queue, m, mp, length, direction,
+				  comment, 0);
+}
 
 
 /**
