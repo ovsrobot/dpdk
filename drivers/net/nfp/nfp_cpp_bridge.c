@@ -334,7 +334,7 @@ nfp_cpp_bridge_service_func(void *args)
 	int datafd;
 	struct nfp_cpp *cpp;
 	const char *pci_name;
-	char socket_handle[14];
+	char socket_handle[108];
 	struct sockaddr address;
 	struct nfp_pf_dev *pf_dev;
 	struct timeval timeout = {1, 0};
@@ -342,7 +342,7 @@ nfp_cpp_bridge_service_func(void *args)
 	pf_dev = args;
 
 	pci_name = strchr(pf_dev->pci_dev->name, ':') + 1;
-	snprintf(socket_handle, sizeof(socket_handle), "/tmp/%s", pci_name);
+	snprintf(socket_handle, sizeof(socket_handle), "/run/dpdk/nfp/%s", pci_name);
 
 	unlink(socket_handle);
 	sockfd = socket(AF_UNIX, SOCK_STREAM, 0);

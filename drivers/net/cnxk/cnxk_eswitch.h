@@ -12,7 +12,7 @@
 
 #include "cn10k_tx.h"
 
-#define CNXK_ESWITCH_CTRL_MSG_SOCK_PATH "/tmp/cxk_rep_ctrl_msg_sock"
+#define CNXK_ESWITCH_CTRL_MSG_SOCK_PATH "/run/dpdk/cnxk_ctrl_msg_sock"
 #define CNXK_ESWITCH_VLAN_TPID		ROC_ESWITCH_VLAN_TPID
 #define CNXK_REP_ESWITCH_DEV_MZ		"cnxk_eswitch_dev"
 #define CNXK_ESWITCH_MAX_TXQ		256
