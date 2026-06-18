@@ -209,13 +209,8 @@ static void sxe2_stats_update(struct sxe2_adapter *adapter)
 	stats->tx_vsi_multicast_packets = hw_stats->tx_vsi_multicast_packets;
 
 	stats->ierrors = sw_stats->ierrors + sw_stats_prev->ierrors;
-	if (adapter->devargs.sw_stats_en) {
-		stats->ipackets = sw_stats->ipackets + sw_stats_prev->ipackets;
-		stats->ibytes = sw_stats->ibytes + sw_stats_prev->ibytes;
-	} else {
-		stats->ipackets = hw_stats->ipackets;
-		stats->ibytes   = hw_stats->rx_vsi_bytes;
-	}
+	stats->ipackets = sw_stats->ipackets + sw_stats_prev->ipackets;
+	stats->ibytes = sw_stats->ibytes + sw_stats_prev->ibytes;
 	stats->rx_vsi_bytes             = hw_stats->rx_vsi_bytes;
 	stats->rx_vsi_unicast_packets   = hw_stats->rx_vsi_unicast_packets;
 	stats->rx_vsi_broadcast_packets = hw_stats->rx_vsi_broadcast_packets;
