@@ -765,6 +765,8 @@ static int32_t sxe2_dev_init(struct rte_eth_dev *dev,
 		goto l_end;
 	}
 
+	sxe2_init_ptype_tbl(dev);
+
 	ret = sxe2_hw_init(dev);
 	if (ret) {
 		PMD_LOG_ERR(INIT, "Failed to initialize hw, ret=[%d]", ret);
