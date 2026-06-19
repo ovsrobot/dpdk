@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright 2018-2024 NXP
+ * Copyright 2018-2026 NXP
  */
 
 #include <stdbool.h>
@@ -172,7 +172,7 @@ enetc_xmit_pkts_nc(void *tx_queue,
 			dcbf(data + j);
 
 		txbd = ENETC_TXBD(*tx_ring, i);
-		txbd->flags = rte_cpu_to_le_16(ENETC4_TXBD_FLAGS_F);
+		txbd->flags = 0;
 		if (tx_ring->q_swbd[i].buffer_addr->ol_flags & ENETC4_TX_CKSUM_OFFLOAD_MASK)
 			enetc4_tx_offload_checksum(tx_ring->q_swbd[i].buffer_addr, txbd);
 
@@ -182,6 +182,7 @@ enetc_xmit_pkts_nc(void *tx_queue,
 		txbd->addr = (uint64_t)(uintptr_t)
 		rte_cpu_to_le_64((size_t)tx_swbd->buffer_addr->buf_iova +
 				 tx_swbd->buffer_addr->data_off);
+		txbd->flags |= rte_cpu_to_le_16(ENETC4_TXBD_FLAGS_F);
 		i++;
 		start++;
 		if (unlikely(i == tx_ring->bd_count))
