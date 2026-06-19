@@ -92,7 +92,34 @@ rte_graph_obj_dump(FILE *f, struct rte_graph *g, bool all)
 			fprintf(f, "       total_sched_fail=%" PRId64 "\n",
 				n->dispatch.total_sched_fail);
 		}
-		fprintf(f, "       total_calls=%" PRId64 "\n", n->total_calls);
+		fprintf(f, "       total_calls=%" PRIu64 "\n", n->total_calls);
+		fprintf(f, "       total_cycles=%" PRIu64 "\n", n->total_cycles);
+#ifdef RTE_GRAPH_PROFILE
+		uint64_t calls_2_or_more = n->total_calls -
+				(n->usage_stats[0].calls + n->usage_stats[1].calls);
+		double avg_objs_2_or_more = calls_2_or_more == 0 ? (double)2 :
+				(double)(n->total_objs - n->usage_stats[1].calls) /
+				(double)calls_2_or_more;
+		fprintf(f, "       calls_0=%" PRIu64 ", _1=%" PRIu64 ", _%.1f=%" PRIu64 "\n",
+				n->usage_stats[0].calls,
+				n->usage_stats[1].calls,
+				avg_objs_2_or_more,
+				calls_2_or_more);
+		fprintf(f, "       cycles_0=%" PRIu64 ", _1=%" PRIu64 ", _%.1f=%" PRIu64 "\n",
+				n->usage_stats[0].cycles,
+				n->usage_stats[1].cycles,
+				avg_objs_2_or_more,
+				n->total_cycles -
+				(n->usage_stats[0].cycles + n->usage_stats[1].cycles));
+		fprintf(f, "       cycles_per_call_1=%.1f, _%.1f=%.1f\n",
+				n->usage_stats[1].calls == 0 ? (double)0 :
+				(double)n->usage_stats[1].cycles / (double)n->usage_stats[1].calls,
+				avg_objs_2_or_more,
+				calls_2_or_more == 0 ? (double)0 :
+				(double)(n->total_cycles -
+				(n->usage_stats[0].cycles + n->usage_stats[1].cycles)) /
+				(double)calls_2_or_more);
+#endif
 		for (i = 0; i < n->nb_edges; i++)
 			fprintf(f, "          edge[%d] <%s>\n", i,
 				n->nodes[i]->name);
