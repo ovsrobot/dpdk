@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright 2018-2019,2024 NXP
+ * Copyright 2018-2019,2024-2026 NXP
  */
 
 #ifndef _ENETC_H_
@@ -28,6 +28,8 @@
 #define MIN_BD_COUNT   32
 /* BD ALIGN */
 #define BD_ALIGN       8
+/* Max segments per ENETC4 TX packet (scatter-gather) */
+#define ENETC4_MAX_SEGS	63
 
 /* minimum frame size supported */
 #define ENETC_MAC_MINFRM_SIZE	68
