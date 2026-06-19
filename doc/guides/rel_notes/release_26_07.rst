@@ -223,6 +223,31 @@ ABI Changes
 * No ABI change that would break compatibility with 25.11.
 
 
+Bug Fixes and Other Changes
+---------------------------
+
+.. This section should contain bug fixes added to the relevant
+   stable branch. Sample format:
+
+   * **code/area: Fixed issue in <component>.**
+
+     Fixed a specific issue with the following impact, caused by the following
+     action, and the resolution.
+
+   This section is a comment. Do not overwrite or remove it.
+   Also, make sure to start the actual text at the margin.
+   =======================================================
+
+* **net/bnxt: Fixed link flapping on flow control configuration.**
+
+  Fixed an issue where setting flow control parameters via
+  ``rte_eth_dev_flow_ctrl_set()`` triggered an unconditional PHY reset,
+  causing repeated link flaps in environments such as OVS-DPDK that
+  periodically reconcile port state. The fix ports the kernel bnxt_en
+  approach of building a combined pause+link HWRM request rather than
+  delegating to the full link reconfiguration path.
+
+
 Known Issues
 ------------
 

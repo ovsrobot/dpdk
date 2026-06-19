@@ -1852,6 +1852,22 @@ static int bnxt_hwrm_port_phy_qcfg(struct bnxt *bp,
 	link_info->auto_pause = resp->auto_pause;
 	link_info->force_pause = resp->force_pause;
 	link_info->auto_mode = resp->auto_mode;
+	link_info->autoneg = 0;
+
+	if (link_info->auto_mode != HWRM_PORT_PHY_QCFG_OUTPUT_AUTO_MODE_NONE) {
+		link_info->autoneg = BNXT_AUTONEG_SPEED;
+		if (bp->hwrm_spec_code >= HWRM_SPEC_CODE_AUTONEG_PAUSE) {
+			if (link_info->auto_pause &
+			    HWRM_PORT_PHY_CFG_INPUT_AUTO_PAUSE_AUTONEG_PAUSE)
+				link_info->autoneg |=
+					BNXT_AUTONEG_FLOW_CTRL;
+		} else {
+			link_info->autoneg |= BNXT_AUTONEG_FLOW_CTRL;
+		}
+	} else {
+		link_info->autoneg = 0;
+	}
+
 	link_info->phy_type = resp->phy_type;
 	link_info->media_type = resp->media_type;
 
@@ -4040,6 +4056,141 @@ link_down:
 	rc = bnxt_hwrm_send_message(bp, &req, sizeof(req), BNXT_USE_CHIMP_MB);
 
 	HWRM_CHECK_RESULT();
+	HWRM_UNLOCK();
+	return rc;
+}
+
+static void
+bnxt_hwrm_set_pause_common(struct bnxt *bp,
+			   struct hwrm_port_phy_cfg_input *req)
+{
+	struct bnxt_link_info *link_info = bp->link_info;
+
+	if (link_info->autoneg & BNXT_AUTONEG_FLOW_CTRL) {
+		if (bp->hwrm_spec_code >= HWRM_SPEC_CODE_AUTONEG_PAUSE)
+			req->auto_pause =
+			    HWRM_PORT_PHY_CFG_INPUT_AUTO_PAUSE_AUTONEG_PAUSE;
+		if (link_info->auto_pause &
+		    HWRM_PORT_PHY_CFG_INPUT_AUTO_PAUSE_RX)
+			req->auto_pause |=
+			    HWRM_PORT_PHY_CFG_INPUT_AUTO_PAUSE_RX;
+		if (link_info->auto_pause &
+		    HWRM_PORT_PHY_CFG_INPUT_AUTO_PAUSE_TX)
+			req->auto_pause |=
+			    HWRM_PORT_PHY_CFG_INPUT_AUTO_PAUSE_TX;
+		req->enables |=
+			rte_cpu_to_le_32(HWRM_PORT_PHY_CFG_INPUT_ENABLES_AUTO_PAUSE);
+	} else {
+		if (link_info->force_pause &
+		    HWRM_PORT_PHY_CFG_INPUT_FORCE_PAUSE_RX)
+			req->force_pause |=
+			    HWRM_PORT_PHY_CFG_INPUT_FORCE_PAUSE_RX;
+		if (link_info->force_pause &
+		    HWRM_PORT_PHY_CFG_INPUT_FORCE_PAUSE_TX)
+			req->force_pause |=
+			    HWRM_PORT_PHY_CFG_INPUT_FORCE_PAUSE_TX;
+		req->enables |=
+			rte_cpu_to_le_32(HWRM_PORT_PHY_CFG_INPUT_ENABLES_FORCE_PAUSE);
+		if (bp->hwrm_spec_code >= HWRM_SPEC_CODE_AUTONEG_PAUSE) {
+			req->auto_pause = req->force_pause;
+			req->enables |=
+				rte_cpu_to_le_32(HWRM_PORT_PHY_CFG_INPUT_ENABLES_AUTO_PAUSE);
+		}
+	}
+}
+
+static void
+bnxt_hwrm_set_link_common(struct bnxt *bp, struct hwrm_port_phy_cfg_input *req)
+{
+	struct rte_eth_conf *dev_conf = &bp->eth_dev->data->dev_conf;
+	uint16_t autoneg, speed;
+
+	autoneg = bnxt_check_eth_link_autoneg(dev_conf->link_speeds);
+
+	if (BNXT_CHIP_P5(bp) &&
+	    dev_conf->link_speeds & RTE_ETH_LINK_SPEED_40G)
+		autoneg = 0;
+
+	if (autoneg == 1 && BNXT_CHIP_P5(bp) &&
+	    bp->link_info->auto_mode == 0 &&
+	    bp->link_info->force_pam4_link_speed ==
+	    HWRM_PORT_PHY_CFG_INPUT_FORCE_PAM4_LINK_SPEED_200GB)
+		autoneg = 0;
+
+	speed = bnxt_parse_eth_link_speed(bp, dev_conf->link_speeds,
+					  bp->link_info);
+	req->flags |=
+		rte_cpu_to_le_32(HWRM_PORT_PHY_CFG_INPUT_FLAGS_RESET_PHY);
+
+	if (autoneg == 1 &&
+	    (bp->link_info->support_auto_speeds ||
+	     bp->link_info->support_pam4_auto_speeds)) {
+		uint16_t spd_mask;
+		uint32_t en;
+
+		req->flags |=
+			rte_cpu_to_le_32(HWRM_PORT_PHY_CFG_INPUT_FLAGS_RESTART_AUTONEG);
+		spd_mask = bnxt_parse_eth_link_speed_mask(bp,
+							  dev_conf->link_speeds);
+		req->auto_link_speed_mask = rte_cpu_to_le_16(spd_mask);
+		req->auto_link_pam4_speed_mask =
+			rte_cpu_to_le_16(bp->link_info->auto_pam4_link_speed_mask);
+		en = HWRM_PORT_PHY_CFG_IN_EN_AUTO_LINK_SPEED_MASK |
+		     HWRM_PORT_PHY_CFG_IN_EN_AUTO_PAM4_LINK_SPD_MASK |
+		     HWRM_PORT_PHY_CFG_INPUT_ENABLES_AUTO_MODE;
+		req->enables |= rte_cpu_to_le_32(en);
+		req->auto_mode =
+			HWRM_PORT_PHY_CFG_INPUT_AUTO_MODE_SPEED_MASK;
+	} else {
+		uint32_t en;
+
+		req->flags |=
+			rte_cpu_to_le_32(HWRM_PORT_PHY_CFG_INPUT_FLAGS_FORCE);
+		if (speed) {
+			if (bp->link_info->link_signal_mode) {
+				req->force_pam4_link_speed =
+					rte_cpu_to_le_16(speed);
+				en = HWRM_PORT_PHY_CFG_IN_EN_FORCE_PAM4_LINK_SPEED;
+				req->enables |= rte_cpu_to_le_32(en);
+			} else {
+				req->force_link_speed =
+					rte_cpu_to_le_16(speed);
+			}
+		}
+	}
+	req->auto_duplex =
+		bnxt_parse_eth_link_duplex(dev_conf->link_speeds);
+	req->enables |=
+		rte_cpu_to_le_32(HWRM_PORT_PHY_CFG_INPUT_ENABLES_AUTO_DUPLEX);
+}
+
+int bnxt_hwrm_set_pause(struct bnxt *bp)
+{
+	struct hwrm_port_phy_cfg_input req = {0};
+	struct hwrm_port_phy_cfg_output *resp = bp->hwrm_cmd_resp_addr;
+	struct bnxt_link_info *link_info = bp->link_info;
+	int rc;
+
+	HWRM_PREP(&req, HWRM_PORT_PHY_CFG, BNXT_USE_CHIMP_MB);
+
+	bnxt_hwrm_set_pause_common(bp, &req);
+
+	if ((link_info->autoneg & BNXT_AUTONEG_FLOW_CTRL) ||
+	    link_info->link_reconfig_needed)
+		bnxt_hwrm_set_link_common(bp, &req);
+
+	rc = bnxt_hwrm_send_message(bp, &req, sizeof(req), BNXT_USE_CHIMP_MB);
+
+	HWRM_CHECK_RESULT();
+
+	if (!rc) {
+		if (!(link_info->autoneg & BNXT_AUTONEG_FLOW_CTRL)) {
+			link_info->pause = link_info->force_pause;
+			link_info->auto_pause = 0;
+		}
+		link_info->link_reconfig_needed = false;
+	}
+
 	HWRM_UNLOCK();
 	return rc;
 }
