@@ -204,6 +204,11 @@ API Changes
   - ``rte_pmd_mlx5_enable_steering``
   - ``rte_pmd_mlx5_disable_steering``
 
+* **atomic: Marked the ``rte_atomicNN`` functions as deprecated.**
+
+  As previously announced these functions were intended to be deprecated
+  but was not being enforced.
+
 
 ABI Changes
 -----------
