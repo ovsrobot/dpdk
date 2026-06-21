@@ -490,7 +490,7 @@ static int dpaa_eth_dev_stop(struct rte_eth_dev *dev)
 	PMD_INIT_FUNC_TRACE();
 	dev->data->dev_started = 0;
 
-	if (!fif->is_shared_mac) {
+	if (!fif->is_shared_mac && fif->mac_type != fman_onic) {
 		fman_if_bmi_stats_disable(fif);
 		fman_if_disable_rx(fif);
 	}
@@ -590,7 +590,7 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 		}
 	}
 	if (fif->num_profiles) {
-		ret = dpaa_port_vsp_cleanup(dpaa_intf, fif);
+		ret = dpaa_port_vsp_cleanup(dpaa_intf);
 		if (ret) {
 			DPAA_PMD_WARN("%s: cleanup VSP failed(%d)",
 				dev->data->name, ret);
@@ -674,7 +674,7 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 			dev->data->name, ret);
 	}
 	if (fif->num_profiles) {
-		ret = dpaa_port_vsp_cleanup(dpaa_intf, fif);
+		ret = dpaa_port_vsp_cleanup(dpaa_intf);
 		if (ret) {
 			DPAA_PMD_WARN("%s: cleanup VSP failed(%d)",
 				dev->data->name, ret);
@@ -1134,8 +1134,8 @@ static inline int dpaa_eth_rx_queue_bp_check(struct rte_eth_dev *dev,
 			vsp_id = 0;
 	}
 
-	if (dpaa_intf->vsp_bpid[vsp_id] &&
-		bpid != dpaa_intf->vsp_bpid[vsp_id]) {
+	if (dpaa_intf->vsp[vsp_id].vsp_bp[0] &&
+		bpid != dpaa_intf->vsp[vsp_id].vsp_bp[0]->bpid) {
 		DPAA_PMD_ERR("Various MPs are assigned to RXQs with same VSP");
 
 		return -1;
@@ -1232,9 +1232,9 @@ int dpaa_eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		int8_t vsp_id = rxq->vsp_id;
 
 		if (vsp_id >= 0) {
-			ret = dpaa_port_vsp_update(dpaa_intf, fmc_q, vsp_id,
-					DPAA_MEMPOOL_TO_POOL_INFO(mp)->bpid,
-					fif, buffsz + RTE_PKTMBUF_HEADROOM);
+			dpaa_intf->vsp[vsp_id].vsp_bp[0] = DPAA_MEMPOOL_TO_POOL_INFO(mp);
+			dpaa_intf->vsp[vsp_id].bp_num = 1;
+			ret = dpaa_port_vsp_update(dpaa_intf, fmc_q, vsp_id, fif);
 			if (ret) {
 				DPAA_PMD_ERR("dpaa_port_vsp_update failed");
 				return ret;
@@ -1247,12 +1247,14 @@ int dpaa_eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 					     " to shared interface on DPDK.");
 				return -EINVAL;
 			}
-			dpaa_intf->vsp_bpid[fif->base_profile_id] =
-				DPAA_MEMPOOL_TO_POOL_INFO(mp)->bpid;
+			dpaa_intf->vsp[fif->base_profile_id].vsp_bp[0] =
+				DPAA_MEMPOOL_TO_POOL_INFO(mp);
+			dpaa_intf->vsp[fif->base_profile_id].bp_num = 1;
 		}
 	} else {
-		dpaa_intf->vsp_bpid[0] =
-			DPAA_MEMPOOL_TO_POOL_INFO(mp)->bpid;
+		dpaa_intf->vsp[0].vsp_bp[0] =
+			DPAA_MEMPOOL_TO_POOL_INFO(mp);
+		dpaa_intf->vsp[0].bp_num = 1;
 	}
 
 	dpaa_intf->valid = 1;
