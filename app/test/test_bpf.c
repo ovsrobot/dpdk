@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <unistd.h>
 
+#include <rte_byteorder.h>
 #include <rte_memory.h>
 #include <rte_debug.h>
 #include <rte_hexdump.h>
@@ -32,6 +33,7 @@ test_bpf(void)
 #include <rte_bpf.h>
 #include <rte_ether.h>
 #include <rte_ip.h>
+#include <rte_udp.h>
 
 
 /* Tests of most simple BPF programs (no instructions, one instruction etc.) */
@@ -4529,6 +4531,7 @@ test_bpf_match(pcap_t *pcap, const char *str,
 	int ret = -1;
 	uint64_t rc;
 
+	printf("%s '%s'\n", __func__, str);
 	if (pcap_compile(pcap, &fcode, str, 1, PCAP_NETMASK_UNKNOWN)) {
 		printf("%s@%d: pcap_compile(\"%s\") failed: %s;\n",
 		       __func__, __LINE__,  str, pcap_geterr(pcap));
@@ -4550,6 +4553,24 @@ test_bpf_match(pcap_t *pcap, const char *str,
 	}
 
 	rc = rte_bpf_exec(bpf, mb);
+#if defined(RTE_ARCH_X86_64) || defined(RTE_ARCH_ARM64)
+	{
+		struct rte_bpf_jit jit;
+
+		rte_bpf_get_jit(bpf, &jit);
+		if (jit.func == NULL) {
+			printf("%s@%d: no JIT generated\n", __func__, __LINE__);
+			goto error;
+		}
+
+		fflush(stdout);
+		uint64_t rc_jit = jit.func(mb);
+		if (rc_jit != rc) {
+			printf("%s@%d: JIT return code does not match\n", __func__, __LINE__);
+			goto error;
+		}
+	}
+#endif
 	/* The return code from bpf capture filter is non-zero if matched */
 	ret = (rc == 0);
 error:
@@ -4560,23 +4581,16 @@ error:
 	return ret;
 }
 
-/* Basic sanity test can we match a IP packet */
-static int
-test_bpf_filter_sanity(pcap_t *pcap)
+/* Setup mbuf for filter test */
+static void
+dummy_ip_prep(void *data, uint16_t plen)
 {
-	const uint32_t plen = 100;
-	struct rte_mbuf mb, *m;
-	uint8_t tbuf[RTE_MBUF_DEFAULT_BUF_SIZE];
 	struct {
 		struct rte_ether_hdr eth_hdr;
 		struct rte_ipv4_hdr ip_hdr;
-	} *hdr;
+		struct rte_udp_hdr udp_hdr;
+	} *hdr = data;
 
-	memset(&mb, 0, sizeof(mb));
-	dummy_mbuf_prep(&mb, tbuf, sizeof(tbuf), plen);
-	m = &mb;
-
-	hdr = rte_pktmbuf_mtod(m, typeof(hdr));
 	hdr->eth_hdr = (struct rte_ether_hdr) {
 		.dst_addr.addr_bytes = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff },
 		.ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4),
@@ -4589,13 +4603,32 @@ test_bpf_filter_sanity(pcap_t *pcap)
 		.src_addr = rte_cpu_to_be_32(RTE_IPV4_LOOPBACK),
 		.dst_addr = rte_cpu_to_be_32(RTE_IPV4_BROADCAST),
 	};
+	hdr->udp_hdr = (struct rte_udp_hdr) {
+		.src_port = rte_rand_max(UINT16_MAX),
+		.dst_port = rte_cpu_to_be_16(9),	/* discard port */
+		.dgram_len = rte_cpu_to_be_16(plen - sizeof(struct rte_ipv4_hdr)),
+		.dgram_cksum = 0,
+	};
+}
 
-	if (test_bpf_match(pcap, "ip", m) != 0) {
+
+/* Basic sanity test can we match a IP packet */
+static int
+test_bpf_filter_sanity(pcap_t *pcap)
+{
+	struct rte_mbuf mb = { 0 };
+	uint8_t tbuf[RTE_MBUF_DEFAULT_BUF_SIZE];
+	const uint32_t plen = 100;
+
+	dummy_mbuf_prep(&mb, tbuf, sizeof(tbuf), plen);
+	dummy_ip_prep(rte_pktmbuf_mtod(&mb, void *), plen);
+
+	if (test_bpf_match(pcap, "ip", &mb) != 0) {
 		printf("%s@%d: filter \"ip\" doesn't match test data\n",
 		       __func__, __LINE__);
 		return -1;
 	}
-	if (test_bpf_match(pcap, "not ip", m) == 0) {
+	if (test_bpf_match(pcap, "not ip", &mb) == 0) {
 		printf("%s@%d: filter \"not ip\" does match test data\n",
 		       __func__, __LINE__);
 		return -1;
@@ -4648,10 +4681,15 @@ static const char * const sample_filters[] = {
 static int
 test_bpf_filter(pcap_t *pcap, const char *s)
 {
+	struct rte_mbuf mb = { 0 };
+	uint8_t tbuf[RTE_MBUF_DEFAULT_BUF_SIZE];
+	const uint32_t plen = 100;
 	struct bpf_program fcode;
 	struct rte_bpf_prm *prm = NULL;
 	struct rte_bpf *bpf = NULL;
+	int ret = -1;
 
+	printf("%s '%s'\n", __func__, s);
 	if (pcap_compile(pcap, &fcode, s, 1, PCAP_NETMASK_UNKNOWN)) {
 		printf("%s@%d: pcap_compile('%s') failed: %s;\n",
 		       __func__, __LINE__, s, pcap_geterr(pcap));
@@ -4665,8 +4703,10 @@ test_bpf_filter(pcap_t *pcap, const char *s)
 		goto error;
 	}
 
+#ifdef DEBUG
 	printf("bpf convert for \"%s\" produced:\n", s);
 	rte_bpf_dump(stdout, prm->ins, prm->nb_ins);
+#endif
 
 	bpf = rte_bpf_load(prm);
 	if (bpf == NULL) {
@@ -4674,6 +4714,30 @@ test_bpf_filter(pcap_t *pcap, const char *s)
 			__func__, __LINE__, rte_errno, strerror(rte_errno));
 		goto error;
 	}
+
+	dummy_mbuf_prep(&mb, tbuf, sizeof(tbuf), plen);
+	dummy_ip_prep(rte_pktmbuf_mtod(&mb, void *), plen);
+
+	uint64_t rc = rte_bpf_exec(bpf, &mb);
+#if defined(RTE_ARCH_X86_64) || defined(RTE_ARCH_ARM64)
+	{
+		struct rte_bpf_jit jit;
+
+		rte_bpf_get_jit(bpf, &jit);
+		if (jit.func == NULL) {
+			printf("%s@%d: no JIT generated\n", __func__, __LINE__);
+			goto error;
+		}
+
+		fflush(stdout);
+		uint64_t rc_jit = jit.func(&mb);
+		if (rc_jit != rc) {
+			printf("%s@%d: JIT return code does not match\n", __func__, __LINE__);
+			goto error;
+		}
+	}
+#endif
+	ret = 0;
 
 error:
 	if (bpf)
@@ -4685,7 +4749,7 @@ error:
 
 	rte_free(prm);
 	pcap_freecode(&fcode);
-	return (bpf == NULL) ? -1 : 0;
+	return ret;
 }
 
 static int
