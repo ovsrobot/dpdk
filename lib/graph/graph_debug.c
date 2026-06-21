@@ -92,7 +92,44 @@ rte_graph_obj_dump(FILE *f, struct rte_graph *g, bool all)
 			fprintf(f, "       total_sched_fail=%" PRId64 "\n",
 				n->dispatch.total_sched_fail);
 		}
-		fprintf(f, "       total_calls=%" PRId64 "\n", n->total_calls);
+		fprintf(f, "       total_calls=%" PRIu64 "\n", n->total_calls);
+		if (rte_graph_has_stats_feature()) {
+			fprintf(f, "       total_cycles=%" PRIu64 ", avg cycles/call=%.1f\n",
+					n->total_cycles,
+					n->total_calls == 0 ? (double)0 :
+					(double)n->total_cycles / (double)n->total_calls);
+		}
+#ifdef RTE_GRAPH_PROFILE
+		uint64_t calls = n->usage_stats[0].calls;
+		fprintf(f, "       objs[0]\n");
+		fprintf(f, "         calls=%" PRIu64 ", cycles=%" PRIu64 ", avg cycles/call=%.1f\n",
+				calls,
+				n->usage_stats[0].cycles,
+				calls == 0 ? 0.0 :
+				(double)n->usage_stats[0].cycles / (double)calls);
+		calls = n->usage_stats[1].calls;
+		fprintf(f, "       objs[1]\n");
+		fprintf(f, "         calls=%" PRIu64 ", cycles=%" PRIu64 ", avg cycles/call=%.1f\n",
+				calls,
+				n->usage_stats[1].cycles,
+				calls == 0 ? 0.0 :
+				(double)n->usage_stats[1].cycles / (double)calls);
+		calls = RTE_MAX(INT64_C(0), (int64_t)(n->total_calls -
+				(n->usage_stats[0].calls + n->usage_stats[1].calls)));
+		uint64_t cycles = RTE_MAX(INT64_C(0), (int64_t)(n->total_cycles -
+				(n->usage_stats[0].cycles + n->usage_stats[1].cycles)));
+		uint64_t objs = RTE_MAX(INT64_C(0), (int64_t)(n->total_objs -
+				n->usage_stats[1].calls));
+		double objs_per_call = calls == 0 ? 0.0 : (double)objs / (double)calls;
+		fprintf(f, "       objs[more], avg objs/call=%.1f\n", objs_per_call);
+		fprintf(f, "         calls=%" PRIu64 ", cycles=%" PRIu64 ", avg cycles/call=%.1f"
+				", avg cycles/obj=%.1f\n",
+				calls,
+				cycles,
+				calls == 0 ? 0.0 : (double)cycles / (double)calls,
+				calls == 0 || objs_per_call == 0.0 ? 0.0 :
+				(double)cycles / (double)calls / objs_per_call);
+#endif
 		for (i = 0; i < n->nb_edges; i++)
 			fprintf(f, "          edge[%d] <%s>\n", i,
 				n->nodes[i]->name);

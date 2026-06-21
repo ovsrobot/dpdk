@@ -144,12 +144,22 @@ struct __rte_cache_aligned rte_node {
 			rte_node_process_t process; /**< Process function. */
 			uint64_t process_u64;
 		};
+		/** Fast path area cache line 3. */
+#ifdef RTE_GRAPH_PROFILE
+		struct {
+			uint64_t calls;     /**< Calls processing resp. 0 or 1 objects. */
+			uint64_t cycles;    /**< Cycles spent processing resp. 0 or 1 objects. */
+		} usage_stats[2];       /**< Usage when this node processed 0 or 1 objects. */
+		/** Fast path area cache line 4. */
+#endif
 		alignas(RTE_CACHE_LINE_MIN_SIZE) struct rte_node *nodes[]; /**< Next nodes. */
 	};
 };
 
+#ifndef RTE_GRAPH_PROFILE
 static_assert(offsetof(struct rte_node, nodes) - offsetof(struct rte_node, ctx)
 	== RTE_CACHE_LINE_MIN_SIZE, "rte_node fast path area must fit in 64 bytes");
+#endif
 
 /**
  * @internal
@@ -197,7 +207,7 @@ void __rte_node_stream_alloc_size(struct rte_graph *graph,
 static __rte_always_inline void
 __rte_node_process(struct rte_graph *graph, struct rte_node *node)
 {
-	uint64_t start;
+	uint64_t cycles;
 	uint16_t rc;
 	void **objs;
 
@@ -206,11 +216,18 @@ __rte_node_process(struct rte_graph *graph, struct rte_node *node)
 	rte_prefetch0(objs);
 
 	if (rte_graph_has_stats_feature()) {
-		start = rte_rdtsc();
+		cycles = -rte_rdtsc();
 		rc = node->process(graph, node, objs, node->idx);
-		node->total_cycles += rte_rdtsc() - start;
+		cycles += rte_rdtsc();
+		node->total_cycles += cycles;
 		node->total_calls++;
 		node->total_objs += rc;
+#ifdef RTE_GRAPH_PROFILE
+		if (rc <= 1) {
+			node->usage_stats[rc].calls++;
+			node->usage_stats[rc].cycles += cycles;
+		}
+#endif
 	} else {
 		node->process(graph, node, objs, node->idx);
 	}
