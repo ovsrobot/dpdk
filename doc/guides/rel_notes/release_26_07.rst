@@ -155,6 +155,9 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Updated Marvell cnxk crypto driver.**
+
+  * Added support for ML-KEM and ML-DSA on CN20K platform.
 
 Removed Items
 -------------
