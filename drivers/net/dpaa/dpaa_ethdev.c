@@ -528,10 +528,12 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 
 	/* DPAA FM deconfig */
 	if (!(default_q || fmc_q)) {
-		ret = dpaa_fm_deconfig(dpaa_intf, dev->process_private);
-		if (ret) {
-			DPAA_PMD_WARN("%s: FM deconfig failed(%d)",
-				dev->data->name, ret);
+		if (dpaa_intf->port_handle) {
+			ret = dpaa_fm_deconfig(dpaa_intf, dev->process_private);
+			if (ret) {
+				DPAA_PMD_WARN("%s: FM deconfig failed(%d)",
+					dev->data->name, ret);
+			}
 		}
 	}
 
@@ -577,6 +579,23 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 	rte_free(dpaa_intf->fc_conf);
 	dpaa_intf->fc_conf = NULL;
 
+	/** For FMCLESS mode of share MAC, deconfig FM to direct
+	 * ingress traffic to kernel before fq shutdown.
+	 */
+	if (!(default_q || fmc_q)) {
+		ret = dpaa_fm_deconfig(dpaa_intf, dev->process_private);
+		if (ret) {
+			DPAA_PMD_WARN("%s: FM deconfig failed(%d)",
+				dev->data->name, ret);
+		}
+	}
+	if (fif->num_profiles) {
+		ret = dpaa_port_vsp_cleanup(dpaa_intf, fif);
+		if (ret) {
+			DPAA_PMD_WARN("%s: cleanup VSP failed(%d)",
+				dev->data->name, ret);
+		}
+	}
 	/** Release congestion Groups after releasing FQIDs*/
 	/* Release RX congestion Groups */
 	if (dpaa_intf->cgr_rx) {
@@ -649,12 +668,10 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 	rte_free(dpaa_intf->tx_conf_queues);
 	dpaa_intf->tx_conf_queues = NULL;
 
-	if (dpaa_intf->port_handle) {
-		ret = dpaa_fm_deconfig(dpaa_intf, fif);
-		if (ret) {
-			DPAA_PMD_WARN("%s: FM deconfig failed(%d)",
-				dev->data->name, ret);
-		}
+	ret = dpaa_fm_deconfig(dpaa_intf, fif);
+	if (ret) {
+		DPAA_PMD_WARN("%s: FM deconfig failed(%d)",
+			dev->data->name, ret);
 	}
 	if (fif->num_profiles) {
 		ret = dpaa_port_vsp_cleanup(dpaa_intf, fif);
