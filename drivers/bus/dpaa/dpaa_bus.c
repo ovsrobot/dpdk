@@ -560,13 +560,37 @@ rte_dpaa_bus_parse(const char *name, void *out)
 static int
 dpaa_bus_dev_compare(const char *name1, const char *name2)
 {
+	int ret = 0;
 	char devname1[32], devname2[32];
 
 	if (rte_dpaa_bus_parse(name1, devname1) != 0 ||
 			rte_dpaa_bus_parse(name2, devname2) != 0)
 		return 1;
 
-	return strncmp(devname1, devname2, sizeof(devname1));
+#define DPAA_DEV_PATH1 "/sys/devices/platform/soc/soc:fsl,dpaa"
+#define DPAA_DEV_PATH2 "/sys/devices/platform/fsl,dpaa"
+	if ((access(DPAA_DEV_PATH1, F_OK) != 0) &&
+	    (access(DPAA_DEV_PATH2, F_OK) != 0)) {
+		DPAA_BUS_DEBUG("DPAA Bus not present. Skipping.");
+		return 0;
+	}
+
+	if (dpaa_bus.detected)
+		return 0;
+
+	dpaa_bus.detected = 1;
+
+	/* create the key, supplying a function that'll be invoked
+	 * when a portal affined thread will be deleted.
+	 */
+	ret = pthread_key_create(&dpaa_portal_key, dpaa_portal_finish);
+	if (ret) {
+		DPAA_BUS_DEBUG("Unable to create pthread key. (%d)", ret);
+		dpaa_clean_device_list();
+		return ret;
+	}
+
+	return 0;
 }
 
 /* register a dpaa bus based dpaa driver */
@@ -667,8 +691,6 @@ static int rte_dpaa_setup_intr(struct rte_intr_handle *intr_handle)
 	return 0;
 }
 
-#define DPAA_DEV_PATH1 "/sys/devices/platform/soc/soc:fsl,dpaa"
-#define DPAA_DEV_PATH2 "/sys/devices/platform/fsl,dpaa"
 
 static int
 rte_dpaa_bus_scan(void)
@@ -715,12 +737,11 @@ rte_dpaa_bus_scan(void)
 		dpaa_bus.svr_ver = 0;
 	}
 	if (dpaa_bus.svr_ver == SVR_LS1046A_FAMILY) {
-		DPAA_BUS_LOG(INFO, "This is LS1046A family SoC.");
+		DPAA_BUS_INFO("This is LS1046A family SoC.");
 	} else if (dpaa_bus.svr_ver == SVR_LS1043A_FAMILY) {
-		DPAA_BUS_LOG(INFO, "This is LS1043A family SoC.");
+		DPAA_BUS_INFO("This is LS1043A family SoC.");
 	} else {
-		DPAA_BUS_LOG(WARNING,
-			"This is Unknown(%08x) DPAA1 family SoC.",
+		DPAA_BUS_WARN("This is Unknown(%08x) DPAA1 family SoC.",
 			dpaa_bus.svr_ver);
 	}
 
