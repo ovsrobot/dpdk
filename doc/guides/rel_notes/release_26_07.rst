@@ -155,6 +155,14 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Updated QAT PMD dependency requirements.**
+
+  The QAT crypto PMD now requires IPsec MB library (v1.4.0+) for HMAC precomputes
+  on all platforms. OpenSSL 3.0+ is now optional and used only for DOCSIS BPI cipher
+  fallback. Previously, QAT could build with OpenSSL-only on x86.
+
+  On ARM, both IPsec MB and OpenSSL are required for full functionality.
+
 
 Removed Items
 -------------
