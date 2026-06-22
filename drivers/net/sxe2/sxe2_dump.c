@@ -186,6 +186,20 @@ l_end:
 	return;
 }
 
+static void sxe2_dump_fc_state(FILE *file, struct rte_eth_dev *dev)
+{
+	struct sxe2_adapter *adapter = SXE2_DEV_PRIVATE_TO_ADAPTER(dev);
+
+	if (!(adapter->cap_flags & SXE2_DEV_CAPS_OFFLOAD_FC_STATE))
+		goto l_end;
+
+	fprintf(file, " -- fc state:\n"
+		"\t  -- curr_state: %u\n",
+		adapter->fc_state_ctx.curr_state);
+l_end:
+	return;
+}
+
 static const char *sxe2_vsi_id_str(uint16_t vsi_id, char *buf, size_t len)
 {
 	if (vsi_id == SXE2_INVALID_VSI_ID)
@@ -272,6 +286,7 @@ int32_t sxe2_eth_dev_priv_dump(struct rte_eth_dev *dev, FILE *file)
 	sxe2_dump_dev_args_info(str, dev);
 	sxe2_dump_filter_info(str, dev);
 	sxe2_dump_switchdev_info(str, dev);
+	sxe2_dump_fc_state(str, dev);
 
 	(void)fflush(str);
 
