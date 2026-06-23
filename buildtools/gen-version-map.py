@@ -14,8 +14,12 @@ export_exp_sym_regexp = re.compile(
 export_int_sym_regexp = re.compile(r"^RTE_EXPORT_INTERNAL_SYMBOL\(([^)]+)\)")
 export_sym_regexp = re.compile(r"^RTE_EXPORT_SYMBOL\(([^)]+)\)")
 ver_sym_regexp = re.compile(r"^RTE_VERSION_SYMBOL\(([^,]+), [^,]+, ([^,]+),")
+
 ver_exp_sym_regexp = re.compile(r"^RTE_VERSION_EXPERIMENTAL_SYMBOL\([^,]+, ([^,]+),")
+ver_exp_sym_alias_regexp = re.compile(r"^RTE_VERSION_EXPERIMENTAL_SYMBOL_ALIAS\([^,]+, ([^,]+),")
+
 default_sym_regexp = re.compile(r"^RTE_DEFAULT_SYMBOL\(([^,]+), [^,]+, ([^,]+),")
+default_sym_alias_regexp = re.compile(r"^RTE_DEFAULT_SYMBOL_ALIAS\(([^,]+), [^,]+, ([^,]+),")
 
 parser = argparse.ArgumentParser(
     description=__doc__,
@@ -73,10 +77,17 @@ for file in args.source:
         elif ver_exp_sym_regexp.match(ln):
             node = "EXPERIMENTAL"
             symbol = ver_exp_sym_regexp.match(ln).group(1)
+        elif ver_exp_sym_alias_regexp.match(ln):
+            node = "EXPERIMENTAL"
+            symbol = ver_exp_sym_alias_regexp.match(ln).group(1)
         elif default_sym_regexp.match(ln):
             abi = default_sym_regexp.match(ln).group(1)
             node = f"DPDK_{abi}"
             symbol = default_sym_regexp.match(ln).group(2)
+        elif default_sym_alias_regexp.match(ln):
+            abi = default_sym_alias_regexp.match(ln).group(1)
+            node = f"DPDK_{abi}"
+            symbol = default_sym_alias_regexp.match(ln).group(2)
 
         if not symbol:
             continue

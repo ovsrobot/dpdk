@@ -63,6 +63,14 @@ __attribute__((__symver__(RTE_STR(name) "@@DPDK_" RTE_STR(ver)))) \
 type name ## _v ## ver args; \
 type name ## _v ## ver args
 
+#define RTE_VERSION_EXPERIMENTAL_SYMBOL_ALIAS(type, name, orig) VERSIONING_WARN \
+extern type name ## _exp __attribute((alias(RTE_STR(orig)), \
+				      __symver__(RTE_STR(name) "@EXPERIMENTAL")))
+
+#define RTE_DEFAULT_SYMBOL_ALIAS(ver, type, name, orig) VERSIONING_WARN \
+extern type name ## _v ## ver __attribute((alias(RTE_STR(orig)), \
+					   __symver__(RTE_STR(name) "@@DPDK_" RTE_STR(ver))))
+
 #else /* !__has_attribute(symver) */
 
 /* Use asm tag to create symbol table entry */
@@ -81,6 +89,14 @@ __asm__(".symver " RTE_STR(name) "_v" RTE_STR(ver) ", " RTE_STR(name) "@@DPDK_" 
 __rte_used type name ## _v ## ver args; \
 type name ## _v ## ver args
 
+#define RTE_DEFAULT_SYMBOL_ALIAS(ver, type, name, orig) VERSIONING_WARN \
+extern type name ## _v ## ver __attribute__((alias(RTE_STR(orig)))); \
+__asm__(".symver " RTE_STR(name) "_v" RTE_STR(ver) ", " RTE_STR(name) "@@DPDK_" RTE_STR(ver));
+
+#define RTE_VERSION_EXPERIMENTAL_SYMBOL_ALIAS(type, name, orig) VERSIONING_WARN \
+extern type name ## _exp __attribute__((alias(RTE_STR(orig)))); \
+__asm__(".symver " RTE_STR(name) "_exp, " RTE_STR(name) "@EXPERIMENTAL");
+
 #endif /* __has_attribute(symver) */
 
 #else /* !RTE_BUILD_SHARED_LIB */
@@ -96,6 +112,12 @@ type name ## _exp args
 
 #define RTE_DEFAULT_SYMBOL(ver, type, name, args) VERSIONING_WARN \
 type name args
+
+#define RTE_VERSION_EXPERIMENTAL_SYMBOL_ALIAS(type, name, orig) VERSIONING_WARN \
+extern type name ## _exp __attribute__((alias(RTE_STR(orig))));
+
+#define RTE_DEFAULT_SYMBOL_ALIAS(ver, type, name, orig) VERSIONING_WARN \
+extern type name __attribute__((alias(RTE_STR(orig))));
 
 #endif /* RTE_BUILD_SHARED_LIB */
 
