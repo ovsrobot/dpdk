@@ -2005,6 +2005,58 @@ test_div1_check(uint64_t rc, const void *arg)
 	return cmp_res(__func__, 0, rc, dve.out, dvt->out, sizeof(dve.out));
 }
 
+/*
+ * Shift by an immediate that doesn't fit in a signed byte: the C1 shift
+ * group takes a fixed 1-byte immediate, but imm_size() returns 4 for
+ * counts >= 128, so the x86 JIT emits 3 stray bytes and desyncs the
+ * instruction stream. The shift results are discarded (a count >= 64 is
+ * UB in the interpreter); the test returns a known constant, which the
+ * corrupted stream fails to produce.
+ */
+static const struct ebpf_insn test_shift_big_imm_prog[] = {
+	{
+		.code = (BPF_ALU | EBPF_MOV | BPF_K),
+		.dst_reg = EBPF_REG_2,
+		.imm = 0x1,
+	},
+	{
+		.code = (EBPF_ALU64 | BPF_LSH | BPF_K),
+		.dst_reg = EBPF_REG_2,
+		.imm = 137,
+	},
+	{
+		.code = (EBPF_ALU64 | BPF_RSH | BPF_K),
+		.dst_reg = EBPF_REG_2,
+		.imm = 200,
+	},
+	{
+		.code = (EBPF_ALU64 | EBPF_ARSH | BPF_K),
+		.dst_reg = EBPF_REG_2,
+		.imm = 255,
+	},
+	/* known result; a desynced stream won't reproduce it */
+	{
+		.code = (BPF_ALU | EBPF_MOV | BPF_K),
+		.dst_reg = EBPF_REG_0,
+		.imm = 0x55,
+	},
+	{
+		.code = (BPF_JMP | EBPF_EXIT),
+	},
+};
+
+static void
+test_shift_big_imm_prepare(void *arg)
+{
+	memset(arg, 0, sizeof(struct dummy_offset));
+}
+
+static int
+test_shift_big_imm_check(uint64_t rc, const void *arg)
+{
+	return cmp_res(__func__, 0x55, rc, arg, arg, 0);
+}
+
 /* call test-cases */
 static const struct ebpf_insn test_call1_prog[] = {
 
@@ -3408,6 +3460,20 @@ static const struct bpf_test tests[] = {
 		},
 		.prepare = test_mul1_prepare,
 		.check_result = test_div1_check,
+	},
+	{
+		.name = "test_shift_big_imm",
+		.arg_sz = sizeof(struct dummy_offset),
+		.prm = {
+			.ins = test_shift_big_imm_prog,
+			.nb_ins = RTE_DIM(test_shift_big_imm_prog),
+			.prog_arg = {
+				.type = RTE_BPF_ARG_PTR,
+				.size = sizeof(struct dummy_offset),
+			},
+		},
+		.prepare = test_shift_big_imm_prepare,
+		.check_result = test_shift_big_imm_check,
 	},
 	{
 		.name = "test_call1",
