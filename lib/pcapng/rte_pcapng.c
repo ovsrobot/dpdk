@@ -546,14 +546,14 @@ pcapng_vlan_insert(struct rte_mbuf *m, uint16_t ether_type, uint16_t tci)
  */
 
 /* Make a copy of original mbuf with pcapng header and options */
-RTE_EXPORT_SYMBOL(rte_pcapng_copy)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pcapng_copy_ts, 26.07)
 struct rte_mbuf *
-rte_pcapng_copy(uint16_t port_id, uint32_t queue,
+rte_pcapng_copy_ts(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *md,
 		struct rte_mempool *mp,
 		uint32_t length,
 		enum rte_pcapng_direction direction,
-		const char *comment)
+		const char *comment, uint64_t ts)
 {
 	struct pcapng_enhance_packet_block *epb;
 	uint32_t orig_len, pkt_len, padding, flags;
@@ -690,8 +690,20 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 	/* Interface index is filled in later during write */
 	mc->port = port_id;
 
-	/* Put timestamp in cycles here - adjust in packet write */
-	timestamp = rte_get_tsc_cycles();
+	/*
+	 * Timestamp handling:
+	 *  - If the caller supplied an explicit timestamp (ts != 0), it is
+	 *    already in nanoseconds since the Unix epoch, so store it as-is.
+	 *  - If the caller did not (ts == 0), store the current TSC and set
+	 *    the high bit as a sentinel so rte_pcapng_write_packets() knows
+	 *    it must convert TSC -> epoch ns at write time. The TSC counter
+	 *    will not reach bit 63 for centuries, and epoch-ns values stay
+	 *    below bit 63 until the year 2554, so the bit is safe to use.
+	 */
+	if (ts != 0)
+		timestamp = ts;
+	else
+		timestamp = rte_get_tsc_cycles() | (UINT64_C(1) << 63);
 	epb->timestamp_hi = timestamp >> 32;
 	epb->timestamp_lo = (uint32_t)timestamp;
 	epb->capture_length = pkt_len;
@@ -707,6 +719,35 @@ fail:
 	return NULL;
 }
 
+/*
+ * Compatibility wrapper: captures current TSC (converted at write time).
+ * Equivalent to rte_pcapng_copy_ts(..., 0).
+ */
+RTE_EXPORT_SYMBOL(rte_pcapng_copy)
+struct rte_mbuf *
+rte_pcapng_copy(uint16_t port_id, uint32_t queue,
+		const struct rte_mbuf *md,
+		struct rte_mempool *mp,
+		uint32_t length,
+		enum rte_pcapng_direction direction,
+		const char *comment)
+{
+	return rte_pcapng_copy_ts(port_id, queue, md, mp, length, direction,
+				  comment, 0);
+}
+
+/*
+ * Convert a TSC value to nanoseconds since the Unix epoch using the
+ * calibrated clock of the capture file. Uses the same pre-computed
+ * reciprocal multiplier as the internal write path (no integer division).
+ */
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pcapng_tsc_to_ns, 26.07)
+uint64_t
+rte_pcapng_tsc_to_ns(const rte_pcapng_t *self, uint64_t tsc)
+{
+	return tsc_to_ns_epoch(&self->clock, tsc);
+}
+
 /* Write pre-formatted packets to file. */
 RTE_EXPORT_SYMBOL(rte_pcapng_write_packets)
 ssize_t
@@ -720,7 +761,7 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 	for (i = 0; i < nb_pkts; i++) {
 		struct rte_mbuf *m = pkts[i];
 		struct pcapng_enhance_packet_block *epb;
-		uint64_t cycles, timestamp;
+		uint64_t timestamp;
 
 		/* sanity check that is really a pcapng mbuf */
 		epb = rte_pktmbuf_mtod(m, struct pcapng_enhance_packet_block *);
@@ -738,14 +779,18 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 		}
 
 		/*
-		 * When data is captured by pcapng_copy the current TSC is stored.
-		 * Adjust the value recorded in file to PCAP epoch units.
+		 * If rte_pcapng_copy[_ts]() stored a TSC value (high bit set
+		 * as sentinel), convert it to nanoseconds since the Unix epoch
+		 * using the per-file clock. Otherwise the timestamp is already
+		 * in epoch ns and is written unchanged.
 		 */
-		cycles = (uint64_t)epb->timestamp_hi << 32;
-		cycles += epb->timestamp_lo;
-		timestamp = tsc_to_ns_epoch(&self->clock, cycles);
-		epb->timestamp_hi = timestamp >> 32;
-		epb->timestamp_lo = (uint32_t)timestamp;
+		timestamp = ((uint64_t)epb->timestamp_hi << 32) | epb->timestamp_lo;
+		if (timestamp & (UINT64_C(1) << 63)) {
+			timestamp &= ~(UINT64_C(1) << 63);
+			timestamp = tsc_to_ns_epoch(&self->clock, timestamp);
+			epb->timestamp_hi = timestamp >> 32;
+			epb->timestamp_lo = (uint32_t)timestamp;
+		}
 
 		/*
 		 * Handle case of highly fragmented and large burst size

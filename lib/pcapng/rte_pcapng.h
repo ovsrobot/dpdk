@@ -109,7 +109,48 @@ enum rte_pcapng_direction {
 };
 
 /**
+ * Format an mbuf with a caller-supplied timestamp for writing to file.
+ *
+ * @param port_id
+ *   The Ethernet port on which packet was received
+ *   or is going to be transmitted.
+ * @param queue
+ *   The queue on the Ethernet port where packet was received
+ *   or is going to be transmitted.
+ * @param mp
+ *   The mempool from which the "clone" mbufs are allocated.
+ * @param m
+ *   The mbuf to copy
+ * @param length
+ *   The upper limit on bytes to copy.  Passing UINT32_MAX
+ *   means all data (after offset).
+ * @param direction
+ *   The direction of the packer: receive, transmit or unknown.
+ * @param comment
+ *   Optional per packet comment.
+ *   Truncated to UINT16_MAX characters.
+ * @param ts
+ *   Packet timestamp in nanoseconds since the Unix epoch. If zero, the
+ *   current TSC is captured and converted to epoch ns by
+ *   rte_pcapng_write_packets() when the packet is written.
+ *
+ * @return
+ *   - The pointer to the new mbuf formatted for pcapng_write
+ *   - NULL on error such as invalid port or out of memory.
+ */
+__rte_experimental
+struct rte_mbuf *
+rte_pcapng_copy_ts(uint16_t port_id, uint32_t queue,
+		const struct rte_mbuf *m, struct rte_mempool *mp,
+		uint32_t length,
+		enum rte_pcapng_direction direction, const char *comment,
+		uint64_t ts);
+
+/**
  * Format an mbuf for writing to file.
+ *
+ * Equivalent to rte_pcapng_copy_ts() with ts=0: the current TSC is
+ * captured at copy time and converted to epoch ns at write time.
  *
  * @param port_id
  *   The Ethernet port on which packet was received
@@ -152,6 +193,29 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
  */
 uint32_t
 rte_pcapng_mbuf_size(uint32_t length);
+
+/**
+ * Convert a TSC value to nanoseconds since the Unix epoch.
+ *
+ * Uses the same calibrated clock reference as the capture file so that
+ * the result is consistent with timestamps written by
+ * rte_pcapng_write_packets(). The conversion is drift-compensated and
+ * uses a pre-computed reciprocal multiplier (no integer division).
+ *
+ * Typical use: convert a TSC timestamp captured close to packet arrival
+ * (e.g., from a PMD or hardware register) to an epoch-ns value before
+ * passing it to rte_pcapng_copy_ts().
+ *
+ * @param self
+ *   The handle to the packet capture file.
+ * @param tsc
+ *   TSC value to convert.
+ * @return
+ *   Nanoseconds since the Unix epoch corresponding to @p tsc.
+ */
+__rte_experimental
+uint64_t
+rte_pcapng_tsc_to_ns(const rte_pcapng_t *self, uint64_t tsc);
 
 /**
  * Write packets to the capture file.
