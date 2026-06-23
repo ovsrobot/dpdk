@@ -23,12 +23,20 @@
 #define FLOW_LOG RTE_ETHDEV_LOG_LINE
 
 /* Mbuf dynamic field name for metadata. */
-RTE_EXPORT_SYMBOL(rte_flow_dynf_metadata_offs)
-int32_t rte_flow_dynf_metadata_offs = -1;
+static int32_t rte_flow_dynf_metadata_offs_impl = -1;
+
+RTE_DEFAULT_SYMBOL_ALIAS(26, int32_t, rte_flow_dynf_metadata_offs,
+			 rte_flow_dynf_metadata_offs_impl);
+RTE_VERSION_EXPERIMENTAL_SYMBOL_ALIAS(int32_t, rte_flow_dynf_metadata_offs,
+				      rte_flow_dynf_metadata_offs_impl);
 
 /* Mbuf dynamic field flag bit number for metadata. */
-RTE_EXPORT_SYMBOL(rte_flow_dynf_metadata_mask)
-uint64_t rte_flow_dynf_metadata_mask;
+static uint64_t rte_flow_dynf_metadata_mask_impl = 0;
+
+RTE_DEFAULT_SYMBOL_ALIAS(26, uint64_t, rte_flow_dynf_metadata_mask,
+			 rte_flow_dynf_metadata_mask_impl);
+RTE_VERSION_EXPERIMENTAL_SYMBOL_ALIAS(uint64_t, rte_flow_dynf_metadata_mask,
+				      rte_flow_dynf_metadata_mask_impl);
 
 /**
  * Flow elements description tables.
@@ -281,9 +289,7 @@ static const struct rte_flow_desc_data rte_flow_desc_action[] = {
 	MK_FLOW_ACTION(JUMP_TO_TABLE_INDEX, sizeof(struct rte_flow_action_jump_to_table_index)),
 };
 
-RTE_EXPORT_SYMBOL(rte_flow_dynf_metadata_register)
-int
-rte_flow_dynf_metadata_register(void)
+RTE_DEFAULT_SYMBOL(26, int, rte_flow_dynf_metadata_register, (void))
 {
 	int offset;
 	int flag;
@@ -303,17 +309,22 @@ rte_flow_dynf_metadata_register(void)
 	flag = rte_mbuf_dynflag_register(&desc_flag);
 	if (flag < 0)
 		goto error;
-	rte_flow_dynf_metadata_offs = offset;
-	rte_flow_dynf_metadata_mask = RTE_BIT64(flag);
+	rte_flow_dynf_metadata_offs_impl = offset;
+	rte_flow_dynf_metadata_mask_impl = RTE_BIT64(flag);
 
 	rte_flow_trace_dynf_metadata_register(offset, RTE_BIT64(flag));
 
 	return 0;
 
 error:
-	rte_flow_dynf_metadata_offs = -1;
-	rte_flow_dynf_metadata_mask = UINT64_C(0);
+	rte_flow_dynf_metadata_offs_impl = -1;
+	rte_flow_dynf_metadata_mask_impl = UINT64_C(0);
 	return -rte_errno;
+}
+
+RTE_VERSION_EXPERIMENTAL_SYMBOL(int, rte_flow_dynf_metadata_register, (void))
+{
+	return rte_flow_dynf_metadata_register();
 }
 
 static inline void
