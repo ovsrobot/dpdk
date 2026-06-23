@@ -281,6 +281,7 @@ eth_txgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	hw->subsystem_device_id = pci_dev->id.subsystem_device_id;
 	hw->subsystem_vendor_id = pci_dev->id.subsystem_vendor_id;
 	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
+	hw->pf_running = true;
 
 	/* initialize the vfta */
 	memset(shadow_vfta, 0, sizeof(*shadow_vfta));
@@ -1405,10 +1406,20 @@ static s32 txgbevf_get_pf_link_status(struct rte_eth_dev *dev)
 	if (retval)
 		return 0;
 
+	if (!(msgbuf[0] & TXGBE_NOFITY_VF_LINK_STATUS))
+		return 0;
+
 	rte_eth_linkstatus_get(dev, &link);
 
+	if (!hw->pf_running) {
+		link.link_status =  RTE_ETH_LINK_DOWN;
+		link.link_speed = RTE_ETH_SPEED_NUM_NONE;
+		link.link_duplex = RTE_ETH_LINK_HALF_DUPLEX;
+		return rte_eth_linkstatus_set(dev, &link);
+	}
+
 	link_up = msgbuf[1] & TXGBE_VFSTATUS_UP;
-	link_speed = (msgbuf[1] & 0xFFF0) >> 1;
+	link_speed = (msgbuf[1] & 0x1FFFFE) >> 1;
 
 	if (link_up == link.link_status && link_speed == link.link_speed)
 		return 0;
@@ -1434,10 +1445,22 @@ static s32 txgbevf_get_pf_link_status(struct rte_eth_dev *dev)
 static void txgbevf_check_link_for_intr(struct rte_eth_dev *dev)
 {
 	struct rte_eth_link orig_link, new_link;
+	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 
 	rte_eth_linkstatus_get(dev, &orig_link);
-	txgbevf_dev_link_update(dev, 0);
-	rte_eth_linkstatus_get(dev, &new_link);
+
+	if (hw->pf_running) {
+		txgbevf_dev_link_update(dev, 0);
+		rte_eth_linkstatus_get(dev, &new_link);
+	} else {
+		DEBUGOUT("PF ifconfig down, so VF link down");
+		new_link.link_status = RTE_ETH_LINK_DOWN;
+		new_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
+		new_link.link_duplex = RTE_ETH_LINK_HALF_DUPLEX;
+		new_link.link_autoneg = !(dev->data->dev_conf.link_speeds &
+					  RTE_ETH_LINK_SPEED_FIXED);
+		rte_eth_linkstatus_set(dev, &new_link);
+	}
 
 	PMD_DRV_LOG(INFO, "orig_link: %d, new_link: %d",
 		    orig_link.link_status, new_link.link_status);
@@ -1450,6 +1473,8 @@ static void txgbevf_check_link_for_intr(struct rte_eth_dev *dev)
 static void txgbevf_mbx_process(struct rte_eth_dev *dev)
 {
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
+	struct txgbe_mbx_info *mbx = &hw->mbx;
+	u32 msgbuf = 0;
 	u32 in_msg = 0;
 
 	/* peek the message first */
@@ -1457,14 +1482,33 @@ static void txgbevf_mbx_process(struct rte_eth_dev *dev)
 
 	/* PF reset VF event */
 	if (in_msg & TXGBE_PF_CONTROL_MSG) {
-		if (in_msg & TXGBE_NOFITY_VF_LINK_STATUS) {
+		/* msg is not CTS, we need to do reset */
+		if (!(in_msg & TXGBE_VT_MSGTYPE_CTS)) {
+			/* send reset to PF to reconfig CTS flag */
+			int err = 0;
+
+			msgbuf = TXGBE_VF_RESET;
+			err = mbx->write_posted(hw, &msgbuf, 1, 0);
+			if (err) {
+				hw->pf_running = false;
+				txgbevf_check_link_for_intr(dev);
+			} else {
+				hw->pf_running = true;
+				rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_INTR_RESET,
+							     NULL);
+			}
+		}
+
+		if (in_msg & TXGBE_NOFITY_VF_LINK_STATUS)
 			txgbevf_get_pf_link_status(dev);
-		} else {
-			/* dummy mbx read to ack pf */
-			txgbe_read_mbx(hw, &in_msg, 1, 0);
+		else
 			/* check link status if pf ping vf */
 			txgbevf_check_link_for_intr(dev);
-		}
+	}
+
+	if (!hw->pf_running) {
+		hw->rx_loaded = true;
+		hw->offset_loaded = true;
 	}
 }
 
