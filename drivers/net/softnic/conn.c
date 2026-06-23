@@ -116,8 +116,8 @@ softnic_conn_init(struct softnic_conn_params *p)
 	}
 
 	/* Fill in */
-	strncpy(conn->welcome, p->welcome, CONN_WELCOME_LEN_MAX);
-	strncpy(conn->prompt, p->prompt, CONN_PROMPT_LEN_MAX);
+	strlcpy(conn->welcome, p->welcome, CONN_WELCOME_LEN_MAX + 1);
+	strlcpy(conn->prompt, p->prompt, CONN_PROMPT_LEN_MAX + 1);
 	conn->buf_size = p->buf_size;
 	conn->msg_in_len_max = p->msg_in_len_max;
 	conn->msg_out_len_max = p->msg_out_len_max;
