@@ -490,7 +490,7 @@ zxdh_dev_free_mbufs(struct rte_eth_dev *dev)
 		if (!vq)
 			continue;
 		while ((buf = zxdh_queue_detach_unused(vq)) != NULL)
-			rte_pktmbuf_free(buf);
+			rte_pktmbuf_free_seg(buf);
 		PMD_DRV_LOG(DEBUG, "freeing %s[%d] used and unused buf",
 		"rxq", i * 2);
 	}
@@ -499,7 +499,7 @@ zxdh_dev_free_mbufs(struct rte_eth_dev *dev)
 		if (!vq)
 			continue;
 		while ((buf = zxdh_queue_detach_unused(vq)) != NULL)
-			rte_pktmbuf_free(buf);
+			rte_pktmbuf_free_seg(buf);
 		PMD_DRV_LOG(DEBUG, "freeing %s[%d] used and unused buf",
 		"txq", i * 2 + 1);
 	}
@@ -1291,10 +1291,17 @@ static int zxdh_scattered_rx(struct rte_eth_dev *eth_dev)
 static int32_t
 zxdh_set_rxtx_funcs(struct rte_eth_dev *eth_dev)
 {
-	eth_dev->tx_pkt_prepare = zxdh_xmit_pkts_prepare;
+	uint64_t tx_offloads = eth_dev->data->dev_conf.txmode.offloads;
+
 	eth_dev->data->scattered_rx = zxdh_scattered_rx(eth_dev);
 
-	eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_packed;
+	if (!(tx_offloads & RTE_ETH_TX_OFFLOAD_MULTI_SEGS)) {
+		eth_dev->tx_pkt_prepare = zxdh_xmit_pkts_simple_prepare;
+		eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_simple;
+	} else {
+		eth_dev->tx_pkt_prepare = zxdh_xmit_pkts_prepare;
+		eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_packed;
+	}
 
 	if (eth_dev->data->scattered_rx)
 		eth_dev->rx_pkt_burst = &zxdh_recv_pkts_packed;
