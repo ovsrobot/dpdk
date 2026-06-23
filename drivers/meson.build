@@ -171,6 +171,7 @@ foreach subpath:subdirs
         pkgconfig_extra_libs = []
         testpmd_sources = []
         require_iova_in_mbuf = true
+        use_function_versioning = false
         # for handling base code files which may need extra cflags
         base_sources = []
         base_cflags = []
@@ -272,6 +273,13 @@ foreach subpath:subdirs
             cflags += '-Wthread-safety'
         endif
         dpdk_conf.set(lib_name.to_upper(), 1)
+
+        if developer_mode and is_windows and use_function_versioning
+            message('@0@: Function versioning is not supported by Windows.'.format(name))
+        endif
+        if use_function_versioning
+            cflags += '-DRTE_USE_FUNCTION_VERSIONING'
+        endif
 
         dpdk_extra_ldflags += pkgconfig_extra_libs
 
