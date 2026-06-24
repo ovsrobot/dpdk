@@ -37,6 +37,9 @@
 /* upper bound for strings in pcapng option data */
 #define PCAPNG_STR_MAX	UINT16_MAX
 
+/* Flag to indicate timestamp is in TSC cycles (bit 63) */
+#define PCAPNG_TSC_FLAG	(1ULL << 63)
+
 /*
  * Converter from TSC values to nanoseconds since Unix epoch.
  * Uses reciprocal multiply to avoid runtime division.
@@ -480,6 +483,13 @@ rte_pcapng_mbuf_size(uint32_t length)
 		+ sizeof(uint32_t);		  /*  length */
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pcapng_tsc_to_ns, 26.07)
+uint64_t
+rte_pcapng_tsc_to_ns(const rte_pcapng_t *self, uint64_t tsc)
+{
+	return tsc_to_ns_epoch(&self->clock, tsc);
+}
+
 /* More generalized version rte_vlan_insert() */
 static int
 pcapng_vlan_insert(struct rte_mbuf *m, uint16_t ether_type, uint16_t tci)
@@ -555,10 +565,23 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		enum rte_pcapng_direction direction,
 		const char *comment)
 {
+	return rte_pcapng_copy_ts(port_id, queue, md, mp, length, direction,
+				  comment, 0);
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pcapng_copy_ts, 26.07)
+struct rte_mbuf *
+rte_pcapng_copy_ts(uint16_t port_id, uint32_t queue,
+		const struct rte_mbuf *md,
+		struct rte_mempool *mp,
+		uint32_t length,
+		enum rte_pcapng_direction direction,
+		const char *comment,
+		uint64_t timestamp)
+{
 	struct pcapng_enhance_packet_block *epb;
 	uint32_t orig_len, pkt_len, padding, flags;
 	struct pcapng_option *opt;
-	uint64_t timestamp;
 	uint16_t optlen;
 	struct rte_mbuf *mc;
 	bool rss_hash;
@@ -690,8 +713,13 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 	/* Interface index is filled in later during write */
 	mc->port = port_id;
 
-	/* Put timestamp in cycles here - adjust in packet write */
-	timestamp = rte_get_tsc_cycles();
+	/*
+	 * Use caller provided timestamp.
+	 * If none provided, use current TSC and set flag.
+	 */
+	if (timestamp == 0)
+		timestamp = rte_get_tsc_cycles() | PCAPNG_TSC_FLAG;
+
 	epb->timestamp_hi = timestamp >> 32;
 	epb->timestamp_lo = (uint32_t)timestamp;
 	epb->capture_length = pkt_len;
@@ -743,9 +771,11 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 		 */
 		cycles = (uint64_t)epb->timestamp_hi << 32;
 		cycles += epb->timestamp_lo;
-		timestamp = tsc_to_ns_epoch(&self->clock, cycles);
-		epb->timestamp_hi = timestamp >> 32;
-		epb->timestamp_lo = (uint32_t)timestamp;
+		if (cycles & PCAPNG_TSC_FLAG) {
+			timestamp = tsc_to_ns_epoch(&self->clock, cycles & ~PCAPNG_TSC_FLAG);
+			epb->timestamp_hi = timestamp >> 32;
+			epb->timestamp_lo = (uint32_t)timestamp;
+		}
 
 		/*
 		 * Handle case of highly fragmented and large burst size

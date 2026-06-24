@@ -140,6 +140,59 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		uint32_t length,
 		enum rte_pcapng_direction direction, const char *comment);
 
+/**
+ * Format an mbuf for writing to file with a custom timestamp.
+ *
+ * @param port_id
+ *   The Ethernet port on which packet was received
+ *   or is going to be transmitted.
+ * @param queue
+ *   The queue on the Ethernet port where packet was received
+ *   or is going to be transmitted.
+ * @param mp
+ *   The mempool from which the "clone" mbufs are allocated.
+ * @param m
+ *   The mbuf to copy
+ * @param length
+ *   The upper limit on bytes to copy.  Passing UINT32_MAX
+ *   means all data (after offset).
+ * @param direction
+ *   The direction of the packer: receive, transmit or unknown.
+ * @param comment
+ *   Optional per packet comment.
+ *   Truncated to UINT16_MAX characters.
+ * @param timestamp
+ *   Nanoseconds since the Unix epoch. If zero, TSC is captured and
+ *   converted at write time.
+ *
+ * @return
+ *   - The pointer to the new mbuf formatted for pcapng_write
+ *   - NULL on error such as invalid port or out of memory.
+ */
+__rte_experimental
+struct rte_mbuf *
+rte_pcapng_copy_ts(uint16_t port_id, uint32_t queue,
+		const struct rte_mbuf *m, struct rte_mempool *mp,
+		uint32_t length,
+		enum rte_pcapng_direction direction,
+		const char *comment, uint64_t timestamp);
+
+/**
+ * Convert a TSC value to nanoseconds since the Unix epoch.
+ *
+ * Uses the calibrated clock of the capture file.
+ *
+ * @param self
+ *  The handle to the packet capture file
+ * @param tsc
+ *  The TSC value to convert
+ * @return
+ *  Nanoseconds since Unix epoch
+ */
+__rte_experimental
+uint64_t
+rte_pcapng_tsc_to_ns(const rte_pcapng_t *self, uint64_t tsc);
+
 
 /**
  * Determine optimum mbuf data size.
