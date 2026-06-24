@@ -164,7 +164,7 @@ New Features
     for installing already loaded BPF programs as port callbacks
     (as opposed to loading them directly from ELF files).
 
-* **Added BPF validation debugging API.**
+* **Added BPF validation debugging API and hardened BPF validator.**
 
   * Introduced a new set of APIs (prefixed with ``rte_bpf_validate_debug_``) to
     introspect the BPF validator. This provides a mechanism to set breakpoints
@@ -172,6 +172,10 @@ New Features
     (such as tracked register bounds). This API is crucial primarily for writing
     comprehensive tests for the validator, but also serves as a foundation for a
     future interactive eBPF validation debugger.
+  * Fixed numerous bugs in the BPF validator's abstract interpretation logic,
+    including incorrect bounds tracking for jumps and arithmetic operations, as
+    well as fixing several instances of undefined behavior (UB) when verifying
+    malicious or corrupt programs.
 
 * **Added AI review helpers.**
 
