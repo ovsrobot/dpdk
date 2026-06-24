@@ -14,6 +14,9 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef RTE_USE_LIBBSD
+#include <bsd/string.h>
+#endif
 
 #include <rte_common.h>
 #include <rte_compat.h>
@@ -81,23 +84,16 @@ rte_strlcat(char *dst, const char *src, size_t size)
 }
 #endif
 
-/* pull in a strlcpy function */
+/* provide strlcpy/strlcat aliases where not natively available */
 #ifdef RTE_EXEC_ENV_FREEBSD
 #ifndef __BSD_VISIBLE /* non-standard functions are hidden */
 #define strlcpy(dst, src, size) rte_strlcpy(dst, src, size)
 #define strlcat(dst, src, size) rte_strlcat(dst, src, size)
-#endif
-
-#else /* non-BSD platforms */
-#ifdef RTE_USE_LIBBSD
-#include <bsd/string.h>
-
-#else /* no BSD header files, create own */
+#endif /* __BSD_VISIBLE */
+#elif !defined(RTE_HAS_STRLCPY)
 #define strlcpy(dst, src, size) rte_strlcpy(dst, src, size)
 #define strlcat(dst, src, size) rte_strlcat(dst, src, size)
-
-#endif /* RTE_USE_LIBBSD */
-#endif /* FREEBSD */
+#endif /* RTE_EXEC_ENV_FREEBSD */
 
 #ifdef __cplusplus
 extern "C" {
