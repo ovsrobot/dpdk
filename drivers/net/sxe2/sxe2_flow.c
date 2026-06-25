@@ -762,6 +762,7 @@ static int32_t sxe2_flow_validate_with_flow(struct rte_eth_dev *dev,
 					const struct rte_flow_action actions[],
 					struct rte_flow_error *error)
 {
+	struct sxe2_adapter *adapter = SXE2_DEV_PRIVATE_TO_ADAPTER(dev);
 	int32_t ret = 0;
 	struct sxe2_flow *flow = NULL;
 
@@ -804,9 +805,11 @@ static int32_t sxe2_flow_validate_with_flow(struct rte_eth_dev *dev,
 
 	ret = sxe2_flow_check_flow_list_duplicate(dev, flow_list);
 	if (ret != 0) {
-		rte_flow_error_set(error, EEXIST, RTE_FLOW_ERROR_TYPE_ITEM,
-				NULL, "Duplicate flow.");
-		PMD_LOG_ERR(DRV, "Duplicate flow.");
+		rte_flow_error_set(error, EEXIST, RTE_FLOW_ERROR_TYPE_ITEM, NULL,
+				   adapter->devargs.flow_dup_pattern_mode ?
+				   "Duplicate flow pattern." :
+				   "Duplicate flow pattern is not allowed.");
+		PMD_LOG_ERR(DRV, "Duplicate flow pattern.");
 		goto l_end;
 	}
 l_end:
