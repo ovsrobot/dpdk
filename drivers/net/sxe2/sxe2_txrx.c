@@ -13,6 +13,7 @@
 #include "sxe2_txrx_common.h"
 #include "sxe2_txrx_vec.h"
 #include "sxe2_txrx_poll.h"
+#include "sxe2_txrx_check_mbuf.h"
 #include "sxe2_ethdev.h"
 #include "sxe2_common_log.h"
 #include "sxe2_osal.h"
@@ -120,19 +121,22 @@ uint16_t sxe2_tx_pkts_prepare(void *tx_queue,
 			rte_errno = -EINVAL;
 			goto l_end;
 		}
-#ifdef RTE_ETHDEV_DEBUG_TX
 		ret = rte_validate_tx_offload(mbuf);
 		if (ret != 0) {
 			rte_errno = -ret;
 			goto l_end;
 		}
-#endif
 		ret = rte_net_intel_cksum_prepare(mbuf);
 		if (ret != 0) {
 			rte_errno = -ret;
 			goto l_end;
 		}
 		ret = sxe2_tx_mbuf_empty_check(mbuf);
+		if (ret != 0) {
+			rte_errno = -ret;
+			goto l_end;
+		}
+		ret = sxe2_txrx_check_mbuf(mbuf);
 		if (ret != 0) {
 			rte_errno = -ret;
 			goto l_end;
