@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
  *
  * Copyright 2008-2016 Freescale Semiconductor Inc.
- * Copyright 2017,2019-2025 NXP
+ * Copyright 2017,2019-2026 NXP
  *
  */
 
@@ -2840,9 +2840,10 @@ qman_shutdown_fq(struct qman_fq *fq)
 		}
 		res = mcr->result; /* Make a copy as we reuse MCR below */
 
-		if (res == QM_MCR_RESULT_OK) {
+		if (res == QM_MCR_RESULT_OK)
 			drain_mr_fqrni(&p->p);
-		} else if (res == QM_MCR_RESULT_PENDING) {
+
+		if (res == QM_MCR_RESULT_PENDING) {
 			/*
 			 * Need to wait for the FQRN in the message ring, which
 			 * will only occur once the FQ has been drained.  In
@@ -2850,28 +2851,29 @@ qman_shutdown_fq(struct qman_fq *fq)
 			 * to dequeue from the channel the FQ is scheduled on
 			 */
 			int found_fqrn = 0;
-			const u16 pool_ch_start = dpaa_get_qm_channel_pool();
-			const u16 pool_ch_end = pool_ch_start + dpaa_get_qm_channel_pool_num();
-			u32 sdqcr = p->sdqcr;
 
 			/* Flag that we need to drain FQ */
 			drain = 1;
 
+			const u16 pool_ch_start = dpaa_get_qm_channel_pool();
+			const u16 pool_ch_end = pool_ch_start +
+					dpaa_get_qm_channel_pool_num();
 			if (channel >= pool_ch_start && channel < pool_ch_end) {
-				/* Pool channel, enable the bit in the portal */
+				/* Pool channel - must use affine portal */
 				if (p->config->channel != channel) {
-					DPAA_BUS_ERR("Portal affine channel(0x%04x) != wq channel(0x%04x)",
+					DPAA_BUS_ERR("Portal ch(0x%04x) != FQ ch(0x%04x)",
 						p->config->channel, channel);
 					ret = -EINVAL;
 					goto out;
 				}
 			} else if (channel < pool_ch_start) {
 				/* Dedicated channel */
-				sdqcr = QM_SDQCR_TYPE_ACTIVE | QM_SDQCR_CHANNELS_DEDICATED;
-				qm_dqrr_sdqcr_set(&p->p, sdqcr);
+				qm_dqrr_sdqcr_set(&p->p,
+						  QM_SDQCR_TYPE_ACTIVE |
+						  QM_SDQCR_CHANNELS_DEDICATED);
 			} else {
-				DPAA_BUS_ERR("Can't recover FQ 0x%x, Invalid channel: 0x%x",
-					fqid, channel);
+				DPAA_BUS_ERR("Invalid channel 0x%x for FQ 0x%x",
+					channel, fqid);
 				ret = -EBUSY;
 				goto out;
 			}
@@ -2879,15 +2881,16 @@ qman_shutdown_fq(struct qman_fq *fq)
 				/* Keep draining DQRR while checking the MR*/
 				qm_dqrr_drain_nomatch(&p->p);
 				/* Process message ring too */
-				found_fqrn = qm_mr_drain(&p->p,
-							FQRN);
+				found_fqrn = qm_mr_drain(&p->p, FQRN);
 				cpu_relax();
 			} while (!found_fqrn);
-			/* Restore SDQCR */
-			if (sdqcr != p->sdqcr)
-				qm_dqrr_sdqcr_set(&p->p, p->sdqcr);
-		} else {
-			DPAA_BUS_ERR("retire_fq failed: FQ 0x%x, res=0x%x", fqid, res);
+			qm_dqrr_sdqcr_set(&p->p, p->sdqcr);
+
+		}
+		if (res != QM_MCR_RESULT_OK &&
+		    res != QM_MCR_RESULT_PENDING) {
+			DPAA_BUS_ERR("retire_fq failed: FQ 0x%x, res=0x%x",
+				fqid, res);
 			ret = -EIO;
 			goto out;
 		}
@@ -2930,7 +2933,7 @@ qman_shutdown_fq(struct qman_fq *fq)
 
 		if (mcr->result != QM_MCR_RESULT_OK) {
 			DPAA_BUS_ERR("OOS after drain fail: FQ 0x%x (0x%x)",
-				      fqid, mcr->result);
+				fqid, mcr->result);
 			ret = -EIO;
 			goto out;
 		}
@@ -2949,7 +2952,7 @@ qman_shutdown_fq(struct qman_fq *fq)
 
 		if (mcr->result != QM_MCR_RESULT_OK) {
 			DPAA_BUS_ERR("OOS fail: FQ 0x%x (0x%x)",
-				      fqid, mcr->result);
+				fqid, mcr->result);
 			ret = -EIO;
 			goto out;
 		}
@@ -2965,4 +2968,39 @@ qman_shutdown_fq(struct qman_fq *fq)
 
 out:
 	return ret;
+}
+
+int qman_find_fq_by_cgrid(u32 cgrid, u32 *fqid)
+{
+	struct qman_fq fq = {
+		.fqid = 1
+	};
+	struct qm_mcr_queryfq_np np;
+	struct qm_fqd fqd;
+	int err;
+
+	do {
+		err = qman_query_fq_np(&fq, &np);
+		if (err == -ERANGE) {
+			DPAA_BUS_INFO("No FQ found with cgrid(0x%x)", cgrid);
+			return err;
+		} else if (err) {
+			DPAA_BUS_WARN("Failed(%d) to Query np FQ(fqid=0x%x)", err, fq.fqid);
+			return err;
+		}
+		if ((np.state & QM_MCR_NP_STATE_MASK) != QM_MCR_NP_STATE_OOS) {
+			err = qman_query_fq(&fq, &fqd);
+			if (err) {
+				DPAA_BUS_WARN("Failed(%d) to Query FQ(fqid=0x%x)", err, fq.fqid);
+			} else if ((fqd.fq_ctrl & QM_FQCTRL_CGE) && fqd.cgid == cgrid) {
+				if (fqid)
+					*fqid = fq.fqid;
+				return 0;
+			}
+		}
+		/* Move to the next FQID */
+		fq.fqid++;
+	} while (1);
+
+	return -ENODEV;
 }
