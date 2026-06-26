@@ -1566,7 +1566,8 @@ iavf_config_irq_map(struct iavf_adapter *adapter)
 static int
 iavf_config_irq_map_lv_chunk(struct iavf_adapter *adapter,
 		uint16_t chunk_sz,
-		uint16_t chunk_start)
+		uint16_t chunk_start,
+		bool wrong_size)
 {
 	struct {
 		struct virtchnl_queue_vector_maps map_info;
@@ -1593,9 +1594,19 @@ iavf_config_irq_map_lv_chunk(struct iavf_adapter *adapter,
 		qv_maps->vector_id = vf->qv_map[chunk_start + i].vector_id;
 	}
 
-	/* for some reason PF side checks for buffer being too big, so adjust it down */
-	buf_len = sizeof(struct virtchnl_queue_vector_maps) +
-		  sizeof(struct virtchnl_queue_vector) * (chunk_sz - 1);
+	/*
+	 * in out-of-tree kernel driver versions 2.6.4 and 2.6.6 there is a
+	 * known issue where the PF side expects the buffer size to be bigger
+	 * than necessary. this is a workaround for that issue.
+	 */
+	if (wrong_size)
+		/* send N+1 instead of N to workaround PF side bug */
+		buf_len = sizeof(struct virtchnl_queue_vector_maps) +
+			sizeof(struct virtchnl_queue_vector) * (chunk_sz);
+	else
+		/* virtchnl_queue_vector_maps already contains 1 queue_vector */
+		buf_len = sizeof(struct virtchnl_queue_vector_maps) +
+			sizeof(struct virtchnl_queue_vector) * (chunk_sz - 1);
 
 	args.ops = VIRTCHNL_OP_MAP_QUEUE_VECTOR;
 	args.in_args = (u8 *)map_info;
@@ -1609,12 +1620,21 @@ iavf_config_irq_map_lv_chunk(struct iavf_adapter *adapter,
 int
 iavf_config_irq_map_lv(struct iavf_adapter *adapter, uint16_t num)
 {
+	static bool wrong_size;
 	uint16_t c;
 	int err;
 
 	for (c = 0; c < num; c += IAVF_CFG_Q_NUM_PER_BUF) {
 		uint16_t chunk_sz = RTE_MIN(num - c, IAVF_CFG_Q_NUM_PER_BUF);
-		err = iavf_config_irq_map_lv_chunk(adapter, chunk_sz, c);
+		err = iavf_config_irq_map_lv_chunk(adapter, chunk_sz, c, wrong_size);
+		if (err) {
+			/* try workaround for a known issue */
+			err = iavf_config_irq_map_lv_chunk(adapter, chunk_sz, c, true);
+			if (err == 0) {
+				PMD_DRV_LOG(DEBUG, "Using workaround for IRQ map");
+				wrong_size = true;
+			}
+		}
 		if (err) {
 			PMD_DRV_LOG(ERR, "Failed to configure irq map chunk [%u, %u)",
 					c, c + chunk_sz);
