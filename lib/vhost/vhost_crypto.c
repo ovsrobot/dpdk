@@ -1512,6 +1512,10 @@ vhost_crypto_process_one_req(struct vhost_crypto *vcrypto,
 		VC_LOG_ERR("Invalid descriptor");
 		return -1;
 	}
+	if (unlikely(vc_req->dev->mem == NULL)) {
+		VC_LOG_ERR("Uninitialized vhost device");
+		return -1;
+	}
 
 	dlen = head->len;
 	src_desc = IOVA_TO_VVA(struct vring_desc *, vc_req->dev, vq,
