@@ -2364,6 +2364,13 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 
 		vsp_id = dev_vspids[loop];
 
+		/* Shutdown FQ before configure to clean the queue */
+		ret = qman_shutdown_fq_by_fqid(fqid);
+		if (ret < 0) {
+			DPAA_PMD_ERR("Failed shutdown %s:rxq-%d-fqid = 0x%08x",
+				dpaa_intf->name, loop, fqid);
+		}
+
 		if (dpaa_intf->cgr_rx)
 			dpaa_intf->cgr_rx[loop].cgrid = cgrid[loop];
 
