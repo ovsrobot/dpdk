@@ -241,6 +241,10 @@ API Changes
   - ``rte_pmd_mlx5_enable_steering``
   - ``rte_pmd_mlx5_disable_steering``
 
+* **eal: promoted timing-safe memory comparison from experimental to stable.**
+
+  The inline function ``rte_memeq_timingsafe()`` is no longer marked experimental.
+
 
 ABI Changes
 -----------
