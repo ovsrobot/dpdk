@@ -3,5 +3,6 @@
 
 sources = files('rte_pcapng.c')
 headers = files('rte_pcapng.h')
+use_function_versioning = true
 
 deps += ['ethdev']

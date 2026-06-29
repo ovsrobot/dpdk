@@ -129,6 +129,9 @@ enum rte_pcapng_direction {
  * @param comment
  *   Optional per packet comment.
  *   Truncated to UINT16_MAX characters.
+ * @param timestamp
+ *   Nanoseconds since the Unix epoch. If zero, TSC is captured and
+ *   converted at write time.
  *
  * @return
  *   - The pointer to the new mbuf formatted for pcapng_write
@@ -138,7 +141,24 @@ struct rte_mbuf *
 rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *m, struct rte_mempool *mp,
 		uint32_t length,
-		enum rte_pcapng_direction direction, const char *comment);
+		enum rte_pcapng_direction direction,
+		const char *comment, uint64_t timestamp);
+
+/**
+ * Convert a TSC value to nanoseconds since the Unix epoch.
+ *
+ * Uses the calibrated clock of the capture file.
+ *
+ * @param self
+ *  The handle to the packet capture file
+ * @param tsc
+ *  The TSC value to convert
+ * @return
+ *  Nanoseconds since Unix epoch
+ */
+__rte_experimental
+uint64_t
+rte_pcapng_tsc_to_ns(const rte_pcapng_t *self, uint64_t tsc);
 
 
 /**
