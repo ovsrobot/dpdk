@@ -131,6 +131,15 @@ IAVF PMD parameters
     * ``segment``: Check number of mbuf segments does not exceed HW limits.
     * ``offload``: Check for use of an unsupported offload flag.
 
+``no_runtime_queue_setup``
+    Runtime (post-start) Rx/Tx queue setup can race with the hardware Tx rate
+    limiter on E810 VFs and corrupt queue state.
+    It is advertised by default.
+    Applications that pace queues through the traffic manager can opt out
+    of advertising the runtime queue setup capability
+    by setting ``no_runtime_queue_setup`` to 1,
+    for example, ``-a 18:01.0,no_runtime_queue_setup=1``.
+
 
 HW-Specific Notes For IAVF
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

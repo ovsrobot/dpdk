@@ -139,6 +139,8 @@ New Features
 
   * Added support for transmitting LLDP packets based on mbuf packet type.
   * Implemented AVX2 context descriptor transmit paths.
+  * Added ``no_runtime_queue_setup`` devarg to disable runtime queue setup
+    on devices that pace queues through the traffic manager.
 
 * **Updated Intel ice driver.**
 

@@ -46,6 +46,7 @@
 #define IAVF_NO_POLL_ON_LINK_DOWN_ARG "no-poll-on-link-down"
 #define IAVF_MBUF_CHECK_ARG       "mbuf_check"
 #define IAVF_ENABLE_PTYPE_LLDP_ARG "enable_ptype_lldp"
+#define IAVF_NO_RUNTIME_QUEUE_SETUP_ARG "no_runtime_queue_setup"
 uint64_t iavf_timestamp_dynflag;
 int iavf_timestamp_dynfield_offset = -1;
 int rte_pmd_iavf_tx_lldp_dynfield_offset = -1;
@@ -59,6 +60,7 @@ static const char * const iavf_valid_args[] = {
 	IAVF_NO_POLL_ON_LINK_DOWN_ARG,
 	IAVF_MBUF_CHECK_ARG,
 	IAVF_ENABLE_PTYPE_LLDP_ARG,
+	IAVF_NO_RUNTIME_QUEUE_SETUP_ARG,
 	NULL
 };
 
@@ -1160,9 +1162,15 @@ iavf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->reta_size = vf->vf_res->rss_lut_size;
 	dev_info->flow_type_rss_offloads = IAVF_RSS_OFFLOAD_ALL;
 	dev_info->max_mac_addrs = IAVF_NUM_MACADDR_MAX;
-	dev_info->dev_capa =
-		RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
-		RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
+	/*
+	 * Runtime queue setup can race with the hardware Tx rate limiter on
+	 * E810 VFs and corrupt queue state. Applications that pace queues via
+	 * the traffic manager can opt out with no_runtime_queue_setup=1.
+	 */
+	if (!adapter->devargs.no_runtime_queue_setup)
+		dev_info->dev_capa =
+			RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
+			RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
 	dev_info->rx_offload_capa =
 		RTE_ETH_RX_OFFLOAD_VLAN_STRIP |
 		RTE_ETH_RX_OFFLOAD_QINQ_STRIP |
@@ -2533,6 +2541,11 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 	if (ret)
 		goto bail;
 
+	ret = rte_kvargs_process(kvlist, IAVF_NO_RUNTIME_QUEUE_SETUP_ARG,
+				 &parse_bool, &ad->devargs.no_runtime_queue_setup);
+	if (ret)
+		goto bail;
+
 bail:
 	rte_kvargs_free(kvlist);
 	return ret;
@@ -3619,7 +3632,8 @@ bool is_iavf_supported(struct rte_eth_dev *dev)
 RTE_PMD_REGISTER_PCI(net_iavf, rte_iavf_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_iavf, pci_id_iavf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_iavf, "* igb_uio | vfio-pci");
-RTE_PMD_REGISTER_PARAM_STRING(net_iavf, "cap=dcf");
+RTE_PMD_REGISTER_PARAM_STRING(net_iavf, "cap=dcf"
+			      IAVF_NO_RUNTIME_QUEUE_SETUP_ARG "=<0|1>");
 RTE_LOG_REGISTER_SUFFIX(iavf_logtype_init, init, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(iavf_logtype_driver, driver, NOTICE);
 #ifdef RTE_ETHDEV_DEBUG_RX
