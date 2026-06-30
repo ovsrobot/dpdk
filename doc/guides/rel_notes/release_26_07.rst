@@ -140,6 +140,11 @@ New Features
   * Added support for transmitting LLDP packets based on mbuf packet type.
   * Implemented AVX2 context descriptor transmit paths.
 
+* **Updated Intel ice driver.**
+
+  * Added ``rl_burst_size`` devarg to configure the scheduler rate-limiter
+    burst size, reducing Tx latency jitter for time-sensitive traffic.
+
 * **Updated NVIDIA mlx5 ethernet driver.**
 
   * Added support for selective Rx in scalar SPRQ Rx path.
