@@ -177,6 +177,13 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Updated Wangxun ngbe driver.**
+
+  * Implemented UDP Segmentation Offload (USO) in the transmit path.
+    The ``RTE_ETH_TX_OFFLOAD_UDP_TSO`` capability was advertised since the
+    driver's initial integration but the data path was missing; it is now
+    functional.
+
 
 Removed Items
 -------------
