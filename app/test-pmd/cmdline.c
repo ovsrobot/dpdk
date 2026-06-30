@@ -371,6 +371,11 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"inner-ipv6-tcp|inner-ipv4-udp|inner-ipv6-udp|"
 			"inner-ipv4-sctp|inner-ipv6-sctp\n\n"
 
+			"create pinned-rxpool (seg-idx) (count) (elt-size)\n"
+			"    Create a pinned external-buffer Rx mempool for"
+			" buffer-split segment <seg-idx>. Payloads DMA directly"
+			" into application-owned hugepage memory without copy.\n\n"
+
 			"set txpkts (x[,y]*)\n"
 			"    Set the length of each segment of TXONLY"
 			" and optionally CSUM packets.\n\n"
@@ -4479,6 +4484,123 @@ static cmdline_parse_inst_t cmd_set_rxhdrs = {
 		(void *)&cmd_set_rxhdrs_set,
 		(void *)&cmd_set_rxhdrs_rxhdrs,
 		(void *)&cmd_set_rxhdrs_values,
+		NULL,
+	},
+};
+
+/* *** CREATE PINNED EXTERNAL BUFFER POOL FOR RX SPLIT SEGMENT *** */
+struct cmd_create_pinned_rxpool_result {
+	cmdline_fixed_string_t create;
+	cmdline_fixed_string_t pinned_rxpool;
+	uint16_t seg_idx;
+	uint32_t count;
+	uint16_t elt_size;
+};
+
+static void
+cmd_create_pinned_rxpool_parsed(void *parsed_result,
+				__rte_unused struct cmdline *cl,
+				__rte_unused void *data)
+{
+	struct cmd_create_pinned_rxpool_result *res = parsed_result;
+	char pool_name[RTE_MEMPOOL_NAMESIZE];
+	struct rte_pktmbuf_extmem ext_mem;
+	struct rte_mempool *mp;
+	unsigned int socket_id;
+	size_t mem_size;
+	void *frames;
+
+	if (res->seg_idx >= MAX_SEGS_BUFFER_SPLIT) {
+		fprintf(stderr, "seg-idx must be less than %u\n",
+			MAX_SEGS_BUFFER_SPLIT);
+		return;
+	}
+
+	socket_id = (num_sockets > 0) ? (unsigned int)socket_ids[0] : 0;
+	mbuf_poolname_build(socket_id, pool_name, sizeof(pool_name),
+			    res->seg_idx);
+
+	if (mbuf_pool_find(socket_id, res->seg_idx) != NULL) {
+		fprintf(stderr,
+			"Pool '%s' already exists; stop/close port before recreating\n",
+			pool_name);
+		return;
+	}
+
+	mem_size = (size_t)res->count * res->elt_size;
+	frames = rte_zmalloc_socket("pinned_rxpool_mem", mem_size,
+				    RTE_CACHE_LINE_SIZE, socket_id);
+	if (frames == NULL) {
+		fprintf(stderr,
+			"Failed to allocate %zu bytes for pinned pool\n",
+			mem_size);
+		return;
+	}
+
+	ext_mem.buf_ptr  = frames;
+	ext_mem.buf_iova = rte_malloc_virt2iova(frames);
+	if (ext_mem.buf_iova == RTE_BAD_IOVA) {
+		fprintf(stderr,
+			"No IOVA mapping for pinned pool (VFIO/IOMMU required)\n");
+		rte_free(frames);
+		return;
+	}
+	ext_mem.buf_len  = mem_size;
+	ext_mem.elt_size = res->elt_size;
+
+	mp = rte_pktmbuf_pool_create_extbuf(pool_name, res->count,
+					    0, 0, res->elt_size,
+					    socket_id, &ext_mem, 1);
+	if (mp == NULL) {
+		fprintf(stderr, "Failed to create pinned pool '%s': %s\n",
+			pool_name, rte_strerror(rte_errno));
+		rte_free(frames);
+		return;
+	}
+
+	/* Register with testpmd so rx_queue_setup() uses this pool for
+	 * segment <seg_idx> when buffer-split is configured.
+	 */
+	mbuf_data_size[res->seg_idx] = res->elt_size;
+	if ((uint32_t)(res->seg_idx + 1) > mbuf_data_size_n)
+		mbuf_data_size_n = res->seg_idx + 1;
+
+	printf("Created pinned ext-buf pool '%s':\n"
+	       "  socket=%u seg-idx=%u count=%u elt-size=%u "
+	       "mem=%p iova=0x%" PRIx64 "\n",
+	       pool_name, socket_id, res->seg_idx, res->count,
+	       res->elt_size, frames, ext_mem.buf_iova);
+}
+
+static cmdline_parse_token_string_t cmd_create_pinned_rxpool_create =
+	TOKEN_STRING_INITIALIZER(struct cmd_create_pinned_rxpool_result,
+				 create, "create");
+static cmdline_parse_token_string_t cmd_create_pinned_rxpool_kw =
+	TOKEN_STRING_INITIALIZER(struct cmd_create_pinned_rxpool_result,
+				 pinned_rxpool, "pinned-rxpool");
+static cmdline_parse_token_num_t cmd_create_pinned_rxpool_seg_idx =
+	TOKEN_NUM_INITIALIZER(struct cmd_create_pinned_rxpool_result,
+			      seg_idx, RTE_UINT16);
+static cmdline_parse_token_num_t cmd_create_pinned_rxpool_count =
+	TOKEN_NUM_INITIALIZER(struct cmd_create_pinned_rxpool_result,
+			      count, RTE_UINT32);
+static cmdline_parse_token_num_t cmd_create_pinned_rxpool_elt_size =
+	TOKEN_NUM_INITIALIZER(struct cmd_create_pinned_rxpool_result,
+			      elt_size, RTE_UINT16);
+
+static cmdline_parse_inst_t cmd_create_pinned_rxpool = {
+	.f = cmd_create_pinned_rxpool_parsed,
+	.data = NULL,
+	.help_str = "create pinned-rxpool <seg-idx> <count> <elt-size>: "
+		    "create a pinned external-buffer Rx mempool for split "
+		    "segment <seg-idx>; payloads DMA directly into hugepage "
+		    "memory owned by the application without an extra copy",
+	.tokens = {
+		(void *)&cmd_create_pinned_rxpool_create,
+		(void *)&cmd_create_pinned_rxpool_kw,
+		(void *)&cmd_create_pinned_rxpool_seg_idx,
+		(void *)&cmd_create_pinned_rxpool_count,
+		(void *)&cmd_create_pinned_rxpool_elt_size,
 		NULL,
 	},
 };
@@ -14238,6 +14360,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_set_rxoffs,
 	&cmd_set_rxpkts,
 	&cmd_set_rxhdrs,
+	&cmd_create_pinned_rxpool,
 	&cmd_set_txflows,
 	&cmd_set_txpkts,
 	&cmd_set_txsplit,

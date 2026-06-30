@@ -867,6 +867,88 @@ Where eth[,ipv4]* represents a CSV list of values, without white space.
 If the list of offsets is shorter than the list of segments,
 zero offsets will be used for the remaining segments.
 
+create pinned-rxpool
+~~~~~~~~~~~~~~~~~~~~
+
+Create a pinned external-buffer Rx mempool for a buffer-split payload
+segment. Each mbuf in the pool is permanently bound to a fixed slot in
+a contiguous hugepage region allocated by testpmd. When the NIC
+performs a buffer-split receive, the payload DMA-writes directly into
+that hugepage memory without any extra copy from a normal mbuf.
+
+.. code-block:: none
+
+   testpmd> create pinned-rxpool (seg-idx) (count) (elt-size)
+
+Where:
+
+seg-idx
+   Index of the Rx split segment that will use the pinned pool.
+   0 is the header segment (usually left as the default pool);
+   1 is the first payload segment and is the typical target.
+
+count
+   Number of mbufs in the pool. Should be at least as large as the
+   number of Rx descriptors on all queues using this pool, plus a
+   safety margin (e.g. ``nb_rxd * nb_rxq * 2``).
+
+elt-size
+   Size of each pool element in bytes. This is the total slot stride,
+   including ``RTE_PKTMBUF_HEADROOM`` (default 128 B). For example,
+   to hold 1260-byte video payloads (SMPTE ST 2110-21 BPM size) with
+   a standard headroom, set ``elt-size`` to 1388 (= 128 + 1260).
+
+The pool is named according to testpmd's internal convention so that
+``rx_queue_setup()`` automatically selects it for segment ``seg-idx``
+when ``RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT`` is enabled.
+
+.. note::
+
+   VFIO or another IOMMU driver is required so that hugepage memory
+   has a valid IOVA. The backing hugepage allocation is not freed when
+   the port is stopped or the pool is re-created; restart testpmd to
+   reclaim it.
+
+**Example — zero-copy header/payload split for video streaming**
+
+This example mirrors the use case in the Media Transport Library (MTL)
+for SMPTE ST 2110-21 video reception. Headers land in the default
+pool; 1260-byte video payloads DMA directly into a pinned hugepage
+region without any copy. The pool holds enough slots for 4 K
+descriptors on 4 queues with headroom:
+
+.. code-block:: console
+
+   # Start testpmd with a default header pool (segment 0)
+   dpdk-testpmd -a 0000:31:00.0,enable-rx-timestamp=0 \
+     --mbuf-size=256 -- -i --rxq=4 --txq=4 --rxd=4096
+
+   # Inside testpmd:
+
+   # 1. Create the pinned payload pool for segment 1 (4*4096 mbufs,
+   #    1388 bytes each: 128 B headroom + 1260 B payload)
+   testpmd> create pinned-rxpool 1 32768 1388
+
+   # 2. Configure buffer split: segment 0 = UDP+lower headers,
+   #    segment 1 = payload (length 0 means "rest of packet")
+   testpmd> set rxhdrs ipv4-udp
+   testpmd> set rxpkts 0,0
+
+   # 3. Enable buffer split on the port
+   testpmd> port config 0 rx_offload buffer_split on
+
+   # 4. Restart the queues so the new configuration takes effect
+   testpmd> stop
+   testpmd> port stop 0
+   testpmd> port start 0
+   testpmd> start
+
+After this sequence, each received UDP packet is split by the NIC:
+the header mbuf (chain head) comes from the default pool, and the
+payload mbuf (chain next) has its ``buf_addr`` pointing into the
+pinned hugepage region owned by the application — no copy, no
+callback, no new ethdev API.
+
 set txpkts
 ~~~~~~~~~~
 
