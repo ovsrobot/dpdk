@@ -241,6 +241,12 @@ API Changes
   - ``rte_pmd_mlx5_enable_steering``
   - ``rte_pmd_mlx5_disable_steering``
 
+* **ip_frag: hardened IP reassembly against malformed fragments.**
+
+  Duplicate, overlapping, oversized, and (for IPv6) per-fragment-header
+  fragments are now rejected rather than mis-reassembled. This changes which
+  fragment streams reassemble and may affect throughput.
+
 
 ABI Changes
 -----------
