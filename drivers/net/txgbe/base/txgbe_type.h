@@ -883,6 +883,7 @@ struct txgbe_hw {
 	rte_atomic32_t swfw_busy;
 	u32 fec_mode;
 	u32 cur_fec_link;
+	RTE_ATOMIC(bool) pf_running;
 };
 
 struct txgbe_backplane_ability {
