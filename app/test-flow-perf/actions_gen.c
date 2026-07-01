@@ -188,6 +188,34 @@ add_port_id(struct rte_flow_action *actions,
 }
 
 static void
+add_represented_port(struct rte_flow_action *actions,
+	uint8_t actions_counter,
+	struct additional_para para)
+{
+	static struct rte_flow_action_ethdev represented_port = {
+		.port_id = PORT_ID_DST,
+	};
+
+	represented_port.port_id = para.dst_port;
+	actions[actions_counter].type = RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT;
+	actions[actions_counter].conf = &represented_port;
+}
+
+static void
+add_port_representor(struct rte_flow_action *actions,
+	uint8_t actions_counter,
+	struct additional_para para)
+{
+	static struct rte_flow_action_ethdev port_representor = {
+		.port_id = PORT_ID_DST,
+	};
+
+	port_representor.port_id = para.dst_port;
+	actions[actions_counter].type = RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR;
+	actions[actions_counter].conf = &port_representor;
+}
+
+static void
 add_drop(struct rte_flow_action *actions,
 	uint8_t actions_counter,
 	__rte_unused struct additional_para para)
@@ -1101,6 +1129,14 @@ fill_actions(struct rte_flow_action *actions, uint64_t *flow_actions,
 		{
 			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_PORT_ID),
 			.funct = add_port_id
+		},
+		{
+			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT),
+			.funct = add_represented_port,
+		},
+		{
+			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR),
+			.funct = add_port_representor,
 		},
 		{
 			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_DROP),

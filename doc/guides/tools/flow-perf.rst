@@ -248,6 +248,26 @@ Actions:
        specify the destination port, the number of values should be
        the same with number of set bits in portmask.
 
+*	``--represented-port``
+	Add represented port redirection action to all flows actions.
+	Port redirection destination is defined in config.h under
+	PORT_ID_DST, default value = 1.
+
+		It can also have an optional parameter like
+		--represented-port=N[,M] to specify the destination port. The
+		number of values should be the same as the number of set bits in
+		portmask.
+
+*	``--port-representor``
+	Add port representor redirection action to all flows actions.
+	Port redirection destination is defined in config.h under
+	PORT_ID_DST, default value = 1.
+
+		It can also have an optional parameter like
+		--port-representor=N[,M] to specify the destination port. The
+		number of values should be the same as the number of set bits in
+		portmask.
+
 *	``--rss``
 	Add RSS action to all flows actions,
 	The queues in RSS action will be all queues configured
