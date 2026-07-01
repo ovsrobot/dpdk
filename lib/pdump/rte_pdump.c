@@ -477,11 +477,21 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 	return ret;
 }
 
+/* Async reply handler; warns if any secondary did not respond. */
+static int
+pdump_secondary_reply(const struct rte_mp_msg *request __rte_unused,
+		      const struct rte_mp_reply *reply)
+{
+	if (reply->nb_sent != reply->nb_received)
+		PDUMP_LOG_LINE(ERR, "not all secondary's replied (sent %u recv %u)",
+			       reply->nb_sent, reply->nb_received);
+	return 0;
+}
+
 static void
 pdump_request_to_secondary(const struct pdump_request *req)
 {
 	struct rte_mp_msg mp_req = { };
-	struct rte_mp_reply mp_reply;
 	struct timespec ts = {.tv_sec = MP_TIMEOUT_S, .tv_nsec = 0};
 
 	PDUMP_LOG_LINE(DEBUG, "forward req %s to secondary", pdump_opname(req->op));
@@ -490,14 +500,9 @@ pdump_request_to_secondary(const struct pdump_request *req)
 	strlcpy(mp_req.name, PDUMP_MP, sizeof(mp_req.name));
 	mp_req.len_param = sizeof(*req);
 
-	if (rte_mp_request_sync(&mp_req, &mp_reply, &ts) != 0)
-		PDUMP_LOG_LINE(ERR, "rte_mp_request_sync failed");
-
-	else if (mp_reply.nb_sent != mp_reply.nb_received)
-		PDUMP_LOG_LINE(ERR, "not all secondary's replied (sent %u recv %u)",
-			       mp_reply.nb_sent, mp_reply.nb_received);
-
-	free(mp_reply.msgs);
+	/* Forward asynchronously so an unresponsive secondary cannot block the requester reply. */
+	if (rte_mp_request_async(&mp_req, &ts, pdump_secondary_reply) != 0)
+		PDUMP_LOG_LINE(ERR, "rte_mp_request_async failed");
 }
 
 /* Allocate temporary storage for passing state to the alarm thread for deferred handling */
