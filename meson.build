@@ -88,6 +88,25 @@ if is_linux
     global_inc += include_directories('kernel/linux')
 endif
 
+# on linux, try to check that documentation sources are correctly built and indexed
+check_docs = is_linux and meson.version().version_compare('>= 0.60.0')
+
+if check_docs
+    doc_build_path = 'doc/api/doxy-api.conf.in'
+    doc_build_file = dpdk_source_root / doc_build_path
+    doc_built_dirs = run_command('sed', '--regexp-extended', '--quiet',
+        # Extract and print the file path immediately following @TOPDIR@/ .
+        's#^(INPUT *=)? *@TOPDIR@/([^ ]*)( .*|\\\\|)$#\\2#p',
+        doc_build_file, check: true).stdout().splitlines()
+
+    doc_index_path = 'doc/api/doxy-api-index.md'
+    doc_index_file = dpdk_source_root / doc_index_path
+    doc_indexed_headers = run_command('sed', '--regexp-extended', '--quiet',
+        # Extract and print the (@ref ...) contents.
+        's#^.*\\(@ref ([^)]*)\\).*$#\\1#p',
+        doc_index_file, check: true).stdout().splitlines()
+endif
+
 # build libs and drivers
 subdir('lib')
 subdir('drivers')

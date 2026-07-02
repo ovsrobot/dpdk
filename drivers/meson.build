@@ -287,6 +287,23 @@ foreach subpath:subdirs
         dpdk_headers += headers
         dpdk_drivers_headers += driver_sdk_headers
 
+        if check_docs and headers.length() > 0
+            foreach h:headers
+                hname = fs.name(h)
+                if not hname.startswith('rte_')
+                    warning('public header @0@ name does not start with "rte_"'.format(h))
+                endif
+                if hname not in doc_indexed_headers
+                    warning('public header @0@ is not listed in @1@'.format(h, doc_index_path))
+                endif
+            endforeach
+            doc_dir = 'drivers/' + drv_path
+            if doc_dir not in doc_built_dirs
+                warning('public header directory @0@ is not listed in @1@'.format(doc_dir,
+                    doc_build_path))
+            endif
+        endif
+
         if headers.length() > 0
             dpdk_includes += include_directories(drv_path)
         endif
