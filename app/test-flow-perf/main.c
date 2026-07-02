@@ -268,6 +268,18 @@ static const struct option_dict {
 		.map_idx = &actions_idx
 	},
 	{
+		.str = "represented-port",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "port-representor",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
 		.str = "rss",
 		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_RSS),
 		.map = &flow_actions[0],
@@ -542,6 +554,8 @@ usage(char *progname)
 
 	printf("To set flow actions:\n");
 	printf("  --port-id: add port-id action in flow actions\n");
+	printf("  --represented-port: add represented-port action in flow actions\n");
+	printf("  --port-representor: add port-representor action in flow actions\n");
 	printf("  --rss: add rss action in flow actions\n");
 	printf("  --queue: add queue action in flow actions\n");
 	printf("  --jump: add jump action in flow actions\n");
@@ -699,6 +713,8 @@ args_parse(int argc, char **argv)
 		{ "icmpv6",                     0, 0, 0 },
 		/* Actions */
 		{ "port-id",                    2, 0, 0 },
+		{ "represented-port",           2, 0, 0 },
+		{ "port-representor",           2, 0, 0 },
 		{ "rss",                        0, 0, 0 },
 		{ "queue",                      0, 0, 0 },
 		{ "jump",                       0, 0, 0 },
@@ -913,14 +929,17 @@ args_parse(int argc, char **argv)
 					rte_exit(EXIT_FAILURE, "Invalid hairpin config mask\n");
 				hairpin_conf_mask = hp_conf;
 			}
-			if (strcmp(lgopts[opt_idx].name,
-					"port-id") == 0) {
+			if (strcmp(lgopts[opt_idx].name, "port-id") == 0 ||
+			    strcmp(lgopts[opt_idx].name, "represented-port") == 0 ||
+			    strcmp(lgopts[opt_idx].name, "port-representor") == 0) {
 				uint16_t port_idx = 0;
 
-				token = strtok(optarg, ",");
-				while (token != NULL) {
-					dst_ports[port_idx++] = atoi(token);
-					token = strtok(NULL, ",");
+				if (optarg != NULL) {
+					token = strtok(optarg, ",");
+					while (token != NULL) {
+						dst_ports[port_idx++] = atoi(token);
+						token = strtok(NULL, ",");
+					}
 				}
 			}
 			if (strcmp(lgopts[opt_idx].name, "rxq") == 0) {

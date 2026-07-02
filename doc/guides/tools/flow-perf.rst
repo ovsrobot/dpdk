@@ -240,13 +240,41 @@ Items:
 Actions:
 
 *	``--port-id``
-	Add port redirection action to all flows actions.
-	Port redirection destination is defined in user_parameters.h
-	under PORT_ID_DST, default value = 1.
+	Add an action that redirects matching traffic to a DPDK port ID.
+	As this action is deprecated; prefer ``--represented-port`` or
+	``--port-representor`` for embedded-switch flows when supported by
+	the PMD.
+	Port redirection destination is defined in config.h under
+	PORT_ID_DST, default value = 1.
 
-       It can also has optional parameter like --port-id=N[,M] to
-       specify the destination port, the number of values should be
-       the same with number of set bits in portmask.
+       Without an argument, ``PORT_ID_DST`` is used for each source port.
+       With ``--port-id=N[,M]``, the values override the destination for
+       enabled source ports in ``--portmask`` order; provide one value for
+       each set bit in the port mask.
+
+*	``--represented-port``
+	At the embedded-switch level, add an action that redirects matching
+	traffic to the entity represented by the specified ethdev. Use this
+	action when the destination is the represented entity.
+	Port redirection destination is defined in config.h under
+	PORT_ID_DST, default value = 1.
+
+		Without an argument, ``PORT_ID_DST`` is used for each source port.
+		With ``--represented-port=N[,M]``, the values override the destination
+		for enabled source ports in ``--portmask`` order; provide one value
+		for each set bit in the port mask.
+
+*	``--port-representor``
+	At the embedded-switch level, add an action that redirects matching
+	traffic to the specified ethdev. Use this action when the destination
+	is the ethdev rather than the entity it represents.
+	Port redirection destination is defined in config.h under
+	PORT_ID_DST, default value = 1.
+
+		Without an argument, ``PORT_ID_DST`` is used for each source port.
+		With ``--port-representor=N[,M]``, the values override the destination
+		for enabled source ports in ``--portmask`` order; provide one value
+		for each set bit in the port mask.
 
 *	``--rss``
 	Add RSS action to all flows actions,

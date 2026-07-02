@@ -178,13 +178,41 @@ add_port_id(struct rte_flow_action *actions,
 	uint8_t actions_counter,
 	struct additional_para para)
 {
-	static struct rte_flow_action_port_id port_id = {
-		.id = PORT_ID_DST,
-	};
+	static alignas(RTE_CACHE_LINE_SIZE)
+	    struct rte_flow_action_port_id port_ids[RTE_MAX_LCORE];
+	uint8_t ti = para.core_idx;
 
-	port_id.id = para.dst_port;
+	port_ids[ti].id = para.dst_port;
 	actions[actions_counter].type = RTE_FLOW_ACTION_TYPE_PORT_ID;
-	actions[actions_counter].conf = &port_id;
+	actions[actions_counter].conf = &port_ids[ti];
+}
+
+static void
+add_represented_port(struct rte_flow_action *actions,
+	uint8_t actions_counter,
+	struct additional_para para)
+{
+	static alignas(RTE_CACHE_LINE_SIZE)
+	    struct rte_flow_action_ethdev represented_ports[RTE_MAX_LCORE];
+	uint8_t ti = para.core_idx;
+
+	represented_ports[ti].port_id = para.dst_port;
+	actions[actions_counter].type = RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT;
+	actions[actions_counter].conf = &represented_ports[ti];
+}
+
+static void
+add_port_representor(struct rte_flow_action *actions,
+	uint8_t actions_counter,
+	struct additional_para para)
+{
+	static alignas(RTE_CACHE_LINE_SIZE)
+	    struct rte_flow_action_ethdev port_representors[RTE_MAX_LCORE];
+	uint8_t ti = para.core_idx;
+
+	port_representors[ti].port_id = para.dst_port;
+	actions[actions_counter].type = RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR;
+	actions[actions_counter].conf = &port_representors[ti];
 }
 
 static void
@@ -1101,6 +1129,14 @@ fill_actions(struct rte_flow_action *actions, uint64_t *flow_actions,
 		{
 			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_PORT_ID),
 			.funct = add_port_id
+		},
+		{
+			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT),
+			.funct = add_represented_port,
+		},
+		{
+			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR),
+			.funct = add_port_representor,
 		},
 		{
 			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_DROP),
