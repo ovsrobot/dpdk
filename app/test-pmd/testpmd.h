@@ -891,6 +891,9 @@ mbuf_pool_find(unsigned int sock_id, uint16_t idx)
 {
 	char pool_name[RTE_MEMPOOL_NAMESIZE];
 
+	if (!numa_support)
+		sock_id = (unsigned int)SOCKET_ID_ANY;
+
 	mbuf_poolname_build(sock_id, pool_name, sizeof(pool_name), idx);
 	return rte_mempool_lookup((const char *)pool_name);
 }

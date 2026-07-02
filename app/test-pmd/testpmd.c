@@ -3153,8 +3153,7 @@ start_port(portid_t pid)
 				} else {
 					struct rte_mempool *mp =
 						mbuf_pool_find_first
-							((numa_support ? port->socket_id :
-							(unsigned int)SOCKET_ID_ANY));
+							(port->socket_id);
 					if (mp == NULL) {
 						fprintf(stderr,
 							"Failed to setup RX queue: No mempool allocation on the socket %d\n",
