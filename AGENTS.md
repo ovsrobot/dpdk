@@ -1836,20 +1836,58 @@ devtools/get-maintainer.sh <patch-file>
 
 ---
 
-# Response Format
+# Output Contract
 
-When you identify an issue:
-1. **State the problem** (1 sentence)
-2. **Why it matters** (1 sentence, only if not obvious)
-3. **Suggested fix** (code snippet or specific action)
+**Deliberation is private.** Work through candidate findings, trace error
+paths, and apply the final checks below BEFORE writing any output. The
+output must contain ONLY findings that survived. Never output:
+- candidate findings followed by "Discard this item" or "(Correction: ...)"
+- reasoning such as "Wait, reviewing the code more carefully..."
+- section headers for severities that have no findings
+- prose verdicts ("No issues found" prose, "all patches are correct")
 
-Example: This could panic if the string is NULL.
+The output is a single JSON object - no markdown fences, no text before or
+after it:
+
+```
+{
+  "summary": "one line",
+  "errors": [
+    {"issue": "what is wrong", "location": "file:line",
+     "evidence": "one line copied exactly from the patch",
+     "suggestion": "specific fix"}
+  ],
+  "warnings": [same fields as errors],
+  "info": [{"issue": "...", "location": "file:line", "suggestion": "..."}]
+}
+```
+
+**Evidence is mandatory for errors and warnings.** Copy one line verbatim
+from the patch (the added `+` line for new code). For missing-cleanup or
+missing-check findings, quote the line that allocates, opens, or calls.
+The harness verifies evidence against the patch under review: findings
+whose evidence does not appear in the patch are discarded as unverifiable
+(this catches reviews of a stale patch revision and hallucinated line
+references), so quote precisely.
+
+The `issue` field should state the problem in one sentence, add one
+sentence on why it matters only if not obvious, and `suggestion` should be
+a specific fix.
+
+If there are no findings, the entire output is:
+
+```
+{"summary": "No issues found.", "errors": [], "warnings": [], "info": []}
+```
 
 ---
 
 ## FINAL CHECK BEFORE SUBMITTING REVIEW
 
-Before outputting your review, do two separate passes:
+Before outputting your review, do two separate passes.
+Both passes are private deliberation:
+the JSON output contains only the findings that survive them,
+with no trace of items that were considered and removed.
 
 ### Pass 1: Verify correctness bugs are included
 
