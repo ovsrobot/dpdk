@@ -54,6 +54,9 @@
 /* At present we allow up to 4 push mode queues as default - as each of
  * this queue need dedicated portal and we are short of portals.
  */
+#define DPAA_DEV_PATH1 "/sys/devices/platform/soc/soc:fsl,dpaa"
+#define DPAA_DEV_PATH2 "/sys/devices/platform/fsl,dpaa"
+
 #define DPAA_MAX_PUSH_MODE_QUEUE 8
 #define DPAA_DEFAULT_PUSH_MODE_QUEUE 4
 
@@ -667,8 +670,6 @@ static int rte_dpaa_setup_intr(struct rte_intr_handle *intr_handle)
 	return 0;
 }
 
-#define DPAA_DEV_PATH1 "/sys/devices/platform/soc/soc:fsl,dpaa"
-#define DPAA_DEV_PATH2 "/sys/devices/platform/fsl,dpaa"
 
 static int
 rte_dpaa_bus_scan(void)
@@ -715,12 +716,11 @@ rte_dpaa_bus_scan(void)
 		dpaa_bus.svr_ver = 0;
 	}
 	if (dpaa_bus.svr_ver == SVR_LS1046A_FAMILY) {
-		DPAA_BUS_LOG(INFO, "This is LS1046A family SoC.");
+		DPAA_BUS_INFO("This is LS1046A family SoC.");
 	} else if (dpaa_bus.svr_ver == SVR_LS1043A_FAMILY) {
-		DPAA_BUS_LOG(INFO, "This is LS1043A family SoC.");
+		DPAA_BUS_INFO("This is LS1043A family SoC.");
 	} else {
-		DPAA_BUS_LOG(WARNING,
-			"This is Unknown(%08x) DPAA1 family SoC.",
+		DPAA_BUS_WARN("This is Unknown(%08x) DPAA1 family SoC.",
 			dpaa_bus.svr_ver);
 	}
 
