@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2025 Red Hat, Inc.
+ * Copyright 2026 NXP
  */
 
 #include <eal_export.h>

@@ -301,7 +301,6 @@ fman_if_bmi_stats_enable(struct fman_if *p)
 	uint32_t tmp;
 
 	tmp = in_be32(&regs->fmbm_rstc);
-
 	tmp |= FMAN_BMI_COUNTERS_EN;
 
 	out_be32(&regs->fmbm_rstc, tmp);
@@ -315,7 +314,6 @@ fman_if_bmi_stats_disable(struct fman_if *p)
 	uint32_t tmp;
 
 	tmp = in_be32(&regs->fmbm_rstc);
-
 	tmp &= ~FMAN_BMI_COUNTERS_EN;
 
 	out_be32(&regs->fmbm_rstc, tmp);
