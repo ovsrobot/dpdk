@@ -93,6 +93,57 @@ rte_graph_obj_dump(FILE *f, struct rte_graph *g, bool all)
 				n->dispatch.total_sched_fail);
 		}
 		fprintf(f, "       total_calls=%" PRId64 "\n", n->total_calls);
+		if (rte_graph_has_stats_feature())
+			fprintf(f, "       total_cycles=%" PRIu64 ", avg cycles/call=%.1f\n",
+					n->total_cycles,
+					n->total_calls == 0 ? 0.0 :
+					(double)n->total_cycles / (double)n->total_calls);
+#ifdef RTE_GRAPH_PROFILE
+		int64_t calls_other = n->total_calls;
+		int64_t cycles_other = n->total_cycles;
+		int64_t objs_other = n->total_objs;
+		for (int idx = 0; idx < RTE_DIM(n->usage_stats) + 1; idx++) {
+			uint64_t calls;
+			uint64_t cycles;
+			double objs_per_call;
+			if (idx < RTE_DIM(n->usage_stats)) {
+				static const uint16_t profile_sample_sizes[] = {
+						0, 1, RTE_GRAPH_PROFILE_BURST_SIZE,
+						RTE_GRAPH_BURST_SIZE};
+				static_assert(RTE_DIM(profile_sample_sizes) ==
+						RTE_DIM(n->usage_stats));
+				uint16_t idx_objs = profile_sample_sizes[idx];
+				fprintf(f, "       objs[%u]\n", idx_objs);
+				calls = n->usage_stats[idx].calls;
+				cycles = n->usage_stats[idx].cycles;
+				objs_per_call = (double)idx_objs;
+				calls_other -= calls;
+				cycles_other -= cycles;
+				objs_other -= idx_objs * calls;
+			} else {
+				fprintf(f, "       objs[other]\n");
+				if (calls_other > 0 && cycles_other > 0 && objs_other > 0) {
+					calls = calls_other;
+					cycles = cycles_other;
+					objs_per_call = (double)objs_other / (double)calls_other;
+					fprintf(f, "         avg objs/call=%.1f\n", objs_per_call);
+				} else {
+					calls = 0;
+					cycles = 0;
+					objs_per_call = 0.0;
+				}
+			}
+			fprintf(f, "         calls=%" PRIu64, calls);
+			if (calls != 0)
+				fprintf(f, ", cycles=%" PRIu64 ", avg cycles/call=%.1f",
+						cycles,
+						(double)cycles / (double)calls);
+			if (calls != 0 && objs_per_call != 0.0)
+				fprintf(f, ", avg cycles/obj=%.1f",
+						(double)cycles / (double)calls / objs_per_call);
+			fprintf(f, "\n");
+		}
+#endif
 		for (i = 0; i < n->nb_edges; i++)
 			fprintf(f, "          edge[%d] <%s>\n", i,
 				n->nodes[i]->name);
