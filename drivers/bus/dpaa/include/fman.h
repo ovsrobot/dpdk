@@ -462,8 +462,8 @@ struct __fman_if {
 	char node_name[IF_NAME_MAX_LEN];
 	char node_path[PATH_MAX];
 	uint64_t regs_size;
-	void *ccsr_map;
-	void *bmi_map;
+	void *memac_map;
+	void *rx_bmi_map;
 	void *tx_bmi_map;
 	void *qmi_map;
 };
@@ -472,8 +472,6 @@ struct __fman_if {
  * fman_if_enable_all_rx() below for an example of its use.)
  */
 extern const struct list_head *fman_if_list;
-
-extern int fman_ccsr_map_fd;
 
 /* To iterate the "bpool_list" for an interface. Eg;
  *        struct fman_if *p = get_ptr_to_some_interface();
