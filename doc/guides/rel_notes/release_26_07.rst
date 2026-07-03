@@ -83,6 +83,13 @@ New Features
   * The size of the ``struct rte_mempool_cache`` was kept
     for API/ABI compatibility purposes.
 
+* **Added optional graph profiling statistics.**
+
+  Added build-time configurable graph node profiling statistics via
+  ``RTE_GRAPH_PROFILE`` in ``rte_config.h``. When enabled, tracks cycles
+  spent processing bursts of 0, 1, ``RTE_GRAPH_PROFILE_BURST_SIZE``,
+  and ``RTE_GRAPH_BURST_SIZE`` objects per node.
+
 * **Added RISC-V vector paths.**
 
   * Increased the default SIMD bitwidth to allow using the vector extension.
