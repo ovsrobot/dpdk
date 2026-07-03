@@ -3782,9 +3782,6 @@ cryptodev_dpaa_sec_probe(struct rte_dpaa_driver *dpaa_drv __rte_unused,
 			RTE_DPAA_MAX_NB_SEC_QPS,
 	};
 
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
-		return 0;
-
 	cryptodev = rte_cryptodev_pmd_create(dpaa_dev->name, &dpaa_dev->device, &init_params);
 	if (cryptodev == NULL) {
 		DPAA_SEC_ERR("failed to create cryptodev vdev");
