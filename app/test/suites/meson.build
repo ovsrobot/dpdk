@@ -23,6 +23,15 @@ if not has_hugepage
     endif
 endif
 
+if is_linux
+    # use wrapper providing per-test work directories to allow parallel runs
+    test_runner = find_program('run_test_with_temp_prefix.sh')
+    test_args_prefix = [dpdk_test]
+else
+    test_runner = dpdk_test
+    test_args_prefix = []
+endif
+
 # process source files to determine the different unit test suites
 # - fast_tests
 # - perf_tests
@@ -41,14 +50,16 @@ foreach suite:test_suites
             if developer_mode
                 warning('Test "@0@" is not defined in any test suite'.format(t))
             endif
-            test(t, dpdk_test,
+            test(t, test_runner,
+                    args: test_args_prefix,
                     env: ['DPDK_TEST=' + t],
                     timeout: timeout_seconds,
                     is_parallel: false)
         endforeach
     elif suite_name == 'stress-tests'
         foreach t: suite_tests
-            test(t, dpdk_test,
+            test(t, test_runner,
+                    args: test_args_prefix,
                     env: ['DPDK_TEST=' + t],
                     timeout: timeout_seconds_stress,
                     is_parallel: false,
@@ -57,7 +68,8 @@ foreach suite:test_suites
     elif suite_name != 'fast-tests'
         # simple cases - tests without parameters or special handling
         foreach t: suite_tests
-            test(t, dpdk_test,
+            test(t, test_runner,
+                    args: test_args_prefix,
                     env: ['DPDK_TEST=' + t],
                     timeout: timeout_seconds,
                     is_parallel: false,
@@ -81,7 +93,7 @@ foreach suite:test_suites
             nohuge = params[1] == 'NOHUGE_OK'
             asan = params[2] == 'ASAN_OK'
 
-            test_args = []
+            test_args = test_args_prefix
             if nohuge
                 test_args += test_no_huge_args
             elif not has_hugepage
@@ -94,25 +106,17 @@ foreach suite:test_suites
                 test_args += ['-d', dpdk_drivers_build_dir]
             endif
 
-            # use unique file-prefix to allow parallel runs
-            file_prefix = []
-            trace_prefix = []
-            if is_linux
-                file_prefix = ['--file-prefix=' + test_name.underscorify()]
-                trace_prefix = [file_prefix[0] + '_with_traces']
-            endif
-
-            test(test_name, dpdk_test,
-                args : test_args + file_prefix,
+            test(test_name, test_runner,
+                args: test_args,
                 env: ['DPDK_TEST=' + test_name],
                 timeout : timeout_seconds_fast,
                 is_parallel : false,
                 suite : 'fast-tests')
             if not is_windows and test_name == 'trace_autotest'
-                trace_extra = ['--trace=.*',
-                               '--trace-dir=@0@'.format(meson.current_build_dir())]
-                test(test_name + '_with_traces', dpdk_test,
-                    args : test_args + trace_extra + trace_prefix,
+                test_args += ['--trace=.*']
+                test_args += ['--trace-dir=@0@'.format(meson.current_build_dir())]
+                test(test_name + '_with_traces', test_runner,
+                    args: test_args,
                     env: ['DPDK_TEST=' + test_name],
                     timeout : timeout_seconds_fast,
                     is_parallel : false,
@@ -165,7 +169,8 @@ dump_test_names = [
         'dump_struct_sizes',
 ]
 foreach arg : dump_test_names
-    test(arg, dpdk_test,
+    test(arg, test_runner,
+                args: test_args_prefix,
                 env : ['DPDK_TEST=' + arg],
                 timeout : timeout_seconds_fast,
                 is_parallel : false,
