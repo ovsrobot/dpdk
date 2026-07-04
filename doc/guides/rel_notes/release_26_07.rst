@@ -143,6 +143,7 @@ New Features
 
   * Added support for transmitting LLDP packets based on mbuf packet type.
   * Implemented AVX2 context descriptor transmit paths.
+  * Added support for QinQ offloading operations.
 
 * **Updated Intel ice driver.**
 
