@@ -3,9 +3,12 @@
  */
 
 #include <stdlib.h>
+#include <errno.h>
 
 #include <eal_export.h>
+#include <rte_eal.h>
 #include <rte_alarm.h>
+#include <rte_cycles.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
 #include <rte_lcore.h>
@@ -29,7 +32,10 @@ RTE_LOG_REGISTER_DEFAULT(pdump_logtype, NOTICE);
 
 #define PDUMP_BURST_SIZE	32u
 
-/* Overly generous timeout for secondary to respond */
+/*
+ * Shared timeout budget for both MP request/reply and inflight callback drain
+ * during disable. Kept fixed for now to avoid API/config scope changes.
+ */
 #define MP_TIMEOUT_S 5
 
 enum pdump_operation {
@@ -68,6 +74,7 @@ struct pdump_request {
 
 	const struct rte_bpf_prm *prm;
 	uint32_t snaplen;
+	uint32_t generation;
 };
 
 struct pdump_response {
@@ -81,6 +88,11 @@ struct pdump_bundle {
 	char peer[];
 };
 
+struct pdump_shared_ctl {
+	RTE_ATOMIC(uint32_t) enabled;
+	RTE_ATOMIC(uint32_t) inflight;
+};
+
 static struct pdump_rxtx_cbs {
 	struct rte_ring *ring;
 	struct rte_mempool *mp;
@@ -88,10 +100,10 @@ static struct pdump_rxtx_cbs {
 	const struct rte_bpf *filter;
 	enum pdump_version ver;
 	uint32_t snaplen;
+	uint32_t generation;
 	RTE_ATOMIC(uint32_t) use_count;
 } rx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT],
 tx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
-
 
 /*
  * The packet capture statistics keep track of packets
@@ -102,12 +114,73 @@ static const char MZ_RTE_PDUMP_STATS[] = "rte_pdump_stats";
 static struct {
 	struct rte_pdump_stats rx[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
 	struct rte_pdump_stats tx[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
+	struct pdump_shared_ctl rx_ctl[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
+	struct pdump_shared_ctl tx_ctl[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
+	RTE_ATOMIC(uint32_t) generation;
 	const struct rte_memzone *mz;
 } *pdump_stats;
+
+static int
+pdump_enter(struct pdump_shared_ctl *ctl, const struct pdump_rxtx_cbs *cbs)
+{
+	uint32_t generation = rte_atomic_load_explicit(&pdump_stats->generation,
+					       rte_memory_order_acquire);
+
+	if (rte_atomic_load_explicit(&ctl->enabled, rte_memory_order_relaxed) == 0 ||
+	    cbs->generation != generation)
+		return 0;
+
+	rte_atomic_fetch_add_explicit(&ctl->inflight, 1, rte_memory_order_acquire);
+
+	/*
+	 * Disable/re-enable may race with callback entry. Re-check enabled and
+	 * generation after taking inflight reference so disable can wait for this
+	 * callback to drain and stale callbacks become no-op. The second generation
+	 * load is intentional: it detects an epoch change that happens between the
+	 * first check and inflight increment.
+	 */
+	generation = rte_atomic_load_explicit(&pdump_stats->generation,
+					     rte_memory_order_acquire);
+	if (rte_atomic_load_explicit(&ctl->enabled, rte_memory_order_relaxed) != 0 &&
+	    cbs->generation == generation)
+		return 1;
+
+	rte_atomic_fetch_sub_explicit(&ctl->inflight, 1, rte_memory_order_release);
+	return 0;
+}
+
+static __rte_always_inline void
+pdump_exit(struct pdump_shared_ctl *ctl)
+{
+	rte_atomic_fetch_sub_explicit(&ctl->inflight, 1, rte_memory_order_release);
+}
+
+static int
+pdump_wait_inflight(struct pdump_shared_ctl *ctl)
+{
+	uint64_t end_tsc = rte_get_timer_cycles() + MP_TIMEOUT_S * rte_get_timer_hz();
+
+	/*
+	 * Use the same timeout budget as MP sync requests. Under heavy load this
+	 * can time out and fail closed, requiring disable retry by the caller.
+	 */
+
+	while (rte_atomic_load_explicit(&ctl->inflight, rte_memory_order_acquire) != 0) {
+		if (rte_get_timer_cycles() > end_tsc)
+			return -ETIMEDOUT;
+		rte_pause();
+	}
+
+	return 0;
+}
 
 static void
 pdump_cb_wait(struct pdump_rxtx_cbs *cbs)
 {
+	/*
+	 * use_count protects callback-owned data (for example filter lifetime),
+	 * while ctl->inflight protects callback entry/teardown synchronization.
+	 */
 	/* make sure the data loads happens before the use count load */
 	rte_atomic_thread_fence(rte_memory_order_acquire);
 
@@ -224,12 +297,17 @@ pdump_rx(uint16_t port, uint16_t queue,
 	uint16_t max_pkts __rte_unused, void *user_params)
 {
 	struct pdump_rxtx_cbs *cbs = user_params;
+	struct pdump_shared_ctl *ctl = &pdump_stats->rx_ctl[port][queue];
 	struct rte_pdump_stats *stats = &pdump_stats->rx[port][queue];
+
+	if (!pdump_enter(ctl, cbs))
+		return nb_pkts;
 
 	pdump_cb_hold(cbs);
 	pdump_copy(port, queue, RTE_PCAPNG_DIRECTION_IN,
 		   pkts, nb_pkts, cbs, stats);
 	pdump_cb_release(cbs);
+	pdump_exit(ctl);
 
 	return nb_pkts;
 }
@@ -239,12 +317,17 @@ pdump_tx(uint16_t port, uint16_t queue,
 		struct rte_mbuf **pkts, uint16_t nb_pkts, void *user_params)
 {
 	struct pdump_rxtx_cbs *cbs = user_params;
+	struct pdump_shared_ctl *ctl = &pdump_stats->tx_ctl[port][queue];
 	struct rte_pdump_stats *stats = &pdump_stats->tx[port][queue];
+
+	if (!pdump_enter(ctl, cbs))
+		return nb_pkts;
 
 	pdump_cb_hold(cbs);
 	pdump_copy(port, queue, RTE_PCAPNG_DIRECTION_OUT,
 		   pkts, nb_pkts, cbs, stats);
 	pdump_cb_release(cbs);
+	pdump_exit(ctl);
 
 	return nb_pkts;
 }
@@ -255,20 +338,43 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 			    uint16_t end_q, uint16_t port, uint16_t queue,
 			    struct rte_ring *ring, struct rte_mempool *mp,
 			    struct rte_bpf *filter,
-			    uint16_t operation, uint32_t snaplen)
+			    uint16_t operation, uint32_t snaplen,
+			    uint32_t generation)
 {
 	uint16_t qid;
 
 	qid = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
 	for (; qid < end_q; qid++) {
 		struct pdump_rxtx_cbs *cbs = &rx_cbs[port][qid];
+		struct pdump_shared_ctl *ctl = &pdump_stats->rx_ctl[port][qid];
 
 		if (operation == ENABLE) {
+			int ret;
+
 			if (cbs->cb) {
-				PDUMP_LOG_LINE(ERR,
-					"rx callback for port=%d queue=%d, already exists",
-					port, qid);
-				return -EEXIST;
+				if (cbs->generation == generation &&
+				    rte_atomic_load_explicit(&ctl->enabled,
+					    rte_memory_order_relaxed) != 0) {
+					PDUMP_LOG_LINE(ERR,
+						"rx callback for port=%d queue=%d, already exists",
+						port, qid);
+					return -EEXIST;
+				}
+
+				PDUMP_LOG_LINE(DEBUG,
+					"reconciling stale rx callback for port=%d queue=%d"
+					" old_gen=%u new_gen=%u",
+					port, qid, cbs->generation, generation);
+
+				ret = rte_eth_remove_rx_callback(port, qid, cbs->cb);
+				if (ret < 0) {
+					PDUMP_LOG_LINE(ERR,
+						"failed to reconcile stale rx callback, errno=%d",
+						-ret);
+					return ret;
+				}
+				pdump_cb_wait(cbs);
+				cbs->cb = NULL;
 			}
 			cbs->use_count = 0;
 			cbs->ver = ver;
@@ -276,6 +382,7 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 			cbs->mp = mp;
 			cbs->snaplen = snaplen;
 			cbs->filter = filter;
+			cbs->generation = generation;
 
 			cbs->cb = rte_eth_add_first_rx_callback(port, qid,
 								pdump_rx, cbs);
@@ -286,9 +393,14 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 				return rte_errno;
 			}
 
+			rte_atomic_store_explicit(&ctl->inflight, 0, rte_memory_order_relaxed);
+			rte_atomic_store_explicit(&ctl->enabled, 1, rte_memory_order_release);
+
 			memset(&pdump_stats->rx[port][qid], 0, sizeof(struct rte_pdump_stats));
 		} else if (operation == DISABLE) {
 			int ret;
+
+			rte_atomic_store_explicit(&ctl->enabled, 0, rte_memory_order_release);
 
 			if (cbs->cb == NULL) {
 				PDUMP_LOG_LINE(ERR,
@@ -298,6 +410,11 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 			}
 			ret = rte_eth_remove_rx_callback(port, qid, cbs->cb);
 			if (ret < 0) {
+				/* Keep state coherent: callback is still registered,
+				 * so restore enabled.
+				 */
+				rte_atomic_store_explicit(&ctl->enabled, 1,
+						rte_memory_order_release);
 				PDUMP_LOG_LINE(ERR,
 					"failed to remove rx callback, errno=%d",
 					-ret);
@@ -305,6 +422,10 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 			}
 			pdump_cb_wait(cbs);
 			cbs->cb = NULL;
+
+			ret = pdump_wait_inflight(ctl);
+			if (ret < 0)
+				return ret;
 		}
 	}
 
@@ -316,7 +437,8 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 			    uint16_t end_q, uint16_t port, uint16_t queue,
 			    struct rte_ring *ring, struct rte_mempool *mp,
 			    struct rte_bpf *filter,
-			    uint16_t operation, uint32_t snaplen)
+			    uint16_t operation, uint32_t snaplen,
+			    uint32_t generation)
 {
 
 	uint16_t qid;
@@ -324,13 +446,36 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 	qid = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
 	for (; qid < end_q; qid++) {
 		struct pdump_rxtx_cbs *cbs = &tx_cbs[port][qid];
+		struct pdump_shared_ctl *ctl = &pdump_stats->tx_ctl[port][qid];
 
 		if (operation == ENABLE) {
+			int ret;
+
 			if (cbs->cb) {
-				PDUMP_LOG_LINE(ERR,
-					"tx callback for port=%d queue=%d, already exists",
-					port, qid);
-				return -EEXIST;
+				if (cbs->generation == generation &&
+				    rte_atomic_load_explicit(&ctl->enabled,
+					    rte_memory_order_relaxed) != 0) {
+					PDUMP_LOG_LINE(ERR,
+						"tx callback for port=%d queue=%d, already exists",
+						port, qid);
+					return -EEXIST;
+				}
+
+				PDUMP_LOG_LINE(DEBUG,
+					"reconciling stale tx callback for port=%d queue=%d"
+					" old_gen=%u new_gen=%u",
+					port, qid, cbs->generation, generation);
+
+				ret = rte_eth_remove_tx_callback(port, qid, cbs->cb);
+				if (ret < 0) {
+					PDUMP_LOG_LINE(ERR,
+						"failed to reconcile stale tx callback, errno=%d",
+						-ret);
+					return ret;
+				}
+
+				pdump_cb_wait(cbs);
+				cbs->cb = NULL;
 			}
 			cbs->use_count = 0;
 			cbs->ver = ver;
@@ -338,6 +483,7 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 			cbs->mp = mp;
 			cbs->snaplen = snaplen;
 			cbs->filter = filter;
+			cbs->generation = generation;
 
 			cbs->cb = rte_eth_add_tx_callback(port, qid, pdump_tx,
 								cbs);
@@ -347,9 +493,14 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 					rte_errno);
 				return rte_errno;
 			}
+
+			rte_atomic_store_explicit(&ctl->inflight, 0, rte_memory_order_relaxed);
+			rte_atomic_store_explicit(&ctl->enabled, 1, rte_memory_order_release);
 			memset(&pdump_stats->tx[port][qid], 0, sizeof(struct rte_pdump_stats));
 		} else if (operation == DISABLE) {
 			int ret;
+
+			rte_atomic_store_explicit(&ctl->enabled, 0, rte_memory_order_release);
 
 			if (cbs->cb == NULL) {
 				PDUMP_LOG_LINE(ERR,
@@ -359,6 +510,11 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 			}
 			ret = rte_eth_remove_tx_callback(port, qid, cbs->cb);
 			if (ret < 0) {
+				/* Keep state coherent: callback is still registered,
+				 * so restore enabled.
+				 */
+				rte_atomic_store_explicit(&ctl->enabled, 1,
+						rte_memory_order_release);
 				PDUMP_LOG_LINE(ERR,
 					"failed to remove tx callback, errno=%d",
 					-ret);
@@ -367,6 +523,10 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 
 			pdump_cb_wait(cbs);
 			cbs->cb = NULL;
+
+			ret = pdump_wait_inflight(ctl);
+			if (ret < 0)
+				return ret;
 		}
 	}
 
@@ -459,17 +619,23 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 		end_q = (queue == RTE_PDUMP_ALL_QUEUES) ? nb_rx_q : queue + 1;
 		ret = pdump_register_rx_callbacks(p->ver, end_q, port, queue,
 						  ring, mp, filter,
-						  operation, p->snaplen);
+						  operation, p->snaplen,
+						  p->generation);
 		if (ret < 0)
 			return ret;
 	}
 
+	/*
+	 * Intentional partial-apply behavior: if RX succeeds and TX fails,
+	 * RX remains enabled. API notes require caller-side unwind.
+	 */
 	/* register TX callback */
 	if (flags & RTE_PDUMP_FLAG_TX) {
 		end_q = (queue == RTE_PDUMP_ALL_QUEUES) ? nb_tx_q : queue + 1;
 		ret = pdump_register_tx_callbacks(p->ver, end_q, port, queue,
 						  ring, mp, filter,
-						  operation, p->snaplen);
+						  operation, p->snaplen,
+						  p->generation);
 		if (ret < 0)
 			return ret;
 	}
@@ -477,12 +643,14 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 	return ret;
 }
 
-static void
-pdump_request_to_secondary(const struct pdump_request *req)
+static int
+pdump_request_to_secondary_sync(const struct pdump_request *req)
 {
 	struct rte_mp_msg mp_req = { };
 	struct rte_mp_reply mp_reply;
 	struct timespec ts = {.tv_sec = MP_TIMEOUT_S, .tv_nsec = 0};
+	int ret = 0;
+	uint16_t i;
 
 	PDUMP_LOG_LINE(DEBUG, "forward req %s to secondary", pdump_opname(req->op));
 
@@ -490,14 +658,45 @@ pdump_request_to_secondary(const struct pdump_request *req)
 	strlcpy(mp_req.name, PDUMP_MP, sizeof(mp_req.name));
 	mp_req.len_param = sizeof(*req);
 
-	if (rte_mp_request_sync(&mp_req, &mp_reply, &ts) != 0)
-		PDUMP_LOG_LINE(ERR, "rte_mp_request_sync failed");
+	if (rte_mp_request_sync_ex(&mp_req, &mp_reply, &ts,
+				    RTE_MP_REQ_F_IGNORE_NO_ACTION) != 0) {
+		PDUMP_LOG_LINE(ERR, "rte_mp_request_sync failed: %s",
+			      strerror(rte_errno));
+		return -rte_errno;
+	}
 
-	else if (mp_reply.nb_sent != mp_reply.nb_received)
+	if (mp_reply.nb_sent != mp_reply.nb_received) {
 		PDUMP_LOG_LINE(ERR, "not all secondary's replied (sent %u recv %u)",
 			       mp_reply.nb_sent, mp_reply.nb_received);
+		ret = -ETIMEDOUT;
+	}
+
+	for (i = 0; i < mp_reply.nb_received; i++) {
+		struct rte_mp_msg *mp_rep = &mp_reply.msgs[i];
+		const struct pdump_response *resp;
+
+		if (mp_rep->len_param != sizeof(*resp)) {
+			PDUMP_LOG_LINE(ERR, "invalid secondary reply size %u", mp_rep->len_param);
+			if (ret == 0)
+				ret = -EINVAL;
+			continue;
+		}
+
+		resp = (const struct pdump_response *)mp_rep->param;
+		if (resp->err_value != 0) {
+			PDUMP_LOG_LINE(ERR, "secondary reply failed: op=%u err=%d",
+				       resp->res_op, resp->err_value);
+			/*
+			 * Return the first failure to keep a single representative
+			 * status; all per-secondary errors are still logged above.
+			 */
+			if (ret == 0)
+				ret = resp->err_value;
+		}
+	}
 
 	free(mp_reply.msgs);
+	return ret;
 }
 
 /* Allocate temporary storage for passing state to the alarm thread for deferred handling */
@@ -556,7 +755,10 @@ pdump_handle_primary_request(const struct rte_mp_msg *mp_msg, const void *peer)
 		PDUMP_LOG_LINE(DEBUG, "secondary pdump %s", pdump_opname(req->op));
 
 		/* Can just do it now, no need for interrupt thread */
-		ret = set_pdump_rxtx_cbs(req);
+		if (req->op == ENABLE || req->op == DISABLE)
+			ret = set_pdump_rxtx_cbs(req);
+		else
+			ret = -EINVAL;
 	}
 
 	return pdump_send_response(req, ret, peer);
@@ -569,17 +771,29 @@ __pdump_request(void *param)
 {
 	struct pdump_bundle *bundle = param;
 	struct rte_mp_msg *msg = &bundle->msg;
-	const struct pdump_request *req =
-		(const struct pdump_request *)msg->param;
+	struct pdump_request *req =
+		(struct pdump_request *)msg->param;
 	int ret;
 
 	PDUMP_LOG_LINE(DEBUG, "primary pdump %s", pdump_opname(req->op));
 
+	if (req->op == DISABLE) {
+		req->generation = rte_atomic_fetch_add_explicit(&pdump_stats->generation, 1,
+							   rte_memory_order_acq_rel) + 1;
+	} else if (req->op == ENABLE) {
+		req->generation = rte_atomic_load_explicit(&pdump_stats->generation,
+							   rte_memory_order_acquire);
+	}
+
 	ret = set_pdump_rxtx_cbs(req);
 
-	/* Primary process is responsible for broadcasting request to all secondaries */
+	/*
+	 * Primary process is responsible for broadcasting the request to all
+	 * secondaries. The sync request uses opt-in ignore-missing-action mode so
+	 * pdump does not depend on unrelated secondary processes.
+	 */
 	if (ret == 0)
-		pdump_request_to_secondary(req);
+		ret = pdump_request_to_secondary_sync(req);
 
 	pdump_send_response(req, ret, bundle->peer);
 	free(bundle);
@@ -659,6 +873,10 @@ rte_pdump_init(void)
 
 	pdump_stats = mz->addr;
 	pdump_stats->mz = mz;
+	/* Start at generation 1 so zero remains the default pre-init value. */
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		rte_atomic_store_explicit(&pdump_stats->generation, 1,
+					  rte_memory_order_release);
 
 	return 0;
 }

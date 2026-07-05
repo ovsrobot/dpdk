@@ -173,6 +173,15 @@ struct rte_mp_reply {
 	struct rte_mp_msg *msgs; /* caller to free */
 };
 
+/** Request flags for rte_mp_request_sync_ex(). */
+enum rte_mp_request_flags {
+	/**
+	 * Ask peers that do not have a registered action to return MP_IGN
+	 * instead of causing timeout for this request.
+	 */
+	RTE_MP_REQ_F_IGNORE_NO_ACTION = 1u << 0,
+};
+
 /**
  * Action function typedef used by other components.
  *
@@ -291,6 +300,30 @@ rte_mp_sendmsg(struct rte_mp_msg *msg);
 int
 rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 	       const struct timespec *ts);
+
+/**
+ * Send a request to peer processes with explicit request flags.
+ *
+ * This API is equivalent to rte_mp_request_sync() with opt-in behavior
+ * controls provided through @p flags.
+ *
+ * @param req
+ *   The req argument contains the customized request message.
+ * @param reply
+ *   The reply argument will be for storing all the replied messages;
+ *   the caller is responsible for free reply->msgs.
+ * @param ts
+ *   The ts argument specifies how long we can wait for the peer(s) to reply.
+ * @param flags
+ *   Bitmask of values from enum rte_mp_request_flags.
+ *
+ * @return
+ *  - On success, return 0.
+ *  - On failure, return -1, and the reason will be stored in rte_errno.
+ */
+int
+rte_mp_request_sync_ex(struct rte_mp_msg *req, struct rte_mp_reply *reply,
+		const struct timespec *ts, uint32_t flags);
 
 /**
  * Send a request to the peer process and expect a reply in a separate callback.

@@ -521,12 +521,32 @@ static void
 cleanup_pdump_resources(void)
 {
 	struct interface *intf;
+	int ret;
+	bool disable_failed = false;
 
 	TAILQ_FOREACH(intf, &interfaces, next) {
-		rte_pdump_disable(intf->port,
-				  RTE_PDUMP_ALL_QUEUES, RTE_PDUMP_FLAG_RXTX);
+		ret = rte_pdump_disable(intf->port,
+					RTE_PDUMP_ALL_QUEUES, RTE_PDUMP_FLAG_RXTX);
+		if (ret < 0) {
+			disable_failed = true;
+			fprintf(stderr,
+				"Disable pdump failed on %u:%s: %s\n",
+				intf->port, intf->name,
+				rte_strerror(rte_errno));
+		}
 		if (intf->opts.promisc_mode)
 			rte_eth_promiscuous_disable(intf->port);
+	}
+
+	if (disable_failed) {
+		/*
+		 * Fail-closed: if disable did not complete, keep pdump action/state
+		 * alive and do not uninit shared capture resources. Recovery in the
+		 * same process instance is not guaranteed until disable succeeds.
+		 */
+		fprintf(stderr,
+			"Skipping pdump uninit because disable did not complete on all interfaces\n");
+		return;
 	}
 
 	rte_pdump_uninit();
