@@ -250,6 +250,13 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Hardened pdump teardown on disable failure.**
+
+  Hardened pdump request completion and application cleanup behavior so timeout
+  or disable failure does not trigger premature pdump resource teardown.
+  pdump now uses an opt-in MP request mode that ignores peers without the
+  pdump action, while preserving legacy EAL MP behavior for all other users.
+
 
 Removed Items
 -------------

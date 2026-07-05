@@ -451,14 +451,17 @@ print_pdump_stats(void)
 	}
 }
 
-static inline void
+static inline int
 disable_pdump(struct pdump_tuples *pt)
 {
 	if (pt->dump_by_type == DEVICE_ID)
-		rte_pdump_disable_by_deviceid(pt->device_id, pt->queue,
-						pt->dir);
+		return rte_pdump_disable_by_deviceid(pt->device_id, pt->queue,
+						     pt->dir);
 	else if (pt->dump_by_type == PORT_ID)
-		rte_pdump_disable(pt->port, pt->queue, pt->dir);
+		return rte_pdump_disable(pt->port, pt->queue, pt->dir);
+
+	rte_errno = EINVAL;
+	return -EINVAL;
 }
 
 static inline void
@@ -518,15 +521,30 @@ static void
 cleanup_pdump_resources(void)
 {
 	int i;
+	int ret;
+	bool disable_failed = false;
 	struct pdump_tuples *pt;
 	char name[RTE_ETH_NAME_MAX_LEN];
 
-	/* disable pdump and free the pdump_tuple resources */
+	/* Disable all callbacks first; freeing shared objects before this is unsafe. */
 	for (i = 0; i < num_tuples; i++) {
 		pt = &pdump_t[i];
 
-		/* remove callbacks */
-		disable_pdump(pt);
+		ret = disable_pdump(pt);
+		if (ret < 0) {
+			disable_failed = true;
+			printf("pdump disable failed (tuple=%d, errno=%d: %s); "
+			       "skip teardown to avoid stale callback access\n",
+			       i, rte_errno, rte_strerror(rte_errno));
+		}
+	}
+
+	if (disable_failed)
+		return;
+
+	/* free the pdump_tuple resources */
+	for (i = 0; i < num_tuples; i++) {
+		pt = &pdump_t[i];
 
 		/*
 		* transmit rest of the enqueued packets of the rings on to

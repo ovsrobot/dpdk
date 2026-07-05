@@ -57,9 +57,18 @@ int
 rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 	const struct timespec *ts)
 {
+	return rte_mp_request_sync_ex(req, reply, ts, 0);
+}
+
+RTE_EXPORT_SYMBOL(rte_mp_request_sync_ex)
+int
+rte_mp_request_sync_ex(struct rte_mp_msg *req, struct rte_mp_reply *reply,
+	const struct timespec *ts, uint32_t flags)
+{
 	RTE_SET_USED(req);
 	RTE_SET_USED(reply);
 	RTE_SET_USED(ts);
+	RTE_SET_USED(flags);
 	EAL_LOG_NOT_IMPLEMENTED();
 	return -1;
 }

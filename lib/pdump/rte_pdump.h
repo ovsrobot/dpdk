@@ -64,13 +64,18 @@ rte_pdump_uninit(void);
  *  queues of a given port.
  * @param flags
  *  flags specifies RTE_PDUMP_FLAG_RX/RTE_PDUMP_FLAG_TX/RTE_PDUMP_FLAG_RXTX
- *  on which packet capturing should be enabled for a given port and queue.
+ *  on which packet capturing should be disabled for a given port and queue.
  * @param ring
  *  ring on which captured packets will be enqueued for user.
  * @param mp
  *  mempool on to which original packets will be mirrored or duplicated.
  * @param filter
  *  Unused should be NULL.
+ *
+ * @note
+ *  In applications that enable capture on multiple interfaces, enable may be
+ *  partially applied before an error is returned. Callers should explicitly
+ *  unwind partial enable state.
  *
  * @return
  *    0 on success, -1 on error, rte_errno is set accordingly.
@@ -103,6 +108,11 @@ rte_pdump_enable(uint16_t port, uint16_t queue, uint32_t flags,
  * @param prm
  *  Use BPF program to run to filter packes (can be NULL)
  *
+ * @note
+ *  In applications that enable capture on multiple interfaces, enable may be
+ *  partially applied before an error is returned. Callers should explicitly
+ *  unwind partial enable state.
+ *
  * @return
  *    0 on success, -1 on error, rte_errno is set accordingly.
  */
@@ -124,7 +134,14 @@ rte_pdump_enable_bpf(uint16_t port_id, uint16_t queue,
  *  queues of a given port.
  * @param flags
  *  flags specifies RTE_PDUMP_FLAG_RX/RTE_PDUMP_FLAG_TX/RTE_PDUMP_FLAG_RXTX
- *  on which packet capturing should be enabled for a given port and queue.
+ *  on which packet capturing should be disabled for a given port and queue.
+ *
+ * @note
+ *  A disable failure (including timeout/no response) means teardown is not
+ *  complete across pdump-enabled peers. The caller must not release shared
+ *  pdump resources and must not uninitialize pdump for that capture session
+ *  until disable succeeds. Releasing resources on disable failure can lead to
+ *  crashes in peer processes still accessing those resources.
  *
  * @return
  *    0 on success, -1 on error, rte_errno is set accordingly.
@@ -152,6 +169,11 @@ rte_pdump_disable(uint16_t port, uint16_t queue, uint32_t flags);
  *  mempool on to which original packets will be mirrored or duplicated.
  * @param filter
  *  unused should be NULL
+ *
+ * @note
+ *  In applications that enable capture on multiple interfaces, enable may be
+ *  partially applied before an error is returned. Callers should explicitly
+ *  unwind partial enable state.
  *
  * @return
  *    0 on success, -1 on error, rte_errno is set accordingly.
@@ -186,6 +208,11 @@ rte_pdump_enable_by_deviceid(char *device_id, uint16_t queue,
  * @param filter
  *  Use BPF program to run to filter packes (can be NULL)
  *
+ * @note
+ *  In applications that enable capture on multiple interfaces, enable may be
+ *  partially applied before an error is returned. Callers should explicitly
+ *  unwind partial enable state.
+ *
  * @return
  *    0 on success, -1 on error, rte_errno is set accordingly.
  */
@@ -210,7 +237,14 @@ rte_pdump_enable_bpf_by_deviceid(const char *device_id, uint16_t queue,
  *  queues of a given device id.
  * @param flags
  *  flags specifies RTE_PDUMP_FLAG_RX/RTE_PDUMP_FLAG_TX/RTE_PDUMP_FLAG_RXTX
- *  on which packet capturing should be enabled for a given port and queue.
+ *  on which packet capturing should be disabled for a given port and queue.
+ *
+ * @note
+ *  A disable failure (including timeout/no response) means teardown is not
+ *  complete across pdump-enabled peers. The caller must not release shared
+ *  pdump resources and must not uninitialize pdump for that capture session
+ *  until disable succeeds. Releasing resources on disable failure can lead to
+ *  crashes in peer processes still accessing those resources.
  *
  * @return
  *    0 on success, -1 on error, rte_errno is set accordingly.

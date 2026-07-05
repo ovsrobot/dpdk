@@ -56,6 +56,7 @@ static struct action_entry_list action_entry_list =
 enum mp_type {
 	MP_MSG, /* Share message with peers, will not block */
 	MP_REQ, /* Request for information, Will block for a reply */
+	MP_REQ_IGN, /* Request where missing action should return ignore */
 	MP_REP, /* Response to previously-received request */
 	MP_IGN, /* Response telling requester to ignore this response */
 };
@@ -399,11 +400,11 @@ process_msg(struct mp_msg_internal *m, struct sockaddr_un *s)
 	pthread_mutex_unlock(&mp_mutex_action);
 
 	if (!action) {
-		if (m->type == MP_REQ && !internal_conf->init_complete) {
-			/* if this is a request, and init is not yet complete,
-			 * and callback wasn't registered, we should tell the
-			 * requester to ignore our existence because we're not
-			 * yet ready to process this request.
+		if ((m->type == MP_REQ && !internal_conf->init_complete) ||
+		    m->type == MP_REQ_IGN) {
+			/*
+			 * Ask requester to ignore this peer when action is not
+			 * registered either due to early init or explicit request policy.
 			 */
 			struct rte_mp_msg dummy;
 
@@ -947,7 +948,8 @@ fail:
 
 static int
 mp_request_sync(const char *dst, struct rte_mp_msg *req,
-	       struct rte_mp_reply *reply, const struct timespec *ts)
+	       struct rte_mp_reply *reply, const struct timespec *ts,
+	       enum mp_type req_type)
 {
 	int ret;
 	pthread_condattr_t attr;
@@ -970,7 +972,7 @@ mp_request_sync(const char *dst, struct rte_mp_msg *req,
 		return -1;
 	}
 
-	ret = send_msg(dst, req, MP_REQ);
+	ret = send_msg(dst, req, req_type);
 	if (ret < 0) {
 		EAL_LOG(ERR, "Fail to send request %s:%s",
 			dst, req->name);
@@ -1022,10 +1024,19 @@ int
 rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 		const struct timespec *ts)
 {
+	return rte_mp_request_sync_ex(req, reply, ts, 0);
+}
+
+RTE_EXPORT_SYMBOL(rte_mp_request_sync_ex)
+int
+rte_mp_request_sync_ex(struct rte_mp_msg *req, struct rte_mp_reply *reply,
+		const struct timespec *ts, uint32_t flags)
+{
 	int dir_fd, ret = -1;
 	DIR *mp_dir;
 	struct dirent *ent;
 	struct timespec now, end;
+	enum mp_type req_type = MP_REQ;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
@@ -1037,6 +1048,14 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 
 	if (check_input(req) != 0)
 		goto end;
+
+	if (flags & ~RTE_MP_REQ_F_IGNORE_NO_ACTION) {
+		rte_errno = EINVAL;
+		goto end;
+	}
+
+	if (flags & RTE_MP_REQ_F_IGNORE_NO_ACTION)
+		req_type = MP_REQ_IGN;
 
 	if (internal_conf->no_shconf) {
 		EAL_LOG(DEBUG, "No shared files mode enabled, IPC is disabled");
@@ -1057,7 +1076,7 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 	/* for secondary process, send request to the primary process only */
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
 		pthread_mutex_lock(&pending_requests.lock);
-		ret = mp_request_sync(eal_mp_socket_path(), req, reply, &end);
+		ret = mp_request_sync(eal_mp_socket_path(), req, reply, &end, req_type);
 		pthread_mutex_unlock(&pending_requests.lock);
 		goto end;
 	}
@@ -1097,7 +1116,7 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 		/* unlocks the mutex while waiting for response,
 		 * locks on receive
 		 */
-		if (mp_request_sync(path, req, reply, &end))
+		if (mp_request_sync(path, req, reply, &end, req_type))
 			goto unlock_end;
 	}
 	ret = 0;
