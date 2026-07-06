@@ -198,6 +198,74 @@ test_cfgfile_sample2(void)
 }
 
 static int
+test_cfgfile_create_add_save_reload(void)
+{
+	struct rte_cfgfile *cfgfile;
+	struct rte_cfgfile *loaded;
+	const char *value;
+	char filename[PATH_MAX];
+	int ret;
+
+	cfgfile = rte_cfgfile_create(0);
+	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to create cfgfile");
+
+	ret = rte_cfgfile_add_section(cfgfile, "section1");
+	TEST_ASSERT_SUCCESS(ret, "Failed to add section1");
+	ret = rte_cfgfile_add_entry(cfgfile, "section1", "key1", "value1");
+	TEST_ASSERT_SUCCESS(ret, "Failed to add section1 key1");
+	ret = rte_cfgfile_add_entry(cfgfile, "section1", "key2", "value2");
+	TEST_ASSERT_SUCCESS(ret, "Failed to add section1 key2");
+
+	ret = rte_cfgfile_add_section(cfgfile, "section2");
+	TEST_ASSERT_SUCCESS(ret, "Failed to add section2");
+	ret = rte_cfgfile_add_entry(cfgfile, "section2", "key3", "value3");
+	TEST_ASSERT_SUCCESS(ret, "Failed to add section2 key3");
+	ret = rte_cfgfile_add_entry(cfgfile, "section2", "key4", "value4");
+	TEST_ASSERT_SUCCESS(ret, "Failed to add section2 key4");
+
+	ret = make_tmp_file(filename, "create_save", "");
+	TEST_ASSERT_SUCCESS(ret, "Failed to make temporary output file");
+
+	ret = rte_cfgfile_save(cfgfile, filename);
+	TEST_ASSERT_SUCCESS(ret, "Failed to save cfgfile");
+
+	ret = rte_cfgfile_close(cfgfile);
+	TEST_ASSERT_SUCCESS(ret, "Failed to close created cfgfile");
+
+	loaded = rte_cfgfile_load(filename, 0);
+	TEST_ASSERT_NOT_NULL(loaded, "Failed to load saved cfgfile");
+
+	ret = rte_cfgfile_num_sections(loaded, NULL, 0);
+	TEST_ASSERT(ret == 2, "Unexpected number of sections: %d", ret);
+
+	ret = rte_cfgfile_section_num_entries(loaded, "section1");
+	TEST_ASSERT(ret == 2, "Unexpected section1 entries: %d", ret);
+	ret = rte_cfgfile_section_num_entries(loaded, "section2");
+	TEST_ASSERT(ret == 2, "Unexpected section2 entries: %d", ret);
+
+	value = rte_cfgfile_get_entry(loaded, "section1", "key1");
+	TEST_ASSERT(strcmp("value1", value) == 0,
+			"section1 key1 unexpected value: %s", value);
+	value = rte_cfgfile_get_entry(loaded, "section1", "key2");
+	TEST_ASSERT(strcmp("value2", value) == 0,
+			"section1 key2 unexpected value: %s", value);
+	value = rte_cfgfile_get_entry(loaded, "section2", "key3");
+	TEST_ASSERT(strcmp("value3", value) == 0,
+			"section2 key3 unexpected value: %s", value);
+	value = rte_cfgfile_get_entry(loaded, "section2", "key4");
+	TEST_ASSERT(strcmp("value4", value) == 0,
+			"section2 key4 unexpected value: %s", value);
+
+	ret = rte_cfgfile_close(loaded);
+	TEST_ASSERT_SUCCESS(ret, "Failed to close loaded cfgfile");
+
+	ret = remove(filename);
+	TEST_ASSERT_SUCCESS(ret, "Failed to remove file");
+
+	return 0;
+}
+
+static int
 test_cfgfile_realloc_sections(void)
 {
 	struct rte_cfgfile *cfgfile;
@@ -437,6 +505,7 @@ unit_test_suite test_cfgfile_suite  = {
 		TEST_CASE(test_cfgfile_missing_section),
 		TEST_CASE(test_cfgfile_global_properties),
 		TEST_CASE(test_cfgfile_empty_file),
+		TEST_CASE(test_cfgfile_create_add_save_reload),
 
 		TEST_CASES_END()
 	}
