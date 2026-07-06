@@ -491,6 +491,60 @@ test_cfgfile_empty_file(void)
 	return 0;
 }
 
+static int
+test_cfgfile_modify_entry(void)
+{
+	struct rte_cfgfile *cfgfile;
+	struct rte_cfgfile *loaded;
+	const char *value;
+	char filename[PATH_MAX];
+	int ret;
+
+	ret = make_tmp_file(filename, "sample1_set", sample1_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, 0);
+	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to load config file");
+
+	ret = rte_cfgfile_has_entry(cfgfile, "section2", "key2");
+	TEST_ASSERT(ret == 1, "section2 key2 entry missing");
+
+	ret = rte_cfgfile_has_entry(cfgfile, "section2", "invalid_key");
+	TEST_ASSERT(ret == 0, "section2 'invalid_key' entry should be missing");
+
+	ret = rte_cfgfile_set_entry(cfgfile, "section2", "key2", "value_of_key2");
+	TEST_ASSERT_SUCCESS(ret, "Failed to set section2 key2");
+
+	/* check we can't set a nonexistent key */
+	ret = rte_cfgfile_set_entry(cfgfile, "section2", "invalid_key", "value_of_key4");
+	TEST_ASSERT(ret < 0, "Error, unexpectedly able to set nonexistent 'invalid_key'");
+
+	/* check we can't add an existing key */
+	ret = rte_cfgfile_add_entry(cfgfile, "section2", "key2", "value_of_key2");
+	TEST_ASSERT(ret < 0, "Error, unexpectedly able to add existing key2");
+
+	ret = rte_cfgfile_save(cfgfile, filename);
+	TEST_ASSERT_SUCCESS(ret, "Failed to save cfgfile");
+
+	ret = rte_cfgfile_close(cfgfile);
+	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
+
+	loaded = rte_cfgfile_load(filename, 0);
+	TEST_ASSERT_NOT_NULL(loaded, "Failed to reload saved cfgfile");
+
+	value = rte_cfgfile_get_entry(loaded, "section2", "key2");
+	TEST_ASSERT(strcmp("value_of_key2", value) == 0,
+			"Unexpected section2 key2 value: %s", value);
+
+	ret = rte_cfgfile_close(loaded);
+	TEST_ASSERT_SUCCESS(ret, "Failed to close reloaded cfgfile");
+
+	ret = remove(filename);
+	TEST_ASSERT_SUCCESS(ret, "Failed to remove file");
+
+	return 0;
+}
+
 static struct
 unit_test_suite test_cfgfile_suite  = {
 	.suite_name = "Test Cfgfile Unit Test Suite",
@@ -506,6 +560,7 @@ unit_test_suite test_cfgfile_suite  = {
 		TEST_CASE(test_cfgfile_global_properties),
 		TEST_CASE(test_cfgfile_empty_file),
 		TEST_CASE(test_cfgfile_create_add_save_reload),
+		TEST_CASE(test_cfgfile_modify_entry),
 
 		TEST_CASES_END()
 	}
