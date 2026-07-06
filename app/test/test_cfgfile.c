@@ -93,7 +93,14 @@ static int
 test_cfgfile_sample1(void)
 {
 	struct rte_cfgfile *cfgfile;
+	struct rte_cfgfile_entry entries[4];
 	char filename[PATH_MAX];
+	char sec0[CFG_NAME_LEN] = {0};
+	char sec1[CFG_NAME_LEN] = {0};
+	char sec2[CFG_NAME_LEN] = "sentinel_section_2";
+	char sec3[CFG_NAME_LEN] = "sentinel_section_3";
+	char index_sec[CFG_NAME_LEN] = {0};
+	char *sections[] = { sec0, sec1, sec2, sec3 };
 	int ret;
 
 	ret = make_tmp_file(filename, "sample1", sample1_ini);
@@ -104,6 +111,52 @@ test_cfgfile_sample1(void)
 
 	ret = _test_cfgfile_sample(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to validate sample file: %d", ret);
+
+	ret = rte_cfgfile_num_sections(cfgfile, NULL, 0);
+	TEST_ASSERT(ret == 2, "Unexpected number of sections: %d", ret);
+
+	ret = rte_cfgfile_sections(cfgfile, sections, 4);
+	TEST_ASSERT(ret == 2, "Unexpected listed sections: %d", ret);
+	TEST_ASSERT(strcmp(sec0, "section1") == 0,
+			"Unexpected section at index 0: %s", sec0);
+	TEST_ASSERT(strcmp(sec1, "section2") == 0,
+			"Unexpected section at index 1: %s", sec1);
+	TEST_ASSERT(strcmp(sec2, "sentinel_section_2") == 0,
+			"Unexpected write past listed sections at index 2: %s", sec2);
+	TEST_ASSERT(strcmp(sec3, "sentinel_section_3") == 0,
+			"Unexpected write past listed sections at index 3: %s", sec3);
+
+	ret = rte_cfgfile_section_num_entries_by_index(cfgfile, index_sec, 0);
+	TEST_ASSERT(ret == 1, "Unexpected entry count at index 0: %d", ret);
+	TEST_ASSERT(strcmp(index_sec, "section1") == 0,
+			"Unexpected section name at index 0: %s", index_sec);
+
+	ret = rte_cfgfile_section_num_entries(cfgfile, "section2");
+	TEST_ASSERT(ret == 2, "Unexpected section2 entry count: %d", ret);
+
+	memset(entries, 0x5a, sizeof(entries));
+	ret = rte_cfgfile_section_entries(cfgfile, "section2", entries, 4);
+	TEST_ASSERT(ret == 2, "Unexpected section2 entry count: %d", ret);
+	TEST_ASSERT(strcmp(entries[0].name, "key2") == 0,
+			"Unexpected section2 first key: %s", entries[0].name);
+	TEST_ASSERT(strcmp(entries[0].value, "value2") == 0,
+			"Unexpected section2 first value: %s", entries[0].value);
+	TEST_ASSERT(strcmp(entries[1].name, "key3") == 0,
+			"Unexpected section2 second key: %s", entries[1].name);
+	TEST_ASSERT(strcmp(entries[1].value, "value3") == 0,
+			"Unexpected section2 second value: %s", entries[1].value);
+	TEST_ASSERT((unsigned char)entries[2].name[0] == 0x5a,
+			"Unexpected write past listed entries at index 2");
+	TEST_ASSERT((unsigned char)entries[3].name[0] == 0x5a,
+			"Unexpected write past listed entries at index 3");
+
+	memset(entries, 0x5a, sizeof(entries));
+	memset(index_sec, 0, sizeof(index_sec));
+	ret = rte_cfgfile_section_entries_by_index(cfgfile, 1, index_sec, entries, 4);
+	TEST_ASSERT(ret == 2,
+			"Unexpected entry count for section at index 1: %d", ret);
+	TEST_ASSERT(strcmp(index_sec, "section2") == 0,
+			"Unexpected section name at index 1: %s", index_sec);
 
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
