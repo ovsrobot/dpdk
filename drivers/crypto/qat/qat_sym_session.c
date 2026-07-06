@@ -201,6 +201,7 @@ ctx_init_err:
 #endif
 
 #ifndef RTE_QAT_OPENSSL
+#ifndef RTE_ARCH_ARM
 /** Creates a context in either AES or DES in ECB mode
  */
 static int
@@ -242,7 +243,8 @@ error_out:
 	}
 	return ret;
 }
-#endif
+#endif /* RTE_ARCH_ARM */
+#endif /* RTE_QAT_OPENSSL */
 
 static int
 qat_is_cipher_alg_supported(enum rte_crypto_cipher_algorithm algo,
@@ -474,6 +476,7 @@ qat_sym_session_configure_cipher(struct rte_cryptodev *dev,
 					cipher_xform->key.length,
 					&session->bpi_ctx);
 #else
+#ifndef RTE_ARCH_ARM
 		session->docsis_key_len = cipher_xform->key.length;
 		ret = ipsec_mb_ctx_init(
 					cipher_xform->key.data,
@@ -482,6 +485,7 @@ qat_sym_session_configure_cipher(struct rte_cryptodev *dev,
 					session->expkey,
 					session->dust,
 					&session->mb_mgr);
+#endif
 #endif
 		if (ret != 0) {
 			QAT_LOG(ERR, "failed to create DES BPI ctx");
@@ -504,6 +508,7 @@ qat_sym_session_configure_cipher(struct rte_cryptodev *dev,
 					cipher_xform->key.length,
 					&session->bpi_ctx);
 #else
+#ifndef RTE_ARCH_ARM
 		session->docsis_key_len = cipher_xform->key.length;
 		ret = ipsec_mb_ctx_init(
 					cipher_xform->key.data,
@@ -512,6 +517,7 @@ qat_sym_session_configure_cipher(struct rte_cryptodev *dev,
 					session->expkey,
 					session->dust,
 					&session->mb_mgr);
+#endif
 #endif
 		if (ret != 0) {
 			QAT_LOG(ERR, "failed to create AES BPI ctx");
