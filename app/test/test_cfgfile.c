@@ -377,6 +377,25 @@ test_cfgfile_invalid_key_value_pair(void)
 }
 
 static int
+test_cfgfile_line_too_long(void)
+{
+	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
+	int ret;
+
+	ret = make_tmp_file(filename, "line_too_long", line_too_long_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, 0);
+	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
+
+	ret = remove(filename);
+	TEST_ASSERT_SUCCESS(ret, "Failed to remove file");
+
+	return 0;
+}
+
+static int
 test_cfgfile_empty_key_value_pair(void)
 {
 	struct rte_cfgfile *cfgfile;
@@ -555,6 +574,7 @@ unit_test_suite test_cfgfile_suite  = {
 		TEST_CASE(test_cfgfile_invalid_section_header),
 		TEST_CASE(test_cfgfile_invalid_comment),
 		TEST_CASE(test_cfgfile_invalid_key_value_pair),
+		TEST_CASE(test_cfgfile_line_too_long),
 		TEST_CASE(test_cfgfile_empty_key_value_pair),
 		TEST_CASE(test_cfgfile_missing_section),
 		TEST_CASE(test_cfgfile_global_properties),
