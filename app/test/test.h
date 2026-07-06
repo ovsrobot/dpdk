@@ -216,6 +216,7 @@ int commands_init(void);
 int command_valid(const char *cmd);
 
 int test_exit(void);
+int test_dev_hotplug_mp(void);
 int test_mp_secondary(void);
 int test_panic(void);
 int test_timer_secondary(void);

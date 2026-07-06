@@ -62,6 +62,7 @@ do_recursive_call(void)
 	} actions[] =  {
 #ifndef RTE_EXEC_ENV_WINDOWS
 			{ "run_secondary_instances", test_mp_secondary },
+			{ "run_hotplug_secondary", test_dev_hotplug_mp },
 #endif
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
