@@ -4039,6 +4039,23 @@ virtio_dev_tx_async_packed_batch(struct virtio_net *dev,
 	vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE)
 		rte_prefetch0((void *)(uintptr_t)desc_addrs[i]);
 
+	if (virtio_net_with_host_offload(dev)) {
+		vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
+			desc_vva = vhost_iova_to_vva(dev, vq, desc_addrs[i],
+						&lens[i], VHOST_ACCESS_RO);
+			/*
+			 * A malformed or unmapped guest descriptor makes the
+			 * IOVA translation fail (returns 0). Bail out of the
+			 * batch fast path so the single-packet path handles the
+			 * error, instead of dereferencing a NULL header.
+			 */
+			if (unlikely(!desc_vva))
+				return -1;
+			hdr = (struct virtio_net_hdr *)(uintptr_t)desc_vva;
+			pkts_info[slot_idx + i].nethdr = *hdr;
+		}
+	}
+
 	vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
 		host_iova[i] = (void *)(uintptr_t)gpa_to_first_hpa(dev,
 			desc_addrs[i] + buf_offset, pkts[i]->pkt_len, &mapped_len[i]);
@@ -4051,15 +4068,6 @@ virtio_dev_tx_async_packed_batch(struct virtio_net *dev,
 		(void *)(uintptr_t)rte_pktmbuf_iova_offset(pkts[i], mbuf_offset),
 		mapped_len[i]);
 		async->iter_idx++;
-	}
-
-	if (virtio_net_with_host_offload(dev)) {
-		vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
-			desc_vva = vhost_iova_to_vva(dev, vq, desc_addrs[i],
-						&lens[i], VHOST_ACCESS_RO);
-			hdr = (struct virtio_net_hdr *)(uintptr_t)desc_vva;
-			pkts_info[slot_idx + i].nethdr = *hdr;
-		}
 	}
 
 	vq_inc_last_avail_packed(vq, PACKED_BATCH_SIZE);
