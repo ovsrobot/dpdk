@@ -131,6 +131,23 @@ New Features
   to support adding and removing memory regions without resetting
   the whole guest memory map.
 
+* **Added VDUSE API version 1 support in vhost library.**
+
+  Updated VDUSE (vDPA Device in Userspace) support with API version 1 features
+  to enable live migration:
+
+  * Added Address Space ID (ASID) support for multiple independent address spaces
+    per device, enabling better isolation and support for virtqueue groups.
+  * Added virtqueue group support to assign different virtqueues to separate
+    address spaces (e.g., control queue vs data queues).
+  * Added ``VDUSE_F_QUEUE_READY`` feature for explicit dataplane queue
+    readiness signaling, ensuring proper device initialization ordering
+    during live migration.
+  * Added ``VDUSE_F_SUSPEND`` feature to reliably suspend virtqueue processing
+    and fetch virtqueue state during live migration.
+  * Added ``VIRTIO_NET_F_STATUS`` support for link status reporting and
+    gratuitous ARP signaling in VDUSE network devices.
+
 * **Added LinkData sxe2 ethernet driver.**
 
   Added network driver for the LinkData network adapters.
