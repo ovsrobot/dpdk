@@ -290,7 +290,10 @@ if not pcap_dep.found()
     # pcap got a pkg-config file only in 1.9.0
     pcap_dep = cc.find_library(pcap_lib, required: false)
 endif
-if (pcap_dep.found() and cc.has_header('pcap.h', dependencies: pcap_dep)
+# has_header() passes even when pcap.h is empty; require a real declaration.
+if (pcap_dep.found()
+        and cc.has_header_symbol('pcap.h', 'pcap_create', dependencies: pcap_dep,
+                args: '-D_GNU_SOURCE')
         and cc.links(min_c_code, dependencies: pcap_dep))
     dpdk_conf.set('RTE_HAS_LIBPCAP', 1)
     dpdk_extra_ldflags += '-l@0@'.format(pcap_lib)
