@@ -2904,6 +2904,13 @@ enic_fm_flow_query_count(struct rte_eth_dev *dev,
 
 	ENICPMD_FUNC_TRACE();
 	fm = begin_fm(pmd_priv(dev));
+
+	if (!fm) {
+		return rte_flow_error_set(error, ENOTSUP,
+			RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
+			"enic: flowman is not initialized");
+	}
+
 	query = data;
 	fm_flow = flow->fm;
 	if (!fm_flow->counter_valid) {
