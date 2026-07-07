@@ -964,8 +964,8 @@ int vnic_dev_notify_setcmd(struct vnic_dev *vdev,
 	int wait = 1000;
 	int r;
 
-	memset(notify_addr, 0, sizeof(struct vnic_devcmd_notify));
 	if (!vnic_dev_in_reset(vdev)) {
+		memset(notify_addr, 0, sizeof(struct vnic_devcmd_notify));
 		vdev->notify = notify_addr;
 		vdev->notify_pa = notify_pa;
 	}
