@@ -1428,11 +1428,24 @@ rte_eth_bond_8023ad_conf_get(uint16_t port_id,
 	return 0;
 }
 
+static int
+bond_8023ad_primary_only(const char *op)
+{
+	if (rte_eal_process_type() != RTE_PROC_SECONDARY)
+		return 0;
+
+	RTE_BOND_LOG(ERR, "%s not supported in secondary process", op);
+	return -ENOTSUP;
+}
+
 RTE_EXPORT_SYMBOL(rte_eth_bond_8023ad_agg_selection_set)
 int
 rte_eth_bond_8023ad_agg_selection_set(uint16_t port_id,
 		enum rte_bond_8023ad_agg_selection agg_selection)
 {
+	if (bond_8023ad_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct rte_eth_dev *bond_dev;
 	struct bond_dev_private *internals;
 	struct mode8023ad_private *mode4;
@@ -1506,6 +1519,9 @@ int
 rte_eth_bond_8023ad_setup(uint16_t port_id,
 		struct rte_eth_bond_8023ad_conf *conf)
 {
+	if (bond_8023ad_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct rte_eth_dev *bond_dev;
 	int err;
 
@@ -1590,6 +1606,9 @@ int
 rte_eth_bond_8023ad_ext_collect(uint16_t port_id, uint16_t member_id,
 				int enabled)
 {
+	if (bond_8023ad_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct port *port;
 	int res;
 
@@ -1612,6 +1631,9 @@ int
 rte_eth_bond_8023ad_ext_distrib(uint16_t port_id, uint16_t member_id,
 				int enabled)
 {
+	if (bond_8023ad_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct port *port;
 	int res;
 
@@ -1664,6 +1686,9 @@ int
 rte_eth_bond_8023ad_ext_slowtx(uint16_t port_id, uint16_t member_id,
 		struct rte_mbuf *lacp_pkt)
 {
+	if (bond_8023ad_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct port *port;
 	int res;
 
@@ -1725,6 +1750,9 @@ RTE_EXPORT_SYMBOL(rte_eth_bond_8023ad_dedicated_queues_enable)
 int
 rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port)
 {
+	if (bond_8023ad_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
 
@@ -1754,6 +1782,9 @@ RTE_EXPORT_SYMBOL(rte_eth_bond_8023ad_dedicated_queues_disable)
 int
 rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port)
 {
+	if (bond_8023ad_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
 

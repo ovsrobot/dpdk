@@ -2053,8 +2053,21 @@ static int
 bond_ethdev_promiscuous_enable(struct rte_eth_dev *eth_dev);
 
 static int
+bond_ethdev_primary_only(const char *op)
+{
+	if (rte_eal_process_type() != RTE_PROC_SECONDARY)
+		return 0;
+
+	RTE_BOND_LOG(ERR, "%s not supported in secondary process", op);
+	return -ENOTSUP;
+}
+
+static int
 bond_ethdev_start(struct rte_eth_dev *eth_dev)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_dev_private *internals;
 	int i;
 
@@ -2186,6 +2199,9 @@ bond_ethdev_free_queues(struct rte_eth_dev *dev)
 int
 bond_ethdev_stop(struct rte_eth_dev *eth_dev)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_dev_private *internals = eth_dev->data->dev_private;
 	uint16_t i;
 	int ret;
@@ -2400,6 +2416,9 @@ bond_ethdev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 static int
 bond_ethdev_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	int res;
 	uint16_t i;
 	struct bond_dev_private *internals = dev->data->dev_private;
@@ -2431,6 +2450,9 @@ bond_ethdev_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		uint16_t nb_rx_desc, unsigned int socket_id __rte_unused,
 		const struct rte_eth_rxconf *rx_conf, struct rte_mempool *mb_pool)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_rx_queue *bd_rx_q = (struct bond_rx_queue *)
 			rte_zmalloc_socket(NULL, sizeof(struct bond_rx_queue),
 					0, dev->data->numa_node);
@@ -2455,6 +2477,9 @@ bond_ethdev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 		uint16_t nb_tx_desc, unsigned int socket_id __rte_unused,
 		const struct rte_eth_txconf *tx_conf)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_tx_queue *bd_tx_q  = (struct bond_tx_queue *)
 			rte_zmalloc_socket(NULL, sizeof(struct bond_tx_queue),
 					0, dev->data->numa_node);
@@ -2697,6 +2722,9 @@ bond_ethdev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 static int
 bond_ethdev_stats_reset(struct rte_eth_dev *dev)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_dev_private *internals = dev->data->dev_private;
 	int i;
 	int err;
@@ -2714,6 +2742,9 @@ bond_ethdev_stats_reset(struct rte_eth_dev *dev)
 static int
 bond_ethdev_promiscuous_enable(struct rte_eth_dev *eth_dev)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_dev_private *internals = eth_dev->data->dev_private;
 	int i;
 	int ret = 0;
@@ -2768,6 +2799,9 @@ bond_ethdev_promiscuous_enable(struct rte_eth_dev *eth_dev)
 static int
 bond_ethdev_promiscuous_disable(struct rte_eth_dev *dev)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_dev_private *internals = dev->data->dev_private;
 	int i;
 	int ret = 0;
@@ -2871,6 +2905,9 @@ bond_ethdev_promiscuous_update(struct rte_eth_dev *dev)
 static int
 bond_ethdev_allmulticast_enable(struct rte_eth_dev *eth_dev)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_dev_private *internals = eth_dev->data->dev_private;
 	int i;
 	int ret = 0;
@@ -2925,6 +2962,9 @@ bond_ethdev_allmulticast_enable(struct rte_eth_dev *eth_dev)
 static int
 bond_ethdev_allmulticast_disable(struct rte_eth_dev *eth_dev)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct bond_dev_private *internals = eth_dev->data->dev_private;
 	int i;
 	int ret = 0;
@@ -3186,6 +3226,9 @@ static int
 bond_ethdev_rss_reta_update(struct rte_eth_dev *dev,
 		struct rte_eth_rss_reta_entry64 *reta_conf, uint16_t reta_size)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	unsigned i, j;
 	int result = 0;
 	int member_reta_size;
@@ -3246,6 +3289,9 @@ static int
 bond_ethdev_rss_hash_update(struct rte_eth_dev *dev,
 		struct rte_eth_rss_conf *rss_conf)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	int i, result = 0;
 	struct bond_dev_private *internals = dev->data->dev_private;
 	struct rte_eth_rss_conf bond_rss_conf;
@@ -3295,6 +3341,9 @@ bond_ethdev_rss_hash_conf_get(struct rte_eth_dev *dev,
 static int
 bond_ethdev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct rte_eth_dev *member_eth_dev;
 	struct bond_dev_private *internals = dev->data->dev_private;
 	int ret, i;
@@ -3324,6 +3373,9 @@ static int
 bond_ethdev_mac_address_set(struct rte_eth_dev *dev,
 			struct rte_ether_addr *addr)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	if (mac_address_set(dev, addr)) {
 		RTE_BOND_LOG(ERR, "Failed to update MAC address");
 		return -EINVAL;
@@ -3345,6 +3397,9 @@ bond_ethdev_mac_addr_add(struct rte_eth_dev *dev,
 			struct rte_ether_addr *mac_addr,
 			__rte_unused uint32_t index, uint32_t vmdq)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	struct rte_eth_dev *member_eth_dev;
 	struct bond_dev_private *internals = dev->data->dev_private;
 	int ret, i;
@@ -3381,6 +3436,9 @@ end:
 static void
 bond_ethdev_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return;
+
 	struct rte_eth_dev *member_eth_dev;
 	struct bond_dev_private *internals = dev->data->dev_private;
 	int i;
@@ -3965,6 +4023,9 @@ bond_remove(struct rte_vdev_device *dev)
 static int
 bond_ethdev_configure(struct rte_eth_dev *dev)
 {
+	if (bond_ethdev_primary_only(__func__) != 0)
+		return -ENOTSUP;
+
 	const char *name = dev->device->name;
 	struct bond_dev_private *internals = dev->data->dev_private;
 	struct rte_kvargs *kvlist = internals->kvlist;
