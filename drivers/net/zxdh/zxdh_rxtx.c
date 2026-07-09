@@ -114,6 +114,22 @@
 		RTE_MBUF_F_TX_SEC_OFFLOAD |     \
 		RTE_MBUF_F_TX_UDP_SEG)
 
+#if RTE_CACHE_LINE_SIZE == 128
+#define NEXT_CACHELINE_OFF_16B   8
+#define NEXT_CACHELINE_OFF_8B   16
+#elif RTE_CACHE_LINE_SIZE == 64
+#define NEXT_CACHELINE_OFF_16B   4
+#define NEXT_CACHELINE_OFF_8B    8
+#else
+#define NEXT_CACHELINE_OFF_16B  (RTE_CACHE_LINE_SIZE / 16)
+#define NEXT_CACHELINE_OFF_8B   (RTE_CACHE_LINE_SIZE / 8)
+#endif
+#define N_PER_LOOP  NEXT_CACHELINE_OFF_8B
+#define N_PER_LOOP_MASK (N_PER_LOOP - 1)
+
+#define rxq_get_vq(q) ((q)->vq)
+#define txq_get_vq(q) ((q)->vq)
+
 uint32_t zxdh_outer_l2_type[16] = {
 	0,
 	RTE_PTYPE_L2_ETHER,
@@ -200,43 +216,6 @@ uint32_t zxdh_inner_l4_type[16] = {
 	0,
 	0,
 };
-
-static void
-zxdh_xmit_cleanup_inorder_packed(struct zxdh_virtqueue *vq, int32_t num)
-{
-	uint16_t used_idx = 0;
-	uint16_t id       = 0;
-	uint16_t curr_id  = 0;
-	uint16_t free_cnt = 0;
-	uint16_t size     = vq->vq_nentries;
-	struct zxdh_vring_packed_desc *desc = vq->vq_packed.ring.desc;
-	struct zxdh_vq_desc_extra     *dxp  = NULL;
-
-	used_idx = vq->vq_used_cons_idx;
-	/* desc_is_used has a load-acquire or rte_io_rmb inside
-	 * and wait for used desc in virtqueue.
-	 */
-	while (num > 0 && desc_is_used(&desc[used_idx], vq)) {
-		id = desc[used_idx].id;
-		do {
-			curr_id = used_idx;
-			dxp = &vq->vq_descx[used_idx];
-			used_idx += dxp->ndescs;
-			free_cnt += dxp->ndescs;
-			num -= dxp->ndescs;
-			if (used_idx >= size) {
-				used_idx -= size;
-				vq->used_wrap_counter ^= 1;
-			}
-			if (dxp->cookie != NULL) {
-				rte_pktmbuf_free(dxp->cookie);
-				dxp->cookie = NULL;
-			}
-		} while (curr_id != id);
-	}
-	vq->vq_used_cons_idx = used_idx;
-	vq->vq_free_cnt += free_cnt;
-}
 
 static inline uint16_t
 zxdh_get_mtu(struct zxdh_virtqueue *vq)
@@ -334,7 +313,7 @@ zxdh_xmit_fill_net_hdr(struct zxdh_virtqueue *vq, struct rte_mbuf *cookie,
 }
 
 static inline void
-zxdh_enqueue_xmit_packed_fast(struct zxdh_virtnet_tx *txvq,
+zxdh_xmit_enqueue_push(struct zxdh_virtnet_tx *txvq,
 						struct rte_mbuf *cookie)
 {
 	struct zxdh_virtqueue *vq = txvq->vq;
@@ -345,7 +324,6 @@ zxdh_enqueue_xmit_packed_fast(struct zxdh_virtnet_tx *txvq,
 	uint8_t hdr_len = vq->hw->dl_net_hdr_len;
 	struct zxdh_vring_packed_desc *dp = &vq->vq_packed.ring.desc[id];
 
-	dxp->ndescs = 1;
 	dxp->cookie = cookie;
 	hdr = rte_pktmbuf_mtod_offset(cookie, struct zxdh_net_hdr_dl *, -hdr_len);
 	zxdh_xmit_fill_net_hdr(vq, cookie, hdr);
@@ -362,51 +340,57 @@ zxdh_enqueue_xmit_packed_fast(struct zxdh_virtnet_tx *txvq,
 }
 
 static inline void
-zxdh_enqueue_xmit_packed(struct zxdh_virtnet_tx *txvq,
+zxdh_xmit_enqueue_append(struct zxdh_virtnet_tx *txvq,
 						struct rte_mbuf *cookie,
 						uint16_t needed)
 {
 	struct zxdh_tx_region *txr = txvq->zxdh_net_hdr_mz->addr;
 	struct zxdh_virtqueue *vq = txvq->vq;
-	uint16_t id = vq->vq_avail_idx;
-	struct zxdh_vq_desc_extra *dxp = &vq->vq_descx[id];
+	struct zxdh_vq_desc_extra *dep = &vq->vq_descx[0];
 	uint16_t head_idx = vq->vq_avail_idx;
 	uint16_t idx = head_idx;
 	struct zxdh_vring_packed_desc *start_dp = vq->vq_packed.ring.desc;
 	struct zxdh_vring_packed_desc *head_dp = &vq->vq_packed.ring.desc[idx];
 	struct zxdh_net_hdr_dl *hdr = NULL;
 
-	uint16_t head_flags = cookie->next ? ZXDH_VRING_DESC_F_NEXT : 0;
+	uint16_t id = vq->vq_avail_idx;
+	struct zxdh_vq_desc_extra *dxp = &vq->vq_descx[id];
 	uint8_t hdr_len = vq->hw->dl_net_hdr_len;
+	uint16_t head_flags = 0;
+	/*
+	 * IMPORTANT: For multi-seg packets, we set the head descriptor's cookie to NULL
+	 * and store each segment's mbuf in its corresponding vq_descx[idx].cookie.
+	 * This is required for the per-descriptor mbuf free in zxdh_xmit_fast_flush()
+	 * which uses rte_pktmbuf_free_seg() to free individual segments.
+	 * Any code path that attempts to read vq_descx[head_id].cookie will see NULL
+	 * and must handle this case appropriately.
+	 */
+	dxp->cookie = NULL;
 
-	dxp->ndescs = needed;
-	dxp->cookie = cookie;
-	head_flags |= vq->cached_flags;
-
+	/* setup first tx ring slot to point to header stored in reserved region. */
 	start_dp[idx].addr = txvq->zxdh_net_hdr_mem + RTE_PTR_DIFF(&txr[idx].tx_hdr, txr);
 	start_dp[idx].len  = hdr_len;
-	head_flags |= ZXDH_VRING_DESC_F_NEXT;
+	start_dp[idx].id = idx;
+	head_flags |= vq->cached_flags | ZXDH_VRING_DESC_F_NEXT;
 	hdr = (void *)&txr[idx].tx_hdr;
 
-	rte_prefetch1(hdr);
+	zxdh_xmit_fill_net_hdr(vq, cookie, hdr);
+
 	idx++;
 	if (idx >= vq->vq_nentries) {
 		idx -= vq->vq_nentries;
 		vq->cached_flags ^= ZXDH_VRING_PACKED_DESC_F_AVAIL_USED;
 	}
 
-	zxdh_xmit_fill_net_hdr(vq, cookie, hdr);
-
 	do {
 		start_dp[idx].addr = rte_pktmbuf_iova(cookie);
 		start_dp[idx].len  = cookie->data_len;
-		start_dp[idx].id = id;
-		if (likely(idx != head_idx)) {
-			uint16_t flags = cookie->next ? ZXDH_VRING_DESC_F_NEXT : 0;
+		start_dp[idx].id = idx;
 
-			flags |= vq->cached_flags;
-			start_dp[idx].flags = flags;
-		}
+		dep[idx].cookie = cookie;
+		uint16_t flags = cookie->next ? ZXDH_VRING_DESC_F_NEXT : 0;
+		flags |= vq->cached_flags;
+		start_dp[idx].flags = flags;
 
 		idx++;
 		if (idx >= vq->vq_nentries) {
@@ -456,7 +440,7 @@ zxdh_update_packet_stats(struct zxdh_virtnet_stats *stats, struct rte_mbuf *mbuf
 }
 
 static void
-zxdh_xmit_flush(struct zxdh_virtqueue *vq)
+zxdh_xmit_fast_flush(struct zxdh_virtqueue *vq)
 {
 	uint16_t id       = 0;
 	uint16_t curr_id  = 0;
@@ -472,19 +456,21 @@ zxdh_xmit_flush(struct zxdh_virtqueue *vq)
 	 * for a used descriptor in the virtqueue.
 	 */
 	while (desc_is_used(&desc[used_idx], vq)) {
+		rte_prefetch0(&desc[used_idx + NEXT_CACHELINE_OFF_16B]);
 		id = desc[used_idx].id;
 		do {
+			desc[used_idx].id = used_idx;
 			curr_id = used_idx;
 			dxp = &vq->vq_descx[used_idx];
-			used_idx += dxp->ndescs;
-			free_cnt += dxp->ndescs;
-			if (used_idx >= size) {
-				used_idx -= size;
-				vq->used_wrap_counter ^= 1;
-			}
 			if (dxp->cookie != NULL) {
-				rte_pktmbuf_free(dxp->cookie);
+				rte_pktmbuf_free_seg(dxp->cookie);
 				dxp->cookie = NULL;
+			}
+			used_idx += 1;
+			free_cnt += 1;
+			if (unlikely(used_idx == size)) {
+				used_idx = 0;
+				vq->used_wrap_counter ^= 1;
 			}
 		} while (curr_id != id);
 	}
@@ -499,13 +485,12 @@ zxdh_xmit_pkts_packed(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkt
 	struct zxdh_virtqueue  *vq   = txvq->vq;
 	uint16_t nb_tx = 0;
 
-	zxdh_xmit_flush(vq);
+	zxdh_xmit_fast_flush(vq);
 
 	for (nb_tx = 0; nb_tx < nb_pkts; nb_tx++) {
 		struct rte_mbuf *txm = tx_pkts[nb_tx];
 		int32_t can_push     = 0;
 		int32_t slots        = 0;
-		int32_t need         = 0;
 
 		rte_prefetch0(txm);
 		/* optimize ring usage */
@@ -522,26 +507,16 @@ zxdh_xmit_pkts_packed(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkt
 		 * default    => number of segments + 1
 		 **/
 		slots = txm->nb_segs + !can_push;
-		need = slots - vq->vq_free_cnt;
 		/* Positive value indicates it need free vring descriptors */
-		if (unlikely(need > 0)) {
-			zxdh_xmit_cleanup_inorder_packed(vq, need);
-			need = slots - vq->vq_free_cnt;
-			if (unlikely(need > 0)) {
-				PMD_TX_LOG(ERR,
-						" No enough %d free tx descriptors to transmit."
-						"freecnt %d",
-						need,
-						vq->vq_free_cnt);
-				break;
-			}
-		}
+
+		if (unlikely(slots >  vq->vq_free_cnt))
+			break;
 
 		/* Enqueue Packet buffers */
 		if (can_push)
-			zxdh_enqueue_xmit_packed_fast(txvq, txm);
+			zxdh_xmit_enqueue_push(txvq, txm);
 		else
-			zxdh_enqueue_xmit_packed(txvq, txm, slots);
+			zxdh_xmit_enqueue_append(txvq, txm, slots);
 		zxdh_update_packet_stats(&txvq->stats, txm);
 	}
 	txvq->stats.packets += nb_tx;
@@ -1070,7 +1045,6 @@ uint16_t zxdh_recv_single_pkts(void *rx_queue, struct rte_mbuf **rcv_pkts, uint1
 
 		if (unlikely(zxdh_init_mbuf(rxm, len, hw, &vq->rxq) < 0))
 			continue;
-		rcv_pkts[nb_rx] = rxm;
 		zxdh_update_packet_stats(&rxvq->stats, rxm);
 		nb_rx++;
 	}

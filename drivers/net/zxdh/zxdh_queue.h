@@ -374,7 +374,7 @@ zxdh_queue_full(const struct zxdh_virtqueue *vq)
 }
 
 static inline void
-zxdh_queue_store_flags_packed(struct zxdh_vring_packed_desc *dp, uint16_t flags)
+zxdh_queue_store_flags_packed(volatile struct zxdh_vring_packed_desc *dp, uint16_t flags)
 {
 	rte_io_wmb();
 	dp->flags = flags;
