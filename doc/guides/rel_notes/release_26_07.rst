@@ -259,6 +259,11 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Updated IAVF ethernet driver.**
+
+  * Increased the maximum number of secondary unicast MAC addresses from 64 to 32k.
+    This increases a VF port memory footprint by ~192kB.
+
 
 Removed Items
 -------------
