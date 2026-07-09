@@ -40,6 +40,10 @@
 #define ZXDH_SPM_SPEED_4X_100G         RTE_BIT32(10)
 #define ZXDH_SPM_SPEED_4X_200G         RTE_BIT32(11)
 
+#define ZXDH_VLAN_TAG_LEN   4
+#define ZXDH_ETH_OVERHEAD  (RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN + ZXDH_VLAN_TAG_LEN * 2)
+#define ZXDH_MTU_TO_PKTLEN(mtu) ((mtu) + ZXDH_ETH_OVERHEAD)
+
 struct zxdh_np_stats_data {
 	uint64_t n_pkts_dropped;
 	uint64_t n_bytes_dropped;
