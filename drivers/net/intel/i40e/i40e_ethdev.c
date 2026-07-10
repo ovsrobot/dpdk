@@ -2764,6 +2764,7 @@ i40e_dev_close(struct rte_eth_dev *dev)
 		ret = rte_intr_callback_unregister(intr_handle,
 				i40e_dev_interrupt_handler, dev);
 		if (ret >= 0 || ret == -ENOENT) {
+			ret = 0;
 			break;
 		} else if (ret != -EAGAIN) {
 			PMD_INIT_LOG(ERR,
