@@ -144,6 +144,9 @@ New Features
   * Added support for QinQ offloading operations.
   * Added support for transmitting LLDP packets based on mbuf packet type.
   * Implemented AVX2 context descriptor transmit paths.
+  * Runtime Rx/Tx queue setup is now automatically disabled while a
+    per-queue bandwidth ``rte_tm`` hierarchy is committed, to avoid
+    corrupting queue state on E810 VFs.
 
 * **Updated Intel ice driver.**
 
