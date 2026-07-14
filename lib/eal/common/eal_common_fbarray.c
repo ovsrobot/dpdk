@@ -1022,7 +1022,9 @@ rte_fbarray_destroy(struct rte_fbarray *arr)
 			 * we're still holding an exclusive lock, so drop it to
 			 * shared.
 			 */
-			eal_file_lock(fd, EAL_FLOCK_SHARED, EAL_FLOCK_RETURN);
+			if (eal_file_lock(fd, EAL_FLOCK_SHARED, EAL_FLOCK_RETURN))
+				EAL_LOG(DEBUG, "Cannot restore fbarray shared lock: %s",
+					rte_strerror(rte_errno));
 
 			ret = -1;
 			goto out;
