@@ -1338,7 +1338,7 @@ rte_dma_submit(int16_t dev_id, uint16_t vchan)
  * @param nb_cpls
  *   The maximum number of completed operations that can be processed.
  * @param[out] last_idx
- *   The last completed operation's ring_idx.
+ *   The last successfully completed operation's ring_idx.
  *   If not required, NULL can be passed in.
  * @param[out] has_error
  *   Indicates if there are transfer error.
@@ -1397,7 +1397,8 @@ rte_dma_completed(int16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
  * @param nb_cpls
  *   Indicates the size of status array.
  * @param[out] last_idx
- *   The last completed operation's ring_idx.
+ *   The last completed operation's ring_idx, regardless of whether it
+ *   completed successfully or with an error.
  *   If not required, NULL can be passed in.
  * @param[out] status
  *   This is a pointer to an array of length 'nb_cpls' that holds the completion
