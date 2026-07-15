@@ -2693,6 +2693,7 @@ i40e_dev_close(struct rte_eth_dev *dev)
 	uint32_t reg;
 	int i;
 	int ret;
+	int cb_ret;
 	uint8_t aq_fail = 0;
 	int retries = 0;
 
@@ -2761,14 +2762,17 @@ i40e_dev_close(struct rte_eth_dev *dev)
 	i40e_pf_host_uninit(dev);
 
 	do {
-		ret = rte_intr_callback_unregister(intr_handle,
+		cb_ret = rte_intr_callback_unregister(intr_handle,
 				i40e_dev_interrupt_handler, dev);
-		if (ret >= 0 || ret == -ENOENT) {
+		if (cb_ret >= 0 || cb_ret == -ENOENT) {
 			break;
-		} else if (ret != -EAGAIN) {
+		} else if (cb_ret != -EAGAIN) {
 			PMD_INIT_LOG(ERR,
 				 "intr callback unregister failed: %d",
-				 ret);
+				 cb_ret);
+			if (ret == 0)
+				ret = cb_ret;
+			break;
 		}
 		i40e_msec_delay(500);
 	} while (retries++ < 5);
