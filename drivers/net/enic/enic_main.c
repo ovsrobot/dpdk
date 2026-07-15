@@ -1887,7 +1887,9 @@ static int enic_dev_init(struct enic *enic)
 	LIST_INIT(&enic->flows);
 
 	/* set up link status checking */
-	vnic_dev_notify_set(enic->vdev, -1); /* No Intr for notify */
+	err = vnic_dev_notify_set(enic->vdev, -1); /* No Intr for notify */
+	if (err)
+		return err;
 
 	enic->overlay_offload = false;
 	/*
