@@ -1824,12 +1824,6 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 		job->msg_len_to_cipher_in_bytes = op->sym->cipher.data.length;
 	}
 
-	if (cipher_mode == IMB_CIPHER_NULL && oop) {
-		memcpy(job->dst + job->cipher_start_src_offset_in_bytes,
-			job->src + job->cipher_start_src_offset_in_bytes,
-			job->msg_len_to_cipher_in_bytes);
-	}
-
 	/* Set user data to be crypto operation data struct */
 	job->user_data = op;
 
@@ -1845,6 +1839,22 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 		else
 			return multi_sgl_job(job, op, oop,
 					m_offset, m_src, m_dst, mb_mgr);
+	} else if (oop) {
+		if (cipher_mode == IMB_CIPHER_NULL) {
+			memcpy(rte_pktmbuf_mtod(m_dst, uint8_t *),
+				rte_pktmbuf_mtod(m_src, uint8_t *),
+				job->msg_len_to_cipher_in_bytes +
+				job->cipher_start_src_offset_in_bytes);
+		} else if (cipher_mode == IMB_CIPHER_SNOW3G_UEA2_BITLEN ||
+				cipher_mode == IMB_CIPHER_KASUMI_UEA1_BITLEN) {
+			memcpy(rte_pktmbuf_mtod(m_dst, uint8_t *),
+				rte_pktmbuf_mtod(m_src, uint8_t *),
+				job->cipher_start_src_offset_in_bits >> 3);
+		} else {
+			memcpy(rte_pktmbuf_mtod(m_dst, uint8_t *),
+				rte_pktmbuf_mtod(m_src, uint8_t *),
+				job->cipher_start_src_offset_in_bytes);
+		}
 	}
 
 	return 0;
