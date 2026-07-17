@@ -61,6 +61,13 @@ Deprecation Notices
 * mempool: The object array in ``struct rte_mempool_cache`` is oversize by factor two,
   and will be reduced to ``RTE_MEMPOOL_CACHE_MAX_SIZE`` in DPDK 26.11.
 
+* graph: The internal scheduling mechanism of ``struct rte_graph`` will change
+  in DPDK 26.11. The circular buffer fields (``head``, ``tail``, ``cir_mask``,
+  ``cir_start``) will be replaced with a topological bitmap scheduler.
+  A new field will be added to ``struct rte_node`` for the scheduling order.
+  The graph walk functions will process nodes in topological order using bitmap
+  scanning instead of the circular buffer.
+
 * lib: will fix extending some enum/define breaking the ABI. There are multiple
   samples in DPDK that enum/define terminated with a ``.*MAX.*`` value which is
   used by iterators, and arrays holding these values are sized with this
