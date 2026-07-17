@@ -10,7 +10,7 @@
 #include <rte_common.h>
 #include <rte_devargs.h>
 #include <rte_kvargs.h>
-#include <bus_driver.h>
+#include <rte_bus.h>
 #include <rte_class.h>
 
 #include "test.h"
@@ -167,14 +167,18 @@ test_valid_devargs(void)
 		{ "net_ring0,iface=test,path=/class/bus/,queues=1",
 		  0, 0, 3, "vdev", "net_ring0", NULL },
 	};
-	struct rte_bus *vdev_bus = rte_bus_find_by_name("vdev");
+	struct rte_devargs da;
 	int ret;
 
 	ret = test_valid_devargs_cases(list, RTE_DIM(list));
-	if (vdev_bus != NULL && vdev_bus->parse("net_ring0", NULL) == 0)
+
+	memset(&da, 0, sizeof(da));
+	if (rte_devargs_parse(&da, "net_ring0") == 0)
 		/* Ring vdev driver enabled. */
 		ret |= test_valid_devargs_cases(legacy_ring_list,
 						RTE_DIM(legacy_ring_list));
+	rte_devargs_reset(&da);
+
 	return ret;
 }
 
