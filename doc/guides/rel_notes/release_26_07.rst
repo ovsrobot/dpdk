@@ -190,6 +190,11 @@ New Features
   * Added ``eof`` devarg to use link state to signal end of receive file input.
   * Added unit test suite.
 
+* **Added per-queue statistics API in bbdev.**
+
+  Added ``rte_bbdev_queue_stats_get()`` function to retrieve statistics
+  for a specific queue, complementing the existing device-level statistics API.
+
 * **Updated Marvell cnxk crypto driver.**
 
   * Added support for ML-KEM and ML-DSA on CN20K platform.
