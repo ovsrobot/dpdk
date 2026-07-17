@@ -3212,7 +3212,9 @@ iavf_dev_close(struct rte_eth_dev *dev)
 	/* remove RSS configuration */
 	iavf_hash_uninit(adapter);
 
-	iavf_flow_flush(dev, NULL);
+	/* Skip the virtchnl-emitting teardow on a PF-initiated reset */
+	if (!vf->pf_reset_in_progress)
+		iavf_flow_flush(dev, NULL);
 	iavf_flow_uninit(adapter);
 
 	/*
@@ -3335,8 +3337,27 @@ iavf_dev_reset(struct rte_eth_dev *dev)
 static inline bool
 iavf_is_reset(struct iavf_hw *hw)
 {
-	return !(IAVF_READ_REG(hw, IAVF_VF_ARQLEN1) &
-		IAVF_VF_ARQLEN1_ARQENABLE_MASK);
+	uint32_t rstat;
+
+	/* ARQ has been disabled by the PF as part of the VFR. */
+	if (!(IAVF_READ_REG(hw, IAVF_VF_ARQLEN1) &
+		IAVF_VF_ARQLEN1_ARQENABLE_MASK))
+		return true;
+
+	/*
+	 * VFGEN_RSTAT reports VIRTCHNL_VFR_INPROGRESS.
+	 * At times, the PF flips ARQENABLE so quickly
+	 * around a VFR that the ARQLEN1 sample window
+	 * misses it. Using VFGEN_RSTAT, as a
+	 * complementary indicator, help to prevent
+	 * from declaring "reset not start" when a
+	 * reset really did happen.
+	 */
+	rstat = (IAVF_READ_REG(hw, IAVF_VFGEN_RSTAT) &
+		 IAVF_VFGEN_RSTAT_VFR_STATE_MASK) >>
+		IAVF_VFGEN_RSTAT_VFR_STATE_SHIFT;
+
+	return rstat == VIRTCHNL_VFR_INPROGRESS;
 }
 
 static bool
@@ -3345,11 +3366,17 @@ iavf_is_reset_detected(struct iavf_adapter *adapter)
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(adapter);
 	int i;
 
-	/* poll until we see the reset actually happen */
-	for (i = 0; i < IAVF_RESET_DETECTED_CNT; i++) {
+	/*
+	 * Poll until we see the reset actually happen.
+	 * Poll every 5 ms to catch the fast ARQ flips.
+	 * Total wait time is unchanged (~10 s) since
+	 * the count is scale up by the same factor
+	 * that the per-iteration delay shrinks.
+	 */
+	for (i = 0; i < IAVF_RESET_DETECTED_CNT * 4; i++) {
 		if (iavf_is_reset(hw))
 			return true;
-		rte_delay_ms(20);
+		rte_delay_us(5000);
 	}
 
 	return false;
@@ -3400,14 +3427,13 @@ iavf_handle_hw_reset(struct rte_eth_dev *dev, bool vf_initiated_reset)
 		if (!dev->data->dev_started)
 			return;
 
-		if (!iavf_is_reset_detected(adapter)) {
-			PMD_DRV_LOG(DEBUG, "reset not start");
-			return;
-		}
+		if (!iavf_is_reset_detected(adapter))
+			PMD_DRV_LOG(WARNING, "VFR not observed; recovering anyway");
 	}
 
 	vf->in_reset_recovery = true;
 	vf->pf_reset_in_progress = !vf_initiated_reset;
+	vf->start_pending = false;
 	iavf_set_no_poll(adapter, false);
 
 	/* Call the pre reset callback */
@@ -3428,10 +3454,17 @@ iavf_handle_hw_reset(struct rte_eth_dev *dev, bool vf_initiated_reset)
 	if (!vf_initiated_reset || restart_device) {
 		/* start the device */
 		ret = iavf_dev_start(dev);
-		if (ret)
-			goto error;
-
-		dev->data->dev_started = 1;
+		if (ret == 0) {
+			dev->data->dev_started = 1;
+		} else {
+			PMD_DRV_LOG(WARNING,
+				    "dev_start failed during reset recovery (rc=%d);"
+				    "deferring to next link-up event",
+				    ret);
+			vf->start_pending = true;
+			dev->data->dev_started = 0;
+			ret = 0;
+		}
 	}
 
 	/* Restore settings after the reset */
@@ -3573,9 +3606,13 @@ void
 iavf_set_no_poll(struct iavf_adapter *adapter, bool link_change)
 {
 	struct iavf_info *vf = &adapter->vf;
+	bool no_poll;
 
-	adapter->no_poll = (link_change & !vf->link_up) ||
+	no_poll = (link_change & !vf->link_up) ||
 		vf->vf_reset || vf->in_reset_recovery;
+
+	rte_atomic_store_explicit(&adapter->no_poll, no_poll,
+				  rte_memory_order_release);
 }
 
 static int
@@ -3643,6 +3680,27 @@ static struct rte_pci_driver rte_iavf_pmd = {
 bool is_iavf_supported(struct rte_eth_dev *dev)
 {
 	return !strcmp(dev->device->driver->name, rte_iavf_pmd.driver.name);
+}
+
+void
+iavf_resume_pending_start(struct rte_eth_dev *dev)
+{
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	int ret;
+
+	if (!(vf->link_up && vf->start_pending))
+		return;
+
+	PMD_DRV_LOG(DEBUG, "PF link back up; resuming deferred dev_start");
+	ret = iavf_dev_start(dev);
+	if (ret == 0) {
+		dev->data->dev_started = 1;
+		vf->start_pending = false;
+	} else {
+		PMD_DRV_LOG(ERR,
+			    "deferred dev_start failed (ret=%d); will retry on next link-up",
+			    ret);
+	}
 }
 
 RTE_PMD_REGISTER_PCI(net_iavf, rte_iavf_pmd);

@@ -260,7 +260,7 @@ iavf_handle_link_change_event(struct rte_eth_dev *dev,
 	 * (link is down or a VF reset is in progress); the watchdog drives
 	 * auto-reset recovery, so it must remain armed in those cases.
 	 */
-	if (vf->link_up && !vf->vf_reset)
+	if (vf->link_up && !vf->vf_reset && !vf->in_reset_recovery)
 		iavf_dev_watchdog_disable(adapter);
 	else
 		iavf_dev_watchdog_enable(adapter);
@@ -268,8 +268,26 @@ iavf_handle_link_change_event(struct rte_eth_dev *dev,
 	if (adapter->devargs.no_poll_on_link_down) {
 		iavf_set_no_poll(adapter, true);
 		PMD_DRV_LOG(DEBUG, "VF no poll turned %s",
-			    adapter->no_poll ? "on" : "off");
+			    rte_atomic_load_explicit(&adapter->no_poll,
+						     rte_memory_order_relaxed) ?
+						     "on" : "off");
+		if (!vf->link_up)
+			iavf_dev_tx_drain(dev);
 	}
+
+	/*
+	 * Resume a deferred dev_start.
+	 * iavf_handle_hw_reset() sets vf->start_pending when
+	 * reset recovery completed dev_init() but iavf_dev_start()
+	 * itself failed (typically -EIO from VIRTCHNL_OP_CONFIG_VSI_QUEUES
+	 * when the PF VSI was inactive).
+	 * A link-up event implies the PF VSI is active again, so retry now.
+	 * Run before the LSC event post so the port is ready to accept Tx
+	 * by the time the app's link-up callback fires; no_poll has already
+	 * been cleared above so bursts go through as soon as
+	 * dev_start sets dev_started=1.
+	 */
+	iavf_resume_pending_start(dev);
 
 	iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_LSC, NULL, 0);
 
@@ -327,6 +345,8 @@ iavf_read_msg_from_pf(struct iavf_adapter *adapter, uint16_t buf_len,
 			if (!vf->vf_reset) {
 				vf->vf_reset = true;
 				iavf_set_no_poll(adapter, false);
+				if (adapter->devargs.no_poll_on_link_down)
+					iavf_dev_tx_drain(vf->eth_dev);
 				iavf_dev_event_post(vf->eth_dev,
 					RTE_ETH_EVENT_INTR_RESET,
 					NULL, 0);
@@ -565,6 +585,9 @@ iavf_handle_pf_event_msg(struct rte_eth_dev *dev, uint8_t *msg,
 		if (!vf->vf_reset) {
 			vf->vf_reset = true;
 			iavf_set_no_poll(adapter, false);
+			iavf_dev_watchdog_enable(adapter);
+			if (adapter->devargs.no_poll_on_link_down)
+				iavf_dev_tx_drain(dev);
 			iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET,
 				NULL, 0);
 		}
@@ -614,6 +637,19 @@ iavf_handle_virtchnl_msg(struct rte_eth_dev *dev)
 			break;
 		}
 		aq_opc = rte_le_to_cpu_16(info.desc.opcode);
+
+		/*
+		 * During PF-initiated resets, iavf_clean_arq_element() has
+		 * been observed to return IAVF_SUCCESS with a fully zeroed
+		 * descriptor (opcode 0).
+		 * Without this guard, such descriptors would fall through
+		 * to the default case of the dispatch switch below and the
+		 * "Request 0 is not supported yet" log flood reported in
+		 * the field would be produced. These are discarded now.
+		 */
+		if (aq_opc == 0)
+			continue;
+
 		/* For the message sent from pf to vf, opcode is stored in
 		 * cookie_high of struct iavf_aq_desc, while return error code
 		 * are stored in cookie_low, Which is done by PF driver.
