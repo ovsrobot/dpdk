@@ -23,27 +23,20 @@ struct crc_vpclmulqdq_ctx {
 static alignas(64) struct crc_vpclmulqdq_ctx crc32_eth;
 static alignas(64) struct crc_vpclmulqdq_ctx crc16_ccitt;
 
-static uint16_t byte_len_to_mask_table[] = {
-	0x0000, 0x0001, 0x0003, 0x0007,
-	0x000f, 0x001f, 0x003f, 0x007f,
-	0x00ff, 0x01ff, 0x03ff, 0x07ff,
-	0x0fff, 0x1fff, 0x3fff, 0x7fff,
-	0xffff};
-
 static const alignas(16) uint8_t shf_table[32] = {
-	0x00, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
-	0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+	0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
+	0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
 };
 
-static const alignas(16) uint32_t mask[4] = {
-	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
-};
+static __rte_always_inline __m128i
+xmm_shift_left(__m128i reg, const unsigned int num)
+{
+	const __m128i *p = (const __m128i *)(shf_table + 16 - num);
 
-static const alignas(16) uint32_t mask2[4] = {
-	0x00000000, 0xffffffff, 0xffffffff, 0xffffffff
-};
+	return _mm_shuffle_epi8(reg, _mm_loadu_si128(p));
+}
 
 static __rte_always_inline __m512i
 crcr32_folding_round(__m512i data_block, __m512i precomp, __m512i fold)
@@ -93,10 +86,6 @@ last_two_xmm(const uint8_t *data, uint32_t data_len, uint32_t n, __m128i res,
 	uint32_t offset;
 	__m128i res2, res3, res4, pshufb_shf;
 
-	const alignas(16) uint32_t mask3[4] = {
-		   0x80808080, 0x80808080, 0x80808080, 0x80808080
-	};
-
 	res2 = res;
 	offset = data_len - n;
 	res3 = _mm_loadu_si128((const __m128i *)&data[n+offset-16]);
@@ -105,8 +94,7 @@ last_two_xmm(const uint8_t *data, uint32_t data_len, uint32_t n, __m128i res,
 			(shf_table + (data_len-n)));
 
 	res = _mm_shuffle_epi8(res, pshufb_shf);
-	pshufb_shf = _mm_xor_si128(pshufb_shf,
-			_mm_load_si128((const __m128i *) mask3));
+	pshufb_shf = _mm_xor_si128(pshufb_shf, _mm_set1_epi8(0xff));
 	res2 = _mm_shuffle_epi8(res2, pshufb_shf);
 
 	res2 = _mm_blendv_epi8(res2, res3, pshufb_shf);
@@ -140,19 +128,16 @@ done_128(__m128i res, const struct crc_vpclmulqdq_ctx *params)
 static __rte_always_inline uint32_t
 barrett_reduction(__m128i data64, const struct crc_vpclmulqdq_ctx *params)
 {
-	__m128i tmp0, tmp1;
+	__m128i tmp0;
 
-	data64 =  _mm_and_si128(data64, *(const __m128i *)mask2);
+	data64 = _mm_blend_epi16(data64, _mm_setzero_si128(), 0x3);
 	tmp0 = data64;
-	tmp1 = data64;
 
-	data64 = _mm_clmulepi64_si128(tmp0, params->rk7_rk8, 0x0);
-	data64 = _mm_ternarylogic_epi64(data64, tmp1, *(const __m128i *)mask,
-			0x28);
+	data64 = _mm_clmulepi64_si128(data64, params->rk7_rk8, 0x0);
+	data64 = _mm_xor_si128(data64, tmp0);
 
-	tmp1 = data64;
 	data64 = _mm_clmulepi64_si128(data64, params->rk7_rk8, 0x10);
-	data64 = _mm_ternarylogic_epi64(data64, tmp1, tmp0, 0x96);
+	data64 = _mm_xor_si128(data64, tmp0);
 
 	return _mm_extract_epi32(data64, 2);
 }
@@ -165,9 +150,8 @@ reduction_loop(__m128i *fold, int *len, const uint8_t *data, uint32_t *n,
 
 	tmp = _mm_clmulepi64_si128(*fold, params->fold_1x128b, 0x1);
 	*fold = _mm_clmulepi64_si128(*fold, params->fold_1x128b, 0x10);
-	*fold = _mm_xor_si128(*fold, tmp);
 	tmp1 = _mm_loadu_si128((const __m128i *)&data[*n]);
-	*fold = _mm_xor_si128(*fold, tmp1);
+	*fold = _mm_ternarylogic_epi64(*fold, tmp, tmp1, 0x96);
 	*n += 16;
 	*len -= 16;
 }
@@ -229,7 +213,7 @@ crc32_eth_calc_vpclmulqdq(const uint8_t *data, uint32_t data_len, uint32_t crc,
 			res = last_two_xmm(data, data_len, n, res,
 					params);
 	} else {
-		if (data_len > 31) {
+		if (data_len >= 16) {
 			res = _mm_cvtsi32_si128(crc);
 			d = _mm_loadu_si128((const __m128i *)data);
 			res = _mm_xor_si128(res, d);
@@ -244,41 +228,15 @@ crc32_eth_calc_vpclmulqdq(const uint8_t *data, uint32_t data_len, uint32_t crc,
 			if (n != data_len)
 				res = last_two_xmm(data, data_len, n, res,
 						params);
-		} else if (data_len > 16) {
-			res = _mm_cvtsi32_si128(crc);
-			d = _mm_loadu_si128((const __m128i *)data);
-			res = _mm_xor_si128(res, d);
-			n += 16;
-
-			if (n != data_len)
-				res = last_two_xmm(data, data_len, n, res,
-						params);
-		} else if (data_len == 16) {
-			res = _mm_cvtsi32_si128(crc);
-			d = _mm_loadu_si128((const __m128i *)data);
-			res = _mm_xor_si128(res, d);
 		} else {
 			res = _mm_cvtsi32_si128(crc);
-			d = _mm_maskz_loadu_epi8(byte_len_to_mask_table[data_len], data);
+			d = _mm_maskz_loadu_epi8((1 << data_len) - 1, data);
 			res = _mm_xor_si128(res, d);
-
-			if (data_len > 3) {
-				d = _mm_loadu_si128((const __m128i *)
-						&shf_table[data_len]);
-				res = _mm_shuffle_epi8(res, d);
-			} else if (data_len > 2) {
-				res = _mm_slli_si128(res, 5);
+			if (data_len < 4) {
+				res = xmm_shift_left(res, 8 - data_len);
 				goto do_barrett_reduction;
-			} else if (data_len > 1) {
-				res = _mm_slli_si128(res, 6);
-				goto do_barrett_reduction;
-			} else if (data_len > 0) {
-				res = _mm_slli_si128(res, 7);
-				goto do_barrett_reduction;
-			} else {
-				/* zero length case */
-				return crc;
 			}
+			res = xmm_shift_left(res, 16 - data_len);
 		}
 	}
 
@@ -316,7 +274,7 @@ crc32_load_init_constants(void)
 	uint64_t c18 = 0x00000000ccaa009e;
 	uint64_t c19 = 0x00000000b8bc6765;
 	uint64_t c20 = 0x00000001f7011640;
-	uint64_t c21 = 0x00000001db710640;
+	uint64_t c21 = 0x00000001db710641;
 
 	a = _mm_set_epi64x(c1, c0);
 	crc32_eth.rk1_rk2 = _mm512_broadcast_i32x4(a);
@@ -360,7 +318,7 @@ crc16_load_init_constants(void)
 	uint64_t c18 = 0x00000000000081bf;
 	uint64_t c19 = 0x0000000000001cbb;
 	uint64_t c20 = 0x000000011c581910;
-	uint64_t c21 = 0x0000000000010810;
+	uint64_t c21 = 0x0000000000010811;
 
 	a = _mm_set_epi64x(c1, c0);
 	crc16_ccitt.rk1_rk2 = _mm512_broadcast_i32x4(a);
