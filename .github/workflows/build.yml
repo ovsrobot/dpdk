@@ -11,8 +11,9 @@ defaults:
 
 env:
   REF_GIT_BRANCH: main
-  REF_GIT_REPO: https://github.com/DPDK/dpdk
-  REF_GIT_TAG: v26.03
+  # FIXME
+  REF_GIT_REPO: https://github.com/david-marchand/dpdk
+  REF_GIT_TAG: 26.03
 
 jobs:
   checkpatch:
@@ -39,6 +40,16 @@ jobs:
     env:
       AARCH64: ${{ matrix.config.cross == 'aarch64' }}
       ABI_CHECKS: ${{ contains(matrix.config.checks, 'abi') }}
+      ABI_SKIP_TESTS: |
+        af_packet_pmd_autotest
+        bpf_exec_wrong_flags_autotest
+        bpf_exec_wrong_nb_prog_arg_autotest
+        bpf_load_null_autotest
+        bpf_validate_autotest
+        eal_flags_pagesz_mem_autotest
+        feature_autotest
+        pcap_pmd_autotest
+        reassembly_autotest
       ASAN: ${{ contains(matrix.config.checks, 'asan') }}
       BUILD_32BIT: ${{ matrix.config.cross == 'i386' }}
       BUILD_DEBUG: ${{ contains(matrix.config.checks, 'debug') }}
