@@ -745,7 +745,7 @@ rte_bbdev_queue_stop(uint16_t dev_id, uint16_t queue_id)
 static void
 get_stats_from_queues(struct rte_bbdev *dev, struct rte_bbdev_stats *stats)
 {
-	unsigned int q_id;
+	unsigned int i, q_id;
 	for (q_id = 0; q_id < dev->data->num_queues; q_id++) {
 		struct rte_bbdev_stats *q_stats =
 				&dev->data->queues[q_id].queue_stats;
@@ -756,6 +756,10 @@ get_stats_from_queues(struct rte_bbdev *dev, struct rte_bbdev_stats *stats)
 		stats->dequeue_err_count += q_stats->dequeue_err_count;
 		stats->enqueue_warn_count += q_stats->enqueue_warn_count;
 		stats->dequeue_warn_count += q_stats->dequeue_warn_count;
+		for (i = 0; i < RTE_BBDEV_ENQ_STATUS_SIZE_MAX; i++)
+			stats->enqueue_status_count[i] += q_stats->enqueue_status_count[i];
+		stats->acc_offload_cycles += q_stats->acc_offload_cycles;
+		stats->enqueue_depth_avail += q_stats->enqueue_depth_avail;
 	}
 	rte_bbdev_log_debug("Got stats on %u", dev->data->dev_id);
 }
