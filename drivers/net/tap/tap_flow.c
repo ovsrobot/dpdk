@@ -1521,7 +1521,7 @@ tap_flow_isolate(struct rte_eth_dev *dev,
 	}
 	return 0;
 error:
-	pmd->flow_isolate = 0;
+	pmd->flow_isolate = false;
 	return rte_flow_error_set(
 		error, ENOTSUP, RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
 		"TC rule creation failed");
@@ -1914,7 +1914,7 @@ tap_flow_init(struct pmd_internals *pmd)
 		return -1;
 	}
 
-	pmd->flow_init = 1;
+	pmd->flow_init = true;
 
 	return 0;
 }
