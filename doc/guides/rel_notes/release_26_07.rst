@@ -97,6 +97,38 @@ New Features
   This allows the user to inspect objects in the ring without removing them
   (aka MT safe peek).
 
+* **Updated lcore validation in power library.**
+
+  Lcore ID validation was moved into the cpufreq framework before driver dispatch.
+  Power QoS API was updated to accept service lcores.
+
+* **Extended BPF API.**
+
+  * Added an extensible BPF loading API comprising the function
+    ``rte_bpf_load_ex`` and struct ``rte_bpf_prm_ex``.
+    This enables new features such as loading classic BPF (cBPF),
+    loading ELF images directly from memory buffers,
+    and executing multi-argument programs, while avoiding future ABI breakages.
+  * Added support for loading and executing BPF programs with up to 5 arguments.
+    This introduces new API functions ``rte_bpf_exec_ex``,
+    ``rte_bpf_exec_burst_ex``, and ``rte_bpf_get_jit_ex``.
+  * Added API functions ``rte_bpf_eth_rx_install`` and ``rte_bpf_eth_tx_install``
+    for installing already loaded BPF programs as port callbacks
+    (as opposed to loading them directly from ELF files).
+
+* **Added BPF validation debugging API and hardened BPF validator.**
+
+  * Introduced a new API (prefixed with ``rte_bpf_validate_debug_``)
+    to introspect the BPF validator.
+    This provides a mechanism to set breakpoints or catchpoints during validation
+    and inspect the verifier's internal state (such as tracked register bounds).
+    This API is crucial primarily for writing comprehensive tests for the validator,
+    but also serves as a foundation for a future interactive eBPF validation debugger.
+  * Fixed numerous bugs in the BPF validator's abstract interpretation logic,
+    including incorrect bounds tracking for jumps and arithmetic operations,
+    as well as fixing several instances of undefined behavior (UB)
+    when verifying malicious or corrupt programs.
+
 * **Added PTP protocol definitions.**
 
   Added IEEE 1588 Precision Time Protocol header structures, constants,
@@ -223,38 +255,6 @@ New Features
   Previously, QAT could build with OpenSSL-only on x86.
 
   On ARM, both IPsec MB and OpenSSL are required for full functionality.
-
-* **Updated lcore validation in power library.**
-
-  Lcore ID validation was moved into the cpufreq framework before driver dispatch.
-  Power QoS API was updated to accept service lcores.
-
-* **Extended BPF API.**
-
-  * Added an extensible BPF loading API comprising the function
-    ``rte_bpf_load_ex`` and struct ``rte_bpf_prm_ex``.
-    This enables new features such as loading classic BPF (cBPF),
-    loading ELF images directly from memory buffers,
-    and executing multi-argument programs, while avoiding future ABI breakages.
-  * Added support for loading and executing BPF programs with up to 5 arguments.
-    This introduces new API functions ``rte_bpf_exec_ex``,
-    ``rte_bpf_exec_burst_ex``, and ``rte_bpf_get_jit_ex``.
-  * Added API functions ``rte_bpf_eth_rx_install`` and ``rte_bpf_eth_tx_install``
-    for installing already loaded BPF programs as port callbacks
-    (as opposed to loading them directly from ELF files).
-
-* **Added BPF validation debugging API and hardened BPF validator.**
-
-  * Introduced a new API (prefixed with ``rte_bpf_validate_debug_``)
-    to introspect the BPF validator.
-    This provides a mechanism to set breakpoints or catchpoints during validation
-    and inspect the verifier's internal state (such as tracked register bounds).
-    This API is crucial primarily for writing comprehensive tests for the validator,
-    but also serves as a foundation for a future interactive eBPF validation debugger.
-  * Fixed numerous bugs in the BPF validator's abstract interpretation logic,
-    including incorrect bounds tracking for jumps and arithmetic operations,
-    as well as fixing several instances of undefined behavior (UB)
-    when verifying malicious or corrupt programs.
 
 * **Updated testpmd application.**
 
