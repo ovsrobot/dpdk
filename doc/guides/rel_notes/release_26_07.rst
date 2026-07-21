@@ -163,10 +163,6 @@ New Features
   to support adding and removing memory regions without resetting
   the whole guest memory map.
 
-* **Added LinkData sxe2 ethernet driver.**
-
-  Added network driver for the LinkData network adapters.
-
 * **Updated Google gve driver.**
 
   Added hardware timestamping support on DQO queues.
@@ -181,6 +177,10 @@ New Features
 
   Added ``rl_burst_size`` devarg to configure the scheduler rate-limiter
   burst size, reducing Tx latency jitter for time-sensitive traffic.
+
+* **Added LinkData sxe2 ethernet driver.**
+
+  Added network driver for the LinkData network adapters.
 
 * **Updated Microsoft mana driver.**
 
@@ -222,10 +222,6 @@ New Features
   * Added ``eof`` devarg to use link state to signal end of receive file input.
   * Added unit test suite.
 
-* **Updated Marvell cnxk crypto driver.**
-
-  Added support for ML-KEM and ML-DSA on CN20K platform.
-
 * **Updated Wangxun ngbe driver.**
 
   Implemented UDP Segmentation Offload (USO) in the transmit path.
@@ -255,6 +251,10 @@ New Features
   Previously, QAT could build with OpenSSL-only on x86.
 
   On ARM, both IPsec MB and OpenSSL are required for full functionality.
+
+* **Updated Marvell cnxk crypto driver.**
+
+  Added support for ML-KEM and ML-DSA on CN20K platform.
 
 * **Updated testpmd application.**
 
