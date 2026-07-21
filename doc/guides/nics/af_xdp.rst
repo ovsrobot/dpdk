@@ -37,6 +37,9 @@ Prerequisites
    header is used to determine the kernel version at compile time.
 *  A kernel with version 5.4 or later is required for 32-bit OS.
 *  The busy polling feature requires kernel version >= v5.11.
+*  The ``read_clock`` feature requires a network interface with PTP
+   Hardware Clock support (capable of exposing a ``/dev/ptpX`` device via
+   ethtool ``ETHTOOL_GET_TS_INFO``).
 
 
 Options
@@ -241,6 +244,15 @@ to verify timestamp validity at ``xdp_meta_valid_hint_offset``.
 .. code-block:: console
 
     --vdev net_af_xdp,iface=ens786f1,xdp_meta_rx_ts_offset=8,xdp_meta_valid_hint_offset=4,xdp_meta_rx_ts_valid_mask=0x1
+
+read_clock
+~~~~~~~~~~
+
+The PMD supports querying the underlying PTP hardware clock time via
+``rte_eth_read_clock()``. When the timestamp offload
+``RTE_ETH_RX_OFFLOAD_TIMESTAMP`` is enabled, the PMD automatically discovers
+the hardware PHC index via ethtool and opens the PTP character device
+(``/dev/ptpX``).
 
 Limitations
 -----------

@@ -5,6 +5,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <time.h>
 #include <netinet/in.h>
 #include <net/if.h>
 #include <sys/un.h>
@@ -29,6 +31,7 @@
 #include <dev_driver.h>
 #include <rte_eal.h>
 #include <rte_ether.h>
+#include <rte_time.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_memory.h>
@@ -194,6 +197,7 @@ struct pmd_internals {
 	int rx_timestamp_offset;
 	int rx_timestamp_valid_offset;
 	uint8_t rx_timestamp_valid_mask;
+	int ptp_fd;
 };
 
 struct pmd_process_private {
@@ -838,6 +842,30 @@ eth_af_xdp_enable_hw_timestamping(const char *if_name)
 }
 
 static int
+eth_af_xdp_get_ptp_index(const char *if_name)
+{
+	struct ethtool_ts_info info = {0};
+	struct ifreq ifr = {0};
+	int fd, ret;
+
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd < 0)
+		return -1;
+
+	ifr.ifr_data = (caddr_t)&info;
+	info.cmd = ETHTOOL_GET_TS_INFO;
+	strlcpy(ifr.ifr_name, if_name, IFNAMSIZ);
+
+	ret = ioctl(fd, SIOCETHTOOL, &ifr);
+	close(fd);
+
+	if (ret < 0)
+		return -1;
+
+	return info.phc_index;
+}
+
+static int
 eth_dev_start(struct rte_eth_dev *dev)
 {
 	struct pmd_internals *internals = dev->data->dev_private;
@@ -871,6 +899,26 @@ eth_dev_start(struct rte_eth_dev *dev)
 				internals->if_name, strerror(-rc));
 			return rc;
 		}
+
+		int phc_index = eth_af_xdp_get_ptp_index(internals->if_name);
+		if (phc_index >= 0) {
+			char ptp_dev[32];
+			snprintf(ptp_dev, sizeof(ptp_dev), "/dev/ptp%d", phc_index);
+			if (internals->ptp_fd >= 0) {
+				close(internals->ptp_fd);
+				internals->ptp_fd = -1;
+			}
+			internals->ptp_fd = open(ptp_dev, O_RDONLY);
+			if (internals->ptp_fd >= 0) {
+				AF_XDP_LOG_LINE(INFO,
+					"Opened PTP device %s for read_clock",
+					ptp_dev);
+			} else {
+				AF_XDP_LOG_LINE(WARNING,
+					"Failed to open PTP device %s for read_clock: %s",
+					ptp_dev, strerror(errno));
+			}
+		}
 	}
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
@@ -886,12 +934,18 @@ eth_dev_start(struct rte_eth_dev *dev)
 static int
 eth_dev_stop(struct rte_eth_dev *dev)
 {
+	struct pmd_internals *internals = dev->data->dev_private;
 	uint16_t i;
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+
+	if (internals->ptp_fd >= 0) {
+		close(internals->ptp_fd);
+		internals->ptp_fd = -1;
 	}
 
 	return 0;
@@ -1225,6 +1279,11 @@ eth_dev_close(struct rte_eth_dev *dev)
 			pthread_mutex_unlock(&internal_list_lock);
 			rte_free(list);
 		}
+	}
+
+	if (internals->ptp_fd >= 0) {
+		close(internals->ptp_fd);
+		internals->ptp_fd = -1;
 	}
 
 out:
@@ -2096,6 +2155,31 @@ eth_dev_promiscuous_disable(struct rte_eth_dev *dev)
 	return eth_dev_change_flags(internals->if_name, 0, ~IFF_PROMISC);
 }
 
+/*
+ * In Linux, dynamic POSIX clock IDs from file descriptors (such as /dev/ptpX)
+ * are encoded with CLOCKFD (3) in the lower 3 bits and ~fd in the upper bits.
+ * As this is not defined in user-space UAPI headers, define the macro here.
+ */
+#define CLOCKFD 3
+#define FD_TO_CLOCKID(fd)	((clockid_t)(~(unsigned int)(fd) << 3 | CLOCKFD))
+
+static int
+eth_af_xdp_read_clock(struct rte_eth_dev *dev, uint64_t *timestamp)
+{
+	struct pmd_internals *internals = dev->data->dev_private;
+	struct timespec ts;
+
+	if (internals->ptp_fd < 0)
+		return -ENOTSUP;
+
+	clockid_t clkid = FD_TO_CLOCKID(internals->ptp_fd);
+	if (clock_gettime(clkid, &ts) < 0)
+		return -errno;
+
+	*timestamp = rte_timespec_to_ns(&ts);
+	return 0;
+}
+
 static const struct eth_dev_ops ops = {
 	.dev_start = eth_dev_start,
 	.dev_stop = eth_dev_stop,
@@ -2111,6 +2195,7 @@ static const struct eth_dev_ops ops = {
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
 	.get_monitor_addr = eth_get_monitor_addr,
+	.read_clock = eth_af_xdp_read_clock,
 };
 
 /* AF_XDP Device Plugin option works in unprivileged
@@ -2132,6 +2217,7 @@ static const struct eth_dev_ops ops_afxdp_dp = {
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
 	.get_monitor_addr = eth_get_monitor_addr,
+	.read_clock = eth_af_xdp_read_clock,
 };
 
 /** parse busy_budget argument */
@@ -2440,6 +2526,7 @@ init_internals(struct rte_vdev_device *dev, const char *if_name,
 	internals->rx_timestamp_offset = rx_timestamp_offset;
 	internals->rx_timestamp_valid_offset = rx_timestamp_valid_offset;
 	internals->rx_timestamp_valid_mask = (uint8_t)rx_timestamp_valid_mask;
+	internals->ptp_fd = -1;
 
 	if (xdp_get_channels_info(if_name, &internals->max_queue_cnt,
 				  &internals->configured_queue_cnt)) {

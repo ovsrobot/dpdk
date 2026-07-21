@@ -140,6 +140,7 @@ New Features
   * Added support for RX metadata hardware timestamping via vdev devargs
     ``xdp_meta_rx_ts_offset``, ``xdp_meta_valid_hint_offset``, and
     ``xdp_meta_rx_ts_valid_mask``.
+  * Added ``read_clock`` operation to query the PTP hardware clock.
 
 * **Updated Google gve driver.**
 
