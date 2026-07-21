@@ -317,13 +317,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* **eal: promoted timing-safe memory comparison from experimental to stable.**
+* eal: Promoted ``rte_memeq_timingsafe()`` from experimental to stable.
 
-  The inline function ``rte_memeq_timingsafe()`` is no longer marked experimental.
-
-* **ethdev: promoted flow metadata API from experimental to stable.**
-
-  The following ethdev symbols are no longer marked experimental:
+* ethdev: Promoted the following flow metadata symbols from experimental to stable:
 
   - ``rte_flow_dynf_metadata_register``
   - ``rte_flow_dynf_metadata_offs``
@@ -332,16 +328,15 @@ API Changes
   - ``rte_flow_dynf_metadata_get``
   - ``rte_flow_dynf_metadata_set``
 
-* **mlx5: promoted driver event and steering management APIs from experimental to stable.**
-
-  The following mlx5 functions are no longer marked experimental:
+* mlx5: Promoted the following driver event and steering management functions
+  from experimental to stable:
 
   - ``rte_pmd_mlx5_driver_event_cb_register``
   - ``rte_pmd_mlx5_driver_event_cb_unregister``
   - ``rte_pmd_mlx5_enable_steering``
   - ``rte_pmd_mlx5_disable_steering``
 
-* **ip_frag: changed handling of malformed fragments.**
+* ip_frag: Changed handling of malformed fragments.
 
   - Duplicate fragments are tolerated instead of failing reassembly.
   - Overlapping fragments are rejected on arrival rather than during reassembly.
