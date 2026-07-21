@@ -212,6 +212,36 @@ the AF_XDP PMD configures it internally to the `AF_XDP Device Plugin for Kuberne
 
    --vdev=net_af_xdp0,use_pinned_map=1,dp_path="/tmp/afxdp_dp/<<interface name>>/xsks_map"
 
+xdp_meta_rx_ts_offset
+~~~~~~~~~~~~~~~~~~~~~
+
+The ``xdp_meta_rx_ts_offset`` argument specifies the byte offset of the 64-bit RX
+timestamp within the XDP metadata headroom area (prepended before packet data).
+
+.. code-block:: console
+
+    --vdev net_af_xdp,iface=ens786f1,xdp_meta_rx_ts_offset=8
+
+xdp_meta_valid_hint_offset
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``xdp_meta_valid_hint_offset`` argument specifies the byte offset of the validity
+flag byte within the XDP metadata headroom area.
+
+.. code-block:: console
+
+    --vdev net_af_xdp,iface=ens786f1,xdp_meta_rx_ts_offset=8,xdp_meta_valid_hint_offset=4
+
+xdp_meta_rx_ts_valid_mask
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``xdp_meta_rx_ts_valid_mask`` argument specifies the bitmask (in hex or decimal) used
+to verify timestamp validity at ``xdp_meta_valid_hint_offset``.
+
+.. code-block:: console
+
+    --vdev net_af_xdp,iface=ens786f1,xdp_meta_rx_ts_offset=8,xdp_meta_valid_hint_offset=4,xdp_meta_rx_ts_valid_mask=0x1
+
 Limitations
 -----------
 

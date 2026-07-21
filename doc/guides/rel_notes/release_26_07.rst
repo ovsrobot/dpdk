@@ -135,6 +135,12 @@ New Features
 
   Added network driver for the LinkData network adapters.
 
+* **Updated AF_XDP PMD.**
+
+  * Added support for RX metadata hardware timestamping via vdev devargs
+    ``xdp_meta_rx_ts_offset``, ``xdp_meta_valid_hint_offset``, and
+    ``xdp_meta_rx_ts_valid_mask``.
+
 * **Updated Google gve driver.**
 
   * Added hardware timestamping support on DQO queues.
