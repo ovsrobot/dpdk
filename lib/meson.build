@@ -209,6 +209,33 @@ foreach l:libraries
     dpdk_indirect_headers += indirect_headers
     dpdk_drivers_headers += driver_sdk_headers
 
+    if check_docs and headers.length() > 0
+        foreach h:headers
+            hname = fs.name(h)
+            if not (hname.startswith('rte_') or hname.startswith('cmdline'))
+                warning('public header @0@ name does not start with "rte_" or "cmdline"'.format(h))
+            endif
+            is_ignored = false
+            foreach ig:doc_ignored_header_suffixes
+                is_ignored = is_ignored or ('/' + hname).endswith(ig)
+            endforeach
+            if not is_ignored and hname not in doc_indexed_headers
+                warning('public header @0@ is not listed in @1@'.format(h, doc_index_path))
+            endif
+        endforeach
+        if l == 'eal'
+            doc_dirs = ['lib/eal/include', 'lib/eal/include/generic']
+        else
+            doc_dirs = ['lib/' + l]
+        endif
+        foreach d:doc_dirs
+            if d not in doc_built_dirs
+                warning('public header directory @0@ is not listed in @1@'.format(d,
+                    doc_build_path))
+            endif
+        endforeach
+    endif
+
     libname = 'rte_' + name
     includes += include_directories(l)
     dpdk_includes += include_directories(l)
