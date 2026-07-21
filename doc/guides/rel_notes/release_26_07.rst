@@ -80,7 +80,7 @@ New Features
   Added EAL options affecting the initial bus probing to find devices.
 
   * ``-A`` or ``--no-auto-probing`` disables the initial bus probing: no device is probed during
-    ``rte_eal_init`` and the application is responsible for probing each device,
+    ``rte_eal_init`` and the application is responsible for probing each device.
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
 * **Added RISC-V vector paths.**
@@ -144,7 +144,7 @@ New Features
 
 * **Added no-IOMMU mode to UACCE bus.**
 
-  Added no-IOMMU mode for devices without or not enabling IOMMU/SVA.
+  Added no-IOMMU mode for devices that do not have or do not enable IOMMU/SVA support.
 
 * **Added unplug operation support to VMBUS bus.**
 
