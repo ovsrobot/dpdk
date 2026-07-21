@@ -55,20 +55,6 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
-* **Added option to change memory limits per page size.**
-
-  Added the EAL option ``--pagesz-mem``
-  to override the default per-page-size memory limits.
-  Each maximum can be configured with a pair ``<pagesz>:<limit>``.
-
-* **Added option to disable auto probing.**
-
-  Added EAL options affecting the initial bus probing.
-
-  * ``-A`` or ``--no-auto-probing`` disable the initial bus probing: no device is probed during
-    ``rte_eal_init`` and the application is responsible for probing each device,
-  * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
-
 * **Changed mempool cache behaviour.**
 
   * The mempool cache flush/refill algorithm was improved,
@@ -82,6 +68,20 @@ New Features
     the effective size was previously 50 % larger than requested.
   * The size of the ``struct rte_mempool_cache`` was kept
     for API/ABI compatibility purposes.
+
+* **Added option to change memory limits per page size.**
+
+  Added the EAL option ``--pagesz-mem``
+  to override the default per-page-size memory limits.
+  Each maximum can be configured with a pair ``<pagesz>:<limit>``.
+
+* **Added option to disable device auto probing.**
+
+  Added EAL options affecting the initial bus probing to find devices.
+
+  * ``-A`` or ``--no-auto-probing`` disables the initial bus probing: no device is probed during
+    ``rte_eal_init`` and the application is responsible for probing each device,
+  * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
 * **Added RISC-V vector paths.**
 
