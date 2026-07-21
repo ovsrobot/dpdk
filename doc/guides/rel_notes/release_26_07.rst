@@ -137,7 +137,7 @@ New Features
 
 * **Updated Google gve driver.**
 
-  * Added hardware timestamping support on DQO queues.
+  Added hardware timestamping support on DQO queues.
 
 * **Updated Intel iavf driver.**
 
@@ -147,18 +147,18 @@ New Features
 
 * **Updated Intel ice driver.**
 
-  * Added ``rl_burst_size`` devarg to configure the scheduler rate-limiter
-    burst size, reducing Tx latency jitter for time-sensitive traffic.
+  Added ``rl_burst_size`` devarg to configure the scheduler rate-limiter
+  burst size, reducing Tx latency jitter for time-sensitive traffic.
 
 * **Updated Microsoft mana driver.**
 
-  * Added device reset support to the MANA PMD,
-    doing automatic recovery from hardware service reset events,
-    and notification to upper layers of the reset lifecycle.
+  Added device reset support to the MANA PMD,
+  doing automatic recovery from hardware service reset events,
+  and notification to upper layers of the reset lifecycle.
 
 * **Updated NVIDIA mlx5 ethernet driver.**
 
-  * Added support for selective Rx in scalar SPRQ Rx path.
+  Added support for selective Rx in scalar SPRQ Rx path.
 
 * **Updated NXP dpaa2 driver.**
 
@@ -192,14 +192,14 @@ New Features
 
 * **Updated Marvell cnxk crypto driver.**
 
-  * Added support for ML-KEM and ML-DSA on CN20K platform.
+  Added support for ML-KEM and ML-DSA on CN20K platform.
 
 * **Updated Wangxun ngbe driver.**
 
-  * Implemented UDP Segmentation Offload (USO) in the transmit path.
-    The ``RTE_ETH_TX_OFFLOAD_UDP_TSO`` capability was advertised
-    since the driver's initial integration but the data path was missing;
-    it is now functional.
+  Implemented UDP Segmentation Offload (USO) in the transmit path.
+  The ``RTE_ETH_TX_OFFLOAD_UDP_TSO`` capability was advertised
+  since the driver's initial integration but the data path was missing;
+  it is now functional.
 
 * **Updated Wangxun txgbe driver.**
 
