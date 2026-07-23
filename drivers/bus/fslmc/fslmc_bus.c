@@ -95,7 +95,6 @@ fslmc_bus_remove_device(struct rte_dpaa2_device *dev)
 		fslmc_bus_device_count[dev->dev_type]--;
 
 	rte_bus_remove_device(&rte_fslmc_bus, &dev->device);
-	rte_intr_instance_free(dev->intr_handle);
 	free(dev);
 }
 
@@ -184,19 +183,12 @@ scan_one_fslmc_device(char *dev_name)
 	dev->device.numa_node = SOCKET_ID_ANY;
 	dev->dev_type = dev_type;
 
-	/* Allocate interrupt instance */
-	dev->intr_handle =
-		rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_PRIVATE);
-	if (dev->intr_handle == NULL) {
-		DPAA2_BUS_ERR("Failed to allocate intr handle");
-		goto cleanup;
-	}
-
 	sscanf(dev_id, "%hu", &dev->object_id);
 	dev->device.name = strdup(dev_name);
 	if (!dev->device.name) {
 		DPAA2_BUS_ERR("Unable to clone device name. Out of memory");
-		goto cleanup;
+		free(dev);
+		return -ENOMEM;
 	}
 	dev->device.devargs = rte_bus_find_devargs(&rte_fslmc_bus, dev_name);
 
@@ -204,12 +196,6 @@ scan_one_fslmc_device(char *dev_name)
 	insert_in_device_list(dev);
 
 	return 0;
-cleanup:
-	if (dev) {
-		rte_intr_instance_free(dev->intr_handle);
-		free(dev);
-	}
-	return -ENOMEM;
 }
 
 static int
@@ -488,18 +474,6 @@ rte_fslmc_scan(void)
 			DPAA2_BUS_ERR("Unable to setup devices %d", ret);
 			return 0;
 		}
-
-		RTE_BUS_FOREACH_DEV(dev, &rte_fslmc_bus) {
-			if (dev->dev_type != DPAA2_ETH &&
-			    dev->dev_type != DPAA2_CRYPTO &&
-			    dev->dev_type != DPAA2_QDMA)
-				continue;
-			ret = fslmc_vfio_dev_setup(dev);
-			if (ret) {
-				DPAA2_BUS_ERR("Dev (%s) VFIO setup failed", dev->device.name);
-				return 0;
-			}
-		}
 	}
 
 	process_once = 1;
@@ -546,7 +520,6 @@ rte_fslmc_close(struct rte_bus *bus)
 			continue;
 		if (rte_dev_is_probed(&dev->device) && fslmc_bus_unplug_device(&dev->device))
 			DPAA2_BUS_ERR("Unable to remove %s", dev->device.name);
-		fslmc_vfio_dev_close(dev);
 	}
 
 	ret = fslmc_vfio_close_group();
@@ -622,10 +595,27 @@ fslmc_bus_probe_device(struct rte_driver *driver, struct rte_device *rte_dev)
 	struct rte_dpaa2_driver *drv = RTE_BUS_DRIVER(driver, *drv);
 	int ret = 0;
 
-	/* FIXME: probe_device should allocate intr_handle */
+	/* Allocate interrupt instance */
+	dev->intr_handle =
+		rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_PRIVATE);
+	if (dev->intr_handle == NULL) {
+		DPAA2_BUS_ERR("Failed to allocate intr handle");
+		return -ENOMEM;
+	}
+
+	ret = fslmc_vfio_dev_setup(dev);
+	if (ret) {
+		DPAA2_BUS_ERR("Dev (%s) VFIO setup failed", dev->device.name);
+		goto release_intr;
+	}
+
 	ret = drv->probe(drv, dev);
 	if (ret != 0) {
 		DPAA2_BUS_ERR("Unable to probe");
+		fslmc_vfio_dev_close(dev);
+release_intr:
+		rte_intr_instance_free(dev->intr_handle);
+		dev->intr_handle = NULL;
 	} else {
 		DPAA2_BUS_INFO("%s Plugged",  dev->device.name);
 	}
@@ -643,7 +633,9 @@ fslmc_bus_unplug_device(struct rte_device *rte_dev)
 		int ret = drv->remove(dev);
 		if (ret != 0)
 			return ret;
-		/* FIXME: unplug_device should free intr_handle */
+		fslmc_vfio_dev_close(dev);
+		rte_intr_instance_free(dev->intr_handle);
+		dev->intr_handle = NULL;
 		DPAA2_BUS_INFO("%s Un-Plugged",  dev->device.name);
 		return 0;
 	}
