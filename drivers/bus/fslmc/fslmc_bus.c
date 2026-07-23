@@ -488,6 +488,18 @@ rte_fslmc_scan(void)
 			DPAA2_BUS_ERR("Unable to setup devices %d", ret);
 			return 0;
 		}
+
+		RTE_BUS_FOREACH_DEV(dev, &rte_fslmc_bus) {
+			if (dev->dev_type != DPAA2_ETH &&
+			    dev->dev_type != DPAA2_CRYPTO &&
+			    dev->dev_type != DPAA2_QDMA)
+				continue;
+			ret = fslmc_vfio_dev_setup(dev);
+			if (ret) {
+				DPAA2_BUS_ERR("Dev (%s) VFIO setup failed", dev->device.name);
+				return 0;
+			}
+		}
 	}
 
 	process_once = 1;
@@ -534,6 +546,7 @@ rte_fslmc_close(struct rte_bus *bus)
 			continue;
 		if (rte_dev_is_probed(&dev->device) && fslmc_bus_unplug_device(&dev->device))
 			DPAA2_BUS_ERR("Unable to remove %s", dev->device.name);
+		fslmc_vfio_dev_close(dev);
 	}
 
 	ret = fslmc_vfio_close_group();

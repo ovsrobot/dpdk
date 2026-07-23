@@ -60,4 +60,9 @@ int fslmc_vfio_close_group(void);
 char *fslmc_get_container(void);
 int fslmc_get_container_group(const char *group_name, int *gropuid);
 int fslmc_vfio_dmamap(void);
+
+struct rte_dpaa2_device;
+int fslmc_vfio_dev_setup(struct rte_dpaa2_device *dev);
+int fslmc_vfio_dev_close(struct rte_dpaa2_device *dev);
+
 #endif /* _FSLMC_VFIO_H_ */
