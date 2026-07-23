@@ -39,6 +39,7 @@ jobs:
     env:
       AARCH64: ${{ matrix.config.cross == 'aarch64' }}
       ABI_CHECKS: ${{ contains(matrix.config.checks, 'abi') }}
+      ABI_SKIP_TESTS: none
       ASAN: ${{ contains(matrix.config.checks, 'asan') }}
       BUILD_32BIT: ${{ matrix.config.cross == 'i386' }}
       BUILD_DEBUG: ${{ contains(matrix.config.checks, 'debug') }}

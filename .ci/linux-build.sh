@@ -206,23 +206,33 @@ if [ "$ABI_CHECKS" = "true" ]; then
         # don't try to link apps.
         REF_OPTS="$REF_OPTS -Dcheck_includes=false"
         REF_OPTS="$REF_OPTS -Ddeveloper_mode=disabled"
-        REF_OPTS="$REF_OPTS -Ddisable_apps=*"
+        REF_OPTS="$REF_OPTS -Denable_apps=test,test-pmd"
         REF_OPTS="$REF_OPTS -Denable_docs=false"
         REF_OPTS="$REF_OPTS -Dexamples="
-        REF_OPTS="$REF_OPTS -Dtests=false"
         refsrcdir=$(readlink -f $(pwd)/../dpdk-$REF_GIT_TAG)
         git clone --single-branch -b "$REF_GIT_TAG" $REF_GIT_REPO $refsrcdir
         meson setup $REF_OPTS $refsrcdir $refsrcdir/build
         ninja -C $refsrcdir/build
         DESTDIR=$(pwd)/reference meson install -C $refsrcdir/build
         find reference/usr/local -name '*.a' -delete
-        rm -rf reference/usr/local/bin
+        rm -rf reference/usr/local/bin/*
+        cp $refsrcdir/build/app/dpdk-test reference/usr/local/bin/dpdk-test
+        cp $refsrcdir/build/app/dpdk-testpmd reference/usr/local/bin/dpdk-testpmd
         rm -rf reference/usr/local/share
         echo $REF_GIT_TAG > reference/VERSION
     fi
 
     DESTDIR=$(pwd)/install meson install -C build
     devtools/check-abi.sh reference install ${ABI_CHECKS_WARN_ONLY:-}
+
+    failed=
+    configure_coredump
+    mv -f build/app/dpdk-testpmd build/app/dpdk-testpmd.ori
+    cp reference/usr/local/bin/dpdk-testpmd build/app/dpdk-testpmd
+    devtools/test-null.sh || failed="true"
+    mv -f build/app/dpdk-testpmd.ori build/app/dpdk-testpmd
+    catch_coredump
+    [ "$failed" != "true" ]
 fi
 
 if [ "$RUN_TESTS" = "true" ]; then
@@ -233,6 +243,23 @@ if [ "$RUN_TESTS" = "true" ]; then
     catch_ubsan DPDK:fast-tests build/meson-logs/testlog.txt
     check_traces
     [ "$failed" != "true" ]
+
+    if [ "$ABI_CHECKS" = "true" ]; then
+        failed=
+        configure_coredump
+        mv -f build/app/dpdk-test build/app/dpdk-test.ori
+        cp reference/usr/local/bin/dpdk-test build/app/dpdk-test
+        for t in ${ABI_SKIP_TESTS}; do
+            DPDK_TEST_SKIP=${DPDK_TEST_SKIP+$DPDK_TEST_SKIP,}$t
+        done
+        sudo env DPDK_TEST_SKIP="$DPDK_TEST_SKIP" \
+            meson test -C build --suite fast-tests -t 3 --no-stdsplit --print-errorlogs || failed="true"
+        catch_coredump
+        catch_ubsan DPDK:fast-tests build/meson-logs/testlog.txt
+        check_traces
+        mv -f build/app/dpdk-test.ori build/app/dpdk-test
+        [ "$failed" != "true" ]
+    fi
 fi
 
 # Test examples compilation with an installed dpdk
