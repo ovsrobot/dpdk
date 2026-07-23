@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added unplug operation support to DPAA bus.**
+
+  Implemented device unplug operation to allow runtime removal of DPAA devices.
+
 
 Removed Items
 -------------
