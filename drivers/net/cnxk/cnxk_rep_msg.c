@@ -14,8 +14,11 @@
 static void
 close_socket(int fd)
 {
+	struct sockaddr_un un;
+
 	close(fd);
-	unlink(CNXK_ESWITCH_CTRL_MSG_SOCK_PATH);
+	if (cnxk_eswitch_ctrl_msg_sock_addr(&un) == 0)
+		unlink(un.sun_path);
 }
 
 static int
@@ -113,6 +116,7 @@ open_socket_ctrl_channel(void)
 {
 	struct sockaddr_un un;
 	int sock_fd;
+	int ret;
 
 	sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock_fd < 0) {
@@ -120,25 +124,19 @@ open_socket_ctrl_channel(void)
 		return -1;
 	}
 
-	/* Set unix socket path and bind */
-	memset(&un, 0, sizeof(un));
-	un.sun_family = AF_UNIX;
-
-	if (strlen(CNXK_ESWITCH_CTRL_MSG_SOCK_PATH) > sizeof(un.sun_path) - 1) {
-		plt_err("Server socket path too long: %s", CNXK_ESWITCH_CTRL_MSG_SOCK_PATH);
+	/* Set unix socket path under the runtime dir and bind */
+	ret = cnxk_eswitch_ctrl_msg_sock_addr(&un);
+	if (ret) {
+		plt_err("Server socket path too long");
 		close(sock_fd);
-		return -E2BIG;
+		return ret;
 	}
 
-	if (remove(CNXK_ESWITCH_CTRL_MSG_SOCK_PATH) == -1 && errno != ENOENT) {
-		plt_err("remove-%s", CNXK_ESWITCH_CTRL_MSG_SOCK_PATH);
+	if (remove(un.sun_path) == -1 && errno != ENOENT) {
+		plt_err("remove-%s", un.sun_path);
 		close(sock_fd);
 		return -errno;
 	}
-
-	memset(&un, 0, sizeof(struct sockaddr_un));
-	un.sun_family = AF_UNIX;
-	strncpy(un.sun_path, CNXK_ESWITCH_CTRL_MSG_SOCK_PATH, sizeof(un.sun_path) - 1);
 
 	if (bind(sock_fd, (struct sockaddr *)&un, sizeof(un)) < 0) {
 		plt_err("Failed to bind %s: %s", un.sun_path, strerror(errno));

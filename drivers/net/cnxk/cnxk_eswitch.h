@@ -12,7 +12,7 @@
 
 #include "cn10k_tx.h"
 
-#define CNXK_ESWITCH_CTRL_MSG_SOCK_PATH "/tmp/cxk_rep_ctrl_msg_sock"
+#define CNXK_ESWITCH_CTRL_MSG_SOCK_NAME "cnxk_ctrl_msg_sock"
 #define CNXK_ESWITCH_VLAN_TPID		ROC_ESWITCH_VLAN_TPID
 #define CNXK_REP_ESWITCH_DEV_MZ		"cnxk_eswitch_dev"
 #define CNXK_ESWITCH_MAX_TXQ		256
@@ -179,6 +179,7 @@ cnxk_eswitch_pmd_priv(void)
 }
 
 /* HW Resources */
+int cnxk_eswitch_ctrl_msg_sock_addr(struct sockaddr_un *un);
 int cnxk_eswitch_nix_rsrc_start(struct cnxk_eswitch_dev *eswitch_dev);
 int cnxk_eswitch_representor_id(struct cnxk_eswitch_dev *eswitch_dev, uint16_t hw_func,
 				uint16_t *rep_id);

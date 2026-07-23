@@ -9,6 +9,24 @@
 
 #define CNXK_NIX_DEF_SQ_COUNT 512
 
+/* Build the control message unix socket address under the EAL runtime
+ * directory (e.g. /run/dpdk/<prefix>) rather than a fixed path in /tmp.
+ */
+int
+cnxk_eswitch_ctrl_msg_sock_addr(struct sockaddr_un *un)
+{
+	int ret;
+
+	memset(un, 0, sizeof(*un));
+	un->sun_family = AF_UNIX;
+	ret = snprintf(un->sun_path, sizeof(un->sun_path), "%s/%s",
+		       rte_eal_get_runtime_dir(), CNXK_ESWITCH_CTRL_MSG_SOCK_NAME);
+	if (ret < 0 || (size_t)ret >= sizeof(un->sun_path))
+		return -ENAMETOOLONG;
+
+	return 0;
+}
+
 int
 cnxk_eswitch_representor_id(struct cnxk_eswitch_dev *eswitch_dev, uint16_t hw_func,
 			    uint16_t *rep_id)
@@ -122,14 +140,17 @@ cnxk_eswitch_dev_remove(struct rte_pci_device *pci_dev)
 					plt_err("Failed to open socket. err %d", -errno);
 					return -errno;
 				}
-				sun.sun_family = AF_UNIX;
+				rc = cnxk_eswitch_ctrl_msg_sock_addr(&sun);
+				if (rc) {
+					plt_err("Control message socket path too long");
+					close(sock_fd);
+					return rc;
+				}
 				sunlen = sizeof(struct sockaddr_un);
-				strncpy(sun.sun_path, CNXK_ESWITCH_CTRL_MSG_SOCK_PATH,
-					sizeof(sun.sun_path) - 1);
 
 				if (connect(sock_fd, (struct sockaddr *)&sun, sunlen) < 0) {
 					plt_err("Failed to connect socket: %s, err %d",
-						CNXK_ESWITCH_CTRL_MSG_SOCK_PATH, errno);
+						sun.sun_path, errno);
 					close(sock_fd);
 					return -errno;
 				}
