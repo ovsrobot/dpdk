@@ -42,7 +42,6 @@
 #include <rte_common.h>
 #include <rte_malloc.h>
 #include <rte_log.h>
-#include <rte_vfio.h>
 #include <rte_errno.h>
 
 #include "iotlb.h"
@@ -174,80 +173,6 @@ get_blk_size(int fd)
 	return ret == -1 ? (uint64_t)-1 : (uint64_t)stat.st_blksize;
 }
 
-static int
-async_dma_map_region(struct virtio_net *dev, struct rte_vhost_mem_region *reg, bool do_map)
-{
-	uint32_t i;
-	int ret;
-	uint64_t reg_start = reg->host_user_addr;
-	uint64_t reg_end = reg_start + reg->size;
-
-	for (i = 0; i < dev->nr_guest_pages; i++) {
-		struct guest_page *page = &dev->guest_pages[i];
-
-		/* Only process pages belonging to this region */
-		if (page->host_user_addr < reg_start ||
-		    page->host_user_addr >= reg_end)
-			continue;
-
-		if (do_map) {
-			ret = rte_vfio_container_dma_map(RTE_VFIO_DEFAULT_CONTAINER_FD,
-					page->host_user_addr,
-					page->host_iova,
-					page->size);
-			if (ret) {
-				/*
-				 * DMA device may bind with kernel driver, in this case,
-				 * we don't need to program IOMMU manually. However, if no
-				 * device is bound with vfio/uio in DPDK, and vfio kernel
-				 * module is loaded, the API will still be called and return
-				 * with ENODEV.
-				 *
-				 * DPDK vfio only returns ENODEV in very similar situations
-				 * (vfio either unsupported, or supported but no devices found).
-				 * Either way, no mappings could be performed. We treat it as
-				 * normal case in async path. This is a workaround.
-				 */
-				if (rte_errno == ENODEV)
-					return 0;
-
-				/* DMA mapping errors won't stop VHOST_USER_SET_MEM_TABLE. */
-				VHOST_CONFIG_LOG(dev->ifname, ERR, "DMA engine map failed");
-				return -1;
-			}
-		} else {
-			ret = rte_vfio_container_dma_unmap(RTE_VFIO_DEFAULT_CONTAINER_FD,
-					page->host_user_addr,
-					page->host_iova,
-					page->size);
-			if (ret) {
-				/* like DMA map, ignore the kernel driver case when unmap. */
-				if (rte_errno == EINVAL)
-					return 0;
-
-				VHOST_CONFIG_LOG(dev->ifname, ERR, "DMA engine unmap failed");
-				return -1;
-			}
-		}
-	}
-
-	return 0;
-}
-
-static void
-async_dma_map(struct virtio_net *dev, bool do_map)
-{
-	uint32_t i;
-	struct rte_vhost_mem_region *reg;
-
-	for (i = 0; i < VHOST_MEMORY_MAX_NREGIONS; i++) {
-		reg = &dev->mem->regions[i];
-		if (reg->host_user_addr == 0)
-			continue;
-		async_dma_map_region(dev, reg, do_map);
-	}
-}
-
 static void
 free_mem_region(struct rte_vhost_mem_region *reg)
 {
@@ -266,9 +191,6 @@ free_all_mem_regions(struct virtio_net *dev)
 
 	if (!dev || !dev->mem)
 		return;
-
-	if (dev->async_copy && rte_vfio_is_enabled("vfio"))
-		async_dma_map(dev, false);
 
 	for (i = 0; i < VHOST_MEMORY_MAX_NREGIONS; i++) {
 		reg = &dev->mem->regions[i];
@@ -1086,90 +1008,6 @@ vhost_user_set_vring_base(struct virtio_net **pdev,
 	return RTE_VHOST_MSG_RESULT_OK;
 }
 
-static int
-add_one_guest_page(struct virtio_net *dev, uint64_t guest_phys_addr,
-		   uint64_t host_iova, uint64_t host_user_addr, uint64_t size)
-{
-	struct guest_page *page, *last_page;
-	struct guest_page *old_pages;
-
-	if (dev->nr_guest_pages == dev->max_guest_pages) {
-		dev->max_guest_pages *= 2;
-		old_pages = dev->guest_pages;
-		dev->guest_pages = rte_realloc(dev->guest_pages,
-					dev->max_guest_pages * sizeof(*page),
-					RTE_CACHE_LINE_SIZE);
-		if (dev->guest_pages == NULL) {
-			VHOST_CONFIG_LOG(dev->ifname, ERR, "cannot realloc guest_pages");
-			rte_free(old_pages);
-			return -1;
-		}
-	}
-
-	if (dev->nr_guest_pages > 0) {
-		last_page = &dev->guest_pages[dev->nr_guest_pages - 1];
-		/* merge if the two pages are continuous */
-		if (host_iova == last_page->host_iova + last_page->size &&
-		    guest_phys_addr == last_page->guest_phys_addr + last_page->size &&
-		    host_user_addr == last_page->host_user_addr + last_page->size) {
-			last_page->size += size;
-			return 0;
-		}
-	}
-
-	page = &dev->guest_pages[dev->nr_guest_pages++];
-	page->guest_phys_addr = guest_phys_addr;
-	page->host_iova  = host_iova;
-	page->host_user_addr = host_user_addr;
-	page->size = size;
-
-	return 0;
-}
-
-static int
-add_guest_pages(struct virtio_net *dev, struct rte_vhost_mem_region *reg,
-		uint64_t page_size)
-{
-	uint64_t reg_size = reg->size;
-	uint64_t host_user_addr  = reg->host_user_addr;
-	uint64_t guest_phys_addr = reg->guest_phys_addr;
-	uint64_t host_iova;
-	uint64_t size;
-
-	host_iova = rte_mem_virt2iova((void *)(uintptr_t)host_user_addr);
-	size = page_size - (guest_phys_addr & (page_size - 1));
-	size = RTE_MIN(size, reg_size);
-
-	if (add_one_guest_page(dev, guest_phys_addr, host_iova,
-			       host_user_addr, size) < 0)
-		return -1;
-
-	host_user_addr  += size;
-	guest_phys_addr += size;
-	reg_size -= size;
-
-	while (reg_size > 0) {
-		size = RTE_MIN(reg_size, page_size);
-		host_iova = rte_mem_virt2iova((void *)(uintptr_t)
-						  host_user_addr);
-		if (add_one_guest_page(dev, guest_phys_addr, host_iova,
-				       host_user_addr, size) < 0)
-			return -1;
-
-		host_user_addr  += size;
-		guest_phys_addr += size;
-		reg_size -= size;
-	}
-
-	/* sort guest page array if over binary search threshold */
-	if (dev->nr_guest_pages >= VHOST_BINARY_SEARCH_THRESH) {
-		qsort((void *)dev->guest_pages, dev->nr_guest_pages,
-			sizeof(struct guest_page), guest_page_addrcmp);
-	}
-
-	return 0;
-}
-
 static void
 remove_guest_pages(struct virtio_net *dev, struct rte_vhost_mem_region *reg)
 {
@@ -1345,7 +1183,6 @@ vhost_user_mmap_region(struct virtio_net *dev,
 	void *mmap_addr;
 	uint64_t mmap_size;
 	uint64_t alignment;
-	int populate;
 
 	/* Check for memory_size + mmap_offset overflow */
 	if (mmap_offset >= -region->size) {
@@ -1384,10 +1221,7 @@ vhost_user_mmap_region(struct virtio_net *dev,
 		return -1;
 	}
 
-	populate = dev->async_copy ? MAP_POPULATE : 0;
-	mmap_addr = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE,
-			MAP_SHARED | populate, region->fd, 0);
-
+	mmap_addr = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, region->fd, 0);
 	if (mmap_addr == MAP_FAILED) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "mmap failed (%s).", strerror(errno));
 		return -1;
@@ -1397,14 +1231,6 @@ vhost_user_mmap_region(struct virtio_net *dev,
 	region->mmap_size = mmap_size;
 	region->host_user_addr = (uint64_t)(uintptr_t)mmap_addr + mmap_offset;
 	mem_set_dump(dev, mmap_addr, mmap_size, false, alignment);
-
-	if (dev->async_copy) {
-		if (add_guest_pages(dev, region, alignment) < 0) {
-			VHOST_CONFIG_LOG(dev->ifname, ERR,
-				"adding guest pages to region failed.");
-			return -1;
-		}
-	}
 
 	VHOST_CONFIG_LOG(dev->ifname, INFO,
 		"guest memory region size: 0x%" PRIx64,
@@ -1519,15 +1345,6 @@ vhost_user_set_mem_table(struct virtio_net **pdev,
 			dev->flags &= ~VIRTIO_DEV_VDPA_CONFIGURED;
 		}
 
-		/* notify the vhost application to stop DMA transfers */
-		if (dev->async_copy && dev->notify_ops->vring_state_changed) {
-			for (i = 0; i < dev->nr_vring; i++) {
-				dev->notify_ops->vring_state_changed(dev->vid,
-						i, 0);
-			}
-			async_notify = true;
-		}
-
 		/* Flush IOTLB cache as previous HVAs are now invalid */
 		if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))
 			vhost_user_iotlb_flush_all(dev);
@@ -1563,9 +1380,6 @@ vhost_user_set_mem_table(struct virtio_net **pdev,
 
 		dev->mem->nregions++;
 	}
-
-	if (dev->async_copy && rte_vfio_is_enabled("vfio"))
-		async_dma_map(dev, true);
 
 	if (vhost_user_postcopy_register(dev, main_fd, ctx) < 0)
 		goto free_mem_table;
@@ -1735,25 +1549,12 @@ vhost_user_add_mem_reg(struct virtio_net **pdev,
 
 	if (vhost_user_mmap_region(dev, reg, region->mmap_offset) < 0) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "failed to mmap region");
-		if (reg->mmap_addr) {
-			/* mmap succeeded but a later step (e.g. add_guest_pages)
-			 * failed; undo the mapping and any guest-page entries.
-			 */
-			remove_guest_pages(dev, reg);
-			free_mem_region(reg);
-		} else {
-			close(reg->fd);
-			reg->fd = -1;
-		}
+		close(reg->fd);
+		reg->fd = -1;
 		goto close_msg_fds;
 	}
 
 	dev->mem->nregions++;
-
-	if (dev->async_copy && rte_vfio_is_enabled("vfio")) {
-		if (async_dma_map_region(dev, reg, true) < 0)
-			goto free_new_region_no_dma;
-	}
 
 	if (dev->postcopy_listening) {
 		/*
@@ -1791,9 +1592,6 @@ vhost_user_add_mem_reg(struct virtio_net **pdev,
 	return RTE_VHOST_MSG_RESULT_OK;
 
 free_new_region:
-	if (dev->async_copy && rte_vfio_is_enabled("vfio"))
-		async_dma_map_region(dev, reg, false);
-free_new_region_no_dma:
 	remove_guest_pages(dev, reg);
 	free_mem_region(reg);
 	dev->mem->nregions--;
@@ -1827,8 +1625,6 @@ vhost_user_rem_mem_reg(struct virtio_net **pdev,
 		if (region->userspace_addr == current_region->guest_user_addr
 			&& region->guest_phys_addr == current_region->guest_phys_addr
 			&& region->memory_size == current_region->size) {
-			if (dev->async_copy && rte_vfio_is_enabled("vfio"))
-				async_dma_map_region(dev, current_region, false);
 			if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))
 				vhost_user_iotlb_cache_remove(dev,
 					current_region->guest_phys_addr,

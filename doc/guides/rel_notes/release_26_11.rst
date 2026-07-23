@@ -68,6 +68,13 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Removed vhost async (DMA-accelerated) data path.**
+
+  The experimental async data path APIs have been removed from the vhost library.
+  The following functions and flag are no longer available:
+
+  - ``RTE_VHOST_USER_ASYNC_COPY``
+
 
 API Changes
 -----------

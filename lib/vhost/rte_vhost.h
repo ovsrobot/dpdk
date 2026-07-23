@@ -38,7 +38,7 @@ extern "C" {
 #define RTE_VHOST_USER_EXTBUF_SUPPORT	(1ULL << 5)
 /* support only linear buffers (no chained mbufs) */
 #define RTE_VHOST_USER_LINEARBUF_SUPPORT	(1ULL << 6)
-#define RTE_VHOST_USER_ASYNC_COPY	(1ULL << 7)
+/* Bit 7 was RTE_VHOST_USER_ASYNC_COPY, now unsupported */
 #define RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS	(1ULL << 8)
 #define RTE_VHOST_USER_NET_STATS_ENABLE	(1ULL << 9)
 #define RTE_VHOST_USER_ASYNC_CONNECT	(1ULL << 10)

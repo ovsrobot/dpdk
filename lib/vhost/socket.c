@@ -210,7 +210,6 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 	size_t size;
 	struct vhost_user_connection *conn;
 	int ret;
-	struct virtio_net *dev;
 
 	if (vsocket == NULL)
 		return;
@@ -240,13 +239,6 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 
 	if (vsocket->linearbuf)
 		vhost_enable_linearbuf(vid);
-
-	if (vsocket->async_copy) {
-		dev = get_device(vid);
-
-		if (dev)
-			dev->async_copy = 1;
-	}
 
 	VHOST_CONFIG_LOG(vsocket->path, INFO, "new device, handle is %d", vid);
 
@@ -911,6 +903,11 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	if (!path)
 		return -1;
 
+	if (flags & (1ULL << 7)) {
+		VHOST_CONFIG_LOG(path, ERR, "async copy flag (bit 7) is no longer supported");
+		return -1;
+	}
+
 	pthread_mutex_lock(&vhost_user.mutex);
 
 	if (vhost_user.vsocket_cnt == MAX_VHOST_SOCKET) {
@@ -938,7 +935,7 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	vsocket->max_queue_pairs = VHOST_MAX_QUEUE_PAIRS;
 	vsocket->extbuf = flags & RTE_VHOST_USER_EXTBUF_SUPPORT;
 	vsocket->linearbuf = flags & RTE_VHOST_USER_LINEARBUF_SUPPORT;
-	vsocket->async_copy = flags & RTE_VHOST_USER_ASYNC_COPY;
+	vsocket->async_copy = false;
 	vsocket->net_compliant_ol_flags = flags & RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS;
 	vsocket->stats_enabled = flags & RTE_VHOST_USER_NET_STATS_ENABLE;
 	vsocket->async_connect = flags & RTE_VHOST_USER_ASYNC_CONNECT;
@@ -946,12 +943,6 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 		vsocket->iommu_support = true;
 	else
 		vsocket->iommu_support = flags & RTE_VHOST_USER_IOMMU_SUPPORT;
-
-	if (vsocket->async_copy && (vsocket->iommu_support ||
-				(flags & RTE_VHOST_USER_POSTCOPY_SUPPORT))) {
-		VHOST_CONFIG_LOG(path, ERR, "async copy with IOMMU or post-copy not supported");
-		goto out_mutex;
-	}
 
 	/*
 	 * Set the supported features correctly for the builtin vhost-user
@@ -973,12 +964,6 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 		vsocket->supported_features = VHOST_USER_NET_SUPPORTED_FEATURES;
 		vsocket->features           = VHOST_USER_NET_SUPPORTED_FEATURES;
 		vsocket->protocol_features  = VHOST_USER_PROTOCOL_FEATURES;
-	}
-
-	if (vsocket->async_copy) {
-		vsocket->supported_features &= ~(1ULL << VHOST_F_LOG_ALL);
-		vsocket->features &= ~(1ULL << VHOST_F_LOG_ALL);
-		VHOST_CONFIG_LOG(path, INFO, "logging feature is disabled in async copy mode");
 	}
 
 	/*

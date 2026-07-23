@@ -103,21 +103,6 @@ The following is an overview of some key Vhost API functions:
 
     It is disabled by default.
 
-  - ``RTE_VHOST_USER_ASYNC_COPY``
-
-    Asynchronous data path will be enabled when this flag is set. Async
-    data path allows applications to enable DMA acceleration for vhost
-    queues. Vhost leverages the registered DMA channels to free CPU from
-    memory copy operations in data path. A set of async data path APIs are
-    defined for DPDK applications to make use of the async capability. Only
-    packets enqueued/dequeued by async APIs are processed through the async
-    data path.
-
-    Currently this feature is only implemented on split ring enqueue data
-    path.
-
-    It is disabled by default.
-
   - ``RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS``
 
     Since v16.04, the vhost library forwards checksum and gso requests for
