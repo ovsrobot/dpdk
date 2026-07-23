@@ -504,23 +504,18 @@ fslmc_bus_match(const struct rte_driver *drv, const struct rte_device *dev)
 	return false;
 }
 
-static int
-fslmc_bus_unplug_device(struct rte_device *rte_dev);
-
-static int
-rte_fslmc_close(struct rte_bus *bus)
+static void
+fslmc_free_device(struct rte_device *rte_dev)
 {
-	struct rte_dpaa2_device *dev;
-	int ret = 0;
+	free(RTE_BUS_DEVICE(rte_dev, struct rte_dpaa2_device));
+}
 
-	RTE_BUS_FOREACH_DEV(dev, bus) {
-		if (dev->dev_type != DPAA2_ETH &&
-		    dev->dev_type != DPAA2_CRYPTO &&
-		    dev->dev_type != DPAA2_QDMA)
-			continue;
-		if (rte_dev_is_probed(&dev->device) && fslmc_bus_unplug_device(&dev->device))
-			DPAA2_BUS_ERR("Unable to remove %s", dev->device.name);
-	}
+static int
+fslmc_cleanup(struct rte_bus *bus)
+{
+	int ret;
+
+	rte_bus_generic_cleanup(bus);
 
 	ret = fslmc_vfio_close_group();
 	if (ret)
@@ -646,7 +641,8 @@ fslmc_bus_unplug_device(struct rte_device *rte_dev)
 struct rte_bus rte_fslmc_bus = {
 	.scan = rte_fslmc_scan,
 	.probe = rte_bus_generic_probe,
-	.cleanup = rte_fslmc_close,
+	.free_device = fslmc_free_device,
+	.cleanup = fslmc_cleanup,
 	.parse = rte_fslmc_parse,
 	.dev_compare = fslmc_dev_compare,
 	.find_device = rte_bus_generic_find_device,
