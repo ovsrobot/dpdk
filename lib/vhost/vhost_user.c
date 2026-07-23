@@ -2409,11 +2409,6 @@ vhost_user_set_vring_enable(struct virtio_net **pdev,
 	if (!(dev->flags & VIRTIO_DEV_VDPA_CONFIGURED)) {
 		/* vhost_user_lock_all_queue_pairs locked all qps */
 		VHOST_USER_ASSERT_LOCK(dev, vq, VHOST_USER_SET_VRING_ENABLE);
-		if (enable && vq->async && vq->async->pkts_inflight_n) {
-			VHOST_CONFIG_LOG(dev->ifname, ERR,
-				"failed to enable vring. Inflight packets must be completed first");
-			return RTE_VHOST_MSG_RESULT_ERR;
-		}
 	}
 
 	vq->enabled = enable;

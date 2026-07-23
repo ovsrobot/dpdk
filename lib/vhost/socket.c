@@ -43,7 +43,6 @@ struct vhost_user_socket {
 	bool use_builtin_virtio_net;
 	bool extbuf;
 	bool linearbuf;
-	bool async_copy;
 	bool net_compliant_ol_flags;
 	bool stats_enabled;
 	bool async_connect;
@@ -935,7 +934,6 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	vsocket->max_queue_pairs = VHOST_MAX_QUEUE_PAIRS;
 	vsocket->extbuf = flags & RTE_VHOST_USER_EXTBUF_SUPPORT;
 	vsocket->linearbuf = flags & RTE_VHOST_USER_LINEARBUF_SUPPORT;
-	vsocket->async_copy = false;
 	vsocket->net_compliant_ol_flags = flags & RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS;
 	vsocket->stats_enabled = flags & RTE_VHOST_USER_NET_STATS_ENABLE;
 	vsocket->async_connect = flags & RTE_VHOST_USER_ASYNC_CONNECT;
