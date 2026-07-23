@@ -73,11 +73,12 @@ test_interrupt_init(void)
 			rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_PRIVATE);
 		if (!intr_handles[i])
 			return -1;
+		/* Verify fd is initialized to -1 */
+		if (rte_intr_fd_get(intr_handles[i]) != -1)
+			return -1;
 	}
 
 	test_intr_handle = intr_handles[TEST_INTERRUPT_HANDLE_INVALID];
-	if (rte_intr_fd_set(test_intr_handle, -1))
-		return -1;
 	if (rte_intr_type_set(test_intr_handle, RTE_INTR_HANDLE_UNKNOWN))
 		return -1;
 
