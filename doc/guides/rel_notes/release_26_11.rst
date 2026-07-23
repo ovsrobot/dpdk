@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel iavf driver.**
+
+  * Increased the maximum number of secondary unicast MAC addresses from 64 to 32k.
+    This increases a VF port memory footprint by ~192kB.
+
 
 Removed Items
 -------------
