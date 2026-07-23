@@ -60,6 +60,11 @@ New Features
   * Increased the maximum number of secondary unicast MAC addresses from 64 to 32k.
     This increases a VF port memory footprint by ~192kB.
 
+* **Updated NVIDIA mlx5 ethernet driver.**
+
+  * Increased the maximum number of secondary unicast MAC addresses from 128 to up to 4096
+    (depending on devlink configuration on the associated kernel netdevice).
+
 
 Removed Items
 -------------
