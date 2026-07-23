@@ -1946,6 +1946,7 @@ clean:
 	} while (true);
 
 	if (rte_intr_fd_get(pmd->intr_handle) >= 0) {
+		/* Netlink socket closed via tap_nl_final(). */
 		tap_nl_final(rte_intr_fd_get(pmd->intr_handle));
 		rte_intr_fd_set(pmd->intr_handle, -1);
 	}
