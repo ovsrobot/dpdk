@@ -7,6 +7,9 @@
 
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/un.h>
+
+#include <rte_eal.h>
 
 #include "nfpcore/nfp_cpp.h"
 #include "nfp_logs.h"
@@ -334,17 +337,22 @@ nfp_cpp_bridge_service_func(void *args)
 	int datafd;
 	struct nfp_cpp *cpp;
 	const char *pci_name;
-	char socket_handle[14];
-	struct sockaddr address;
+	struct sockaddr_un address = { .sun_family = AF_UNIX };
 	struct nfp_pf_dev *pf_dev;
 	struct timeval timeout = {1, 0};
 
 	pf_dev = args;
 
 	pci_name = strchr(pf_dev->pci_dev->name, ':') + 1;
-	snprintf(socket_handle, sizeof(socket_handle), "/tmp/%s", pci_name);
 
-	unlink(socket_handle);
+	ret = snprintf(address.sun_path, sizeof(address.sun_path), "%s/nfp_%s",
+			rte_eal_get_runtime_dir(), pci_name);
+	if (ret < 0 || (size_t)ret >= sizeof(address.sun_path)) {
+		PMD_CPP_LOG(ERR, "Socket path too long. Service failed.");
+		return -EINVAL;
+	}
+
+	unlink(address.sun_path);
 	sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sockfd < 0) {
 		PMD_CPP_LOG(ERR, "Socket creation error. Service failed.");
@@ -353,13 +361,7 @@ nfp_cpp_bridge_service_func(void *args)
 
 	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
 
-	memset(&address, 0, sizeof(struct sockaddr));
-
-	address.sa_family = AF_UNIX;
-	strcpy(address.sa_data, socket_handle);
-
-	ret = bind(sockfd, (const struct sockaddr *)&address,
-			sizeof(struct sockaddr));
+	ret = bind(sockfd, (const struct sockaddr *)&address, sizeof(address));
 	if (ret < 0) {
 		PMD_CPP_LOG(ERR, "Bind error (%d). Service failed.", errno);
 		close(sockfd);
