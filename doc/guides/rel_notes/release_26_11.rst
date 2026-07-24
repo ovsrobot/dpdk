@@ -84,6 +84,11 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **pcapng: add packet filtering statistic.**
+
+  The API for ``rte_pcapng_write_stats`` was changed to include
+  recording the number of filtered packets.
+
 
 ABI Changes
 -----------
