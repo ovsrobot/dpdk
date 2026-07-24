@@ -39,7 +39,6 @@
 
 #include <stdint.h>
 
-#include <rte_common.h>
 #include <rte_ip6.h>
 
 #include "rte_table.h"
@@ -47,8 +46,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define RTE_LPM_IPV6_ADDR_SIZE (RTE_DEPRECATED(RTE_LPM_IPV6_ADDR_SIZE) RTE_IPV6_ADDR_SIZE)
 
 /** LPM table parameters */
 struct rte_table_lpm_ipv6_params {
