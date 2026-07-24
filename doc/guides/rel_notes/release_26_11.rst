@@ -59,6 +59,7 @@ New Features
 
   * Added ``capture`` library for packet capture via telemetry API.
   * Added python script for wireshark external capture integration.
+  * Added python version of dpdk-dumpcap.
 
 
 Removed Items
