@@ -37,6 +37,7 @@ source_file_deps = {
     'test_bpf.c': ['bpf', 'net'],
     'test_bpf_validate.c': ['bpf'],
     'test_byteorder.c': [],
+    'test_capture.c': ['net_null', 'net', 'ethdev', 'bus_vdev', 'capture'],
     'test_cfgfile.c': ['cfgfile'],
     'test_cksum.c': ['net'],
     'test_cksum_perf.c': ['net'],
