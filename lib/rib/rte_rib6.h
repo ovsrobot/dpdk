@@ -22,8 +22,6 @@
 extern "C" {
 #endif
 
-#define RTE_RIB6_IPV6_ADDR_SIZE (RTE_DEPRECATED(RTE_RIB6_IPV6_ADDR_SIZE) RTE_IPV6_ADDR_SIZE)
-
 /**
  * rte_rib6_get_nxt() flags
  */
@@ -48,77 +46,6 @@ struct rte_rib6_conf {
 	/* size of rte_rib6_node's pool */
 	int	max_nodes;
 };
-
-/**
- * Copy IPv6 address from one location to another
- *
- * @param dst
- *  pointer to the place to copy
- * @param src
- *  pointer from where to copy
- */
-static inline void rte_rib6_copy_addr(uint8_t *dst, const uint8_t *src)
-	__rte_deprecated_msg("use direct struct assignment");
-
-static inline void
-rte_rib6_copy_addr(uint8_t *dst, const uint8_t *src)
-{
-	if ((dst == NULL) || (src == NULL))
-		return;
-	rte_memcpy(dst, src, RTE_IPV6_ADDR_SIZE);
-}
-
-/**
- * Compare two IPv6 addresses
- *
- * @param ip1
- *  pointer to the first ipv6 address
- * @param ip2
- *  pointer to the second ipv6 address
- *
- * @return
- *  1 if equal
- *  0 otherwise
- */
-static inline int rte_rib6_is_equal(const uint8_t *ip1, const uint8_t *ip2)
-	__rte_deprecated_msg("use rte_ipv6_addr_eq");
-
-static inline int
-rte_rib6_is_equal(const uint8_t *ip1, const uint8_t *ip2) {
-	int i;
-
-	if ((ip1 == NULL) || (ip2 == NULL))
-		return 0;
-	for (i = 0; i < RTE_IPV6_ADDR_SIZE; i++) {
-		if (ip1[i] != ip2[i])
-			return 0;
-	}
-	return 1;
-}
-
-/**
- * Get 8-bit part of 128-bit IPv6 mask
- *
- * @param depth
- *  ipv6 prefix length
- * @param byte
- *  position of a 8-bit chunk in the 128-bit mask
- *
- * @return
- *  8-bit chunk of the 128-bit IPv6 mask
- */
-static inline uint8_t get_msk_part(uint8_t depth, int byte) __rte_deprecated;
-
-static inline uint8_t
-get_msk_part(uint8_t depth, int byte) {
-	uint8_t part;
-
-	byte &= 0xf;
-	depth = RTE_MIN(depth, 128);
-	part = RTE_MAX((int16_t)depth - (byte * 8), 0);
-	part = (part > 8) ? 8 : part;
-	return (uint16_t)(~UINT8_MAX) >> part;
-}
 
 /**
  * Lookup an IP into the RIB structure

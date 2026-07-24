@@ -18,9 +18,6 @@
 extern "C" {
 #endif
 
-
-#define RTE_LPM6_MAX_DEPTH (RTE_DEPRECATED(RTE_LPM6_MAX_DEPTH) RTE_IPV6_MAX_DEPTH)
-#define RTE_LPM6_IPV6_ADDR_SIZE (RTE_DEPRECATED(RTE_LPM6_IPV6_ADDR_SIZE) RTE_IPV6_ADDR_SIZE)
 /** Max number of characters in LPM name. */
 #define RTE_LPM6_NAMESIZE                 32
 

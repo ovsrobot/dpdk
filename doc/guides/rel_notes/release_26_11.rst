@@ -68,6 +68,17 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* Deprecated functions removed:
+
+  - ``RTE_FIB6_IPV6_ADDR_SIZE``
+  - ``RTE_FIB6_MAXDEPTH``
+  - ``RTE_LPM6_IPV6_ADDR_SIZE``
+  - ``RTE_LPM6_MAX_DEPTH``
+  - ``RTE_LPM_IPV6_ADDR_SIZE``
+  - ``RTE_RIB6_IPV6_ADDR_SIZE``
+  - ``get_msk_part``
+  - ``rte_rib6_copy_addr``
+  - ``rte_rib6_is_equal``
 
 API Changes
 -----------
