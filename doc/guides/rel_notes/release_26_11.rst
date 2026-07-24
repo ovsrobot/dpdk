@@ -100,6 +100,11 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* mempool: The structure ``rte_mempool_cache`` was updated as follows:
+  - The obsolete ``flushthresh`` field was removed.
+  - The size of the ``objs`` array was reduced from ``RTE_MEMPOOL_CACHE_MAX_SIZE`` * 2 to ``RTE_MEMPOOL_CACHE_MAX_SIZE``.
+  - A cache guard was added at the end of the structure.
+
 
 Known Issues
 ------------
