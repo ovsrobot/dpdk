@@ -3,9 +3,10 @@
 # Copyright(c) 2026 Stephen Hemminger
 
 """
-Review DPDK patches using AI providers.
+Review DPDK patches using AI providers or a local agent tool.
 
 Supported providers: Anthropic Claude, OpenAI ChatGPT, xAI Grok, Google Gemini
+Supported agent: OpenCode (--via opencode)
 """
 
 import argparse
@@ -577,6 +578,109 @@ def build_google_request(
     }
 
 
+def _call_opencode(
+    model: str,
+    system_prompt: str,
+    patch_content: str,
+    patch_name: str,
+    agents_path: str = "",
+    output_format: str = "text",
+    verbose: bool = False,
+    timeout: int = 300,
+) -> tuple[str, TokenUsage]:
+    """Call local opencode CLI for review."""
+    format_instruction = FORMAT_INSTRUCTIONS.get(output_format, "")
+    user_prompt = (
+        f"Review the attached DPDK patch file '{patch_name}'.\n\n"
+        f"Focus on correctness bugs, C coding style, API requirements, "
+        f"and other guideline violations. "
+        f"Commit message format and SPDX/copyright are checked by "
+        f"checkpatches.sh -- do NOT flag those.\n\n"
+        f"{format_instruction}"
+    )
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".patch", delete=False, prefix="review_"
+    ) as f:
+        f.write(patch_content)
+        patch_temp = f.name
+
+    try:
+        full_message = system_prompt + "\n\n" + user_prompt
+
+        cmd = [
+            "opencode", "run", "--format", "json",
+            "--dir", str(Path(__file__).resolve().parent.parent.parent),
+        ]
+        if model:
+            cmd.extend(["--model", model])
+        if verbose:
+            cmd.append("--print-logs")
+        cmd.append(full_message)
+        cmd.extend(["--file", patch_temp])
+        if agents_path:
+            cmd.extend(["--file", agents_path])
+
+        if verbose:
+            print(f"Running: {' '.join(cmd)}", file=sys.stderr)
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except FileNotFoundError:
+            error("opencode not found. Install from https://opencode.ai")
+        except subprocess.TimeoutExpired:
+            error(f"opencode timed out after {timeout} seconds")
+
+        if result.returncode != 0:
+            error(
+                f"opencode exited with code {result.returncode}: "
+                f"{result.stderr[:500]}"
+            )
+
+    finally:
+        os.unlink(patch_temp)
+
+    text_parts = []
+    usage = TokenUsage()
+    steps = 0
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            event = json.loads(stripped)
+        except json.JSONDecodeError:
+            continue
+
+        event_type = event.get("type", "")
+        if event_type == "text":
+            part_text = event.get("part", {}).get("text", "")
+            if part_text:
+                text_parts.append(part_text)
+        elif event_type == "step_finish":
+            steps += 1
+            tokens = event.get("part", {}).get("tokens", {})
+            if tokens:
+                usage.input_tokens += tokens.get("input", 0)
+                usage.output_tokens += tokens.get("output", 0)
+                cache = tokens.get("cache", {})
+                usage.cache_creation_tokens += cache.get("write", 0)
+                usage.cache_read_tokens += cache.get("read", 0)
+
+    usage.api_calls = 1 if steps > 0 else 0
+    review_text = "\n".join(text_parts)
+
+    if not review_text:
+        error("No review text received from opencode")
+
+    return review_text, usage
+
+
 def call_api(
     provider: str,
     auth: str,
@@ -764,6 +868,7 @@ def main() -> None:
 Examples:
     %(prog)s patch.patch                    # Review with default settings
     %(prog)s -p openai my-patch.patch       # Use OpenAI ChatGPT
+    %(prog)s --via opencode my-patch.patch  # Use local opencode agent
     %(prog)s -f markdown patch.patch        # Output as Markdown
     %(prog)s -f json -o review.json patch.patch  # Save JSON to file
     %(prog)s -f html -o review.html patch.patch  # Save HTML to file
@@ -810,7 +915,13 @@ Exit Codes:
         "--provider",
         choices=PROVIDERS.keys(),
         default="anthropic",
-        help="AI provider (default: anthropic)",
+        help="Cloud AI provider (default: anthropic)",
+    )
+    parser.add_argument(
+        "--via",
+        choices=["opencode"],
+        default=None,
+        help="Use a local agent tool instead of a cloud API (e.g. --via opencode)",
     )
     parser.add_argument(
         "-a",
@@ -956,12 +1067,17 @@ Exit Codes:
     if not args.patch_file:
         parser.error("patch_file is required")
 
-    # Get provider config
-    config = PROVIDERS[args.provider]
-    model = args.model or config["default_model"]
-
-    # Get authentication string
-    auth = get_auth_string(args.auth, args.provider)
+    # Get provider config or set up local agent runner
+    via = args.via
+    if via:
+        model = args.model or ""
+        auth = ""
+        provider_name = "OpenCode"
+    else:
+        config = PROVIDERS[args.provider]
+        model = args.model or config["default_model"]
+        auth = get_auth_string(args.auth, args.provider)
+        provider_name = config["name"]
 
     # Validate files
     agents_path = Path(args.agents)
@@ -999,16 +1115,41 @@ Exit Codes:
     patch_content = patch_path.read_text(encoding="utf-8", errors="replace")
     patch_name = patch_path.name
 
-    # Determine max tokens for this provider
-    max_input_tokens = args.max_tokens or PROVIDER_INPUT_LIMITS.get(
-        args.provider, 100000
-    )
+    # Dispatch to agent or provider
+    def _run_review(patch_body: str, patch_label: str) -> tuple[str, TokenUsage]:
+        if via:
+            return _call_opencode(
+                model, system_prompt,
+                patch_body, patch_label,
+                str(agents_path),
+                args.output_format, args.verbose, args.timeout,
+            )
+        return call_api(
+            args.provider, auth, model, args.tokens,
+            system_prompt, agents_content,
+            patch_body, patch_label,
+            args.output_format, args.verbose, args.timeout,
+        )
 
-    # Estimate token count
-    estimated_tokens = estimate_tokens(patch_content + agents_content)
+    # Determine max tokens (cloud API only)
+    max_input_tokens = 0
+    if via:
+        estimated_tokens = 1
+    else:
+        max_input_tokens = args.max_tokens or PROVIDER_INPUT_LIMITS.get(
+            args.provider, 100000
+        )
+        estimated_tokens = estimate_tokens(patch_content + agents_content)
 
     # Accumulate token usage across all API calls
     total_usage = TokenUsage()
+
+    if via and args.large_file != "error":
+        print(
+            "Warning: --large-file is ignored in --via mode; "
+            "opencode handles large files automatically",
+            file=sys.stderr,
+        )
 
     # Parse patch range if specified
     patch_start, patch_end = None, None
@@ -1067,19 +1208,7 @@ Exit Codes:
                 patch_label = f"Patch {i}/{total_patches}"
                 print(f"\nReviewing {patch_label}...", file=sys.stderr)
 
-                review_text, call_usage = call_api(
-                    args.provider,
-                    auth,
-                    model,
-                    args.tokens,
-                    system_prompt,
-                    agents_content,
-                    patch,
-                    f"{patch_name} ({patch_label})",
-                    args.output_format,
-                    args.verbose,
-                    args.timeout,
-                )
+                review_text, call_usage = _run_review(patch, f"{patch_name} ({patch_label})")
                 total_usage.add(call_usage)
                 all_reviews.append((patch_label, review_text))
 
@@ -1091,10 +1220,10 @@ Exit Codes:
             # Skip the normal API call
             estimated_tokens = 0  # Bypass size check since we've already processed
 
-    # Check if content is too large
+    # Check if content is too large (cloud API only)
     is_large = estimated_tokens > max_input_tokens
 
-    if is_large:
+    if is_large and not via:
         print(
             f"Warning: Estimated {estimated_tokens:,} tokens exceeds limit of "
             f"{max_input_tokens:,}",
@@ -1137,19 +1266,7 @@ Exit Codes:
                 chunk_label = f"Chunk {chunk_num}/{total_chunks}"
                 print(f"Reviewing {chunk_label}...", file=sys.stderr)
 
-                review_text, call_usage = call_api(
-                    args.provider,
-                    auth,
-                    model,
-                    args.tokens,
-                    system_prompt,
-                    agents_content,
-                    chunk,
-                    f"{patch_name} ({chunk_label})",
-                    args.output_format,
-                    args.verbose,
-                    args.timeout,
-                )
+                review_text, call_usage = _run_review(chunk, f"{patch_name} ({chunk_label})")
                 total_usage.add(call_usage)
                 all_reviews.append((chunk_label, review_text))
 
@@ -1163,8 +1280,11 @@ Exit Codes:
 
     if args.verbose:
         print("=== Request ===", file=sys.stderr)
-        print(f"Provider: {args.provider}", file=sys.stderr)
-        print(f"Auth method: {'vertex' if auth == 'vertex' else 'direct'}", file=sys.stderr)
+        if via:
+            print(f"Runner: {args.via}", file=sys.stderr)
+        else:
+            print(f"Provider: {args.provider}", file=sys.stderr)
+            print(f"Auth method: {'vertex' if auth == 'vertex' else 'direct'}", file=sys.stderr)
         print(f"Model: {model}", file=sys.stderr)
         print(f"Review date: {review_date}", file=sys.stderr)
         if args.release:
@@ -1191,26 +1311,13 @@ Exit Codes:
 
     # Call API (unless already processed via chunks/split)
     if estimated_tokens > 0:  # Not already processed
-        review_text, call_usage = call_api(
-            args.provider,
-            auth,
-            model,
-            args.tokens,
-            system_prompt,
-            agents_content,
-            patch_content,
-            patch_name,
-            args.output_format,
-            args.verbose,
-            args.timeout,
-        )
+        review_text, call_usage = _run_review(patch_content, patch_name)
         total_usage.add(call_usage)
 
     if not review_text:
-        error(f"No response received from {args.provider}")
+        error(f"No response received from {provider_name}")
 
     # Format output based on requested format
-    provider_name = config["name"]
 
     if args.output_format == "json":
         # For JSON, try to parse and add metadata
@@ -1234,7 +1341,7 @@ Exit Codes:
         output_data = {
             "metadata": {
                 "patch_file": patch_name,
-                "provider": args.provider,
+                "provider": args.via or args.provider,
                 "provider_name": provider_name,
                 "model": model,
                 "review_date": review_date,
@@ -1289,7 +1396,7 @@ Exit Codes:
 
     print_token_summary(
         total_usage,
-        args.provider,
+        args.via or args.provider,
         model,
         args.show_tokens or args.verbose,
     )
