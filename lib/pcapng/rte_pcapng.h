@@ -179,20 +179,35 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 			 struct rte_mbuf *pkts[], uint16_t nb_pkts);
 
 /**
+ * A structure to store interface statistics in pcapng
+ * Interface statistics block.
+ * If the statistic is unavailable or unknown, use UINT64_MAX.
+ *
+ * Subset of definitions come from IETF pcapng standard.
+ * The osdrop and usrdeliv statistics are not included because
+ * DPDK does not use OS and does not deliver to application over sockets.
+ */
+struct rte_pcapng_interface_stats {
+	uint64_t ifrecv;	/**< Packets received on interface during capture. */
+	uint64_t ifdrop;	/**< Packets dropped by interface due to lack of resources. */
+	uint64_t filteraccept;	/**< Packets accepted by filter. */
+};
+
+/**
  * Write an Interface statistics block.
- * For statistics, use 0 if don't know or care to report it.
  * Should be called before closing capture to report results.
  *
  * @param self
  *  The handle to the packet capture file
  * @param port
  *  The Ethernet port to report stats on.
- * @param ifrecv
- *  The number of packets received by capture.
- *  Optional: use UINT64_MAX if not known.
- * @param ifdrop
- *  The number of packets missed by the capture process.
- *  Optional: use UINT64_MAX if not known.
+ * @param stats
+ *  The statistics to write.
+ * @param stats_sz
+ *  The sizeof statistics structure.
+ *  Must be greater than 0 and not more than sizeof(*stats).
+ *  This allows for future expansion of interface statistics but
+ *  with ABI compatibility.
  * @param comment
  *  Optional comment to add to statistics.
  * @return
@@ -203,8 +218,8 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
  */
 ssize_t
 rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port,
-		       uint64_t ifrecv, uint64_t ifdrop,
-		       const char *comment);
+		       const struct rte_pcapng_interface_stats *stats,
+		       size_t stats_sz, const char *comment);
 
 #ifdef __cplusplus
 }
