@@ -1124,6 +1124,15 @@ idpf_timesync_disable(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+idpf_dev_read_clock(struct rte_eth_dev *dev, uint64_t *clock)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_adapter *adapter = vport->adapter;
+
+	return idpf_ptp_read_src_clk_reg(adapter, clock);
+}
+
 
 static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_configure			= idpf_dev_configure,
@@ -1159,6 +1168,7 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.timesync_read_time           = idpf_timesync_read_time,
 	.timesync_write_time          = idpf_timesync_write_time,
 	.timesync_disable             = idpf_timesync_disable,
+	.read_clock                   = idpf_dev_read_clock,
 };
 
 static int
