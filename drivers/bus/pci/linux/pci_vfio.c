@@ -742,12 +742,6 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 
 	struct pci_map *maps;
 
-	if (rte_intr_fd_set(dev->intr_handle, -1))
-		return -1;
-
-	if (rte_intr_fd_set(dev->vfio_req_intr_handle, -1))
-		return -1;
-
 	/* store PCI address string */
 	snprintf(pci_addr, sizeof(pci_addr), PCI_PRI_FMT,
 			loc->domain, loc->bus, loc->devid, loc->function);
@@ -938,11 +932,6 @@ pci_vfio_map_resource_secondary(struct rte_pci_device *dev)
 		RTE_TAILQ_CAST(rte_vfio_tailq.head, mapped_pci_res_list);
 
 	struct pci_map *maps;
-
-	if (rte_intr_fd_set(dev->intr_handle, -1))
-		return -1;
-	if (rte_intr_fd_set(dev->vfio_req_intr_handle, -1))
-		return -1;
 
 	/* store PCI address string */
 	snprintf(pci_addr, sizeof(pci_addr), PCI_PRI_FMT,

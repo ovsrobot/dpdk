@@ -93,6 +93,11 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* interrupts: Updated interrupt handle file descriptor management.
+
+  * ``rte_intr_instance_alloc()`` now initializes file descriptors
+    to invalid values instead of zero.
+
 
 ABI Changes
 -----------
