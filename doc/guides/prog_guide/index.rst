@@ -129,6 +129,7 @@ Utility Libraries
     log_lib
     metrics_lib
     telemetry_lib
+    capture_lib
     pdump_lib
     pcapng_lib
     bpf_lib
