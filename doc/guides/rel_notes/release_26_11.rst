@@ -58,6 +58,7 @@ New Features
 * **Added wireshark capture support.**
 
   * Added ``capture`` library for packet capture via telemetry API.
+  * Added python script for wireshark external capture integration.
 
 
 Removed Items

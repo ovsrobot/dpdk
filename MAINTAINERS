@@ -1732,6 +1732,8 @@ F: app/pdump/
 F: doc/guides/tools/pdump.rst
 F: app/dumpcap/
 F: doc/guides/tools/dumpcap.rst
+F: usertools/dpdk-wireshark-extcap.py
+F: doc/guides/tools/wireshark_extcap.rst
 
 
 Packet Framework

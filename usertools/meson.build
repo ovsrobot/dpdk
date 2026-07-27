@@ -13,6 +13,7 @@ install_data([
             'dpdk-rss-flows.py',
             'dpdk-telemetry-exporter.py',
             'dpdk-telemetry-watcher.py',
+            'dpdk-wireshark-extcap.py',
         ],
         install_dir: 'bin')
 
