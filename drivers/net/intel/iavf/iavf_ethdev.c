@@ -165,6 +165,7 @@ static int iavf_set_mc_addr_list(struct rte_eth_dev *dev,
 			struct rte_ether_addr *mc_addrs,
 			uint32_t mc_addrs_num);
 static int iavf_tm_ops_get(struct rte_eth_dev *dev __rte_unused, void *arg);
+static int iavf_dev_read_clock(struct rte_eth_dev *dev, uint64_t *clock);
 
 static const struct rte_pci_id pci_id_iavf_map[] = {
 	{ RTE_PCI_DEVICE(IAVF_INTEL_VENDOR_ID, IAVF_DEV_ID_ADAPTIVE_VF) },
@@ -264,6 +265,7 @@ static const struct eth_dev_ops iavf_eth_dev_ops = {
 	.tx_done_cleanup	    = iavf_dev_tx_done_cleanup,
 	.get_monitor_addr           = iavf_get_monitor_addr,
 	.tm_ops_get                 = iavf_tm_ops_get,
+	.read_clock                 = iavf_dev_read_clock,
 };
 
 static int
@@ -3643,6 +3645,28 @@ static struct rte_pci_driver rte_iavf_pmd = {
 bool is_iavf_supported(struct rte_eth_dev *dev)
 {
 	return !strcmp(dev->device->driver->name, rte_iavf_pmd.driver.name);
+}
+
+static int
+iavf_dev_read_clock(struct rte_eth_dev *dev, uint64_t *clock)
+{
+	struct iavf_adapter *adapter =
+		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
+	int ret;
+
+	if (adapter->closed)
+		return -EIO;
+
+	if (!(vf->vf_res->vf_cap_flags & VIRTCHNL_VF_CAP_PTP) ||
+	    !(vf->ptp_caps & VIRTCHNL_1588_PTP_CAP_READ_PHC))
+		return -ENOTSUP;
+
+	ret = iavf_phc_get_time(adapter, clock);
+	if (ret != 0)
+		return -EIO;
+
+	return 0;
 }
 
 RTE_PMD_REGISTER_PCI(net_iavf, rte_iavf_pmd);
