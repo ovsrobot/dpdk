@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Support auto-detection of uncore power driver.**
+
+  The uncore power library now supports automatic probing of multiple
+  uncore drivers when using ``RTE_UNCORE_PM_ENV_AUTO_DETECT``,
+  instead of defaulting only to the Intel uncore driver.
+
 
 Removed Items
 -------------
