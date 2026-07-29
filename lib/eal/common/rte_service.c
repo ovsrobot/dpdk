@@ -795,7 +795,6 @@ rte_service_lcore_del(uint32_t lcore)
 
 	set_lcore_state(lcore, ROLE_RTE);
 
-	rte_smp_wmb();
 	return 0;
 }
 
