@@ -523,9 +523,16 @@ sw_event_schedule(struct rte_eventdev *dev)
 		do {
 			in_pkts = 0;
 			for (i = 0; i < sw->port_count; i++) {
-				/* ack the unlinks in progress as done */
-				if (sw->ports[i].unlinks_in_progress)
-					sw->ports[i].unlinks_in_progress = 0;
+				/* Ack the unlinks in progress as done. The
+				 * acquire exchange orders the cq map reads
+				 * below after the unlinker's map update.
+				 */
+				if (rte_atomic_load_explicit(
+						&sw->ports[i].unlinks_in_progress,
+						rte_memory_order_relaxed))
+					rte_atomic_exchange_explicit(
+						&sw->ports[i].unlinks_in_progress,
+						0, rte_memory_order_acquire);
 
 				if (sw->ports[i].is_directed)
 					in_pkts += sw_schedule_pull_port_dir(sw, i);
