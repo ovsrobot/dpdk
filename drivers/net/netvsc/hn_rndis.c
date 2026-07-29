@@ -357,7 +357,7 @@ void hn_rndis_receive_response(struct hn_data *hv,
 	memcpy(hv->rndis_resp, data, len);
 
 	/* make sure response copied before update */
-	rte_smp_wmb();
+	rte_atomic_thread_fence(rte_memory_order_release);
 
 	if (rte_atomic32_cmpset(&hv->rndis_pending, hdr->rid, 0) == 0) {
 		PMD_DRV_LOG(NOTICE,
