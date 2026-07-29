@@ -77,6 +77,12 @@ Removed Items
     ``rte_rib6_is_equal``
   * table: ``RTE_LPM_IPV6_ADDR_SIZE``
 
+* Removed SMP memory barriers:
+
+  * ``rte_smp_mb()`` replaced with ``rte_atomic_thread_fence(rte_memory_order_seq_cst)``
+  * ``rte_smp_rmb()`` replaced with ``rte_atomic_thread_fence(rte_memory_order_acquire)``
+  * ``rte_smp_wmb()`` revised code to use ``rte_atomic_load/store``
+
 
 API Changes
 -----------
