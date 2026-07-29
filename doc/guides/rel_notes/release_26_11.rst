@@ -77,6 +77,9 @@ Removed Items
     ``rte_rib6_is_equal``
   * table: ``RTE_LPM_IPV6_ADDR_SIZE``
 
+* Removed the ``dpdk-test-pipeline`` application, which was based on
+  the legacy pipeline library API.
+
 
 API Changes
 -----------
