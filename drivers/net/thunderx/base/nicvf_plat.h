@@ -26,7 +26,7 @@
 /* barrier */
 #include <rte_atomic.h>
 #define nicvf_smp_wmb() rte_smp_wmb()
-#define nicvf_smp_rmb() rte_smp_rmb()
+#define nicvf_smp_rmb() rte_atomic_thread_fence(rte_memory_order_acquire)
 
 /* utils */
 #include <rte_common.h>
