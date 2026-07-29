@@ -28,7 +28,6 @@ source_file_deps = {
     'test_alarm.c': [],
     'test_argparse.c': ['argparse'],
     'test_atomic.c': ['hash'],
-    'test_barrier.c': [],
     'test_bitcount.c': [],
     'test_bitmap.c': [],
     'test_bitops.c': [],
