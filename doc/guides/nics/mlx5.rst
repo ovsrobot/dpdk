@@ -3425,6 +3425,12 @@ Limitations
 
 #. In template tables of group 0, the modify action must be fully masked.
 
+#. On group 0 (root table), when using sync API, two sequential
+   ``RTE_FLOW_ACTION_TYPE_MODIFY_FIELD`` actions where the first modifies a
+   packet or metadata field and the second uses that field as ``src`` are not
+   supported. On the root table the second action is handled before the first
+   change is applied, so the source still reads the original field value.
+
 #. Modification of an arbitrary place in a packet via
    the special ``RTE_FLOW_FIELD_START`` field ID is not supported.
 
