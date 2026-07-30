@@ -187,10 +187,13 @@ mlx5_rxq_mempool_register(struct mlx5_rxq_ctrl *rxq_ctrl)
 	return 0;
 
 error:
-	while (s-- > 0) {
+	while (s > 0) {
+		s--;
 		seg = &rxq_ctrl->rxq.rxseg[s];
-		mlx5_free(seg->null_mbuf);
-		seg->null_mbuf = NULL;
+		if (!seg->mp) {
+			mlx5_free(seg->null_mbuf);
+			seg->null_mbuf = NULL;
+		}
 	}
 	return ret;
 }
