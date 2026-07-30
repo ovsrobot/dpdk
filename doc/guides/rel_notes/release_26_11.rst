@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added wireshark capture support.**
+
+  * New ``capture`` library for packet capture accessed via telemetry API.
+
+
 
 Removed Items
 -------------
