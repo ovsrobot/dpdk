@@ -558,8 +558,9 @@ test_write_packets(void)
 		goto fail;
 	}
 
-	/* write a statistics block */
-	ret = rte_pcapng_write_stats(pcapng, port_id, 0, 0, NULL);
+	/* write an initial statistics block */
+	struct rte_pcapng_interface_stats isb = { };
+	ret = rte_pcapng_write_stats(pcapng, port_id, &isb, sizeof(isb), NULL);
 	if (ret <= 0) {
 		printf("Write of statistics failed\n");
 		goto fail;
@@ -569,9 +570,10 @@ test_write_packets(void)
 	if (count < 0)
 		goto fail;
 
-	/* write a statistics block */
+	/* write a final statistics block with comment */
+	isb.ifrecv = count;
 	ret = rte_pcapng_write_stats(pcapng, port_id,
-				     count, 0, "end of test");
+				     &isb, sizeof(isb), "end of test");
 	if (ret <= 0) {
 		printf("Write of statistics failed\n");
 		goto fail;

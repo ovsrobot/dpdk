@@ -574,8 +574,8 @@ static void
 report_packet_stats(dumpcap_out_t out)
 {
 	struct rte_pdump_stats pdump_stats;
+	struct rte_pcapng_interface_stats isb;
 	struct interface *intf;
-	uint64_t ifrecv, ifdrop;
 	double percent;
 
 	fputc('\n', stderr);
@@ -584,22 +584,22 @@ report_packet_stats(dumpcap_out_t out)
 			continue;
 
 		/* do what Wiretap does */
-		ifrecv = pdump_stats.accepted + pdump_stats.filtered;
-		ifdrop = pdump_stats.nombuf + pdump_stats.ringfull;
+		isb.ifrecv = pdump_stats.accepted + pdump_stats.filtered;
+		isb.ifdrop = pdump_stats.nombuf + pdump_stats.ringfull;
+		isb.filteraccept = pdump_stats.accepted;
 
 		if (use_pcapng)
-			rte_pcapng_write_stats(out.pcapng, intf->port,
-					       ifrecv, ifdrop, NULL);
+			rte_pcapng_write_stats(out.pcapng, intf->port, &isb, sizeof(isb), NULL);
 
-		if (ifrecv == 0)
+		if (isb.ifrecv == 0)
 			percent = 0;
 		else
-			percent = 100. * ifrecv / (ifrecv + ifdrop);
+			percent = 100. * isb.ifrecv / (isb.ifrecv + isb.ifdrop);
 
 		fprintf(stderr,
 			"Packets received/dropped on interface '%s': "
 			"%"PRIu64 "/%" PRIu64 " (%.1f)\n",
-			intf->name, ifrecv, ifdrop, percent);
+			intf->name, isb.ifrecv, isb.ifdrop, percent);
 	}
 }
 

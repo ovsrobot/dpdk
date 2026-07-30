@@ -277,6 +277,9 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port, uint16_t link_type,
 	uint64_t speed = 0;
 	int ret;
 
+	if (self == NULL)
+		return -EINVAL;
+
 	ret = rte_eth_dev_info_get(port, &dev_info);
 	if (ret < 0)
 		return -1;  /* should be ret */
@@ -394,29 +397,43 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port, uint16_t link_type,
 RTE_EXPORT_SYMBOL(rte_pcapng_write_stats)
 ssize_t
 rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
-		       uint64_t ifrecv, uint64_t ifdrop,
-		       const char *comment)
+		       const struct rte_pcapng_interface_stats *stats,
+		       size_t stats_sz, const char *comment)
 {
+	struct rte_pcapng_interface_stats isb;
 	struct pcapng_statistics *hdr;
 	struct pcapng_option *opt;
-	uint64_t start_time = self->clock.ns_base;
-	uint64_t sample_time;
+	uint64_t start_time, sample_time;
 	uint32_t optlen, len;
 	uint32_t *buf;
 	ssize_t ret;
 
+	if (self == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
+
+	if (stats == NULL || stats_sz == 0 || stats_sz > sizeof(*stats))
+		return -EINVAL;
 
 	if (comment && strlen(comment) > PCAPNG_STR_MAX)
 		return -EINVAL;
 
+	/* Future proof for more/less stats - all UINT64_MAX */
+	memset(&isb, 0xff, sizeof(isb));
+	memcpy(&isb, stats, stats_sz);
+
 	optlen = 0;
 
-	if (ifrecv != UINT64_MAX)
-		optlen += pcapng_optlen(sizeof(ifrecv));
-	if (ifdrop != UINT64_MAX)
-		optlen += pcapng_optlen(sizeof(ifdrop));
+	/* compute how many stats will be added. */
+	if (isb.ifrecv != UINT64_MAX)
+		optlen += pcapng_optlen(sizeof(isb.ifrecv));
+	if (isb.ifdrop != UINT64_MAX)
+		optlen += pcapng_optlen(sizeof(isb.ifdrop));
+	if (isb.filteraccept != UINT64_MAX)
+		optlen += pcapng_optlen(sizeof(isb.filteraccept));
 
+	start_time = self->clock.ns_base;
 	if (start_time != 0)
 		optlen += pcapng_optlen(sizeof(start_time));
 
@@ -439,12 +456,16 @@ rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 	if (start_time != 0)
 		opt = pcapng_add_option(opt, PCAPNG_ISB_STARTTIME,
 					 &start_time, sizeof(start_time));
-	if (ifrecv != UINT64_MAX)
+	if (isb.ifrecv != UINT64_MAX)
 		opt = pcapng_add_option(opt, PCAPNG_ISB_IFRECV,
-				&ifrecv, sizeof(ifrecv));
-	if (ifdrop != UINT64_MAX)
+					&isb.ifrecv, sizeof(uint64_t));
+	if (isb.ifdrop != UINT64_MAX)
 		opt = pcapng_add_option(opt, PCAPNG_ISB_IFDROP,
-				&ifdrop, sizeof(ifdrop));
+					&isb.ifdrop, sizeof(uint64_t));
+	if (isb.filteraccept != UINT64_MAX)
+		opt = pcapng_add_option(opt, PCAPNG_ISB_FILTERACCEPT,
+					&isb.filteraccept, sizeof(uint64_t));
+
 	if (optlen != 0)
 		opt = pcapng_add_option(opt, PCAPNG_OPT_END, NULL, 0);
 
@@ -716,6 +737,11 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 	struct iovec iov[IOV_MAX];
 	unsigned int i, cnt = 0;
 	ssize_t ret, total = 0;
+
+	if (self == NULL) {
+		rte_errno = EINVAL;
+		return -1;
+	}
 
 	for (i = 0; i < nb_pkts; i++) {
 		struct rte_mbuf *m = pkts[i];
