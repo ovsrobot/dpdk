@@ -85,6 +85,14 @@ New Features
   to support adding and removing memory regions without resetting
   the whole guest memory map.
 
+* **Fixed vhost REM_MEM_REG compatibility with front-ends sending file descriptors.**
+
+  The vhost-user ``REM_MEM_REG`` message handler now tolerates
+  an unexpected file descriptor sent by the front-end,
+  closing it without use as permitted by the vhost-user specification.
+  This fixes interoperability with front-ends such as libblkio
+  that unconditionally attach a file descriptor to the message.
+
 * **Updated Google gve driver.**
 
   Added hardware timestamping support on DQO queues.
