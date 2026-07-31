@@ -109,6 +109,11 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **atomic: Marked the ``rte_atomicNN`` functions as deprecated.**
+
+  As previously announced these functions were intended to be deprecated
+  but was not being enforced.
+
 
 Known Issues
 ------------
