@@ -81,13 +81,29 @@ test_stack_push_pop(struct rte_stack *s, void **obj_table, unsigned int bulk_sz)
 		}
 	}
 
-	for (i = 0; i < STACK_SIZE; i++) {
-		if (obj_table[i] != popped_objs[STACK_SIZE - i - 1]) {
-			printf("[%s():%u] Incorrect value %p at index 0x%x\n",
-			       __func__, __LINE__,
-			       popped_objs[STACK_SIZE - i - 1], i);
-			rte_free(popped_objs);
-			return -1;
+	if (!(s->flags & RTE_STACK_F_PILE)) {
+		for (i = 0; i < STACK_SIZE; i++) {
+			if (obj_table[i] != popped_objs[STACK_SIZE - i - 1]) {
+				printf("[%s():%u] Incorrect value %p at index 0x%x\n",
+				       __func__, __LINE__,
+				       popped_objs[STACK_SIZE - i - 1], i);
+				rte_free(popped_objs);
+				return -1;
+			}
+		}
+	}
+
+	if ((s->flags & RTE_STACK_F_PILE) && (bulk_sz & (RTE_STACK_PILE_BULK_SIZE - 1)) == 0) {
+		for (i = 0; i < STACK_SIZE; i += RTE_STACK_PILE_BULK_SIZE) {
+			if (memcmp(&obj_table[i],
+					&popped_objs[STACK_SIZE - RTE_STACK_PILE_BULK_SIZE - i],
+					RTE_STACK_PILE_BULK_SIZE) != 0) {
+				printf("[%s():%u] Incorrect values %p at index 0x%x with bulk size %u\n",
+				       __func__, __LINE__,
+				       popped_objs[STACK_SIZE - RTE_STACK_PILE_BULK_SIZE - i], i, bulk_sz);
+				rte_free(popped_objs);
+				return -1;
+			}
 		}
 	}
 
@@ -152,12 +168,26 @@ test_stack_basic(uint32_t flags)
 		goto fail_test;
 	}
 
-	ret = rte_stack_push(s, obj_table, 2 * STACK_SIZE);
-	if (ret != 0) {
-		printf("[%s():%u] Excess objects push succeeded\n",
-		       __func__, __LINE__);
-		goto fail_test;
+__rte_diagnostic_push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overread"
+	if (!(s->flags & RTE_STACK_F_PILE)) {
+		ret = rte_stack_push(s, obj_table, 2 * STACK_SIZE);
+		if (ret != 0) {
+			printf("[%s():%u] Excess objects push succeeded\n",
+			       __func__, __LINE__);
+			goto fail_test;
+		}
 	}
+	if (s->flags & RTE_STACK_F_PILE) {
+		ret = rte_stack_push(s, obj_table, STACK_SIZE * RTE_STACK_PILE_BULK_SIZE + 1);
+		if (ret != 0) {
+			printf("[%s():%u] Excess objects push succeeded\n",
+			       __func__, __LINE__);
+			goto fail_test;
+		}
+	}
+__rte_diagnostic_pop
 
 	ret = rte_stack_pop(s, obj_table, 1);
 	if (ret != 0) {
@@ -181,14 +211,14 @@ test_stack_name_reuse(uint32_t flags)
 {
 	struct rte_stack *s[2];
 
-	s[0] = rte_stack_create("test", STACK_SIZE, rte_socket_id(), flags);
+	s[0] = rte_stack_create(__func__, STACK_SIZE, rte_socket_id(), flags);
 	if (s[0] == NULL) {
 		printf("[%s():%u] Failed to create a stack\n",
 		       __func__, __LINE__);
 		return -1;
 	}
 
-	s[1] = rte_stack_create("test", STACK_SIZE, rte_socket_id(), flags);
+	s[1] = rte_stack_create(__func__, STACK_SIZE, rte_socket_id(), flags);
 	if (s[1] != NULL) {
 		printf("[%s():%u] Failed to detect re-used name\n",
 		       __func__, __LINE__);
@@ -300,6 +330,7 @@ stack_thread_push_pop(__rte_unused void *args)
 			       __func__, __LINE__, num);
 			return -1;
 		}
+		rte_compiler_barrier();
 	}
 
 	return 0;
@@ -384,5 +415,16 @@ test_lf_stack(void)
 #endif
 }
 
+static int
+test_pile(void)
+{
+#if defined(RTE_STACK_PILE_SUPPORTED)
+	return __test_stack(RTE_STACK_F_PILE);
+#else
+	return TEST_SKIPPED;
+#endif
+}
+
 REGISTER_FAST_TEST(stack_autotest, NOHUGE_SKIP, ASAN_OK, test_stack);
 REGISTER_FAST_TEST(stack_lf_autotest, NOHUGE_SKIP, ASAN_OK, test_lf_stack);
+REGISTER_FAST_TEST(stack_pile_autotest, NOHUGE_SKIP, ASAN_OK, test_pile);
