@@ -34,7 +34,7 @@
  */
 static __rte_always_inline unsigned int
 __rte_stack_lf_push(struct rte_stack *s,
-		    void * const *obj_table,
+		    void * const * __rte_restrict obj_table,
 		    unsigned int n)
 {
 	struct rte_stack_lf_elem *tmp, *first, *last = NULL;
@@ -71,7 +71,8 @@ __rte_stack_lf_push(struct rte_stack *s,
  *   - Actual number of objects popped.
  */
 static __rte_always_inline unsigned int
-__rte_stack_lf_pop(struct rte_stack *s, void **obj_table, unsigned int n)
+__rte_stack_lf_pop(struct rte_stack *s, void ** __rte_restrict obj_table,
+		   unsigned int n)
 {
 	struct rte_stack_lf_elem *first, *last = NULL;
 
@@ -79,6 +80,7 @@ __rte_stack_lf_pop(struct rte_stack *s, void **obj_table, unsigned int n)
 		return 0;
 
 	/* Pop n used elements */
+	__rte_assume(obj_table != NULL);
 	first = __rte_stack_lf_pop_elems(&s->stack_lf.used,
 					 n, obj_table, &last);
 	if (unlikely(first == NULL))

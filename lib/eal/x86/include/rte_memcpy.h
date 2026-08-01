@@ -707,6 +707,35 @@ rte_memcpy(void *__rte_restrict dst, const void *__rte_restrict src, size_t n)
 #endif
 		return dst;
 	}
+	/* Common way for small copy size of 64-byte blocks */
+#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
+	if (__rte_constant(n) && (n & 63) == 0 && n <= 512) {
+#elif defined RTE_MEMCPY_AVX
+	if (__rte_constant(n) && (n & 63) == 0 && n <= 256) {
+#else /* SSE implementation */
+	if (__rte_constant(n) && (n & 63) == 0 && n <= 512) {
+#endif
+		void *ret = dst;
+
+		if (n & 512) {
+			rte_mov256((uint8_t *)dst + 0 * 256, (const uint8_t *)src + 0 * 256);
+			rte_mov256((uint8_t *)dst + 1 * 256, (const uint8_t *)src + 1 * 256);
+		}
+		if (n & 256) {
+			rte_mov256((uint8_t *)dst, (const uint8_t *)src);
+			src = (const uint8_t *)src + 256;
+			dst = (uint8_t *)dst + 256;
+		}
+		if (n & 128) {
+			rte_mov128((uint8_t *)dst, (const uint8_t *)src);
+			src = (const uint8_t *)src + 128;
+			dst = (uint8_t *)dst + 128;
+		}
+		if (n & 64)
+			rte_mov64((uint8_t *)dst, (const uint8_t *)src);
+
+		return ret;
+	}
 
 	/* Implementation for size > 64 bytes depends on alignment with vector register size. */
 	if (!(((uintptr_t)dst | (uintptr_t)src) & ALIGNMENT_MASK))
