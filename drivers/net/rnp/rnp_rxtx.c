@@ -8,6 +8,12 @@
 #include <rte_memzone.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
+#include <rte_vxlan.h>
+#include <rte_ip.h>
+#include <rte_gre.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
+#include <rte_sctp.h>
 
 #include "base/rnp_bdq_if.h"
 #include "base/rnp_dma_regs.h"
