@@ -3,6 +3,7 @@
  */
 
 #include <rte_malloc.h>
+#include <rte_flow.h>
 
 #include <mlx5_malloc.h>
 

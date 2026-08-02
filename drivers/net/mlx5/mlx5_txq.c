@@ -18,6 +18,7 @@
 #include <rte_common.h>
 #include <rte_eal_paging.h>
 #include <rte_bitops.h>
+#include <rte_flow.h>
 
 #include <mlx5_common.h>
 #include <mlx5_common_mr.h>

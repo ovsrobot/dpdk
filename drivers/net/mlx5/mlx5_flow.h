@@ -12,6 +12,7 @@
 
 #include <rte_alarm.h>
 #include <rte_mtr.h>
+#include <rte_flow.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_prm.h>

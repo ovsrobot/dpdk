@@ -19,6 +19,7 @@
 #include <rte_string_fns.h>
 #include <rte_rwlock.h>
 #include <rte_cycles.h>
+#include <rte_flow.h>
 
 #include <mlx5_malloc.h>
 
