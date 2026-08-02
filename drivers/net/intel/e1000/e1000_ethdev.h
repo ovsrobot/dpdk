@@ -9,6 +9,7 @@
 #include <sys/queue.h>
 
 #include <rte_flow.h>
+#include <ethdev_fdir.h>
 #include <rte_time.h>
 #include <rte_pci.h>
 

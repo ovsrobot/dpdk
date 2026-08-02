@@ -16,7 +16,7 @@
 #include <ethdev_driver.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
-#include <rte_eth_ctrl.h>
+#include <ethdev_fdir.h>
 #include <rte_tailq.h>
 #include <rte_flow_driver.h>
 

@@ -32,11 +32,11 @@ headers = files(
 
 indirect_headers += files(
         'rte_ethdev_core.h',
-        'rte_eth_ctrl.h',
 )
 
 driver_sdk_headers += files(
         'ethdev_driver.h',
+        'ethdev_fdir.h',
         'ethdev_pci.h',
         'ethdev_vdev.h',
         'rte_flow_driver.h',

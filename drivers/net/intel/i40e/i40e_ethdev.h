@@ -13,6 +13,7 @@
 #include <rte_hash.h>
 #include <rte_flow.h>
 #include <rte_flow_driver.h>
+#include <ethdev_fdir.h>
 #include <rte_tm_driver.h>
 #include "rte_pmd_i40e.h"
 #include <rte_vect.h>
