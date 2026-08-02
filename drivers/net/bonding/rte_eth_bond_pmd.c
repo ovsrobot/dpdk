@@ -1702,7 +1702,7 @@ member_configure_slow_queue(struct rte_eth_dev *bonding_eth_dev,
 		snprintf(mem_name, RTE_DIM(mem_name), "member_port%u_slow_pool",
 				member_id);
 		port->slow_pool = rte_pktmbuf_pool_create(mem_name, 8191,
-			250, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+			256, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
 			member_eth_dev->data->numa_node);
 
 		/* Any memory allocation failure in initialization is critical because
