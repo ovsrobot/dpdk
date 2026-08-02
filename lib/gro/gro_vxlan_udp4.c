@@ -5,6 +5,7 @@
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
+#include <rte_vxlan.h>
 #include <rte_udp.h>
 
 #include "gro_vxlan_udp4.h"

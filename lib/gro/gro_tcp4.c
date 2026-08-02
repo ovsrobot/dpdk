@@ -5,6 +5,7 @@
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
+#include <rte_ip.h>
 
 #include "gro_tcp4.h"
 #include "gro_tcp_internal.h"
