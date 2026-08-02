@@ -20,6 +20,9 @@
 #include <rte_memory.h>
 #include <rte_malloc.h>
 #include <dev_driver.h>
+#include <rte_ip.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
 
 #include "r8169_ethdev.h"
 #include "r8169_hw.h"
