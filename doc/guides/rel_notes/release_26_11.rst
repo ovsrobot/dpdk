@@ -77,6 +77,15 @@ Removed Items
     ``rte_rib6_is_equal``
   * table: ``RTE_LPM_IPV6_ADDR_SIZE``
 
+* Removed the experimental flow director API:
+
+  * ixgbe: ``rte_pmd_ixgbe_get_fdir_info``, ``rte_pmd_ixgbe_get_fdir_stats``
+  * i40e: ``rte_pmd_i40e_get_fdir_info``, ``rte_pmd_i40e_get_fdir_stats``
+
+* Removed some testpmd commands:
+
+  The ``fdir`` option in ``show port`` and ``clear port`` were removed.
+
 
 API Changes
 -----------
@@ -92,6 +101,16 @@ API Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* **Changed ethdev include files.**
+
+  * Dropped inclusion of ``rte_flow.h`` in ``rte_ethdev.h``.
+    Applications using flow API should include it directly.
+  * Network headers ``rte_ip.h``, ``rte_udp.h``, ``rte_tcp.h`` and ``rte_sctp.h``
+    are no longer indirectly included by ``rte_ethdev.h``.
+    Applications should include network headers as needed.
+  * Legacy flow director definitions are no longer included by ``rte_ethdev.h``.
+    ``rte_eth_ctrl.h`` is removed. Internal driver definitions were moved to ``ethdev_fdir.h``.
 
 
 ABI Changes
