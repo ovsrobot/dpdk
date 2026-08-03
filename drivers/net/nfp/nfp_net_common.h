@@ -8,6 +8,7 @@
 
 #include <bus_pci_driver.h>
 #include <ethdev_driver.h>
+#include <rte_flow.h>
 #include <nfp_common.h>
 #include <nfp_dev.h>
 #include <rte_spinlock.h>

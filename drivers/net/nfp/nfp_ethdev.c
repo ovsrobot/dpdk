@@ -6,6 +6,7 @@
  */
 
 #include <unistd.h>
+#include <limits.h>
 
 #include <eal_firmware.h>
 #include <rte_alarm.h>
@@ -32,6 +33,7 @@
 
 /* 64-bit per app capabilities */
 #define NFP_NET_APP_CAP_SP_INDIFF       RTE_BIT64(0) /* Indifferent to port speed */
+#define NFP_UINT64_BIT (CHAR_BIT * sizeof(uint64_t))
 
 #define NFP_PF_DRIVER_NAME net_nfp_pf
 #define NFP_PF_FORCE_RELOAD_FW   "force_reload_fw"
@@ -2060,8 +2062,8 @@ nfp_net_speed_capa_get_real(struct nfp_eth_media_buf *media_buf,
 
 	for (i = 0; i < RTE_DIM(media_buf->supported_modes); i++) {
 		supported_modes = media_buf->supported_modes[i];
-		offset = i * UINT64_BIT;
-		for (j = 0; j < UINT64_BIT; j++) {
+		offset = i * NFP_UINT64_BIT;
+		for (j = 0; j < NFP_UINT64_BIT; j++) {
 			if (supported_modes == 0)
 				break;
 
