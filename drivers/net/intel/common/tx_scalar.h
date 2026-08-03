@@ -8,6 +8,9 @@
 #include <stdint.h>
 #include <rte_io.h>
 #include <rte_byteorder.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
+#include <rte_sctp.h>
 
 /* depends on common Tx definitions. */
 #include "tx.h"
