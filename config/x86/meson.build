@@ -49,6 +49,7 @@ else
 endif
 
 dpdk_conf.set('RTE_MAX_NUMA_NODES', 32)
+dpdk_conf.set('RTE_USE_C11_MEM_MODEL', true) # FIXME: Test only.
 
 if is_ms_compiler
     subdir_done()

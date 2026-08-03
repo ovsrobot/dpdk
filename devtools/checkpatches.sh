@@ -154,6 +154,14 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# refrain from using __rte_restrict
+	awk -v FOLDERS="lib drivers app examples" \
+		-v EXPRESSIONS="__rte_restrict" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Using __rte_restrict, prefer restrict' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# refrain from using compiler __atomic_xxx builtins
 	awk -v FOLDERS="lib drivers app examples" \
 		-v SKIP_FILES='drivers/common/cnxk/' \

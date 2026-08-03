@@ -30,7 +30,7 @@ __rte_stack_lf_push_elems(struct rte_stack_lf_list *list,
 static __rte_always_inline struct rte_stack_lf_elem *
 __rte_stack_lf_pop_elems(struct rte_stack_lf_list *list,
 			 unsigned int num,
-			 void **obj_table,
+			 void ** __restrict obj_table,
 			 struct rte_stack_lf_elem **last)
 {
 	RTE_SET_USED(obj_table);

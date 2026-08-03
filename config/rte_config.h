@@ -56,13 +56,16 @@
 #define RTE_CONTIGMEM_DEFAULT_BUF_SIZE (512*1024*1024)
 
 /* mempool defines */
-#define RTE_MEMPOOL_CACHE_MAX_SIZE 512
+#define RTE_MEMPOOL_CACHE_MAX_SIZE 1024
 /* RTE_LIBRTE_MEMPOOL_STATS is not set */
 /* RTE_LIBRTE_MEMPOOL_DEBUG is not set */
 
 /* mbuf defines */
-#define RTE_MBUF_DEFAULT_MEMPOOL_OPS "ring_mp_mc"
+#define RTE_MBUF_DEFAULT_MEMPOOL_OPS "pile" /* FIXME: Test only. Default: "ring_mp_mc" */
 /* RTE_MBUF_HISTORY_DEBUG is not set */
+
+/* stack defines */
+#define RTE_STACK_PILE_BULK_SIZE 32
 
 /* ether defines */
 #define RTE_MAX_QUEUES_PER_PORT 1024

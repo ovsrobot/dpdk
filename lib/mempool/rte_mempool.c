@@ -753,20 +753,36 @@ static void
 mempool_cache_init(struct rte_mempool_cache *cache, uint32_t size)
 {
 	cache->size = size;
-	cache->flushthresh = size; /* Obsolete; for API/ABI compatibility purposes only */
 	cache->len = 0;
 }
 
 /*
  * Create and initialize a cache for objects that are retrieved from and
  * returned to an underlying mempool. This structure is identical to the
- * local_cache[lcore_id] pointed to by the mempool structure.
+ * local_cache[lcore_id] entry in the mempool structure.
  */
 RTE_EXPORT_SYMBOL(rte_mempool_cache_create)
 struct rte_mempool_cache *
 rte_mempool_cache_create(uint32_t size, int socket_id)
 {
 	struct rte_mempool_cache *cache;
+
+	/*
+	 * Alignment requirement for performance optimized move within the mempool cache.
+	 * @ref rte_mempool_do_generic_put() implementation.
+	 */
+	if (size & 31) {
+		uint32_t rounded = RTE_ALIGN_MUL_FLOOR(size, 32);
+		if (rounded == 0) {
+			RTE_MEMPOOL_LOG(ERR,
+					"Tiny cache size not divisible by 32.");
+			rte_errno = EINVAL;
+			return NULL;
+		}
+		RTE_MEMPOOL_LOG(DEBUG,
+				"Rounding down cache size to nearest multiple of 32.");
+		size = rounded;
+	}
 
 	if (size == 0 || size > RTE_MEMPOOL_CACHE_MAX_SIZE) {
 		rte_errno = EINVAL;
@@ -838,9 +854,28 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 		return NULL;
 	}
 
+	/*
+	 * Alignment requirement for performance optimized move within the mempool cache.
+	 * @ref rte_mempool_do_generic_put() implementation.
+	 */
+	RTE_BUILD_BUG_ON(((sizeof(void *) * RTE_MEMPOOL_CACHE_MAX_SIZE / 2) &
+			RTE_CACHE_LINE_MASK) != 0);
+	RTE_BUILD_BUG_ON((RTE_MEMPOOL_CACHE_MAX_SIZE & 31) != 0);
+	if (cache_size & 31) {
+		unsigned int rounded = RTE_ALIGN_MUL_FLOOR(cache_size, 32);
+		if (rounded > 0)
+			RTE_MEMPOOL_LOG(DEBUG,
+					"Rounding down cache size to nearest multiple of 32.");
+		else
+			RTE_MEMPOOL_LOG(WARNING,
+					"Tiny cache size not divisible by 32. Disabling cache.");
+		cache_size = rounded;
+	}
+
 	/* asked cache too big */
 	if (cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
 	    cache_size > n) {
+		RTE_MEMPOOL_LOG(ERR, "Cache size too big.");
 		rte_errno = EINVAL;
 		return NULL;
 	}
@@ -884,7 +919,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 		goto exit_unlock;
 	}
 
-	mempool_size = RTE_MEMPOOL_HEADER_SIZE(mp, cache_size);
+	mempool_size = sizeof(struct rte_mempool);
 	mempool_size += private_data_size;
 	mempool_size = RTE_ALIGN_CEIL(mempool_size, RTE_MEMPOOL_ALIGN);
 
@@ -900,7 +935,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 
 	/* init the mempool structure */
 	mp = mz->addr;
-	memset(mp, 0, RTE_MEMPOOL_HEADER_SIZE(mp, cache_size));
+	memset(mp, 0, mempool_size);
 	ret = strlcpy(mp->name, name, sizeof(mp->name));
 	if (ret < 0 || ret >= (int)sizeof(mp->name)) {
 		rte_errno = ENAMETOOLONG;
@@ -936,13 +971,6 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 		rte_errno = -ret;
 		goto exit_unlock;
 	}
-
-	/*
-	 * local_cache pointer is set even if cache_size is zero.
-	 * The local_cache points to just past the elt_pa[] array.
-	 */
-	mp->local_cache = (struct rte_mempool_cache *)
-		RTE_PTR_ADD(mp, RTE_MEMPOOL_HEADER_SIZE(mp, 0));
 
 	/* Init all default caches. */
 	if (cache_size != 0) {
@@ -1197,6 +1225,7 @@ mempool_obj_audit(struct rte_mempool *mp, __rte_unused void *opaque,
 	RTE_MEMPOOL_CHECK_COOKIES(mp, &obj, 1, 2);
 }
 
+/* check cookies before and after objects */
 static void
 mempool_audit_cookies(struct rte_mempool *mp)
 {
@@ -1213,23 +1242,28 @@ mempool_audit_cookies(struct rte_mempool *mp)
 #define mempool_audit_cookies(mp) do {} while(0)
 #endif
 
-/* check cookies before and after objects */
+/* check cache size consistency */
 static void
 mempool_audit_cache(const struct rte_mempool *mp)
 {
-	/* check cache size consistency */
 	unsigned lcore_id;
+	const uint32_t cache_size = mp->cache_size;
 
-	if (mp->cache_size == 0)
-		return;
+	if (cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE) {
+		RTE_MEMPOOL_LOG(CRIT, "badness on cache size");
+		rte_panic("MEMPOOL: invalid cache size\n");
+	}
 
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		const struct rte_mempool_cache *cache;
 		cache = &mp->local_cache[lcore_id];
-		if (cache->len > RTE_DIM(cache->objs)) {
-			RTE_MEMPOOL_LOG(CRIT, "badness on cache[%u]",
-				lcore_id);
-			rte_panic("MEMPOOL: invalid cache len\n");
+		if (cache->size != cache_size) {
+			RTE_MEMPOOL_LOG(CRIT, "badness on cache[%u] size", lcore_id);
+			rte_panic("MEMPOOL: invalid cache[%u] size\n", lcore_id);
+		}
+		if (cache->len > cache_size) {
+			RTE_MEMPOOL_LOG(CRIT, "badness on cache[%u] len", lcore_id);
+			rte_panic("MEMPOOL: invalid cache[%u] len\n", lcore_id);
 		}
 	}
 }
@@ -1241,9 +1275,6 @@ rte_mempool_audit(struct rte_mempool *mp)
 {
 	mempool_audit_cache(mp);
 	mempool_audit_cookies(mp);
-
-	/* For case where mempool DEBUG is not set, and cache size is 0 */
-	RTE_SET_USED(mp);
 }
 
 /* dump the status of the mempool on the console */

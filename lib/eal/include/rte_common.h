@@ -250,12 +250,11 @@ typedef uint16_t unaligned_uint16_t;
 
 /**
  * Mark pointer as restricted with regard to pointer aliasing.
+ * For backwards compatibility only.
+ * @deprecated
+ * Use the ``__restrict`` keyword (recognized by supported C and C++ compilers) instead.
  */
-#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
 #define __rte_restrict __restrict
-#else
-#define __rte_restrict restrict
-#endif
 
 /**
  * definition to mark a variable or function parameter as used so
@@ -568,6 +567,15 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #endif
 
 /**
+ * Alignment hint precondition
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_assume_aligned(ptr, alignment) (ptr)
+#else
+#define __rte_assume_aligned(ptr, alignment) __builtin_assume_aligned(ptr, alignment)
+#endif
+
+/**
  * Disable AddressSanitizer on some code
  */
 #ifdef RTE_MALLOC_ASAN
@@ -729,7 +737,7 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  *   True(1) where the pointer is correctly aligned, false(0) otherwise
  */
 static inline int
-rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
+rte_is_aligned(const void * const __restrict ptr, const unsigned int align)
 {
 	return ((uintptr_t)ptr & (align - 1)) == 0;
 }
@@ -774,6 +782,9 @@ rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
 
 /** Force minimum cache line alignment. */
 #define __rte_cache_min_aligned __rte_aligned(RTE_CACHE_LINE_MIN_SIZE)
+
+/** Cache alignment hint precondition */
+#define __rte_assume_cache_aligned(ptr) __rte_assume_aligned(ptr, RTE_CACHE_LINE_SIZE)
 
 #define _RTE_CACHE_GUARD_HELPER2(unique) \
 	alignas(RTE_CACHE_LINE_SIZE) \

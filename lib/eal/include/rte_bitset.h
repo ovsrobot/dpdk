@@ -978,7 +978,7 @@ rte_bitset_find_clear_wrap(const uint64_t *bitset, size_t size, size_t start_bit
  */
 __rte_experimental
 static inline void
-rte_bitset_copy(uint64_t *__rte_restrict dst_bitset, const uint64_t *__rte_restrict src_bitset,
+rte_bitset_copy(uint64_t * __restrict dst_bitset, const uint64_t * __restrict src_bitset,
 		size_t size)
 {
 	rte_memcpy(dst_bitset, src_bitset, RTE_BITSET_SIZE(size));
