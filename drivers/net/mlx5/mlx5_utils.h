@@ -16,6 +16,7 @@
 #include <rte_rwlock.h>
 #include <rte_memory.h>
 #include <rte_bitmap.h>
+#include <rte_flow.h>
 
 #include <mlx5_common.h>
 #include <mlx5_common_utils.h>
