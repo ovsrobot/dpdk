@@ -14,6 +14,9 @@
 #include <rte_bitmap.h>
 #include <rte_memzone.h>
 #include <rte_thread.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
+#include <rte_sctp.h>
 
 #include "base/gve.h"
 
