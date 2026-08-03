@@ -11,6 +11,7 @@
 #include <rte_graph.h>
 #include <rte_graph_worker.h>
 #include <rte_ip.h>
+#include <rte_udp.h>
 #include <rte_lpm.h>
 #include <rte_hash.h>
 #include <rte_fbk_hash.h>
