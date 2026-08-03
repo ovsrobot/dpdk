@@ -13,6 +13,7 @@
 
 #include <rte_ether.h>
 #include <ethdev_driver.h>
+#include <ethdev_fdir.h>
 #include <rte_hexdump.h>
 #include <rte_malloc.h>
 #include <rte_tailq.h>

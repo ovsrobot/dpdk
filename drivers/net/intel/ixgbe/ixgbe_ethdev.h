@@ -16,6 +16,7 @@
 #include "ixgbe_bypass.h"
 #include "ixgbe_ipsec.h"
 #include <rte_flow.h>
+#include <ethdev_fdir.h>
 #include <rte_time.h>
 #include <rte_hash.h>
 #include <rte_pci.h>

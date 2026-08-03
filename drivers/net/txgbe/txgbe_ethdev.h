@@ -18,6 +18,7 @@
 #include <rte_time.h>
 #include <rte_ethdev.h>
 #include <rte_ethdev_core.h>
+#include <ethdev_fdir.h>
 #include <rte_hash.h>
 #include <rte_hash_crc.h>
 #include <bus_pci_driver.h>
