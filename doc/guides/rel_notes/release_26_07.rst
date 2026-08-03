@@ -226,6 +226,17 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Updated ZTE zxdh ethernet driver.**
+
+  * Fixed an issue that prevented enabling queue interrupts.
+  * Added a fast single-segment Rx path (``zxdh_recv_single_pkts``) that
+    is selected when the MTU fits in a single buffer.
+  * Optimized the packed-ring Rx recv path.
+  * Optimized the packed-ring Tx xmit path with per-descriptor mbuf
+    free (``rte_pktmbuf_free_seg``) and prefetch hints.
+  * Removed unused xstats counters (``full``, ``norefill``,
+    ``multicast_packets``, ``broadcast_packets``) from both Rx and Tx
+    queues.
 
 Removed Items
 -------------

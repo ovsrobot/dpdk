@@ -48,7 +48,6 @@ struct __rte_cache_aligned zxdh_virtnet_rx {
 	struct rte_mempool       *mpool;            /* mempool for mbuf allocation */
 	struct zxdh_virtnet_stats      stats;
 	const struct rte_memzone *mz;               /* mem zone to populate RX ring. */
-	uint64_t offloads;
 	uint16_t                  queue_id;         /* DPDK queue index. */
 	uint16_t                  port_id;          /* Device port identifier. */
 };
