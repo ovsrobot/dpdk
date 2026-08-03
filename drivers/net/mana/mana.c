@@ -6,8 +6,10 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <netinet/in.h>
 
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
