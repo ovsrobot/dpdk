@@ -11,6 +11,10 @@
 #include <rte_malloc.h>
 #include <rte_net.h>
 #include <rte_vect.h>
+#include <rte_ip.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
+#include <rte_sctp.h>
 
 #include "ngbe_logs.h"
 #include "base/ngbe.h"
