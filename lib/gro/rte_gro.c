@@ -6,6 +6,7 @@
 #include <rte_malloc.h>
 #include <rte_cycles.h>
 #include <rte_ethdev.h>
+#include <rte_vxlan.h>
 
 #include "rte_gro.h"
 #include "gro_tcp4.h"
