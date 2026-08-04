@@ -15,6 +15,7 @@
 #include <rte_ethdev.h>
 #include <rte_log.h>
 #include <rte_mbuf_dyn.h>
+#include <rte_flow.h>
 
 #include "efx.h"
 
