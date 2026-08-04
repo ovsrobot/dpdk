@@ -2,20 +2,21 @@
  * Copyright(C) 2023 Marvell International Ltd.
  */
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
+#include <stdio.h>
+#include <stdint.h>
 
 #include <eal_export.h>
-#include <rte_ethdev.h>
+#include <rte_common.h>
+#include <rte_byteorder.h>
+#include <rte_errno.h>
 #include <rte_ether.h>
 #include <rte_graph.h>
-#include <rte_graph_worker.h>
-#include <rte_ip.h>
-#include <rte_lpm.h>
 #include <rte_hash.h>
-#include <rte_fbk_hash.h>
+#include <rte_ip.h>
 #include <rte_jhash.h>
-#include <rte_hash_crc.h>
+#include <rte_log.h>
+#include <rte_memcpy.h>
+#include <rte_udp.h>
 
 #include "rte_node_udp4_input_api.h"
 
