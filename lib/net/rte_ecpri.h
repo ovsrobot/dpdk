@@ -43,6 +43,55 @@
 #define RTE_ECPRI_MSG_TYPE_IWF_DCTRL	11
 
 /*
+ * Read/Write of Message Type #4: Remote Memory Access
+ * 0x0: Read
+ * 0x1: Write
+ * 0x2: Write_No_Resp
+ * 0x3...0xF: Reserved
+ */
+#define RTE_ECPRI_RM_ACC_RW_READ		0x0
+#define RTE_ECPRI_RM_ACC_RW_WRITE		0x1
+#define RTE_ECPRI_RM_ACC_RW_WRITE_NO_RSP	0x2
+
+/*
+ * Req/Resp of Message Type #4: Remote Memory Access
+ * 0x0: Request
+ * 0x1: Response
+ * 0x2: Failure
+ * 0x3...0xF: Reserved
+ */
+#define RTE_ECPRI_RM_ACC_RR_REQ			0x0
+#define RTE_ECPRI_RM_ACC_RR_RSP			0x1
+#define RTE_ECPRI_RM_ACC_RR_FAIL		0x2
+
+/*
+ * Action Type of Message Type #5: One-Way Delay Measurement
+ * 0x00: Request
+ * 0x01: Request with Follow_Up
+ * 0x02: Response
+ * 0x03: Remote Request
+ * 0x04: Remote Request with Follow_Up
+ * 0x05: Follow_Up
+ * 0x06...0xFF: Reserved
+ */
+#define RTE_ECPRI_DLY_MSR_ACT_REQ		0x00
+#define RTE_ECPRI_DLY_MSR_ACT_REQ_FUP		0x01
+#define RTE_ECPRI_DLY_MSR_ACT_RSP		0x02
+#define RTE_ECPRI_DLY_MSR_ACT_RMT_REQ		0x03
+#define RTE_ECPRI_DLY_MSR_ACT_RMT_REQ_FUP	0x04
+#define RTE_ECPRI_DLY_MSR_ACT_FUP		0x05
+
+/*
+ * Reset Code Op of Message Type #6: Remote Reset
+ * 0x00: Reserved
+ * 0x01: Remote reset request
+ * 0x02: Remote reset response
+ * 0x03...0xFF: Reserved
+ */
+#define RTE_ECPRI_RMT_RST_OP_REQ	0x01
+#define RTE_ECPRI_RMT_RST_OP_RSP	0x02
+
+/*
  * Event Type of Message Type #7: Event Indication
  * 0x00: Fault(s) Indication
  * 0x01: Fault(s) Indication Acknowledge
