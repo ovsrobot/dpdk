@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2016 Intel Corporation.
  */
 
+#include <ctype.h>
 #include <stdlib.h>
 
 #include <rte_pmd_i40e.h>
@@ -465,6 +466,56 @@ static cmdline_parse_inst_t cmd_show_queue_region_info_all = {
 };
 
 /* *** deal with flow director filter *** */
+
+static const struct {
+	char str[32];
+	uint16_t ftype;
+} flowtype_str_table[] = {
+	{"raw", RTE_ETH_FLOW_RAW},
+	{"ipv4", RTE_ETH_FLOW_IPV4},
+	{"ipv4-frag", RTE_ETH_FLOW_FRAG_IPV4},
+	{"ipv4-tcp", RTE_ETH_FLOW_NONFRAG_IPV4_TCP},
+	{"ipv4-udp", RTE_ETH_FLOW_NONFRAG_IPV4_UDP},
+	{"ipv4-sctp", RTE_ETH_FLOW_NONFRAG_IPV4_SCTP},
+	{"ipv4-other", RTE_ETH_FLOW_NONFRAG_IPV4_OTHER},
+	{"ipv6", RTE_ETH_FLOW_IPV6},
+	{"ipv6-frag", RTE_ETH_FLOW_FRAG_IPV6},
+	{"ipv6-tcp", RTE_ETH_FLOW_NONFRAG_IPV6_TCP},
+	{"ipv6-udp", RTE_ETH_FLOW_NONFRAG_IPV6_UDP},
+	{"ipv6-sctp", RTE_ETH_FLOW_NONFRAG_IPV6_SCTP},
+	{"ipv6-other", RTE_ETH_FLOW_NONFRAG_IPV6_OTHER},
+	{"l2_payload", RTE_ETH_FLOW_L2_PAYLOAD},
+	{"ipv6-ex", RTE_ETH_FLOW_IPV6_EX},
+	{"ipv6-tcp-ex", RTE_ETH_FLOW_IPV6_TCP_EX},
+	{"ipv6-udp-ex", RTE_ETH_FLOW_IPV6_UDP_EX},
+	{"port", RTE_ETH_FLOW_PORT},
+	{"vxlan", RTE_ETH_FLOW_VXLAN},
+	{"geneve", RTE_ETH_FLOW_GENEVE},
+	{"nvgre", RTE_ETH_FLOW_NVGRE},
+	{"vxlan-gpe", RTE_ETH_FLOW_VXLAN_GPE},
+	{"gtpu", RTE_ETH_FLOW_GTPU},
+};
+
+static uint16_t
+str_to_flowtype(const char *string)
+{
+	uint8_t i;
+
+	for (i = 0; i < RTE_DIM(flowtype_str_table); i++) {
+		if (!strcmp(flowtype_str_table[i].str, string))
+			return flowtype_str_table[i].ftype;
+	}
+
+	if (isdigit(string[0])) {
+		int val = atoi(string);
+		if (val > 0 && val < 64)
+			return (uint16_t)val;
+	}
+
+	return RTE_ETH_FLOW_UNKNOWN;
+}
+
+
 struct cmd_flow_director_result {
 	cmdline_fixed_string_t flow_director_filter;
 	portid_t port_id;
