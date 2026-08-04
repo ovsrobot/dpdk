@@ -2,12 +2,19 @@
  * Copyright(c) 2017 Intel Corporation
  */
 
+#include <stddef.h>
+
 #include <eal_export.h>
+#include <rte_branch_prediction.h>
+#include <rte_common.h>
 #include <rte_malloc.h>
+#include <rte_mbuf.h>
 #include <rte_cycles.h>
-#include <rte_ethdev.h>
+#include <rte_ether.h>
+#include <rte_vxlan.h>
 
 #include "rte_gro.h"
+#include "gro_tcp.h"
 #include "gro_tcp4.h"
 #include "gro_tcp6.h"
 #include "gro_udp4.h"

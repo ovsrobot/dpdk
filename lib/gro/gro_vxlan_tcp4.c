@@ -2,9 +2,17 @@
  * Copyright(c) 2018 Intel Corporation
  */
 
+#include <stddef.h>
+
+#include <rte_branch_prediction.h>
+#include <rte_byteorder.h>
+#include <rte_common.h>
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
-#include <rte_ethdev.h>
+#include <rte_ether.h>
+#include <rte_vxlan.h>
+#include <rte_ip.h>
+#include <rte_tcp.h>
 #include <rte_udp.h>
 
 #include "gro_vxlan_tcp4.h"
