@@ -5,21 +5,29 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>
-
-#include <rte_eal.h>
+#include <stdbool.h>
+#include <string.h>
+#include <arpa/inet.h>
 
 #include <rte_common.h>
-#include <rte_interrupts.h>
+#include <rte_atomic.h>
 #include <rte_byteorder.h>
 #include <rte_debug.h>
-#include <rte_pci.h>
+#include <rte_log.h>
 #include <bus_pci_driver.h>
 #include <rte_ether.h>
+#include <rte_ethdev.h>
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
-#include <rte_memory.h>
+#include <rte_bitops.h>
+#include <rte_memzone.h>
 #include <rte_malloc.h>
+#include <rte_mbuf.h>
+#include <rte_prefetch.h>
+#include <rte_random.h>
+#include <rte_stdatomic.h>
 #include <dev_driver.h>
+#include <rte_udp.h>
 
 #include "r8169_ethdev.h"
 #include "r8169_hw.h"
