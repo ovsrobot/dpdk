@@ -136,11 +136,16 @@ struct rte_ecpri_msg_rm_access {
 
 /**
  * eCPRI Message Header of Type #5: One-Way Delay Measurement
+ *
+ * The Compensation Value is a signed value, in units of 2^-16 ns.
  */
-struct rte_ecpri_msg_delay_measure {
+struct __rte_packed_begin rte_ecpri_msg_delay_measure {
 	uint8_t msr_id;			/**< Measurement ID */
 	uint8_t act_type;		/**< Action Type */
-};
+	uint8_t ts_sec[6];		/**< TimeStamp: seconds */
+	rte_be32_t ts_nsec;		/**< TimeStamp: nanoseconds */
+	rte_be64_t comp_val;		/**< Compensation Value */
+} __rte_packed_end;
 
 /**
  * eCPRI Message Header of Type #6: Remote Reset
@@ -174,7 +179,7 @@ struct rte_ecpri_combined_msg_hdr {
 		struct rte_ecpri_msg_delay_measure type5;
 		struct rte_ecpri_msg_remote_reset type6;
 		struct rte_ecpri_msg_event_ind type7;
-		rte_be32_t dummy[3];
+		rte_be32_t dummy[5];
 	};
 };
 

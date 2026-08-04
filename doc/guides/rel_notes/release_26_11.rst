@@ -109,6 +109,11 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* net: Added the missing ``TimeStamp`` and ``Compensation Value`` fields to
+  ``struct rte_ecpri_msg_delay_measure``, which grew from 2 to 20 bytes.
+  ``struct rte_ecpri_combined_msg_hdr``, and hence
+  ``struct rte_flow_item_ecpri``, grew from 16 to 24 bytes.
+
 
 Known Issues
 ------------
