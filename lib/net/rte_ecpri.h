@@ -168,17 +168,22 @@ struct rte_ecpri_msg_gen_data {
  * eCPRI Message Header of Type #4: Remote Memory Access
  */
 struct rte_ecpri_msg_rm_access {
+	union {
+		rte_be32_t u32;		/**< 4B first word in BE */
+		struct {
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
-	uint32_t ele_id:16;		/**< Element ID */
-	uint32_t rr:4;			/**< Req/Resp */
-	uint32_t rw:4;			/**< Read/Write */
-	uint32_t rma_id:8;		/**< Remote Memory Access ID */
+			uint32_t ele_id:16;	/**< Element ID */
+			uint32_t rr:4;		/**< Req/Resp */
+			uint32_t rw:4;		/**< Read/Write */
+			uint32_t rma_id:8;	/**< Remote Memory Access ID */
 #elif RTE_BYTE_ORDER == RTE_BIG_ENDIAN
-	uint32_t rma_id:8;		/**< Remote Memory Access ID */
-	uint32_t rw:4;			/**< Read/Write */
-	uint32_t rr:4;			/**< Req/Resp */
-	uint32_t ele_id:16;		/**< Element ID */
+			uint32_t rma_id:8;	/**< Remote Memory Access ID */
+			uint32_t rw:4;		/**< Read/Write */
+			uint32_t rr:4;		/**< Req/Resp */
+			uint32_t ele_id:16;	/**< Element ID */
 #endif
+		};
+	};
 	uint8_t addr[6];		/**< 48-bits address */
 	rte_be16_t length;		/**< number of bytes */
 };
