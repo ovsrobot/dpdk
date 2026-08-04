@@ -1183,6 +1183,8 @@ class TestPmd(DPDKShell):
         """Overrides :meth:`~.dpdk_shell.close`."""
         self.stop()
         self.send_command("quit", "Bye...")
+        if SETTINGS.code_coverage:
+            time.sleep(1)
         return super().close()
 
     """
