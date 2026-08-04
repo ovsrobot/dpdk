@@ -8,9 +8,11 @@
 
 #include <bus_pci_driver.h>
 #include <ethdev_driver.h>
+#include <rte_flow.h>
+#include <rte_spinlock.h>
+
 #include <nfp_common.h>
 #include <nfp_dev.h>
-#include <rte_spinlock.h>
 
 #include "nfpcore/nfp_sync.h"
 #include "nfp_net_ctrl.h"
