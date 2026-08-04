@@ -5,15 +5,26 @@
 #ifndef _GVE_ETHDEV_H_
 #define _GVE_ETHDEV_H_
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <pthread.h>
+#include <sys/queue.h>
+
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
 #include <rte_alarm.h>
+#include <rte_atomic.h>
+#include <rte_stdatomic.h>
+#include <rte_bitops.h>
+#include <rte_ethdev.h>
 #include <rte_ether.h>
 #include <rte_pci.h>
-#include <pthread.h>
 #include <rte_bitmap.h>
 #include <rte_memzone.h>
 #include <rte_thread.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
+#include <rte_sctp.h>
 
 #include "base/gve.h"
 
