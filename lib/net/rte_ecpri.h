@@ -108,6 +108,28 @@
 #define RTE_ECPRI_EVT_IND_SYNC_ACK	0x04
 #define RTE_ECPRI_EVT_IND_SYNC_END	0x05
 
+/*
+ * Action Type of Message Type #10: IWF Mapping
+ * 0x00: SetRxConfigRequest
+ * 0x01: SetRxConfigResponseAccept
+ * 0x02: SetRxConfigResponseReject
+ * 0x03: SetRxConfigResponsePropose
+ * 0x04...0xFF: Reserved
+ */
+#define RTE_ECPRI_IWF_MAP_ACT_SET_RX_CFG_REQ	0x00
+#define RTE_ECPRI_IWF_MAP_ACT_SET_RX_CFG_ACC	0x01
+#define RTE_ECPRI_IWF_MAP_ACT_SET_RX_CFG_REJ	0x02
+#define RTE_ECPRI_IWF_MAP_ACT_SET_RX_CFG_PRP	0x03
+
+/*
+ * Action Type of Message Type #11: IWF Delay Control
+ * 0x00: Request get delays
+ * 0x01: Response get delays
+ * 0x02...0xFF: Reserved
+ */
+#define RTE_ECPRI_IWF_DCTRL_ACT_GET_DLY_REQ	0x00
+#define RTE_ECPRI_IWF_DCTRL_ACT_GET_DLY_RSP	0x01
+
 /**
  * eCPRI Common Header
  */
@@ -220,6 +242,59 @@ struct rte_ecpri_msg_event_ind {
 };
 
 /**
+ * eCPRI Message Header of Type #8: IWF Start-Up
+ */
+struct __rte_packed_begin rte_ecpri_msg_iwf_up {
+	rte_be16_t pc_id;		/**< Physical channel ID */
+	uint8_t hfn;			/**< #Z: CPRI hyperframe number */
+	uint8_t bfn;			/**< #X: CPRI basic frame number */
+	rte_be32_t timestamp;		/**< Timestamp, in nanoseconds */
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+	uint8_t line_rate:5;		/**< CPRI line rate */
+	uint8_t res:1;			/**< Reserved */
+	uint8_t s:1;			/**< CPRI scrambling indicator */
+	uint8_t f:1;			/**< CPRI FEC indicator */
+#elif RTE_BYTE_ORDER == RTE_BIG_ENDIAN
+	uint8_t f:1;			/**< CPRI FEC indicator */
+	uint8_t s:1;			/**< CPRI scrambling indicator */
+	uint8_t res:1;			/**< Reserved */
+	uint8_t line_rate:5;		/**< CPRI line rate */
+#endif
+} __rte_packed_end;
+
+/**
+ * eCPRI Message Header of Type #9: IWF Operation
+ *
+ * The header is followed by one or more chunks, each but the first one
+ * preceded by its own hyperframe and basic frame number.
+ */
+struct rte_ecpri_msg_iwf_opt {
+	rte_be16_t pc_id;		/**< Physical channel ID */
+	uint8_t hfn;			/**< #Z: CPRI hyperframe number */
+	uint8_t bfn;			/**< #X: CPRI basic frame number */
+};
+
+/**
+ * eCPRI Message Header of Type #10: IWF Mapping
+ */
+struct rte_ecpri_msg_iwf_map {
+	rte_be16_t pc_id;		/**< Physical channel ID */
+	uint8_t cfg_id;			/**< Mapping Config ID */
+	uint8_t act_type;		/**< Action Type */
+};
+
+/**
+ * eCPRI Message Header of Type #11: IWF Delay Control
+ */
+struct rte_ecpri_msg_iwf_dctrl {
+	rte_be16_t pc_id;		/**< Physical channel ID */
+	uint8_t dc_id;			/**< Delay Control ID */
+	uint8_t act_type;		/**< Action Type */
+	rte_be32_t delay_a;		/**< Delay A, in 1/16 ns */
+	rte_be32_t delay_b;		/**< Delay B, in 1/16 ns */
+};
+
+/**
  * eCPRI Combined Message Header Format: Common Header + Message Types
  */
 struct rte_ecpri_combined_msg_hdr {
@@ -233,6 +308,10 @@ struct rte_ecpri_combined_msg_hdr {
 		struct rte_ecpri_msg_delay_measure type5;
 		struct rte_ecpri_msg_remote_reset type6;
 		struct rte_ecpri_msg_event_ind type7;
+		struct rte_ecpri_msg_iwf_up type8;
+		struct rte_ecpri_msg_iwf_opt type9;
+		struct rte_ecpri_msg_iwf_map type10;
+		struct rte_ecpri_msg_iwf_dctrl type11;
 		rte_be32_t dummy[5];
 	};
 };
