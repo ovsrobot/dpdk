@@ -150,10 +150,10 @@ struct __rte_packed_begin rte_ecpri_msg_delay_measure {
 /**
  * eCPRI Message Header of Type #6: Remote Reset
  */
-struct rte_ecpri_msg_remote_reset {
+struct __rte_packed_begin rte_ecpri_msg_remote_reset {
 	rte_be16_t rst_id;		/**< Reset ID */
 	uint8_t rst_op;			/**< Reset Code Op */
-};
+} __rte_packed_end;
 
 /**
  * eCPRI Message Header of Type #7: Event Indication

@@ -114,6 +114,9 @@ ABI Changes
   ``struct rte_ecpri_combined_msg_hdr``, and hence
   ``struct rte_flow_item_ecpri``, grew from 16 to 24 bytes.
 
+* net: Packed ``struct rte_ecpri_msg_remote_reset``, so that its size matches
+  the 3-byte message header on the wire. It shrank from 4 to 3 bytes.
+
 
 Known Issues
 ------------
