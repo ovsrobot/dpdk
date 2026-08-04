@@ -164,8 +164,10 @@
 #include <rte_devargs.h>
 #include <rte_bitops.h>
 #include <rte_errno.h>
+#include <rte_ether.h>
 #include <rte_common.h>
 #include <rte_config.h>
+#include <rte_mbuf_history.h>
 #include <rte_power_intrinsics.h>
 
 #include "rte_ethdev_trace_fp.h"
@@ -1504,17 +1506,6 @@ enum rte_eth_tunnel_type {
 	RTE_ETH_TUNNEL_TYPE_ECPRI,
 	RTE_ETH_TUNNEL_TYPE_MAX,
 };
-
-#ifdef __cplusplus
-}
-#endif
-
-/* Deprecated API file for rte_eth_dev_filter_* functions */
-#include "rte_eth_ctrl.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * UDP tunneling configuration.
