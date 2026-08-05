@@ -32,14 +32,40 @@ class Config(BaseConfig):
     """Performance test metrics."""
 
     test_parameters: list[dict[str, int | float]] = [
-        {"frame_size": 64, "num_descriptors": 1024, "expected_mpps": 1.00},
-        {"frame_size": 128, "num_descriptors": 1024, "expected_mpps": 1.00},
-        {"frame_size": 256, "num_descriptors": 1024, "expected_mpps": 1.00},
-        {"frame_size": 512, "num_descriptors": 1024, "expected_mpps": 1.00},
-        {"frame_size": 1024, "num_descriptors": 1024, "expected_mpps": 1.00},
-        {"frame_size": 1518, "num_descriptors": 1024, "expected_mpps": 1.00},
+        {"frame_size": 64, "num_descriptors": 1024, "expected_mpps": 1.00, "delta_tolerance": 0.05},
+        {
+            "frame_size": 128,
+            "num_descriptors": 1024,
+            "expected_mpps": 1.00,
+            "delta_tolerance": 0.05,
+        },
+        {
+            "frame_size": 256,
+            "num_descriptors": 1024,
+            "expected_mpps": 1.00,
+            "delta_tolerance": 0.05,
+        },
+        {
+            "frame_size": 512,
+            "num_descriptors": 1024,
+            "expected_mpps": 1.00,
+            "delta_tolerance": 0.05,
+        },
+        {
+            "frame_size": 1024,
+            "num_descriptors": 1024,
+            "expected_mpps": 1.00,
+            "delta_tolerance": 0.05,
+        },
+        {
+            "frame_size": 1518,
+            "num_descriptors": 1024,
+            "expected_mpps": 1.00,
+            "delta_tolerance": 0.05,
+        },
     ]
-    delta_tolerance: float = 0.05
+    traffic_duration: int = 5
+    test_repetitions: int = 5
 
 
 @requires_link_topology(LinkTopology.TWO_LINKS)
@@ -51,7 +77,8 @@ class TestSingleCoreForwardPerf(TestSuite):
     def set_up_suite(self):
         """Set up the test suite."""
         self.test_parameters = self.config.test_parameters
-        self.delta_tolerance = self.config.delta_tolerance
+        self.traffic_duration = self.config.traffic_duration
+        self.test_repetitions = self.config.test_repetitions
 
     def _transmit(self, testpmd: TestPmd, frame_size: int, repetitions: int = 1) -> float:
         """Create a testpmd session with every rule in the given list, verify jump behavior.
@@ -76,8 +103,7 @@ class TestSingleCoreForwardPerf(TestSuite):
         rx_avg = 0.0
 
         for _ in range(repetitions):
-            # Transmit for 5 seconds.
-            stats = assess_performance_by_packet(packet=packet, duration=5)
+            stats = assess_performance_by_packet(packet=packet, duration=self.traffic_duration)
             rx_avg += stats.rx_pps
         return rx_avg / (repetitions * 1_000_000)
 
@@ -134,21 +160,21 @@ class TestSingleCoreForwardPerf(TestSuite):
                 **driver_specific_testpmd_args,
             ) as testpmd:
                 params["measured_mpps"] = round(
-                    self._transmit(testpmd, frame_size, repetitions=5), 3
+                    self._transmit(testpmd, frame_size, repetitions=self.test_repetitions), 3
                 )
                 params["performance_delta"] = round(
                     (float(params["measured_mpps"]) - float(params["expected_mpps"]))
                     / float(params["expected_mpps"]),
                     3,
                 )
-                params["pass"] = float(params["performance_delta"]) >= -self.delta_tolerance
+                params["pass"] = float(params["performance_delta"]) >= -params["delta_tolerance"]
 
         self._produce_stats_table(self.test_parameters)
 
         for params in self.test_parameters:
             verify(
                 params["pass"] is True,
-                f"""Packets forwarded is less than {(1 - self.delta_tolerance) * 100}%
+                f"""Packets forwarded is less than {(1 - params["delta_tolerance"]) * 100}%
                 of the expected baseline.
                 Measured MPPS = {params["measured_mpps"]}
                 Expected MPPS = {params["expected_mpps"]}""",

@@ -52,6 +52,7 @@ func_traffic_generator:
 #   type: TREX
 #   remote_path: "/opt/trex/v3.03" # The remote path of the traffic generator application.
 #   config: "/opt/trex_config/trex_config.yaml" # Additional configuration files. (Leave blank if not required)
+#   cores: 10 # The number of cores to run TRex with.
 perf: false # disable performance testing
 func: true # enable functional testing
 crypto: false # disable cryptographic testing
