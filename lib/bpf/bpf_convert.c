@@ -64,18 +64,18 @@
  * Arg1, Arg2, Arg3, etc are used as argument mappings of function
  * calls in BPF_CALL instruction.
  */
-#define BPF_REG_ARG1	EBPF_REG_1
-#define BPF_REG_ARG2	EBPF_REG_2
-#define BPF_REG_ARG3	EBPF_REG_3
-#define BPF_REG_ARG4	EBPF_REG_4
-#define BPF_REG_ARG5	EBPF_REG_5
-#define BPF_REG_CTX	EBPF_REG_6
-#define BPF_REG_FP	EBPF_REG_10
+#define BPF_REG_ARG1	BPF_REG_1
+#define BPF_REG_ARG2	BPF_REG_2
+#define BPF_REG_ARG3	BPF_REG_3
+#define BPF_REG_ARG4	BPF_REG_4
+#define BPF_REG_ARG5	BPF_REG_5
+#define BPF_REG_CTX	BPF_REG_6
+#define BPF_REG_FP	BPF_REG_10
 
 /* Additional register mappings for converted user programs. */
-#define BPF_REG_A	EBPF_REG_0
-#define BPF_REG_X	EBPF_REG_7
-#define BPF_REG_TMP	EBPF_REG_8
+#define BPF_REG_A	BPF_REG_0
+#define BPF_REG_X	BPF_REG_7
+#define BPF_REG_TMP	BPF_REG_8
 
 /* Helper macros for filter block array initializers. */
 
@@ -83,7 +83,7 @@
 
 #define EBPF_ALU64_REG(OP, DST, SRC)				\
 	((struct rte_ebpf_insn) {					\
-		.code  = EBPF_ALU64 | BPF_OP(OP) | BPF_X,	\
+		.code  = BPF_ALU64 | BPF_OP(OP) | BPF_X,	\
 		.dst_reg = DST,					\
 		.src_reg = SRC,					\
 		.off   = 0,					\
@@ -111,7 +111,7 @@
 
 #define BPF_MOV64_REG(DST, SRC)					\
 	((struct rte_ebpf_insn) {					\
-		.code  = EBPF_ALU64 | EBPF_MOV | BPF_X,		\
+		.code  = BPF_ALU64 | BPF_MOV | BPF_X,		\
 		.dst_reg = DST,					\
 		.src_reg = SRC,					\
 		.off   = 0,					\
@@ -119,7 +119,7 @@
 
 #define BPF_MOV32_REG(DST, SRC)					\
 	((struct rte_ebpf_insn) {					\
-		.code  = BPF_ALU | EBPF_MOV | BPF_X,		\
+		.code  = BPF_ALU | BPF_MOV | BPF_X,		\
 		.dst_reg = DST,					\
 		.src_reg = SRC,					\
 		.off   = 0,					\
@@ -129,7 +129,7 @@
 
 #define BPF_MOV32_IMM(DST, IMM)					\
 	((struct rte_ebpf_insn) {					\
-		.code  = BPF_ALU | EBPF_MOV | BPF_K,		\
+		.code  = BPF_ALU | BPF_MOV | BPF_K,		\
 		.dst_reg = DST,					\
 		.src_reg = 0,					\
 		.off   = 0,					\
@@ -139,7 +139,7 @@
 
 #define BPF_MOV32_RAW(TYPE, DST, SRC, IMM)			\
 	((struct rte_ebpf_insn) {					\
-		.code  = BPF_ALU | EBPF_MOV | BPF_SRC(TYPE),	\
+		.code  = BPF_ALU | BPF_MOV | BPF_SRC(TYPE),	\
 		.dst_reg = DST,					\
 		.src_reg = SRC,					\
 		.off   = 0,					\
@@ -199,7 +199,7 @@
 
 #define BPF_EXIT_INSN()						\
 	((struct rte_ebpf_insn) {					\
-		.code  = BPF_JMP | EBPF_EXIT,			\
+		.code  = BPF_JMP | BPF_EXIT,			\
 		.dst_reg = 0,					\
 		.src_reg = 0,					\
 		.off   = 0,					\
@@ -305,7 +305,7 @@ do_pass:
 		case BPF_ALU | BPF_MOD | BPF_X:
 			/* For cBPF, don't cause floating point exception */
 			*insn++ = BPF_MOV32_REG(BPF_REG_X, BPF_REG_X);
-			*insn++ = BPF_JMP_IMM(EBPF_JNE, BPF_REG_X, 0, 2);
+			*insn++ = BPF_JMP_IMM(BPF_JNE, BPF_REG_X, 0, 2);
 			*insn++ = BPF_ALU32_REG(BPF_XOR, BPF_REG_A, BPF_REG_A);
 			*insn++ = BPF_EXIT_INSN();
 			/* fallthrough */
@@ -396,7 +396,7 @@ do_pass:
 
 			/* Convert JEQ into JNE when 'jump_true' is next insn. */
 			if (fp->jt == 0 && BPF_OP(fp->code) == BPF_JEQ) {
-				insn->code = BPF_JMP | EBPF_JNE | bpf_src;
+				insn->code = BPF_JMP | BPF_JNE | bpf_src;
 				target = i + fp->jf + 1;
 				BPF_EMIT_JMP;
 				break;
@@ -430,12 +430,12 @@ do_pass:
 			break;
 
 			/* RET_K is remapped into 2 insns. RET_A case doesn't need an
-			 * extra mov as EBPF_REG_0 is already mapped into BPF_REG_A.
+			 * extra mov as BPF_REG_0 is already mapped into BPF_REG_A.
 			 */
 		case BPF_RET | BPF_A:
 		case BPF_RET | BPF_K:
 			if (BPF_RVAL(fp->code) == BPF_K) {
-				*insn++ = BPF_MOV32_RAW(BPF_K, EBPF_REG_0,
+				*insn++ = BPF_MOV32_RAW(BPF_K, BPF_REG_0,
 							0, fp->k);
 			}
 			*insn = BPF_EXIT_INSN();

@@ -291,7 +291,7 @@ rte_bpf_load(const struct rte_bpf_prm *prm)
 /**
  * Create a new eBPF execution context and load BPF code from given ELF
  * file into it.
- * Note that if the function will encounter EBPF_PSEUDO_CALL instruction
+ * Note that if the function will encounter BPF_PSEUDO_CALL instruction
  * that references external symbol, it will treat is as standard BPF_CALL
  * to the external helper function.
  *

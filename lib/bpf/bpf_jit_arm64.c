@@ -14,11 +14,11 @@
 #define A64_REG_MASK(r)		((r) & 0x1f)
 #define A64_INVALID_OP_CODE	(UINT32_C(0xffffffff))
 
-#define TMP_REG_1		(EBPF_REG_10 + 1)
-#define TMP_REG_2		(EBPF_REG_10 + 2)
-#define TMP_REG_3		(EBPF_REG_10 + 3)
+#define TMP_REG_1		(BPF_REG_10 + 1)
+#define TMP_REG_2		(BPF_REG_10 + 2)
+#define TMP_REG_3		(BPF_REG_10 + 3)
 
-#define EBPF_FP			(EBPF_REG_10)
+#define EBPF_FP			(BPF_REG_10)
 #define EBPF_OP_GET(op)		(BPF_OP(op) >> 4)
 
 #define A64_R(x)		x
@@ -42,7 +42,7 @@ struct a64_jit_ctx {
 	uint32_t idx;             /* Current instruction index */
 	uint32_t program_start;   /* Program index, Just after prologue */
 	uint32_t program_sz;      /* Program size. Found in first pass */
-	uint8_t foundcall;        /* Found EBPF_CALL class code in eBPF pgm */
+	uint8_t foundcall;        /* Found BPF_CALL class code in eBPF pgm */
 };
 
 static int
@@ -70,7 +70,7 @@ check_mov_hw(bool is64, const uint8_t val)
 static int
 check_ls_sz(uint8_t sz)
 {
-	if (sz == BPF_B || sz == BPF_H || sz == BPF_W || sz == EBPF_DW)
+	if (sz == BPF_B || sz == BPF_H || sz == BPF_W || sz == BPF_DW)
 		return 0;
 
 	return 1;
@@ -190,22 +190,22 @@ ebpf_to_a64_cond(uint8_t op)
 		return A64_EQ;
 	case BPF_JGT:
 		return A64_HI;
-	case EBPF_JLT:
+	case BPF_JLT:
 		return A64_CC;
 	case BPF_JGE:
 		return A64_CS;
-	case EBPF_JLE:
+	case BPF_JLE:
 		return A64_LS;
 	case BPF_JSET:
-	case EBPF_JNE:
+	case BPF_JNE:
 		return A64_NE;
-	case EBPF_JSGT:
+	case BPF_JSGT:
 		return A64_GT;
-	case EBPF_JSLT:
+	case BPF_JSLT:
 		return A64_LT;
-	case EBPF_JSGE:
+	case BPF_JSGE:
 		return A64_GE;
-	case EBPF_JSLE:
+	case BPF_JSLE:
 		return A64_LE;
 	default:
 		return UINT8_MAX;
@@ -402,7 +402,7 @@ emit_ls(struct a64_jit_ctx *ctx, uint8_t sz, uint8_t rt, uint8_t rn, uint8_t rm,
 		insn |= RTE_SHIFT_VAL32(1, 30);
 	else if (sz == BPF_W)
 		insn |= RTE_SHIFT_VAL32(2, 30);
-	else if (sz == EBPF_DW)
+	else if (sz == BPF_DW)
 		insn |= RTE_SHIFT_VAL32(3, 30);
 
 	insn |= RTE_SHIFT_VAL32(rm, 16);
@@ -726,18 +726,18 @@ ebpf_to_a64_reg(struct a64_jit_ctx *ctx, uint8_t reg)
 {
 	const uint32_t ebpf2a64_has_call[] = {
 		/* Map A64 R7 register as EBPF return register */
-		[EBPF_REG_0] = A64_R(7),
+		[BPF_REG_0] = A64_R(7),
 		/* Map A64 arguments register as EBPF arguments register */
-		[EBPF_REG_1] = A64_R(0),
-		[EBPF_REG_2] = A64_R(1),
-		[EBPF_REG_3] = A64_R(2),
-		[EBPF_REG_4] = A64_R(3),
-		[EBPF_REG_5] = A64_R(4),
+		[BPF_REG_1] = A64_R(0),
+		[BPF_REG_2] = A64_R(1),
+		[BPF_REG_3] = A64_R(2),
+		[BPF_REG_4] = A64_R(3),
+		[BPF_REG_5] = A64_R(4),
 		/* Map A64 callee save register as EBPF callee save register */
-		[EBPF_REG_6] = A64_R(19),
-		[EBPF_REG_7] = A64_R(20),
-		[EBPF_REG_8] = A64_R(21),
-		[EBPF_REG_9] = A64_R(22),
+		[BPF_REG_6] = A64_R(19),
+		[BPF_REG_7] = A64_R(20),
+		[BPF_REG_8] = A64_R(21),
+		[BPF_REG_9] = A64_R(22),
 		[EBPF_FP]    = A64_R(25),
 		/* Map A64 scratch registers as temporary storage */
 		[TMP_REG_1] = A64_R(9),
@@ -747,21 +747,21 @@ ebpf_to_a64_reg(struct a64_jit_ctx *ctx, uint8_t reg)
 
 	const uint32_t ebpf2a64_no_call[] = {
 		/* Map A64 R7 register as EBPF return register */
-		[EBPF_REG_0] = A64_R(7),
+		[BPF_REG_0] = A64_R(7),
 		/* Map A64 arguments register as EBPF arguments register */
-		[EBPF_REG_1] = A64_R(0),
-		[EBPF_REG_2] = A64_R(1),
-		[EBPF_REG_3] = A64_R(2),
-		[EBPF_REG_4] = A64_R(3),
-		[EBPF_REG_5] = A64_R(4),
+		[BPF_REG_1] = A64_R(0),
+		[BPF_REG_2] = A64_R(1),
+		[BPF_REG_3] = A64_R(2),
+		[BPF_REG_4] = A64_R(3),
+		[BPF_REG_5] = A64_R(4),
 		/*
-		 * EBPF program does not have EBPF_CALL op code,
+		 * EBPF program does not have BPF_CALL op code,
 		 * Map A64 scratch registers as EBPF callee save registers.
 		 */
-		[EBPF_REG_6] = A64_R(9),
-		[EBPF_REG_7] = A64_R(10),
-		[EBPF_REG_8] = A64_R(11),
-		[EBPF_REG_9] = A64_R(12),
+		[BPF_REG_6] = A64_R(9),
+		[BPF_REG_7] = A64_R(10),
+		[BPF_REG_8] = A64_R(11),
+		[BPF_REG_9] = A64_R(12),
 		/* Map A64 FP register as EBPF FP register */
 		[EBPF_FP]    = A64_FP,
 		/* Map remaining A64 scratch registers as temporary storage */
@@ -795,10 +795,10 @@ emit_prologue_has_call(struct a64_jit_ctx *ctx)
 {
 	uint8_t r6, r7, r8, r9, fp;
 
-	r6 = ebpf_to_a64_reg(ctx, EBPF_REG_6);
-	r7 = ebpf_to_a64_reg(ctx, EBPF_REG_7);
-	r8 = ebpf_to_a64_reg(ctx, EBPF_REG_8);
-	r9 = ebpf_to_a64_reg(ctx, EBPF_REG_9);
+	r6 = ebpf_to_a64_reg(ctx, BPF_REG_6);
+	r7 = ebpf_to_a64_reg(ctx, BPF_REG_7);
+	r8 = ebpf_to_a64_reg(ctx, BPF_REG_8);
+	r9 = ebpf_to_a64_reg(ctx, BPF_REG_9);
 	fp = ebpf_to_a64_reg(ctx, EBPF_FP);
 
 	/*
@@ -842,12 +842,12 @@ emit_epilogue_has_call(struct a64_jit_ctx *ctx)
 {
 	uint8_t r6, r7, r8, r9, fp, r0;
 
-	r6 = ebpf_to_a64_reg(ctx, EBPF_REG_6);
-	r7 = ebpf_to_a64_reg(ctx, EBPF_REG_7);
-	r8 = ebpf_to_a64_reg(ctx, EBPF_REG_8);
-	r9 = ebpf_to_a64_reg(ctx, EBPF_REG_9);
+	r6 = ebpf_to_a64_reg(ctx, BPF_REG_6);
+	r7 = ebpf_to_a64_reg(ctx, BPF_REG_7);
+	r8 = ebpf_to_a64_reg(ctx, BPF_REG_8);
+	r9 = ebpf_to_a64_reg(ctx, BPF_REG_9);
 	fp = ebpf_to_a64_reg(ctx, EBPF_FP);
-	r0 = ebpf_to_a64_reg(ctx, EBPF_REG_0);
+	r0 = ebpf_to_a64_reg(ctx, BPF_REG_0);
 
 	if (ctx->stack_sz)
 		emit_add_imm_64(ctx, A64_SP, A64_SP, ctx->stack_sz);
@@ -863,7 +863,7 @@ static void
 emit_prologue_no_call(struct a64_jit_ctx *ctx)
 {
 	/*
-	 * eBPF prog stack layout without EBPF_CALL opcode
+	 * eBPF prog stack layout without BPF_CALL opcode
 	 *
 	 *                               high
 	 *    eBPF prologue(EBPF_FP) 0:+-----+ <= original A64_SP/current A64_FP
@@ -891,7 +891,7 @@ emit_epilogue_no_call(struct a64_jit_ctx *ctx)
 {
 	if (ctx->stack_sz)
 		emit_add_imm_64(ctx, A64_SP, A64_SP, ctx->stack_sz);
-	emit_mov_64(ctx, A64_R(0), ebpf_to_a64_reg(ctx, EBPF_REG_0));
+	emit_mov_64(ctx, A64_R(0), ebpf_to_a64_reg(ctx, BPF_REG_0));
 	emit_ret(ctx);
 }
 
@@ -920,7 +920,7 @@ emit_epilogue(struct a64_jit_ctx *ctx)
 static void
 emit_call(struct a64_jit_ctx *ctx, uint8_t tmp, void *func)
 {
-	uint8_t r0 = ebpf_to_a64_reg(ctx, EBPF_REG_0);
+	uint8_t r0 = ebpf_to_a64_reg(ctx, BPF_REG_0);
 
 	emit_mov_imm(ctx, 1, tmp, (uint64_t)func);
 	emit_blr(ctx, tmp);
@@ -956,7 +956,7 @@ emit_b(struct a64_jit_ctx *ctx, int32_t imm26)
 static void
 emit_return_zero_if_src_zero(struct a64_jit_ctx *ctx, bool is64, uint8_t src)
 {
-	uint8_t r0 = ebpf_to_a64_reg(ctx, EBPF_REG_0);
+	uint8_t r0 = ebpf_to_a64_reg(ctx, BPF_REG_0);
 	uint16_t jump_to_epilogue;
 
 	emit_cbnz(ctx, is64, src, 3);
@@ -1035,7 +1035,7 @@ static void
 emit_atomic(struct a64_jit_ctx *ctx, uint8_t op, uint8_t tmp1, uint8_t tmp2,
 	  uint8_t tmp3, uint8_t dst, int16_t off, uint8_t src, int32_t atomic_op)
 {
-	bool is64 = (BPF_SIZE(op) == EBPF_DW);
+	bool is64 = (BPF_SIZE(op) == BPF_DW);
 	uint8_t rn;
 
 	if (off) {
@@ -1047,7 +1047,7 @@ emit_atomic(struct a64_jit_ctx *ctx, uint8_t op, uint8_t tmp1, uint8_t tmp2,
 	}
 
 	switch (atomic_op) {
-	case BPF_ATOMIC_ADD:
+	case BPF_ADD:
 		if (has_atomics()) {
 			emit_stadd(ctx, is64, src, rn);
 		} else {
@@ -1057,7 +1057,7 @@ emit_atomic(struct a64_jit_ctx *ctx, uint8_t op, uint8_t tmp1, uint8_t tmp2,
 			emit_cbnz(ctx, is64, tmp3, -3);
 		}
 		break;
-	case BPF_ATOMIC_XCHG:
+	case BPF_XCHG:
 		if (has_atomics()) {
 			emit_swpal(ctx, is64, src, src, rn);
 		} else {
@@ -1069,7 +1069,7 @@ emit_atomic(struct a64_jit_ctx *ctx, uint8_t op, uint8_t tmp1, uint8_t tmp2,
 		break;
 	default:
 		/* this should be caught by validator and never reach here */
-		emit_mov_imm(ctx, 1, ebpf_to_a64_reg(ctx, EBPF_REG_0), 0);
+		emit_mov_imm(ctx, 1, ebpf_to_a64_reg(ctx, BPF_REG_0), 0);
 		emit_epilogue(ctx);
 		return;
 	}
@@ -1136,7 +1136,7 @@ check_program_has_call(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 
 		switch (op) {
 		/* Call imm */
-		case (BPF_JMP | EBPF_CALL):
+		case (BPF_JMP | BPF_CALL):
 			ctx->foundcall = 1;
 			return;
 		}
@@ -1178,162 +1178,162 @@ emit(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 
 		dst = ebpf_to_a64_reg(ctx, ins->dst_reg);
 		src = ebpf_to_a64_reg(ctx, ins->src_reg);
-		is64 = (BPF_CLASS(op) == EBPF_ALU64);
+		is64 = (BPF_CLASS(op) == BPF_ALU64);
 
 		switch (op) {
 		/* dst = src */
-		case (BPF_ALU | EBPF_MOV | BPF_X):
-		case (EBPF_ALU64 | EBPF_MOV | BPF_X):
+		case (BPF_ALU | BPF_MOV | BPF_X):
+		case (BPF_ALU64 | BPF_MOV | BPF_X):
 			emit_mov(ctx, is64, dst, src);
 			break;
 		/* dst = imm */
-		case (BPF_ALU | EBPF_MOV | BPF_K):
-		case (EBPF_ALU64 | EBPF_MOV | BPF_K):
+		case (BPF_ALU | BPF_MOV | BPF_K):
+		case (BPF_ALU64 | BPF_MOV | BPF_K):
 			emit_mov_imm(ctx, is64, dst, imm);
 			break;
 		/* dst += src */
 		case (BPF_ALU | BPF_ADD | BPF_X):
-		case (EBPF_ALU64 | BPF_ADD | BPF_X):
+		case (BPF_ALU64 | BPF_ADD | BPF_X):
 			emit_add(ctx, is64, dst, src);
 			break;
 		/* dst += imm */
 		case (BPF_ALU | BPF_ADD | BPF_K):
-		case (EBPF_ALU64 | BPF_ADD | BPF_K):
+		case (BPF_ALU64 | BPF_ADD | BPF_K):
 			emit_mov_imm(ctx, is64, tmp1, imm);
 			emit_add(ctx, is64, dst, tmp1);
 			break;
 		/* dst -= src */
 		case (BPF_ALU | BPF_SUB | BPF_X):
-		case (EBPF_ALU64 | BPF_SUB | BPF_X):
+		case (BPF_ALU64 | BPF_SUB | BPF_X):
 			emit_sub(ctx, is64, dst, src);
 			break;
 		/* dst -= imm */
 		case (BPF_ALU | BPF_SUB | BPF_K):
-		case (EBPF_ALU64 | BPF_SUB | BPF_K):
+		case (BPF_ALU64 | BPF_SUB | BPF_K):
 			emit_mov_imm(ctx, is64, tmp1, imm);
 			emit_sub(ctx, is64, dst, tmp1);
 			break;
 		/* dst *= src */
 		case (BPF_ALU | BPF_MUL | BPF_X):
-		case (EBPF_ALU64 | BPF_MUL | BPF_X):
+		case (BPF_ALU64 | BPF_MUL | BPF_X):
 			emit_mul(ctx, is64, dst, src);
 			break;
 		/* dst *= imm */
 		case (BPF_ALU | BPF_MUL | BPF_K):
-		case (EBPF_ALU64 | BPF_MUL | BPF_K):
+		case (BPF_ALU64 | BPF_MUL | BPF_K):
 			emit_mov_imm(ctx, is64, tmp1, imm);
 			emit_mul(ctx, is64, dst, tmp1);
 			break;
 		/* dst /= src */
 		case (BPF_ALU | BPF_DIV | BPF_X):
-		case (EBPF_ALU64 | BPF_DIV | BPF_X):
+		case (BPF_ALU64 | BPF_DIV | BPF_X):
 			emit_return_zero_if_src_zero(ctx, is64, src);
 			emit_div(ctx, is64, dst, src);
 			break;
 		/* dst /= imm */
 		case (BPF_ALU | BPF_DIV | BPF_K):
-		case (EBPF_ALU64 | BPF_DIV | BPF_K):
+		case (BPF_ALU64 | BPF_DIV | BPF_K):
 			emit_mov_imm(ctx, is64, tmp1, imm);
 			emit_div(ctx, is64, dst, tmp1);
 			break;
 		/* dst %= src */
 		case (BPF_ALU | BPF_MOD | BPF_X):
-		case (EBPF_ALU64 | BPF_MOD | BPF_X):
+		case (BPF_ALU64 | BPF_MOD | BPF_X):
 			emit_return_zero_if_src_zero(ctx, is64, src);
 			emit_mod(ctx, is64, tmp1, dst, src);
 			break;
 		/* dst %= imm */
 		case (BPF_ALU | BPF_MOD | BPF_K):
-		case (EBPF_ALU64 | BPF_MOD | BPF_K):
+		case (BPF_ALU64 | BPF_MOD | BPF_K):
 			emit_mov_imm(ctx, is64, tmp1, imm);
 			emit_mod(ctx, is64, tmp2, dst, tmp1);
 			break;
 		/* dst |= src */
 		case (BPF_ALU | BPF_OR | BPF_X):
-		case (EBPF_ALU64 | BPF_OR | BPF_X):
+		case (BPF_ALU64 | BPF_OR | BPF_X):
 			emit_or(ctx, is64, dst, src);
 			break;
 		/* dst |= imm */
 		case (BPF_ALU | BPF_OR | BPF_K):
-		case (EBPF_ALU64 | BPF_OR | BPF_K):
+		case (BPF_ALU64 | BPF_OR | BPF_K):
 			emit_mov_imm(ctx, is64, tmp1, imm);
 			emit_or(ctx, is64, dst, tmp1);
 			break;
 		/* dst &= src */
 		case (BPF_ALU | BPF_AND | BPF_X):
-		case (EBPF_ALU64 | BPF_AND | BPF_X):
+		case (BPF_ALU64 | BPF_AND | BPF_X):
 			emit_and(ctx, is64, dst, src);
 			break;
 		/* dst &= imm */
 		case (BPF_ALU | BPF_AND | BPF_K):
-		case (EBPF_ALU64 | BPF_AND | BPF_K):
+		case (BPF_ALU64 | BPF_AND | BPF_K):
 			emit_mov_imm(ctx, is64, tmp1, imm);
 			emit_and(ctx, is64, dst, tmp1);
 			break;
 		/* dst ^= src */
 		case (BPF_ALU | BPF_XOR | BPF_X):
-		case (EBPF_ALU64 | BPF_XOR | BPF_X):
+		case (BPF_ALU64 | BPF_XOR | BPF_X):
 			emit_xor(ctx, is64, dst, src);
 			break;
 		/* dst ^= imm */
 		case (BPF_ALU | BPF_XOR | BPF_K):
-		case (EBPF_ALU64 | BPF_XOR | BPF_K):
+		case (BPF_ALU64 | BPF_XOR | BPF_K):
 			emit_mov_imm(ctx, is64, tmp1, imm);
 			emit_xor(ctx, is64, dst, tmp1);
 			break;
 		/* dst = -dst */
 		case (BPF_ALU | BPF_NEG):
-		case (EBPF_ALU64 | BPF_NEG):
+		case (BPF_ALU64 | BPF_NEG):
 			emit_neg(ctx, is64, dst);
 			break;
 		/* dst <<= src */
 		case BPF_ALU | BPF_LSH | BPF_X:
-		case EBPF_ALU64 | BPF_LSH | BPF_X:
+		case BPF_ALU64 | BPF_LSH | BPF_X:
 			emit_lslv(ctx, is64, dst, src);
 			break;
 		/* dst <<= imm */
 		case BPF_ALU | BPF_LSH | BPF_K:
-		case EBPF_ALU64 | BPF_LSH | BPF_K:
+		case BPF_ALU64 | BPF_LSH | BPF_K:
 			emit_lsl(ctx, is64, dst, imm);
 			break;
 		/* dst >>= src */
 		case BPF_ALU | BPF_RSH | BPF_X:
-		case EBPF_ALU64 | BPF_RSH | BPF_X:
+		case BPF_ALU64 | BPF_RSH | BPF_X:
 			emit_lsrv(ctx, is64, dst, src);
 			break;
 		/* dst >>= imm */
 		case BPF_ALU | BPF_RSH | BPF_K:
-		case EBPF_ALU64 | BPF_RSH | BPF_K:
+		case BPF_ALU64 | BPF_RSH | BPF_K:
 			emit_lsr(ctx, is64, dst, imm);
 			break;
 		/* dst >>= src (arithmetic) */
-		case BPF_ALU | EBPF_ARSH | BPF_X:
-		case EBPF_ALU64 | EBPF_ARSH | BPF_X:
+		case BPF_ALU | BPF_ARSH | BPF_X:
+		case BPF_ALU64 | BPF_ARSH | BPF_X:
 			emit_asrv(ctx, is64, dst, src);
 			break;
 		/* dst >>= imm (arithmetic) */
-		case BPF_ALU | EBPF_ARSH | BPF_K:
-		case EBPF_ALU64 | EBPF_ARSH | BPF_K:
+		case BPF_ALU | BPF_ARSH | BPF_K:
+		case BPF_ALU64 | BPF_ARSH | BPF_K:
 			emit_asr(ctx, is64, dst, imm);
 			break;
 		/* dst = be##imm(dst) */
-		case (BPF_ALU | EBPF_END | EBPF_TO_BE):
+		case (BPF_ALU | BPF_END | BPF_TO_BE):
 			emit_be(ctx, dst, imm);
 			break;
 		/* dst = le##imm(dst) */
-		case (BPF_ALU | EBPF_END | EBPF_TO_LE):
+		case (BPF_ALU | BPF_END | BPF_TO_LE):
 			emit_le(ctx, dst, imm);
 			break;
 		/* dst = *(size *) (src + off) */
 		case (BPF_LDX | BPF_MEM | BPF_B):
 		case (BPF_LDX | BPF_MEM | BPF_H):
 		case (BPF_LDX | BPF_MEM | BPF_W):
-		case (BPF_LDX | BPF_MEM | EBPF_DW):
+		case (BPF_LDX | BPF_MEM | BPF_DW):
 			emit_mov_imm(ctx, 1, tmp1, off);
 			emit_ldr(ctx, BPF_SIZE(op), dst, src, tmp1);
 			break;
 		/* dst = imm64 */
-		case (BPF_LD | BPF_IMM | EBPF_DW):
+		case (BPF_LD | BPF_IMM | BPF_DW):
 			u64 = RTE_SHIFT_VAL64(ins[1].imm, 32) | (uint32_t)imm;
 			emit_mov_imm(ctx, 1, dst, u64);
 			i++;
@@ -1342,7 +1342,7 @@ emit(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 		case (BPF_STX | BPF_MEM | BPF_B):
 		case (BPF_STX | BPF_MEM | BPF_H):
 		case (BPF_STX | BPF_MEM | BPF_W):
-		case (BPF_STX | BPF_MEM | EBPF_DW):
+		case (BPF_STX | BPF_MEM | BPF_DW):
 			emit_mov_imm(ctx, 1, tmp1, off);
 			emit_str(ctx, BPF_SIZE(op), src, dst, tmp1);
 			break;
@@ -1350,14 +1350,14 @@ emit(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 		case (BPF_ST | BPF_MEM | BPF_B):
 		case (BPF_ST | BPF_MEM | BPF_H):
 		case (BPF_ST | BPF_MEM | BPF_W):
-		case (BPF_ST | BPF_MEM | EBPF_DW):
+		case (BPF_ST | BPF_MEM | BPF_DW):
 			emit_mov_imm(ctx, 1, tmp1, imm);
 			emit_mov_imm(ctx, 1, tmp2, off);
 			emit_str(ctx, BPF_SIZE(op), tmp1, dst, tmp2);
 			break;
 		/* lock *(size *)(dst + off) += src or xchg(dst + off, &src) */
-		case (BPF_STX | EBPF_ATOMIC | BPF_W):
-		case (BPF_STX | EBPF_ATOMIC | EBPF_DW):
+		case (BPF_STX | BPF_ATOMIC | BPF_W):
+		case (BPF_STX | BPF_ATOMIC | BPF_DW):
 			emit_atomic(ctx, op, tmp1, tmp2, tmp3, dst, off, src, imm);
 			break;
 		/* PC += off */
@@ -1366,15 +1366,15 @@ emit(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 			break;
 		/* PC += off if dst COND imm */
 		case (BPF_JMP | BPF_JEQ | BPF_K):
-		case (BPF_JMP | EBPF_JNE | BPF_K):
+		case (BPF_JMP | BPF_JNE | BPF_K):
 		case (BPF_JMP | BPF_JGT | BPF_K):
-		case (BPF_JMP | EBPF_JLT | BPF_K):
+		case (BPF_JMP | BPF_JLT | BPF_K):
 		case (BPF_JMP | BPF_JGE | BPF_K):
-		case (BPF_JMP | EBPF_JLE | BPF_K):
-		case (BPF_JMP | EBPF_JSGT | BPF_K):
-		case (BPF_JMP | EBPF_JSLT | BPF_K):
-		case (BPF_JMP | EBPF_JSGE | BPF_K):
-		case (BPF_JMP | EBPF_JSLE | BPF_K):
+		case (BPF_JMP | BPF_JLE | BPF_K):
+		case (BPF_JMP | BPF_JSGT | BPF_K):
+		case (BPF_JMP | BPF_JSLT | BPF_K):
+		case (BPF_JMP | BPF_JSGE | BPF_K):
+		case (BPF_JMP | BPF_JSLE | BPF_K):
 			emit_mov_imm(ctx, 1, tmp1, imm);
 			emit_cmp(ctx, 1, dst, tmp1);
 			emit_branch(ctx, op, i, off);
@@ -1386,15 +1386,15 @@ emit(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 			break;
 		/* PC += off if dst COND src */
 		case (BPF_JMP | BPF_JEQ | BPF_X):
-		case (BPF_JMP | EBPF_JNE | BPF_X):
+		case (BPF_JMP | BPF_JNE | BPF_X):
 		case (BPF_JMP | BPF_JGT | BPF_X):
-		case (BPF_JMP | EBPF_JLT | BPF_X):
+		case (BPF_JMP | BPF_JLT | BPF_X):
 		case (BPF_JMP | BPF_JGE | BPF_X):
-		case (BPF_JMP | EBPF_JLE | BPF_X):
-		case (BPF_JMP | EBPF_JSGT | BPF_X):
-		case (BPF_JMP | EBPF_JSLT | BPF_X):
-		case (BPF_JMP | EBPF_JSGE | BPF_X):
-		case (BPF_JMP | EBPF_JSLE | BPF_X):
+		case (BPF_JMP | BPF_JLE | BPF_X):
+		case (BPF_JMP | BPF_JSGT | BPF_X):
+		case (BPF_JMP | BPF_JSLT | BPF_X):
+		case (BPF_JMP | BPF_JSGE | BPF_X):
+		case (BPF_JMP | BPF_JSLE | BPF_X):
 			emit_cmp(ctx, 1, dst, src);
 			emit_branch(ctx, op, i, off);
 			break;
@@ -1403,11 +1403,11 @@ emit(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 			emit_branch(ctx, op, i, off);
 			break;
 		/* Call imm */
-		case (BPF_JMP | EBPF_CALL):
+		case (BPF_JMP | BPF_CALL):
 			emit_call(ctx, tmp1, bpf->prm.xsym[ins->imm].func.val);
 			break;
 		/* Return r0 */
-		case (BPF_JMP | EBPF_EXIT):
+		case (BPF_JMP | BPF_EXIT):
 			emit_epilogue(ctx);
 			break;
 		default:

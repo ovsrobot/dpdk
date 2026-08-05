@@ -39,22 +39,22 @@ RTE_LOG_REGISTER(test_bpf_validate_logtype, test.bpf_validate, NOTICE);
 
 /* List comparison opcodes to make their index bits match constants above.  */
 static const uint8_t comparisons_opcode[] = {
-	(BPF_JMP | EBPF_JLT  | BPF_X),
-	(BPF_JMP | EBPF_JLT  | BPF_K),
+	(BPF_JMP | BPF_JLT  | BPF_X),
+	(BPF_JMP | BPF_JLT  | BPF_K),
 	(BPF_JMP |  BPF_JGT  | BPF_X),
 	(BPF_JMP |  BPF_JGT  | BPF_K),
-	(BPF_JMP | EBPF_JLE  | BPF_X),
-	(BPF_JMP | EBPF_JLE  | BPF_K),
+	(BPF_JMP | BPF_JLE  | BPF_X),
+	(BPF_JMP | BPF_JLE  | BPF_K),
 	(BPF_JMP |  BPF_JGE  | BPF_X),
 	(BPF_JMP |  BPF_JGE  | BPF_K),
-	(BPF_JMP | EBPF_JSLT | BPF_X),
-	(BPF_JMP | EBPF_JSLT | BPF_K),
-	(BPF_JMP | EBPF_JSGT | BPF_X),
-	(BPF_JMP | EBPF_JSGT | BPF_K),
-	(BPF_JMP | EBPF_JSLE | BPF_X),
-	(BPF_JMP | EBPF_JSLE | BPF_K),
-	(BPF_JMP | EBPF_JSGE | BPF_X),
-	(BPF_JMP | EBPF_JSGE | BPF_K),
+	(BPF_JMP | BPF_JSLT | BPF_X),
+	(BPF_JMP | BPF_JSLT | BPF_K),
+	(BPF_JMP | BPF_JSGT | BPF_X),
+	(BPF_JMP | BPF_JSGT | BPF_K),
+	(BPF_JMP | BPF_JSLE | BPF_X),
+	(BPF_JMP | BPF_JSLE | BPF_K),
+	(BPF_JMP | BPF_JSGE | BPF_X),
+	(BPF_JMP | BPF_JSGE | BPF_K),
 };
 
 /* Interval bounded by two signed values, inclusive; min <= max. */
@@ -280,7 +280,7 @@ check_signed_interval(struct rte_bpf_validate_debug *debug,
 
 	TEST_ASSERT_EQUAL(may_jump(debug,
 		&(struct rte_ebpf_insn){
-			.code = (BPF_JMP | EBPF_JSLT | BPF_K),
+			.code = (BPF_JMP | BPF_JSLT | BPF_K),
 			.dst_reg = reg,
 		}, interval.min),
 		false,
@@ -307,7 +307,7 @@ check_signed_interval(struct rte_bpf_validate_debug *debug,
 
 	TEST_ASSERT_EQUAL(may_jump(debug,
 		&(struct rte_ebpf_insn){
-			.code = (BPF_JMP | EBPF_JSGT | BPF_K),
+			.code = (BPF_JMP | BPF_JSGT | BPF_K),
 			.dst_reg = reg,
 		}, interval.max),
 		false,
@@ -326,7 +326,7 @@ check_unsigned_interval(struct rte_bpf_validate_debug *debug,
 
 	TEST_ASSERT_EQUAL(may_jump(debug,
 		&(struct rte_ebpf_insn){
-			.code = (BPF_JMP | EBPF_JLT | BPF_K),
+			.code = (BPF_JMP | BPF_JLT | BPF_K),
 			.dst_reg = reg,
 		}, interval.min),
 		false,
@@ -372,7 +372,7 @@ check_relative_interval(struct rte_bpf_validate_debug *debug,
 
 	TEST_ASSERT_EQUAL(may_jump(debug,
 		&(struct rte_ebpf_insn){
-			.code = (BPF_JMP | EBPF_JLT | BPF_X),
+			.code = (BPF_JMP | BPF_JLT | BPF_X),
 			.dst_reg = reg,
 			.src_reg = base_reg,
 		}, interval.min),
@@ -552,14 +552,14 @@ load_constant(struct rte_ebpf_insn **ins, uint8_t reg, int64_t value)
 {
 	if (fits_in_imm32(value)) {
 		*(*ins)++ = (struct rte_ebpf_insn){
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
+			.code = (BPF_ALU64 | BPF_MOV | BPF_K),
 			.dst_reg = reg,
 			.imm = (int32_t)value,
 		};
 	} else {
 		/* Load imm64 into tmp_reg using wide load, lower bits first... */
 		*(*ins)++ = (struct rte_ebpf_insn){
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
 			.dst_reg = reg,
 			.imm = (uint32_t)value,
 		};
@@ -618,7 +618,7 @@ prepare_scalar_domain(struct rte_ebpf_insn **ins, uint8_t reg,
 
 	/* Load value from memory area into the register. */
 	*(*ins)++ = (struct rte_ebpf_insn){
-		.code = (BPF_LDX | EBPF_DW | BPF_MEM),
+		.code = (BPF_LDX | BPF_DW | BPF_MEM),
 		.dst_reg = reg,
 		.src_reg = base_reg,
 		.off = sizeof(uint64_t) * (*service_cell_count)++,
@@ -632,13 +632,13 @@ prepare_scalar_domain(struct rte_ebpf_insn **ins, uint8_t reg,
 	 * these bugs, this preparation phase is not a test for them.
 	 */
 	if (domain->u.min > unknown.u.min)
-		compare_and_jump(ins, EBPF_JLT, reg, domain->u.min, tmp_reg);
+		compare_and_jump(ins, BPF_JLT, reg, domain->u.min, tmp_reg);
 	if (domain->u.max < unknown.u.max)
 		compare_and_jump(ins, BPF_JGT, reg, domain->u.max, tmp_reg);
 	if (domain->s.min > unknown.s.min)
-		compare_and_jump(ins, EBPF_JSLT, reg, domain->s.min, tmp_reg);
+		compare_and_jump(ins, BPF_JSLT, reg, domain->s.min, tmp_reg);
 	if (domain->s.max < unknown.s.max)
-		compare_and_jump(ins, EBPF_JSGT, reg, domain->s.max, tmp_reg);
+		compare_and_jump(ins, BPF_JSGT, reg, domain->s.max, tmp_reg);
 }
 
 /*
@@ -657,7 +657,7 @@ prepare_domain(struct rte_ebpf_insn **ins, uint8_t reg,
 	if (domain->is_pointer)
 		/* Add base_reg to convert resulting scalar into a pointer. */
 		*(*ins)++ = (struct rte_ebpf_insn){
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
+			.code = (BPF_ALU64 | BPF_ADD | BPF_X),
 			.dst_reg = reg,
 			.src_reg = base_reg,
 		};
@@ -734,15 +734,15 @@ generate_program(struct verify_instruction_context *ctx, struct rte_ebpf_insn *i
 	fill_verify_instruction_defaults(&ctx->prm);
 
 	/* Allocate registers, base_reg is received as program argument. */
-	ctx->base_reg = EBPF_REG_1;
+	ctx->base_reg = BPF_REG_1;
 	ctx->dst_reg = (ctx->prm.pre.dst.is_defined || ctx->prm.post.dst.is_defined ||
-		ctx->prm.jump.dst.is_defined) ? EBPF_REG_2 : NO_REGISTER;
+		ctx->prm.jump.dst.is_defined) ? BPF_REG_2 : NO_REGISTER;
 	ctx->src_reg = (ctx->prm.pre.src.is_defined || ctx->prm.post.src.is_defined ||
-		ctx->prm.jump.src.is_defined) ? EBPF_REG_3 : NO_REGISTER;
-	ctx->tmp_reg = EBPF_REG_4;
+		ctx->prm.jump.src.is_defined) ? BPF_REG_3 : NO_REGISTER;
+	ctx->tmp_reg = BPF_REG_4;
 
 	/* Clear r0 to make it eligible as a return value. */
-	load_constant(&ins, EBPF_REG_0, 0);
+	load_constant(&ins, BPF_REG_0, 0);
 
 	/* Fill dst register in the instruction if defined anywhere, prepare if needed. */
 	if (ctx->dst_reg != NO_REGISTER) {
@@ -777,18 +777,18 @@ generate_program(struct verify_instruction_context *ctx, struct rte_ebpf_insn *i
 
 	/* Issue post instruction (for setting post breakpoint). */
 	ctx->post.program_counter = ins - ins_buf;
-	load_constant(&ins, EBPF_REG_0, 1);
+	load_constant(&ins, BPF_REG_0, 1);
 
 	/* Issue jump branch for the jump instruction, even if dynamically unreachable. */
 	if (BPF_CLASS(ctx->prm.tested_instruction.code) != BPF_JMP)
 		ctx->jump.program_counter = NO_PROGRAM_COUNTER;
 	else {
 		/* Finish previous branch by issuing exit. */
-		*ins++ = (struct rte_ebpf_insn){ .code = (BPF_JMP | EBPF_EXIT) };
+		*ins++ = (struct rte_ebpf_insn){ .code = (BPF_JMP | BPF_EXIT) };
 
 		/* Issue jump target instruction (for setting jump breakpoint). */
 		ctx->jump.program_counter = ins - ins_buf;
-		load_constant(&ins, EBPF_REG_0, 2);
+		load_constant(&ins, BPF_REG_0, 2);
 
 		/* Patch jump in tested jump instruction. */
 		RTE_VERIFY(ins_buf[ctx->pre.program_counter].off == 0);
@@ -798,7 +798,7 @@ generate_program(struct verify_instruction_context *ctx, struct rte_ebpf_insn *i
 
 	/* Issue exit instruction. */
 	const uint32_t exit_pc = ins - ins_buf;
-	*ins++ = (struct rte_ebpf_insn){ .code = (BPF_JMP | EBPF_EXIT) };
+	*ins++ = (struct rte_ebpf_insn){ .code = (BPF_JMP | BPF_EXIT) };
 
 	/* Patch all jumps to point to exit. */
 	for (uint32_t pc = 0; pc != ctx->pre.program_counter; ++pc)
@@ -1283,7 +1283,7 @@ test_alu64_add_k(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_K),
+			.code = (BPF_ALU64 | BPF_ADD | BPF_K),
 			.imm = 17,
 		},
 		.pre.dst = make_signed_domain(11, 29),
@@ -1297,7 +1297,7 @@ test_alu64_add_k_pointer(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_K),
+			.code = (BPF_ALU64 | BPF_ADD | BPF_K),
 			.imm = 17,
 		},
 		.area_size = 256,
@@ -1312,7 +1312,7 @@ test_alu64_add_x_pointer_pointer(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
+			.code = (BPF_ALU64 | BPF_ADD | BPF_X),
 		},
 		.area_size = 256,
 		.pre.dst = make_pointer_domain(11, 29),
@@ -1327,7 +1327,7 @@ test_alu64_add_x_pointer_scalar(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
+			.code = (BPF_ALU64 | BPF_ADD | BPF_X),
 		},
 		.area_size = 256,
 		.pre.dst = make_pointer_domain(11, 29),
@@ -1342,7 +1342,7 @@ test_alu64_add_x_scalar_pointer(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
+			.code = (BPF_ALU64 | BPF_ADD | BPF_X),
 		},
 		.area_size = 256,
 		.pre.dst = make_signed_domain(11, 29),
@@ -1357,7 +1357,7 @@ test_alu64_add_x_scalar_scalar(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
+			.code = (BPF_ALU64 | BPF_ADD | BPF_X),
 		},
 		.area_size = 256,
 		.pre.dst = make_signed_domain(11, 29),
@@ -1372,7 +1372,7 @@ test_alu64_and_k(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_AND | BPF_K),
+			.code = (BPF_ALU64 | BPF_AND | BPF_K),
 			.imm = 5,
 		},
 		.pre.dst = make_signed_domain(6, 8),
@@ -1401,21 +1401,21 @@ test_alu64_div_mod_big_constant(void)
 
 		TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (EBPF_ALU64 | BPF_DIV | BPF_X),
+				.code = (BPF_ALU64 | BPF_DIV | BPF_X),
 			},
 			.pre.dst = make_singleton_domain(dividend),
 			.pre.src = make_singleton_domain(divisor),
 			.post.dst = make_singleton_domain(dividend / divisor),
-		}), "(EBPF_ALU64 | BPF_DIV | BPF_X) check, index=%d", index);
+		}), "(BPF_ALU64 | BPF_DIV | BPF_X) check, index=%d", index);
 
 		TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (EBPF_ALU64 | BPF_MOD | BPF_X),
+				.code = (BPF_ALU64 | BPF_MOD | BPF_X),
 			},
 			.pre.dst = make_singleton_domain(dividend),
 			.pre.src = make_singleton_domain(divisor),
 			.post.dst = make_singleton_domain(dividend % divisor),
-		}), "(EBPF_ALU64 | BPF_MOD | BPF_X) check, index=%d", index);
+		}), "(BPF_ALU64 | BPF_MOD | BPF_X) check, index=%d", index);
 	}
 
 	return TEST_SUCCESS;
@@ -1443,21 +1443,21 @@ test_alu64_div_mod_big_range(void)
 
 		TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (EBPF_ALU64 | BPF_DIV | BPF_X),
+				.code = (BPF_ALU64 | BPF_DIV | BPF_X),
 			},
 			.pre.dst = make_unsigned_domain(dividend_first, dividend_last),
 			.pre.src = make_singleton_domain(divisor),
 			.post.dst = make_unsigned_domain(0, dividend_last),
-		}), "(EBPF_ALU64 | BPF_DIV | BPF_X) check, index=%d", index);
+		}), "(BPF_ALU64 | BPF_DIV | BPF_X) check, index=%d", index);
 
 		TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (EBPF_ALU64 | BPF_MOD | BPF_X),
+				.code = (BPF_ALU64 | BPF_MOD | BPF_X),
 			},
 			.pre.dst = make_unsigned_domain(dividend_first, dividend_last),
 			.pre.src = make_singleton_domain(divisor),
 			.post.dst = make_unsigned_domain(0, RTE_MIN(dividend_last, divisor - 1)),
-		}), "(EBPF_ALU64 | BPF_MOD | BPF_X) check, index=%d", index);
+		}), "(BPF_ALU64 | BPF_MOD | BPF_X) check, index=%d", index);
 	}
 
 	return TEST_SUCCESS;
@@ -1469,39 +1469,39 @@ test_alu64_div_mod_overflow(void)
 {
 	TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_DIV | BPF_K),
+			.code = (BPF_ALU64 | BPF_DIV | BPF_K),
 			.imm = -1,
 		},
 		.pre.dst = make_singleton_domain(INT64_MIN),
 		.post.dst = make_singleton_domain(0),
-	}), "(EBPF_ALU64 | BPF_DIV | BPF_K) check");
+	}), "(BPF_ALU64 | BPF_DIV | BPF_K) check");
 
 	TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_DIV | BPF_X),
+			.code = (BPF_ALU64 | BPF_DIV | BPF_X),
 		},
 		.pre.dst = make_singleton_domain(INT64_MIN),
 		.pre.src = make_singleton_domain(-1),
 		.post.dst = make_singleton_domain(0),
-	}), "(EBPF_ALU64 | BPF_DIV | BPF_X) check");
+	}), "(BPF_ALU64 | BPF_DIV | BPF_X) check");
 
 	TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_MOD | BPF_K),
+			.code = (BPF_ALU64 | BPF_MOD | BPF_K),
 			.imm = -1,
 		},
 		.pre.dst = make_singleton_domain(INT64_MIN),
 		.post.dst = make_singleton_domain(INT64_MIN),
-	}), "(EBPF_ALU64 | BPF_MOD | BPF_K) check");
+	}), "(BPF_ALU64 | BPF_MOD | BPF_K) check");
 
 	TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_MOD | BPF_X),
+			.code = (BPF_ALU64 | BPF_MOD | BPF_X),
 		},
 		.pre.dst = make_singleton_domain(INT64_MIN),
 		.pre.src = make_singleton_domain(-1),
 		.post.dst = make_singleton_domain(INT64_MIN),
-	}), "(EBPF_ALU64 | BPF_MOD | BPF_X) check");
+	}), "(BPF_ALU64 | BPF_MOD | BPF_X) check");
 
 	return TEST_SUCCESS;
 }
@@ -1512,7 +1512,7 @@ test_alu64_lsh_63(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_LSH | BPF_K),
+			.code = (BPF_ALU64 | BPF_LSH | BPF_K),
 			.imm = 63,
 		},
 		.pre.dst = make_signed_domain(3, 5),
@@ -1526,7 +1526,7 @@ test_alu64_mul_k_overflow(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_MUL | BPF_K),
+			.code = (BPF_ALU64 | BPF_MUL | BPF_K),
 			.imm = 0x12345678,
 		},
 		.pre.dst = make_singleton_domain(0x9876543210),
@@ -1540,7 +1540,7 @@ test_alu64_mul_k_range_small(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_MUL | BPF_K),
+			.code = (BPF_ALU64 | BPF_MUL | BPF_K),
 			.imm = 11,
 		},
 		.pre.dst = make_unsigned_domain(17, 29),
@@ -1569,7 +1569,7 @@ test_alu64_neg_int64min_first(void)
 		const int64_t other_value = other_values[other_index];
 		TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (EBPF_ALU64 | BPF_NEG),
+				.code = (BPF_ALU64 | BPF_NEG),
 			},
 			.pre.dst = make_signed_domain(INT64_MIN, other_value),
 			.post.dst = other_value > 0 ? unknown :
@@ -1596,7 +1596,7 @@ test_alu64_neg_int64min_last(void)
 		const int64_t other_value = other_values[other_index];
 		TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (EBPF_ALU64 | BPF_NEG),
+				.code = (BPF_ALU64 | BPF_NEG),
 			},
 			.pre.dst = make_unsigned_domain(other_value, INT64_MIN),
 			.post.dst = make_signed_domain(INT64_MIN, -(uint64_t)other_value),
@@ -1626,7 +1626,7 @@ test_alu64_neg_zero_first(void)
 		const uint64_t other_value = other_values[other_index];
 		TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (EBPF_ALU64 | BPF_NEG),
+				.code = (BPF_ALU64 | BPF_NEG),
 			},
 			.pre.dst = make_unsigned_domain(0, other_value),
 			.post.dst = other_value > (uint64_t)INT64_MIN ? unknown :
@@ -1652,7 +1652,7 @@ test_alu64_neg_zero_last(void)
 		const int64_t other_value = other_values[other_index];
 		TEST_ASSERT_SUCCESS(verify_instruction((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (EBPF_ALU64 | BPF_NEG),
+				.code = (BPF_ALU64 | BPF_NEG),
 			},
 			.pre.dst = make_signed_domain(other_value, 0),
 			.post.dst = make_unsigned_domain(0, -(uint64_t)other_value),
@@ -1668,7 +1668,7 @@ test_alu64_or_k_negative(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_OR | BPF_K),
+			.code = (BPF_ALU64 | BPF_OR | BPF_K),
 			.imm = -2,
 		},
 		.pre.dst = make_signed_domain(5, 6),
@@ -1682,7 +1682,7 @@ test_alu64_or_k_positive(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_OR | BPF_K),
+			.code = (BPF_ALU64 | BPF_OR | BPF_K),
 			.imm = 2,
 		},
 		.pre.dst = make_signed_domain(5, 6),
@@ -1696,7 +1696,7 @@ test_alu64_sub_x_src_signed_max_zero(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_SUB | BPF_X),
+			.code = (BPF_ALU64 | BPF_SUB | BPF_X),
 		},
 		.pre.dst = make_signed_domain(INT64_MIN, 0),
 		.pre.src = make_signed_domain(INT64_MIN, 0),
@@ -1710,7 +1710,7 @@ test_alu64_xor_k_negative(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (EBPF_ALU64 | BPF_XOR | BPF_K),
+			.code = (BPF_ALU64 | BPF_XOR | BPF_K),
 			.imm = 0,
 		},
 		.pre.dst = make_signed_domain(INT64_MIN, 0),
@@ -1739,7 +1739,7 @@ test_jmp64_jslt_x(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JSLT | BPF_X),
+			.code = (BPF_JMP | BPF_JSLT | BPF_X),
 		},
 		.pre.dst = make_signed_domain(-3, 3),
 		.pre.src = make_signed_domain(0, 0),
@@ -1757,7 +1757,7 @@ test_jmp64_ordering_overflow(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JSLT | BPF_X),
+			.code = (BPF_JMP | BPF_JSLT | BPF_X),
 		},
 		.pre.dst = make_singleton_domain(42),
 		.pre.src = make_singleton_domain(INT64_MIN),
@@ -1766,7 +1766,7 @@ test_jmp64_ordering_overflow(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JSGT | BPF_X),
+			.code = (BPF_JMP | BPF_JSGT | BPF_X),
 		},
 		.pre.dst = make_singleton_domain(42),
 		.pre.src = make_singleton_domain(INT64_MAX),
@@ -1775,7 +1775,7 @@ test_jmp64_ordering_overflow(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_X),
+			.code = (BPF_JMP | BPF_JLT | BPF_X),
 		},
 		.pre.dst = make_singleton_domain(42),
 		.pre.src = make_singleton_domain(0),
@@ -1808,7 +1808,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_X),
+			.code = (BPF_JMP | BPF_JLT | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(0, 10),
@@ -1817,7 +1817,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_X),
+			.code = (BPF_JMP | BPF_JLE | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(0, 10),
@@ -1831,7 +1831,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_X),
+			.code = (BPF_JMP | BPF_JLT | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(10, 40),
@@ -1841,7 +1841,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_X),
+			.code = (BPF_JMP | BPF_JLE | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(10, 40),
@@ -1856,7 +1856,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_X),
+			.code = (BPF_JMP | BPF_JLT | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(10, 70),
@@ -1866,7 +1866,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_X),
+			.code = (BPF_JMP | BPF_JLE | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(10, 70),
@@ -1881,7 +1881,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_X),
+			.code = (BPF_JMP | BPF_JLT | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(30, 50),
@@ -1891,7 +1891,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_X),
+			.code = (BPF_JMP | BPF_JLE | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(30, 50),
@@ -1906,7 +1906,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_X),
+			.code = (BPF_JMP | BPF_JLT | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(40, 70),
@@ -1916,7 +1916,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_X),
+			.code = (BPF_JMP | BPF_JLE | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(40, 70),
@@ -1931,7 +1931,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_X),
+			.code = (BPF_JMP | BPF_JLT | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(70, 80),
@@ -1940,7 +1940,7 @@ test_jmp64_ordering_ranges(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_X),
+			.code = (BPF_JMP | BPF_JLE | BPF_X),
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.pre.src = make_signed_domain(70, 80),
@@ -1964,13 +1964,13 @@ test_jmp64_ordering_singleton_inside(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_K),
+			.code = (BPF_JMP | BPF_JLT | BPF_K),
 			.imm = 40,
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.post.dst = make_signed_domain(40, 60),
 		.jump.dst = make_signed_domain(20, 39),
-	}, also_signed), "(BPF_JMP | EBPF_JLT | BPF_K) check");
+	}, also_signed), "(BPF_JMP | BPF_JLT | BPF_K) check");
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
@@ -1984,13 +1984,13 @@ test_jmp64_ordering_singleton_inside(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_K),
+			.code = (BPF_JMP | BPF_JLE | BPF_K),
 			.imm = 40,
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.post.dst = make_signed_domain(41, 60),
 		.jump.dst = make_signed_domain(20, 40),
-	}, also_signed), "(BPF_JMP | EBPF_JLE | BPF_K) check");
+	}, also_signed), "(BPF_JMP | BPF_JLE | BPF_K) check");
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
@@ -2019,21 +2019,21 @@ test_jmp64_ordering_singleton_outside(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_K),
+			.code = (BPF_JMP | BPF_JLT | BPF_K),
 			.imm = 10,
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.jump = unreachable,
-	}, also_signed), "(BPF_JMP | EBPF_JLT | BPF_K) check, range greater than imm");
+	}, also_signed), "(BPF_JMP | BPF_JLT | BPF_K) check, range greater than imm");
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_K),
+			.code = (BPF_JMP | BPF_JLE | BPF_K),
 			.imm = 10,
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.jump = unreachable,
-	}, also_signed), "(BPF_JMP | EBPF_JLE | BPF_K) check, range greater than imm");
+	}, also_signed), "(BPF_JMP | BPF_JLE | BPF_K) check, range greater than imm");
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
@@ -2060,21 +2060,21 @@ test_jmp64_ordering_singleton_outside(void)
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLT | BPF_K),
+			.code = (BPF_JMP | BPF_JLT | BPF_K),
 			.imm = 70,
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.post = unreachable,
-	}, also_signed), "(BPF_JMP | EBPF_JLT | BPF_K) check, range less than imm");
+	}, also_signed), "(BPF_JMP | BPF_JLT | BPF_K) check, range less than imm");
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_JMP | EBPF_JLE | BPF_K),
+			.code = (BPF_JMP | BPF_JLE | BPF_K),
 			.imm = 70,
 		},
 		.pre.dst = make_signed_domain(20, 60),
 		.post = unreachable,
-	}, also_signed), "(BPF_JMP | EBPF_JLE | BPF_K) check, range less than imm");
+	}, also_signed), "(BPF_JMP | BPF_JLE | BPF_K) check, range less than imm");
 
 	TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 		.tested_instruction = {
@@ -2113,7 +2113,7 @@ test_jmp64_ordering_touching(void)
 
 		TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (BPF_JMP | EBPF_JLT | BPF_X),
+				.code = (BPF_JMP | BPF_JLT | BPF_X),
 			},
 			.pre.dst = make_signed_domain(20, 30),
 			.pre.src = make_signed_domain(10, 19 + overlap),
@@ -2125,7 +2125,7 @@ test_jmp64_ordering_touching(void)
 
 		TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (BPF_JMP | EBPF_JLE | BPF_X),
+				.code = (BPF_JMP | BPF_JLE | BPF_X),
 			},
 			.pre.dst = make_signed_domain(20, 30),
 			.pre.src = make_signed_domain(10, 19 + overlap),
@@ -2142,7 +2142,7 @@ test_jmp64_ordering_touching(void)
 
 		TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (BPF_JMP | EBPF_JLT | BPF_X),
+				.code = (BPF_JMP | BPF_JLT | BPF_X),
 			},
 			.pre.dst = make_signed_domain(10, 19 + overlap),
 			.pre.src = make_signed_domain(20, 30),
@@ -2154,7 +2154,7 @@ test_jmp64_ordering_touching(void)
 
 		TEST_ASSERT_SUCCESS(verify_comparison((struct verify_instruction_param){
 			.tested_instruction = {
-				.code = (BPF_JMP | EBPF_JLE | BPF_X),
+				.code = (BPF_JMP | BPF_JLE | BPF_X),
 			},
 			.pre.dst = make_signed_domain(10, 19 + overlap),
 			.pre.src = make_signed_domain(20, 30),
@@ -2174,7 +2174,7 @@ test_mem_ldx_dw_heap(void)
 {
 	return verify_instruction((struct verify_instruction_param){
 		.tested_instruction = {
-			.code = (BPF_MEM | BPF_LDX | EBPF_DW),
+			.code = (BPF_MEM | BPF_LDX | BPF_DW),
 			.off = 16,
 		},
 		.area_size = 24,

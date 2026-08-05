@@ -89,7 +89,7 @@ bpf_size(uint32_t bpf_op_sz)
 		return sizeof(uint16_t);
 	else if (bpf_op_sz == BPF_W)
 		return sizeof(uint32_t);
-	else if (bpf_op_sz == EBPF_DW)
+	else if (bpf_op_sz == BPF_DW)
 		return sizeof(uint64_t);
 	return 0;
 }
