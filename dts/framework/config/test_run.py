@@ -481,8 +481,6 @@ class TestRunConfiguration(FrozenModel):
     perf: bool
     #: Whether to run functional tests.
     func: bool
-    #: Whether to run cryptography tests.
-    crypto: bool
     #: Whether to run the testing with virtual functions instead of physical functions
     use_virtual_functions: bool
     #: Whether to skip smoke tests.
@@ -522,7 +520,6 @@ class TestRunConfiguration(FrozenModel):
                 for tt in t.test_cases
                 if (tt.test_type is TestCaseType.FUNCTIONAL and self.func)
                 or (tt.test_type is TestCaseType.PERFORMANCE and self.perf)
-                or (tt.test_type is TestCaseType.CRYPTO and self.crypto)
             )
             # Only include test suites that have at least one test case after filtering
             if test_cases:
