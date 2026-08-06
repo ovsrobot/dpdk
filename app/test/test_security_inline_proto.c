@@ -7,6 +7,7 @@
 #include <inttypes.h>
 
 #include <rte_ethdev.h>
+#include <rte_flow.h>
 #include <rte_malloc.h>
 #include <rte_security.h>
 

@@ -8,6 +8,8 @@
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
 #include <rte_security.h>
+#include <rte_flow.h>
+#include <rte_macsec.h>
 
 #include "test.h"
 #include "test_security_inline_macsec_vectors.h"
