@@ -12,6 +12,7 @@ from typing import ClassVar
 from scapy.packet import Packet
 
 from api.exception import SSHTimeoutError
+from api.utils import StrEnum
 from framework.config.node import OS, NodeConfiguration
 from framework.config.test_run import TrexTrafficGeneratorConfig
 from framework.parser import TextParser
@@ -24,7 +25,6 @@ from framework.testbed_model.traffic_generator.performance_traffic_generator imp
     PerformanceTrafficGenerator,
     PerformanceTrafficStats,
 )
-from framework.utils import StrEnum
 
 
 @dataclass(slots=True)
