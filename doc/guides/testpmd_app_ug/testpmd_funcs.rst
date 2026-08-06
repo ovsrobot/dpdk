@@ -7,7 +7,7 @@ Testpmd Runtime Functions
 Where the testpmd application is started in interactive mode, (``-i|--interactive``),
 it displays a prompt that can be used to start and stop forwarding,
 configure the application, display statistics (including the extended NIC
-statistics aka xstats) , set the Flow Director and other tasks::
+statistics aka xstats), set offload parameters and other tasks::
 
    testpmd>
 
@@ -22,10 +22,10 @@ If you type a partial command and hit ``<TAB>`` you get a list of the available 
 
    testpmd> show port <TAB>
 
-       info [Mul-choice STRING]: show|clear port info|stats|xstats|fdir|dcb_tc|cap X
-       info [Mul-choice STRING]: show|clear port info|stats|xstats|fdir|dcb_tc|cap all
-       stats [Mul-choice STRING]: show|clear port info|stats|xstats|fdir|dcb_tc|cap X
-       stats [Mul-choice STRING]: show|clear port info|stats|xstats|fdir|dcb_tc|cap all
+       info [Mul-choice STRING]: show|clear port info|stats|xstats|dcb_tc|cap X
+       info [Mul-choice STRING]: show|clear port info|stats|xstats|dcb_tc|cap all
+       stats [Mul-choice STRING]: show|clear port info|stats|xstats|dcb_tc|cap X
+       stats [Mul-choice STRING]: show|clear port info|stats|xstats|dcb_tc|cap all
        ...
 
 
@@ -160,7 +160,7 @@ show port
 
 Display information for a given port or all ports::
 
-   testpmd> show port (info|summary|stats|xstats|fdir|dcb_tc|cap) (port_id|all)
+   testpmd> show port (info|summary|stats|xstats|dcb_tc|cap) (port_id|all)
 
 The available information categories are:
 
@@ -171,8 +171,6 @@ The available information categories are:
 * ``stats``: RX/TX statistics.
 
 * ``xstats``: RX/TX extended NIC statistics.
-
-* ``fdir``: Flow Director information and statistics.
 
 * ``dcb_tc``: DCB information such as TC mapping.
 
@@ -262,7 +260,7 @@ clear port
 
 Clear the port statistics and forward engine statistics for a given port or for all ports::
 
-   testpmd> clear port (info|stats|xstats|fdir) (port_id|all)
+   testpmd> clear port (info|stats|xstats) (port_id|all)
 
 For example::
 
@@ -2287,42 +2285,6 @@ Where the threshold type can be:
 * ``txrst:`` Set the transmit RS bit threshold of TX rings, 0 <= value <= txd.
 
 These threshold options are also available from the command-line.
-
-port config pctype mapping
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Reset pctype mapping table::
-
-   testpmd> port config (port_id) pctype mapping reset
-
-Update hardware defined pctype to software defined flow type mapping table::
-
-   testpmd> port config (port_id) pctype mapping update (pctype_id_0[,pctype_id_1]*) (flow_type_id)
-
-where:
-
-* ``pctype_id_x``: hardware pctype id as index of bit in bitmask value of the pctype mapping table.
-
-* ``flow_type_id``: software flow type id as the index of the pctype mapping table.
-
-port config input set
-~~~~~~~~~~~~~~~~~~~~~
-
-Config RSS/FDIR/FDIR flexible payload input set for some pctype::
-
-   testpmd> port config (port_id) pctype (pctype_id) \
-            (hash_inset|fdir_inset|fdir_flx_inset) \
-	    (get|set|clear) field (field_idx)
-
-Clear RSS/FDIR/FDIR flexible payload input set for some pctype::
-
-   testpmd> port config (port_id) pctype (pctype_id) \
-            (hash_inset|fdir_inset|fdir_flx_inset) clear all
-
-where:
-
-* ``pctype_id``: hardware packet classification types.
-* ``field_idx``: hardware field index.
 
 port config udp_tunnel_port
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -5519,10 +5481,10 @@ L2TPv2 RSS rules can be created by the following commands::
    testpmd> flow create 0 ingress pattern eth / ipv6 / udp / l2tpv2 / ppp / ipv6
             / end actions rss types ipv6 end queues end / end
 
-Sample L2TPv2 FDIR rules
+Sample L2TPv2 flow rules
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-L2TPv2 FDIR rules can be created by the following commands::
+L2TPv2 flow rules can be created by the following commands::
 
    testpmd> flow create 0 ingress pattern eth / ipv4 / udp / l2tpv2 type control
             session_id is 0x1111 / end actions queue index 3 / end
