@@ -614,6 +614,19 @@ iavf_handle_virtchnl_msg(struct rte_eth_dev *dev)
 			break;
 		}
 		aq_opc = rte_le_to_cpu_16(info.desc.opcode);
+
+		/*
+		 * During PF-initiated resets, iavf_clean_arq_element() has
+		 * been observed to return IAVF_SUCCESS with a fully zeroed
+		 * descriptor (opcode 0).
+		 * Without this guard, such descriptors would fall through
+		 * to the default case of the dispatch switch below and the
+		 * "Request 0 is not supported yet" log flood reported in
+		 * the field would be produced. These are discarded now.
+		 */
+		if (aq_opc == 0)
+			continue;
+
 		/* For the message sent from pf to vf, opcode is stored in
 		 * cookie_high of struct iavf_aq_desc, while return error code
 		 * are stored in cookie_low, Which is done by PF driver.
