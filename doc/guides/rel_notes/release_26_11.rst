@@ -72,6 +72,7 @@ New Features
   * Added per-queue MSI-X Rx interrupt support for the ENETC4 VF.
   * Added SI-based port VLAN insertion (Tx) and removal (Rx) for ENETC4 PF and VF.
   * Updated ENETC4 VF link status reporting to use bitmask encoding.
+  * Added TX PAUSE support for the ENETC4 VF via RX congestion mode.
 
 Removed Items
 -------------
