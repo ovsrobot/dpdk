@@ -16,10 +16,10 @@ from framework.remote_session.shell_pool import ShellPool
 from framework.settings import SETTINGS
 
 if TYPE_CHECKING:
+    from api.test_suite import TestCase, TestSuite
     from api.testbed_model.capability import TestProtocol
     from api.testbed_model.traffic_generator.traffic_generator import TrafficGenerator
     from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
-    from framework.test_suite import TestCase, TestSuite
 
 P = ParamSpec("P")
 
