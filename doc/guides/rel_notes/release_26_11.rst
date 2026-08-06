@@ -68,6 +68,8 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* mempool: The obsolete ``flushthresh`` field was removed from the ``rte_mempool_cache`` structure.
+
 * Removed deprecated symbols:
 
   * fib: ``RTE_FIB6_IPV6_ADDR_SIZE``, ``RTE_FIB6_MAXDEPTH``
@@ -92,6 +94,10 @@ API Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* mempool: The ``rte_mempool_cache`` structure was updated as follows:
+  - The obsolete ``flushthresh`` field was removed.
+  - The size of the ``objs`` array was reduced from ``RTE_MEMPOOL_CACHE_MAX_SIZE`` * 2 to ``RTE_MEMPOOL_CACHE_MAX_SIZE``.
 
 
 ABI Changes
