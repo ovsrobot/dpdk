@@ -22,10 +22,10 @@ from framework.config.node import (
     OS,
     NodeConfiguration,
 )
+from framework.linux_session import LinuxSession
 from framework.logger import DTSLogger, get_dts_logger
 
 from .cpu import Architecture, LogicalCore
-from .linux_session import LinuxSession
 from .os_session import OSSession, OSSessionInfo
 from .port import Port
 

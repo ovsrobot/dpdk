@@ -35,6 +35,7 @@ Modules
    api.context
    framework.logger
    framework.parser
+   framework.linux_session
    api.utils
    api.exception
 
