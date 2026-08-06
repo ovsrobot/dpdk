@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 
+#include <rte_byteorder.h>
+
 #include "sff_common.h"
 
 /* Offsets in decimal, for direct comparison with the SFF specs */
@@ -176,7 +178,7 @@ static float befloattoh(const uint32_t *source)
 		float dst;
 	} converter;
 
-	converter.src = ntohl(*source);
+	converter.src = rte_be_to_cpu_32(*source);
 	return converter.dst;
 }
 
