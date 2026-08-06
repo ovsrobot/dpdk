@@ -23,8 +23,8 @@ from api.exception import (
     InternalError,
     RemoteCommandExecutionError,
 )
+from api.testbed_model.port import PortInfo
 from api.utils import expand_range
-from framework.testbed_model.port import PortInfo
 
 from .cpu import LogicalCore
 from .port import Port
