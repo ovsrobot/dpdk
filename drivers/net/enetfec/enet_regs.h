@@ -5,6 +5,8 @@
 #ifndef __ENETFEC_REGS_H
 #define __ENETFEC_REGS_H
 
+#include <sys/types.h>
+
 /* Ethernet receive use control and status of buffer descriptor
  */
 #define RX_BD_TR	((ushort)0x0001) /* Truncated */
