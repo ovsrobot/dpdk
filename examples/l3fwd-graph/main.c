@@ -36,6 +36,7 @@
 #include <rte_per_lcore.h>
 #include <rte_string_fns.h>
 #include <rte_vect.h>
+#include <rte_ip.h>
 
 #include <cmdline_parse.h>
 #include <cmdline_parse_etheraddr.h>

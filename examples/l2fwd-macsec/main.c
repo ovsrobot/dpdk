@@ -33,9 +33,11 @@
 #include <rte_debug.h>
 #include <rte_ether.h>
 #include <rte_ethdev.h>
+#include <rte_flow.h>
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 #include <rte_security.h>
+#include <rte_macsec.h>
 #include <rte_string_fns.h>
 
 static volatile bool force_quit;

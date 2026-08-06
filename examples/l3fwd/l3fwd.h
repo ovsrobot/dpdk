@@ -8,6 +8,8 @@
 #include <rte_ethdev.h>
 #include <rte_vect.h>
 #include <rte_acl.h>
+#include <rte_ip.h>
+
 
 #define DO_RFC_1812_CHECKS
 
