@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added NXP i.MX95 eDMA5 DMA driver.**
+
+  Added the ``imx_edma5`` DMA driver for the NXP i.MX95 eDMA5 controller.
+  The driver exposes each eDMA5 instance as a DPDK dmadev device and
+  supports memory-to-memory copy and scatter-gather copy operations.
+
 
 Removed Items
 -------------
