@@ -260,7 +260,7 @@ iavf_handle_link_change_event(struct rte_eth_dev *dev,
 	 * (link is down or a VF reset is in progress); the watchdog drives
 	 * auto-reset recovery, so it must remain armed in those cases.
 	 */
-	if (vf->link_up && !vf->vf_reset)
+	if (vf->link_up && !vf->vf_reset && !vf->in_reset_recovery)
 		iavf_dev_watchdog_disable(adapter);
 	else
 		iavf_dev_watchdog_enable(adapter);
@@ -270,6 +270,20 @@ iavf_handle_link_change_event(struct rte_eth_dev *dev,
 		PMD_DRV_LOG(DEBUG, "VF no poll turned %s",
 			    adapter->no_poll ? "on" : "off");
 	}
+
+	/*
+	 * Resume a deferred dev_start.
+	 * iavf_handle_hw_reset() sets vf->start_pending when
+	 * reset recovery completed dev_init() but iavf_dev_start()
+	 * itself failed (typically -EIO from VIRTCHNL_OP_CONFIG_VSI_QUEUES
+	 * when the PF VSI was inactive).
+	 * A link-up event implies the PF VSI is active again, so retry now.
+	 * Run before the LSC event post so the port is ready to accept Tx
+	 * by the time the app's link-up callback fires; no_poll has already
+	 * been cleared above so bursts go through as soon as
+	 * dev_start sets dev_started=1.
+	 */
+	iavf_resume_pending_start(dev);
 
 	iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_LSC, NULL, 0);
 
