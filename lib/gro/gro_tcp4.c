@@ -2,9 +2,16 @@
  * Copyright(c) 2017 Intel Corporation
  */
 
+#include <stddef.h>
+
+#include <rte_branch_prediction.h>
+#include <rte_byteorder.h>
+#include <rte_common.h>
+#include <rte_ether.h>
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
-#include <rte_ethdev.h>
+#include <rte_ip.h>
+#include <rte_tcp.h>
 
 #include "gro_tcp4.h"
 #include "gro_tcp_internal.h"
