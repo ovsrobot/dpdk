@@ -33,21 +33,6 @@ extern "C" {
 #endif
 
 /**
- * Copy bytes from one location to another. The locations must not overlap.
- *
- * @param dst
- *   Pointer to the destination of the data.
- * @param src
- *   Pointer to the source data.
- * @param n
- *   Number of bytes to copy.
- * @return
- *   Pointer to the destination data.
- */
-static __rte_always_inline void *
-rte_memcpy(void *__rte_restrict dst, const void *__rte_restrict src, size_t n);
-
-/**
  * Copy bytes from one location to another,
  * locations must not overlap.
  * Use with n <= 15.
@@ -187,7 +172,8 @@ rte_mov256(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
  * AVX512 implementation below
  */
 
-#define ALIGNMENT_MASK 0x3F
+#define RTE_MEMCPY_ALIGNMENT_MASK 0x3F
+#define RTE_MEMCPY_BLOCK_64_MAX 512
 
 /**
  * Copy 128-byte blocks from one location to another,
@@ -333,7 +319,8 @@ COPY_BLOCK_128_BACK63:
  * AVX implementation below
  */
 
-#define ALIGNMENT_MASK 0x1F
+#define RTE_MEMCPY_ALIGNMENT_MASK 0x1F
+#define RTE_MEMCPY_BLOCK_64_MAX 256
 
 /**
  * Copy 128-byte blocks from one location to another,
@@ -444,7 +431,8 @@ COPY_BLOCK_128_BACK31:
  * SSE implementation below
  */
 
-#define ALIGNMENT_MASK 0x0F
+#define RTE_MEMCPY_ALIGNMENT_MASK 0x0F
+#define RTE_MEMCPY_BLOCK_64_MAX 512
 
 /**
  * Macro for copying unaligned block from one location to another with constant load offset,
@@ -673,6 +661,18 @@ rte_memcpy_aligned_more_than_64(void *__rte_restrict dst, const void *__rte_rest
 	return ret;
 }
 
+/**
+ * Copy bytes from one location to another. The locations must not overlap.
+ *
+ * @param dst
+ *   Pointer to the destination of the data.
+ * @param src
+ *   Pointer to the source data.
+ * @param n
+ *   Number of bytes to copy.
+ * @return
+ *   Pointer to the destination data.
+ */
 static __rte_always_inline void *
 rte_memcpy(void *__rte_restrict dst, const void *__rte_restrict src, size_t n)
 {
@@ -707,15 +707,43 @@ rte_memcpy(void *__rte_restrict dst, const void *__rte_restrict src, size_t n)
 #endif
 		return dst;
 	}
+	/* Common way for small copy size of 64-byte blocks. Unlikely, so constant size only */
+	static_assert(RTE_MEMCPY_BLOCK_64_MAX <= 512,
+			"64-byte block copy max size too big for implementation below");
+	if (__rte_constant(n) && (n & 63) == 0 && n <= RTE_MEMCPY_BLOCK_64_MAX) {
+		if (n == 512) {
+			rte_mov256((uint8_t *)dst + 0 * 256, (const uint8_t *)src + 0 * 256);
+			rte_mov256((uint8_t *)dst + 1 * 256, (const uint8_t *)src + 1 * 256);
+			return dst;
+		} else {
+			void *ret = dst;
+
+			if (n & 256) {
+				rte_mov256((uint8_t *)dst, (const uint8_t *)src);
+				src = (const uint8_t *)src + 256;
+				dst = (uint8_t *)dst + 256;
+			}
+			if (n & 128) {
+				rte_mov128((uint8_t *)dst, (const uint8_t *)src);
+				src = (const uint8_t *)src + 128;
+				dst = (uint8_t *)dst + 128;
+			}
+			if (n & 64)
+				rte_mov64((uint8_t *)dst, (const uint8_t *)src);
+
+			return ret;
+		}
+	}
 
 	/* Implementation for size > 64 bytes depends on alignment with vector register size. */
-	if (!(((uintptr_t)dst | (uintptr_t)src) & ALIGNMENT_MASK))
+	if (!(((uintptr_t)dst | (uintptr_t)src) & RTE_MEMCPY_ALIGNMENT_MASK))
 		return rte_memcpy_aligned_more_than_64(dst, src, n);
 	else
 		return rte_memcpy_generic_more_than_64(dst, src, n);
 }
 
-#undef ALIGNMENT_MASK
+#undef RTE_MEMCPY_ALIGNMENT_MASK
+#undef RTE_MEMCPY_BLOCK_64_MAX
 
 #ifdef __cplusplus
 }
