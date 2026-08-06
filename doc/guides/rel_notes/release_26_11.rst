@@ -65,6 +65,7 @@ New Features
   * Added Receive Segment Coalesce (RSC / hardware LRO) support for ENETC4 PF and VF.
   * Extended the PF-to-VF link speed code field from 4-bit to 8-bit in ENETC4.
   * Added firmware version reporting for the ENETC4 VF.
+  * Added register dump support for ENETC4 PF and VF.
 
 Removed Items
 -------------
