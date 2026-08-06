@@ -30,10 +30,10 @@ from scapy.packet import Packet
 from typing_extensions import Self
 
 from api.exception import ConfigurationError, InternalError
+from api.testbed_model.capability import TestProtocol
+from api.testbed_model.topology import Topology
 from api.utils import to_pascal_case
 from framework.config.common import FrozenModel
-from framework.testbed_model.capability import TestProtocol
-from framework.testbed_model.topology import Topology
 
 from .logger import DTSLogger, get_dts_logger
 
