@@ -3,6 +3,9 @@
  */
 
 #include <ethdev_driver.h>
+#include <rte_ip.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
 
 #include <infiniband/verbs.h>
 #include <infiniband/manadv.h>
