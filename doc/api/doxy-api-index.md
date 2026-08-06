@@ -11,7 +11,6 @@ The public API headers are grouped by topics:
 - **device**:
   [dev](@ref rte_dev.h),
   [ethdev](@ref rte_ethdev.h),
-  [ethctrl](@ref rte_eth_ctrl.h),
   [rte_flow](@ref rte_flow.h),
   [rte_tm](@ref rte_tm.h),
   [rte_mtr](@ref rte_mtr.h),

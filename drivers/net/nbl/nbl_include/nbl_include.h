@@ -27,6 +27,7 @@
 
 #include <rte_alarm.h>
 #include <rte_ethdev.h>
+#include <rte_flow.h>
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
 #include <bus_pci_driver.h>

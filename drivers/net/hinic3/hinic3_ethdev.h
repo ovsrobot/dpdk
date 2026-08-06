@@ -7,6 +7,7 @@
 
 #include <rte_ethdev.h>
 #include <rte_ethdev_core.h>
+#include <ethdev_fdir.h>
 
 #include "hinic3_fdir.h"
 

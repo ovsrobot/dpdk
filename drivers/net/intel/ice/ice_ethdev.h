@@ -8,8 +8,10 @@
 #include <rte_compat.h>
 #include <rte_kvargs.h>
 #include <rte_time.h>
+#include <rte_flow.h>
 
 #include <ethdev_driver.h>
+#include <ethdev_fdir.h>
 #include <rte_tm_driver.h>
 #include <rte_vect.h>
 

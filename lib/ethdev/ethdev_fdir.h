@@ -1,23 +1,22 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2010-2015 Intel Corporation
+ * Copyright(c) 2010-2017 Intel Corporation
  */
 
-#ifndef _RTE_ETH_CTRL_H_
-#define _RTE_ETH_CTRL_H_
-
-#include <stdint.h>
-#include <rte_common.h>
-#include <rte_ether.h>
-#include "rte_flow.h"
-#include "rte_ethdev.h"
+#ifndef _ETHDEV_FDIR_H_
+#define _ETHDEV_FDIR_H_
 
 /**
- * @deprecated Please use rte_flow API instead of this legacy one.
  * @file
  *
- * Ethernet device features and related data structures used
- * by control APIs should be defined in this file.
+ * Ethernet device definitions for legacy Flow Director support.
+ * This API is maintained only for existing driver compatibility.
+ * New drivers should use the rte_flow API (rte_flow.h) instead.
+ *
+ * This header is part of the driver SDK and is installed for drivers
+ * that still depend on legacy FDIR structures. Do not use in new drivers.
  */
+
+#include <rte_flow.h>
 
 /**
  * Define all structures for ntuple Filter type.
@@ -483,4 +482,41 @@ struct rte_eth_fdir_stats {
 	uint32_t best_cnt;     /**< Number of filters in best effort spaces. */
 };
 
-#endif /* _RTE_ETH_CTRL_H_ */
+
+/**
+ *  Memory space that can be configured to store Flow Director filters
+ *  in the board memory.
+ */
+enum rte_eth_fdir_pballoc_type {
+	RTE_ETH_FDIR_PBALLOC_64K = 0,  /**< 64k. */
+	RTE_ETH_FDIR_PBALLOC_128K,     /**< 128k. */
+	RTE_ETH_FDIR_PBALLOC_256K,     /**< 256k. */
+};
+
+/**
+ *  Select report mode of FDIR hash information in Rx descriptors.
+ */
+enum rte_fdir_status_mode {
+	RTE_FDIR_NO_REPORT_STATUS = 0, /**< Never report FDIR hash. */
+	RTE_FDIR_REPORT_STATUS, /**< Only report FDIR hash for matching pkts. */
+	RTE_FDIR_REPORT_STATUS_ALWAYS, /**< Always report FDIR hash. */
+};
+
+/**
+ * A structure used to configure the Flow Director (FDIR) feature
+ * of an Ethernet port.
+ *
+ * If mode is RTE_FDIR_MODE_NONE, the pballoc value is ignored.
+ */
+struct rte_eth_fdir_conf {
+	enum rte_fdir_mode mode; /**< Flow Director mode. */
+	enum rte_eth_fdir_pballoc_type pballoc; /**< Space for FDIR filters. */
+	enum rte_fdir_status_mode status;  /**< How to report FDIR hash. */
+	/** Rx queue of packets matching a "drop" filter in perfect mode. */
+	uint8_t drop_queue;
+	struct rte_eth_fdir_masks mask;
+	/** Flex payload configuration. */
+	struct rte_eth_fdir_flex_conf flex_conf;
+};
+
+#endif /* _ETHDEV_FDIR_H_ */
