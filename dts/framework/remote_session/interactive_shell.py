@@ -35,10 +35,10 @@ from api.exception import (
     InteractiveSSHSessionDeadError,
     InteractiveSSHTimeoutError,
 )
+from api.testbed_model.node import Node
 from framework.logger import DTSLogger, get_dts_logger
 from framework.params import Params
 from framework.settings import SETTINGS
-from framework.testbed_model.node import Node
 
 P = ParamSpec("P")
 T = TypeVar("T", bound="InteractiveShell")
