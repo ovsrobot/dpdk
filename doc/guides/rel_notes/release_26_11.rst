@@ -66,6 +66,7 @@ New Features
   * Extended the PF-to-VF link speed code field from 4-bit to 8-bit in ENETC4.
   * Added firmware version reporting for the ENETC4 VF.
   * Added register dump support for ENETC4 PF and VF.
+  * Added ring parameters support for the ENETC4 VF (rxq_info_get / txq_info_get).
 
 Removed Items
 -------------
