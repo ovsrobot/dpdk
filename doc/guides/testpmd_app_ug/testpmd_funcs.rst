@@ -874,6 +874,17 @@ Set the length of each segment of the TX-ONLY packets or length of packet for FL
 
 Where x[,y]* represents a CSV list of values, without white space.
 
+The total packet length may be set as small as the Ethernet header
+(``sizeof(struct rte_ether_hdr)``), since control level protocols can
+be very short. This generates runt frames with truncated IPv4/UDP
+headers. Checksum offloads are automatically disabled when the
+corresponding header is not fully present.
+
+Note that random split (``set txsplit rand``) and multi-flow
+(``set txonly-flows``) still require the first segment to hold the full
+Ethernet/IPv4/UDP header stack, so they cannot be combined with runt
+lengths.
+
 set txtimes
 ~~~~~~~~~~~
 

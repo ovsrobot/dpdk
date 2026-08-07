@@ -76,6 +76,12 @@ copy_buf_to_pkt_segs(void* buf, unsigned len, struct rte_mbuf *pkt,
 	while (offset >= seg->data_len) {
 		offset -= seg->data_len;
 		seg = seg->next;
+		/*
+		 * The packet may be shorter than the header stack when
+		 * generating runt frames, stop once it runs out of segments.
+		 */
+		if (seg == NULL)
+			return;
 	}
 	copy_len = seg->data_len - offset;
 	seg_buf = rte_pktmbuf_mtod_offset(seg, char *, offset);
@@ -84,6 +90,8 @@ copy_buf_to_pkt_segs(void* buf, unsigned len, struct rte_mbuf *pkt,
 		len -= copy_len;
 		buf = ((char*) buf + copy_len);
 		seg = seg->next;
+		if (seg == NULL)
+			return;
 		seg_buf = rte_pktmbuf_mtod(seg, char *);
 		copy_len = seg->data_len;
 	}
@@ -193,7 +201,6 @@ pkt_burst_prepare(struct rte_mbuf *pkt, struct rte_mempool *mbp,
 	pkt->vlan_tci = vlan_tci;
 	pkt->vlan_tci_outer = vlan_tci_outer;
 	pkt->l2_len = sizeof(struct rte_ether_hdr);
-	pkt->l3_len = sizeof(struct rte_ipv4_hdr);
 
 	pkt_len = pkt->data_len;
 	pkt_seg = pkt;
@@ -204,6 +211,25 @@ pkt_burst_prepare(struct rte_mbuf *pkt, struct rte_mempool *mbp,
 		pkt_len += pkt_seg->data_len;
 	}
 	pkt_seg->next = NULL; /* Last segment of packet. */
+
+	/*
+	 * A runt frame may be too short to carry a full IPv4/UDP header.
+	 * Clamp l3_len and drop any checksum offload whose header is not
+	 * fully present, so the PMD is never asked to checksum bytes that
+	 * are not in the frame. pkt_len is at least sizeof(struct rte_ether_hdr),
+	 * so the subtraction below cannot underflow.
+	 */
+	pkt->l3_len = RTE_MIN(sizeof(struct rte_ipv4_hdr),
+			pkt_len - sizeof(struct rte_ether_hdr));
+	if (pkt_len < sizeof(struct rte_ether_hdr) +
+			sizeof(struct rte_ipv4_hdr))
+		pkt->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM |
+				RTE_MBUF_F_TX_L4_MASK);
+	else if (pkt_len < sizeof(struct rte_ether_hdr) +
+			sizeof(struct rte_ipv4_hdr) +
+			sizeof(struct rte_udp_hdr))
+		pkt->ol_flags &= ~RTE_MBUF_F_TX_L4_MASK;
+
 	/*
 	 * Copy headers in first packet segment(s).
 	 */
@@ -405,7 +431,13 @@ tx_only_begin(portid_t pi)
 	pkt_hdr_len = (uint16_t)(sizeof(struct rte_ether_hdr) +
 				 sizeof(struct rte_ipv4_hdr) +
 				 sizeof(struct rte_udp_hdr));
-	pkt_data_len = tx_pkt_length - pkt_hdr_len;
+	/*
+	 * tx_pkt_length may be smaller than the full header stack when
+	 * generating runt frames, clamp the payload length to zero in
+	 * that case so the IP/UDP length fields stay sane.
+	 */
+	pkt_data_len = tx_pkt_length > pkt_hdr_len ?
+			tx_pkt_length - pkt_hdr_len : 0;
 
 	if ((tx_pkt_split == TX_PKT_SPLIT_RND || txonly_multi_flow) &&
 	    tx_pkt_seg_lengths[0] < pkt_hdr_len) {

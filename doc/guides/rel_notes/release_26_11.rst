@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated testpmd application.**
+
+  Added support for runt frames in txonly mode. The minimum packet
+  length for ``set txpkts`` is relaxed to the Ethernet header size,
+  since control level protocols can be very short. Checksum offloads
+  are automatically disabled when headers are incomplete.
+
 
 Removed Items
 -------------
