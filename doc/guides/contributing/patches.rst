@@ -533,6 +533,13 @@ The script supports multiple AI providers
 An API key for the chosen provider must be set
 in the corresponding environment variable (see ``--list-providers``).
 
+Alternatively, the ``--via opencode`` option uses the locally installed
+`opencode <https://opencode.ai>`_ CLI as the review runner instead of
+calling a cloud API directly.
+opencode reads ``AGENTS.md`` from the DPDK project directory
+and selects the model from its own configuration,
+so no API key needs to be set in the environment.
+
 Basic usage::
 
    # Review a single patch (default provider: Anthropic Claude)
@@ -540,6 +547,9 @@ Basic usage::
 
    # Use a different provider
    devtools/ai/review-patch.py -p openai my-patch.patch
+
+   # Use the local opencode agent instead of a cloud API
+   devtools/ai/review-patch.py --via opencode my-patch.patch
 
    # Review for an LTS branch (enables stricter rules)
    devtools/ai/review-patch.py -r 24.11 my-patch.patch
