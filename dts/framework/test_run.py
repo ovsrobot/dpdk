@@ -368,6 +368,13 @@ class TestRunSetup(State):
 
         self.logger.info(f"DUT NIC info written to: {SETTINGS.output_dir}/dut_info.json")
 
+        if (
+            test_run.ctx.topology.type != LinkTopology.NO_LINK
+            and test_run.ctx.sut_node.ports[0].config.os_driver_for_dpdk == "vfio-pci"
+        ):
+            test_run.ctx.sut_node.main_session.send_command("modprobe vfio")
+            test_run.ctx.sut_node.main_session.send_command("modprobe vfio-pci")
+
         if test_run.config.use_virtual_functions:
             ctx.topology.instantiate_vf_ports()
         if ctx.sut_node.cryptodevs and test_run.config.crypto:
