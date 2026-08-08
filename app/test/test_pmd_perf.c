@@ -15,7 +15,7 @@
 #include "test.h"
 
 #define NB_ETHPORTS_USED                (1)
-#define NB_SOCKETS                      (2)
+#define NB_SOCKETS                      RTE_MAX_NUMA_NODES
 #define MEMPOOL_CACHE_SIZE 250
 #define MAX_PKT_BURST                   (32)
 #define RX_DESC_DEFAULT        (1024)
