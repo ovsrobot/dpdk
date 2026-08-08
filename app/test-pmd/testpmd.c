@@ -3829,6 +3829,7 @@ pmd_test_exit(void)
 		}
 	}
 #endif
+
 	if (ports != NULL) {
 		no_link_check = 1;
 		RTE_ETH_FOREACH_DEV(pt_id) {
