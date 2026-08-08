@@ -2826,6 +2826,23 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_NVGRE_DECAP,
 
 	/**
+	 * Encapsulate flow in GENEVE tunnel defined in the
+	 * rte_flow_action_geneve_encap action structure.
+	 *
+	 * See struct rte_flow_action_geneve_encap.
+	 */
+	RTE_FLOW_ACTION_TYPE_GENEVE_ENCAP,
+
+	/**
+	 * Decapsulate outer most GENEVE tunnel from matched flow.
+	 *
+	 * If flow pattern does not define a valid GENEVE tunnel (as specified by
+	 * RFC8296) then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION
+	 * error.
+	 */
+	RTE_FLOW_ACTION_TYPE_GENEVE_DECAP,
+
+	/**
 	 * Add outer header whose template is provided in its data buffer
 	 *
 	 * See struct rte_flow_action_raw_encap.
@@ -3733,6 +3750,39 @@ struct rte_flow_action_vxlan_encap {
 struct rte_flow_action_nvgre_encap {
 	/**
 	 * Encapsulating nvgre tunnel definition
+	 * (terminated by the END pattern item).
+	 */
+	struct rte_flow_item *definition;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ACTION_TYPE_GENEVE_ENCAP
+ *
+ * GENEVE tunnel end-point encapsulation data definition
+ *
+ * The tunnel definition is provided through the flow item pattern  the
+ * provided pattern must conform with RFC8926. The flow definition must be
+ * provided in order from the RTE_FLOW_ITEM_TYPE_ETH definition up the end item
+ * which is specified by RTE_FLOW_ITEM_TYPE_END.
+ *
+ * The mask field allows user to specify which fields in the flow item
+ * definitions can be ignored and which have valid data and can be used
+ * verbatim.
+ *
+ * Note: the last field is not used in the definition of a tunnel and can be
+ * ignored.
+ *
+ * Valid flow definition for RTE_FLOW_ACTION_TYPE_GENEVE_ENCAP include:
+ *
+ * - ETH / IPV4 / GENEVE / END
+ * - ETH / VLAN / IPV6 / GENEVE / END
+ */
+struct rte_flow_action_geneve_encap {
+	/**
+	 * Encapsulating geneve tunnel definition
 	 * (terminated by the END pattern item).
 	 */
 	struct rte_flow_item *definition;
