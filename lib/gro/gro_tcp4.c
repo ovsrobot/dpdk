@@ -5,6 +5,8 @@
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
+#include <rte_hash.h>
+#include <rte_jhash.h>
 
 #include "gro_tcp4.h"
 #include "gro_tcp_internal.h"
@@ -57,6 +59,15 @@ gro_tcp4_tbl_create(uint16_t socket_id,
 		tbl->flows[i].start_index = INVALID_ARRAY_INDEX;
 	tbl->max_flow_num = entries_num;
 
+	/* Create Hash table for faster lookup of the flows */
+	tbl->flow_hash = rte_hash_create(&(struct rte_hash_parameters){
+		.name = "gro_tcp4_flow_hash",
+		.entries = tbl->max_flow_num,
+		.key_len = sizeof(struct tcp4_flow_key),
+		.hash_func = rte_jhash,
+		.hash_func_init_val = 0
+	});
+
 	return tbl;
 }
 
@@ -69,6 +80,7 @@ gro_tcp4_tbl_destroy(void *tbl)
 		rte_free(tcp_tbl->items);
 		rte_free(tcp_tbl->flows);
 	}
+	rte_hash_free(tcp_tbl->flow_hash);
 	rte_free(tcp_tbl);
 }
 
@@ -91,9 +103,15 @@ insert_new_flow(struct gro_tcp4_tbl *tbl,
 {
 	struct tcp4_flow_key *dst;
 	uint32_t flow_idx;
+	int32_t ret;
 
 	flow_idx = find_an_empty_flow(tbl);
 	if (unlikely(flow_idx == INVALID_ARRAY_INDEX))
+		return INVALID_ARRAY_INDEX;
+
+	ret = rte_hash_add_key_data(tbl->flow_hash, src,
+			(void *)&tbl->flows[flow_idx]);
+	if (ret < 0)
 		return INVALID_ARRAY_INDEX;
 
 	dst = &(tbl->flows[flow_idx].key);
@@ -124,9 +142,8 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 
 	struct tcp4_flow_key key;
 	uint32_t item_idx;
-	uint32_t i, max_flow_num, remaining_flow_num;
-	uint8_t find;
-	uint32_t item_start_idx;
+	int ret;
+	struct gro_tcp4_flow *flow;
 
 	/*
 	 * Don't process the packet whose TCP header length is greater
@@ -173,22 +190,8 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 	is_atomic = (frag_off & RTE_IPV4_HDR_DF_FLAG) == RTE_IPV4_HDR_DF_FLAG;
 	ip_id = is_atomic ? 0 : rte_be_to_cpu_16(ipv4_hdr->packet_id);
 
-	/* Search for a matched flow. */
-	max_flow_num = tbl->max_flow_num;
-	remaining_flow_num = tbl->flow_num;
-	find = 0;
-	for (i = 0; i < max_flow_num && remaining_flow_num; i++) {
-		if (tbl->flows[i].start_index != INVALID_ARRAY_INDEX) {
-			if (is_same_tcp4_flow(tbl->flows[i].key, key)) {
-				find = 1;
-				item_start_idx = tbl->flows[i].start_index;
-				break;
-			}
-			remaining_flow_num--;
-		}
-	}
-
-	if (find == 1) {
+	ret = rte_hash_lookup_data(tbl->flow_hash, &key, (void **)&flow);
+	if (ret >= 0) {
 		/*
 		 * Any packet with additional flags like PSH,FIN should be processed
 		 * and flushed immediately.
@@ -197,9 +200,9 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 		 */
 		if (tcp_hdr->tcp_flags & (RTE_TCP_ACK_FLAG | RTE_TCP_PSH_FLAG | RTE_TCP_FIN_FLAG)) {
 			if (tcp_hdr->tcp_flags != RTE_TCP_ACK_FLAG)
-				tbl->items[item_start_idx].start_time = 0;
+				tbl->items[flow->start_index].start_time = 0;
 			return process_tcp_item(pkt, tcp_hdr, tcp_dl, tbl->items,
-						tbl->flows[i].start_index, &tbl->item_num,
+						flow->start_index, &tbl->item_num,
 						tbl->max_item_num, ip_id, is_atomic, start_time);
 		} else {
 			return -1;
@@ -256,6 +259,8 @@ gro_tcp4_tbl_timeout_flush(struct gro_tcp4_tbl *tbl,
 	uint16_t k = 0;
 	uint32_t i, j;
 	uint32_t max_flow_num = tbl->max_flow_num;
+	struct gro_tcp4_flow *flow;
+	int ret;
 
 	for (i = 0; i < max_flow_num; i++) {
 		if (unlikely(tbl->flow_num == 0))
@@ -273,9 +278,18 @@ gro_tcp4_tbl_timeout_flush(struct gro_tcp4_tbl *tbl,
 				 */
 				j = delete_tcp_item(tbl->items, j,
 							&tbl->item_num, INVALID_ARRAY_INDEX);
-				tbl->flows[i].start_index = j;
-				if (j == INVALID_ARRAY_INDEX)
+				if (j == INVALID_ARRAY_INDEX) {
+					flow = &tbl->flows[i];
+					ret = rte_hash_del_key(tbl->flow_hash, &flow->key);
+					RTE_ASSERT(ret >= 0);
+					if (ret >= 0) {
+						ret = rte_hash_free_key_with_position(
+									tbl->flow_hash, ret);
+						RTE_ASSERT(ret == 0);
+					}
 					tbl->flow_num--;
+				}
+				tbl->flows[i].start_index = j;
 
 				if (unlikely(k == nb_out))
 					return k;
