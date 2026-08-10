@@ -42,15 +42,19 @@ extern "C" {
 static inline uint32_t
 __rte_raw_cksum(const void *buf, size_t len, uint32_t sum)
 {
-	const void *end;
+	/**
+	 * unaligned_uint16_t triggers GCC bug where buf memory may not be
+	 * initialized. rte_uint16_alias avoids strict aliasing bugs.
+	 */
+	struct __rte_packed_begin rte_uint16_alias {
+		uint16_t val;
+	} __rte_packed_end __rte_may_alias;
 
-	for (end = RTE_PTR_ADD(buf, RTE_ALIGN_FLOOR(len, sizeof(uint16_t)));
-	     buf != end; buf = RTE_PTR_ADD(buf, sizeof(uint16_t))) {
-		uint16_t v;
-
-		memcpy(&v, buf, sizeof(uint16_t));
-		sum += v;
-	}
+	/* Process uint16 chunks to preserve overflow/carry math. GCC/Clang vectorize the loop. */
+	const uint16_t *buf16 = (const uint16_t *)buf;
+	const uint16_t *end = buf16 + (len / sizeof(uint16_t));
+	for (; buf16 != end; buf16++)
+		sum += ((const struct rte_uint16_alias *)buf16)->val;
 
 	/* if length is odd, keeping it byte order independent */
 	if (unlikely(len % 2)) {
