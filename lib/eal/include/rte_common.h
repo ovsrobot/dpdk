@@ -568,6 +568,15 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #endif
 
 /**
+ * Alignment hint precondition
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_assume_aligned(ptr, alignment) (ptr)
+#else
+#define __rte_assume_aligned(ptr, alignment) __builtin_assume_aligned(ptr, alignment)
+#endif
+
+/**
  * Disable AddressSanitizer on some code
  */
 #ifdef RTE_MALLOC_ASAN
@@ -774,6 +783,9 @@ rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
 
 /** Force minimum cache line alignment. */
 #define __rte_cache_min_aligned __rte_aligned(RTE_CACHE_LINE_MIN_SIZE)
+
+/** Cache alignment hint precondition */
+#define __rte_assume_cache_aligned(ptr) __rte_assume_aligned(ptr, RTE_CACHE_LINE_SIZE)
 
 #define _RTE_CACHE_GUARD_HELPER2(unique) \
 	alignas(RTE_CACHE_LINE_SIZE) \
