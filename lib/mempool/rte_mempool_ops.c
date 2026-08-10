@@ -27,7 +27,7 @@ int
 rte_mempool_register_ops(const struct rte_mempool_ops *h)
 {
 	struct rte_mempool_ops *ops;
-	int16_t ops_index;
+	unsigned int ops_index;
 
 	rte_spinlock_lock(&rte_mempool_ops_table.sl);
 
@@ -47,12 +47,20 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 		return -EINVAL;
 	}
 
-	if (strlen(h->name) >= sizeof(ops->name) - 1) {
+	if (strlen(h->name) > sizeof(ops->name) - 1) {
 		rte_spinlock_unlock(&rte_mempool_ops_table.sl);
-		RTE_MEMPOOL_LOG(DEBUG, "%s(): mempool_ops <%s>: name too long",
+		RTE_MEMPOOL_LOG(ERR, "%s(): mempool_ops <%s>: name too long",
 				__func__, h->name);
-		rte_errno = EEXIST;
-		return -EEXIST;
+		return -ENAMETOOLONG;
+	}
+
+	for (ops_index = 0; ops_index < rte_mempool_ops_table.num_ops; ops_index++) {
+		if (!strcmp(h->name,
+				rte_mempool_ops_table.ops[ops_index].name)) {
+			RTE_MEMPOOL_LOG(ERR, "%s(): mempool_ops <%s>: name exists",
+					__func__, h->name);
+			return -EEXIST;
+		}
 	}
 
 	ops_index = rte_mempool_ops_table.num_ops++;
@@ -67,6 +75,10 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 	ops->populate = h->populate;
 	ops->get_info = h->get_info;
 	ops->dequeue_contig_blocks = h->dequeue_contig_blocks;
+
+	/* FIXME: Test only. Reduce to DEBUG level. */
+	RTE_MEMPOOL_LOG(INFO,
+		"Registered mempool_ops[%u] <%s>", ops_index, h->name);
 
 	rte_spinlock_unlock(&rte_mempool_ops_table.sl);
 
@@ -185,8 +197,11 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
 		}
 	}
 
-	if (ops == NULL)
+	if (ops == NULL) {
+		RTE_MEMPOOL_LOG(ERR,
+			"Unknown mempool_ops <%s>, %u ops searched", name, i);
 		return -EINVAL;
+	}
 
 	mp->ops_index = i;
 	mp->pool_config = pool_config;

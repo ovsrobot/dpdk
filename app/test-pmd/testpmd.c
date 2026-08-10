@@ -1283,8 +1283,8 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 	}
 
 	TESTPMD_LOG(INFO,
-		"create a new mbuf pool <%s>: n=%u, size=%u, socket=%s\n",
-		pool_name, nb_mbuf, mbuf_seg_size,
+		"create a new mbuf pool <%s>: n=%u, cache=%u, size=%u, socket=%s\n",
+		pool_name, nb_mbuf, mb_mempool_cache, mbuf_seg_size,
 		socket_id_str(socket_id, sock_str, sizeof(sock_str)));
 
 	switch (mp_alloc_type) {
