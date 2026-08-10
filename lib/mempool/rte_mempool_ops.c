@@ -185,8 +185,11 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
 		}
 	}
 
-	if (ops == NULL)
+	if (ops == NULL) {
+		RTE_MEMPOOL_LOG(ERR,
+			"Unknown mempool_ops <%s>", name);
 		return -EINVAL;
+	}
 
 	mp->ops_index = i;
 	mp->pool_config = pool_config;
