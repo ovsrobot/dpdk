@@ -68,7 +68,25 @@ arguments to explicitly tell the AF_XDP PMD where to find either:
 2. The pinned xskmap to use when creating AF_XDP sockets.
 
 If this argument is not passed alongside the ``use_cni`` or ``use_pinned_map`` arguments
-then the AF_XDP PMD configures it internally to the `AF_XDP Device Plugin for Kubernetes`_.
+then the AF_XDP PMD builds the path itself.
+It looks for ``afxdp_dp/<if_name>/afxdp.sock``
+(or ``afxdp_dp/<if_name>/xsks_map``) below the EAL runtime directory,
+which is where runtime state such as sockets belongs.
+When no such entry exists, the PMD falls back to the same file
+below ``/tmp/afxdp_dp``, the location used by the
+`AF_XDP Device Plugin for Kubernetes`_.
+
+.. note::
+
+   The ``/tmp/afxdp_dp`` fallback exists only for compatibility with
+   deployments of the `AF_XDP Device Plugin for Kubernetes`_
+   that mount the endpoint there.
+   New deployments should place the socket or pinned map
+   below the EAL runtime directory,
+   or point at it explicitly with ``dp_path``.
+   The ``<if_name>`` component of the path must be kept in either location:
+   it is what distinguishes the endpoints
+   when several interfaces are mounted in a single pod.
 
 .. note::
 
@@ -339,4 +357,6 @@ Run dpdk-testpmd with the AF_XDP Device Plugin + CNI
 .. note::
 
    If the ``dp_path`` parameter isn't explicitly set with ``use_cni`` or ``use_pinned_map``
-   the AF_XDP PMD will set the parameter values to the `AF_XDP Device Plugin for Kubernetes`_ defaults.
+   the AF_XDP PMD looks for the endpoint below the EAL runtime directory first,
+   and only then below the ``/tmp/afxdp_dp`` location
+   used by the `AF_XDP Device Plugin for Kubernetes`_.
