@@ -167,10 +167,6 @@ Deprecation Notices
   ``drivers/bus/vmbus/rte_bus_vmbus.h`` will become internal to DPDK.
   Those API functions are used internally by DPDK core and netvsc PMD.
 
-* net/iavf: The dynamic mbuf field used to detect LLDP packets on the
-  transmit path in the iavf PMD will be removed in a future release.
-  After removal, only packet type-based detection will be supported.
-
 * net/iavf: The ``auto_reconfig`` devarg is deprecated
   and will be removed in a future release.
   It allows disabling the automatic restoration of device settings
