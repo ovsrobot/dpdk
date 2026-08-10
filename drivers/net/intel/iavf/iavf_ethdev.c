@@ -45,6 +45,8 @@
 #define IAVF_ENABLE_AUTO_RECONFIG_ARG "auto_reconfig"
 #define IAVF_NO_POLL_ON_LINK_DOWN_ARG "no-poll-on-link-down"
 #define IAVF_MBUF_CHECK_ARG       "mbuf_check"
+#define IAVF_ENABLE_LLDP_ARG       "enable_lldp"
+/* Deprecated alias for IAVF_ENABLE_LLDP_ARG. */
 #define IAVF_ENABLE_PTYPE_LLDP_ARG "enable_ptype_lldp"
 uint64_t iavf_timestamp_dynflag;
 int iavf_timestamp_dynfield_offset = -1;
@@ -57,6 +59,7 @@ static const char * const iavf_valid_args[] = {
 	IAVF_ENABLE_AUTO_RECONFIG_ARG,
 	IAVF_NO_POLL_ON_LINK_DOWN_ARG,
 	IAVF_MBUF_CHECK_ARG,
+	IAVF_ENABLE_LLDP_ARG,
 	IAVF_ENABLE_PTYPE_LLDP_ARG,
 	NULL
 };
@@ -1028,7 +1031,7 @@ iavf_dev_start(struct rte_eth_dev *dev)
 	for (uint16_t i = 0; i < dev->data->nb_tx_queues; i++) {
 		struct ci_tx_queue *txq = dev->data->tx_queues[i];
 		if (txq)
-			txq->lldp_enabled = adapter->devargs.enable_ptype_lldp;
+			txq->lldp_enabled = adapter->devargs.enable_lldp;
 	}
 
 	if (iavf_init_queues(dev) != 0) {
@@ -2517,8 +2520,19 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 	if (ret)
 		goto bail;
 
-	ret = rte_kvargs_process(kvlist, IAVF_ENABLE_PTYPE_LLDP_ARG,
-				 &parse_bool, &ad->devargs.enable_ptype_lldp);
+	/* Deprecated alias: same behaviour as enable_lldp. */
+	if (rte_kvargs_count(kvlist, IAVF_ENABLE_PTYPE_LLDP_ARG) > 0) {
+		PMD_INIT_LOG(WARNING,
+			"devarg '%s' is deprecated, use '%s' instead",
+			IAVF_ENABLE_PTYPE_LLDP_ARG, IAVF_ENABLE_LLDP_ARG);
+		ret = rte_kvargs_process(kvlist, IAVF_ENABLE_PTYPE_LLDP_ARG,
+					 &parse_bool, &ad->devargs.enable_lldp);
+		if (ret)
+			goto bail;
+	}
+
+	ret = rte_kvargs_process(kvlist, IAVF_ENABLE_LLDP_ARG,
+				 &parse_bool, &ad->devargs.enable_lldp);
 	if (ret)
 		goto bail;
 

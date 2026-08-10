@@ -173,3 +173,6 @@ Deprecation Notices
   after a VF reset, but this is of questionable value
   since most applications expect their settings to be preserved
   transparently across a reset.
+
+* net/iavf: The ``enable_ptype_lldp`` devarg is deprecated and will be
+  removed in a future release. Use the ``enable_lldp`` devarg instead.

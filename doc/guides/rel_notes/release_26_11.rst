@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel iavf driver.**
+
+  * Added the ``enable_lldp`` devarg to enable LLDP packet transmission.
+    The ``enable_ptype_lldp`` devarg is retained as a deprecated alias.
+
 
 Removed Items
 -------------
@@ -80,7 +85,7 @@ Removed Items
 * net/iavf: Removed the dynamic mbuf field method for detecting LLDP packets
   on the transmit path, along with the ``set tx lldp on`` testpmd command.
   The only remaining method for detecting LLDP packets is by using the mbuf
-  packet type in conjunction with the ``enable_ptype_lldp`` devarg.
+  packet type in conjunction with the ``enable_lldp`` devarg.
 
 
 API Changes

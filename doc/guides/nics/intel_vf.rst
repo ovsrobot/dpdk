@@ -684,10 +684,15 @@ Tx LLDP Testing
 
 To trigger LLDP packet transmission from the VF, set the ``packet_type``
 of the mbuf to ``RTE_PTYPE_L2_ETHER_LLDP``.
-This, in conjunction with enabling the ``enable_ptype_lldp`` devarg
+This, in conjunction with enabling the ``enable_lldp`` devarg
 will cause such packets to be transmitted::
 
-    -a 0000:xx:xx.x,enable_ptype_lldp=1
+    -a 0000:xx:xx.x,enable_lldp=1
+
+.. note::
+
+   The ``enable_ptype_lldp`` devarg is a deprecated alias for ``enable_lldp``
+   and will be removed in a future release.
 
 
 Limitations or Knowing issues
