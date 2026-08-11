@@ -296,6 +296,18 @@ the ``-a`` EAL option (e.g. ``-a dpaa_bus:fm1-mac3,drv_rx_taildrop=64``):
   Provide the kernel Linux interface name for a shared MAC interface when it
   differs from the ``fmX-macY`` style name used by DPDK.
 
+* ``drv_bh_port``
+
+  Name of the back-half port associated with an offline (O/H) port device.
+
+The following bus-level device arguments configure the DPAA bus itself and
+are passed through the EAL bus arguments (e.g. ``--vdev`` / ``-a`` bus
+options, ``bus=dpaa,drv_oldev=1``):
+
+* ``drv_oldev`` (default disabled)
+
+  Enable the DPAA offline (O/H) port device.
+
 FMAN Config
 -----------
 
