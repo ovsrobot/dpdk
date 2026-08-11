@@ -237,12 +237,35 @@ efx_np_get_fixed_port_props(
 	__out_opt		uint32_t *sup_cap_maskp,
 	__out_opt		efx_qword_t *loopback_cap_maskp)
 {
+	const efx_nic_cfg_t *encp = &enp->en_nic_cfg;
 	EFX_MCDI_DECLARE_BUF(payload,
 	    MC_CMD_GET_FIXED_PORT_PROPERTIES_IN_LEN,
 	    MC_CMD_GET_FIXED_PORT_PROPERTIES_OUT_V2_LEN);
 	const uint8_t *cap_data;
 	efx_mcdi_req_t req;
 	efx_rc_t rc;
+
+	/* VFs do not allow access to the fixed port data. */
+	if (EFX_PCI_FUNCTION_IS_VF(encp)) {
+		if (sup_cap_maskp != NULL) {
+			/*
+			 * Indicate a dummy link speed mode, as the
+			 * DPDK driver expects to see at least one.
+			 */
+			*sup_cap_maskp = 1U << EFX_PHY_CAP_1000FDX;
+
+			/*
+			 * Indicate three basic capabilities that
+			 * a VF cannot manage, but that can be
+			 * safely assumed to be available.
+			 */
+			*sup_cap_maskp |= 1U << EFX_PHY_CAP_PAUSE;
+			*sup_cap_maskp |= 1U << EFX_PHY_CAP_ASYM;
+			*sup_cap_maskp |= 1U << EFX_PHY_CAP_AN;
+		}
+
+		return (0);
+	}
 
 	req.emr_out_length = MC_CMD_GET_FIXED_PORT_PROPERTIES_OUT_V2_LEN;
 	req.emr_in_length = MC_CMD_GET_FIXED_PORT_PROPERTIES_IN_LEN;
@@ -985,10 +1008,6 @@ efx_np_attach(
 	if (rc != 0)
 		goto fail1;
 
-	/*
-	 * FIXME: This may need revisiting for VFs, which
-	 * don't necessarily have access to these details.
-	 */
 	rc = efx_np_get_fixed_port_props(enp, epp->ep_np_handle,
 		    epp->ep_np_cap_data_raw, &epp->ep_phy_cap_mask,
 		    &epp->ep_np_loopback_cap_mask);
