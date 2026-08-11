@@ -117,6 +117,7 @@ class ResultNode(BaseModel):
     label: str
     children: list[Union["ResultNode", ResultLeaf]] = Field(default_factory=list)
     parent: Union["ResultNode", None] = None
+    ports: list[dict[str, str]] | None = None
 
     def add_child(self, label: str) -> "ResultNode":
         """Creates and append a child node to the model.

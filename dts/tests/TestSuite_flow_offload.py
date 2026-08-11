@@ -30,7 +30,7 @@ from framework.exception import (
     SkippedTestException,
     TestCaseVerifyError,
 )
-from framework.test_suite import TestSuite, func_test
+from framework.test_suite import TestSuite, func_suite, func_test
 
 
 @dataclass
@@ -402,6 +402,7 @@ class FlowTestGenerator:
 
 
 @requires_nic_capability(NicCapability.FLOW_CTRL)
+@func_suite
 class TestFlowOffload(TestSuite):
     """Flow offload test suite.
 

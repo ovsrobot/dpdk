@@ -20,13 +20,14 @@ from api.packet import (
 )
 from api.testpmd import TestPmd
 from api.testpmd.config import EthPeer
-from framework.test_suite import TestSuite, func_test
+from framework.test_suite import TestSuite, func_suite, func_test
 from framework.testbed_model.virtual_device import VirtualDevice
 from framework.utils import generate_random_packets
 
 
 @requires_nic_capability(NicCapability.PHYSICAL_FUNCTION)
 @requires_link_topology(LinkTopology.TWO_LINKS)
+@func_suite
 class TestSoftnic(TestSuite):
     """Softnic test suite."""
 

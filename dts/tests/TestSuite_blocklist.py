@@ -12,10 +12,11 @@ from api.capabilities import (
 )
 from api.test import verify
 from api.testpmd import TestPmd
-from framework.test_suite import TestSuite, func_test
+from framework.test_suite import TestSuite, func_suite, func_test
 from framework.testbed_model.port import Port
 
 
+@func_suite
 class TestBlocklist(TestSuite):
     """DPDK device blocklisting test suite."""
 

@@ -10,7 +10,7 @@ are properly configured.
 
 from api.test import log
 from api.testpmd import TestPmd
-from framework.test_suite import BaseConfig, TestSuite, func_test
+from framework.test_suite import BaseConfig, TestSuite, func_suite, func_test
 
 
 class Config(BaseConfig):
@@ -20,6 +20,7 @@ class Config(BaseConfig):
     msg: str = "Hello World!"
 
 
+@func_suite
 class TestHelloWorld(TestSuite):
     """Hello World test suite. One test case, which starts and stops a testpmd session."""
 

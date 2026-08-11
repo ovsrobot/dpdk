@@ -27,10 +27,11 @@ from api.packet import send_packet_and_capture
 from api.test import fail, verify
 from api.testpmd import TestPmd
 from framework.exception import InteractiveCommandExecutionError
-from framework.test_suite import TestSuite, func_test
+from framework.test_suite import TestSuite, func_suite, func_test
 
 
 @requires_nic_capability(NicCapability.PHYSICAL_FUNCTION)
+@func_suite
 class TestMacFilter(TestSuite):
     """Mac address allowlist filtering test suite.
 

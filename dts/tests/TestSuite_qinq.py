@@ -19,9 +19,10 @@ from api.capabilities import NicCapability, requires_nic_capability
 from api.packet import send_packet_and_capture
 from api.test import log, verify
 from api.testpmd import TestPmd
-from framework.test_suite import TestSuite, func_test
+from framework.test_suite import TestSuite, func_suite, func_test
 
 
+@func_suite
 class TestQinq(TestSuite):
     """QinQ test suite.
 

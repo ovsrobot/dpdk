@@ -115,7 +115,7 @@ from framework.logger import DTSLogger, get_dts_logger
 from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
 from framework.settings import SETTINGS
 from framework.test_result import Result, ResultNode, TestRunResult
-from framework.test_suite import BaseConfig, TestCase, TestCaseType, TestSuite
+from framework.test_suite import BaseConfig, TestCase, TestCaseType, TestSuite, TestSuiteType
 from framework.testbed_model.capability import (
     Capability,
     get_supported_capabilities,
@@ -375,11 +375,6 @@ class TestRunSetup(State):
             ctx.topology.bind_cryptodevs("dpdk")
 
         ctx.topology.configure_ports("sut", "dpdk")
-        if ctx.func_tg and ctx.topology.type is not LinkTopology.NO_LINK:
-            ctx.func_tg.setup(ctx.topology)
-        if ctx.perf_tg and ctx.topology.type is not LinkTopology.NO_LINK:
-            ctx.perf_tg.setup(ctx.topology)
-
         self.result.ports = [
             port.to_dict() for port in ctx.topology.sut_ports + ctx.topology.tg_ports
         ]
@@ -506,11 +501,33 @@ class TestSuiteSetup(TestSuiteState):
     """Test suite setup."""
 
     logger_name: ClassVar[str] = "test_suite_setup"
+    test_run: TestRun
 
     def before(self) -> None:
         """Hook before the state is processed."""
         super().before()
         self.logger.set_custom_log_file(self.test_suite.name)
+
+        ctx = self.test_run.ctx
+        testsuite_type = self.test_suite.testsuite_type
+        if (
+            ctx.topology.type is not LinkTopology.NO_LINK
+            and testsuite_type is not TestSuiteType.CRYPTO
+        ):
+            if testsuite_type == TestSuiteType.FUNC:
+                required_tg, other_tg = ctx.func_tg, ctx.perf_tg
+            else:
+                required_tg, other_tg = ctx.perf_tg, ctx.func_tg
+
+            if other_tg and other_tg.is_setup:
+                other_tg.teardown()
+
+                if testsuite_type == TestSuiteType.FUNC and ctx.tg_node:
+                    for port in ctx.topology.tg_ports:
+                        ctx.tg_node.main_session.bind_ports_to_driver([port], port.config.os_driver)
+
+            if required_tg and not required_tg.is_setup:
+                required_tg.setup(ctx.topology)
 
     @property
     def description(self) -> str:
