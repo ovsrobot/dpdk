@@ -59,6 +59,10 @@ New Features
 Removed Items
 -------------
 
+* **Updated AESNI_MB crypto driver.**
+
+  * Remove support for versions older than 2.0 of IPsec MB Library.
+
 .. This section should contain removed items in this release. Sample format:
 
    * Add a short 1-2 sentence description of the removed item
