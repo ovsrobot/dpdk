@@ -783,10 +783,11 @@ efx_np_stats_describe(
 	__out_opt			uint32_t *nstats_maxp)
 {
 	uint8_t *payload = NULL;
-	uint32_t nprocessed;
 	efx_mcdi_req_t req;
 	uint8_t *entries;
 	uint32_t stride;
+	uint32_t count;
+	uint32_t more;
 	unsigned int i;
 	size_t out_sz;
 	size_t size;
@@ -829,25 +830,28 @@ efx_np_stats_describe(
 		    sizeof (efx_qword_t);
 	}
 
-	if (lut_nentries == 0 || lut == NULL || nprocessedp == NULL)
-		goto out;
-
 	stride = MCDI_OUT_DWORD(req, MAC_STATISTICS_DESCRIPTOR_OUT_ENTRY_SIZE);
-	nprocessed = MC_CMD_MAC_STATISTICS_DESCRIPTOR_OUT_ENTRIES_NUM(out_sz);
-	if (nprocessed == 0) {
+	count = MCDI_OUT_DWORD(req, MAC_STATISTICS_DESCRIPTOR_OUT_ENTRY_COUNT);
+	more = MCDI_OUT_DWORD(req, MAC_STATISTICS_DESCRIPTOR_OUT_MORE_ENTRIES);
+
+	if ((count == 0) && (more != 0)) {
 		rc = EMSGSIZE;
 		goto fail4;
 	}
 
-	entries = MCDI_OUT2(req, uint8_t,
-	    MAC_STATISTICS_DESCRIPTOR_OUT_ENTRIES);
+	if (lut != NULL) {
+		entries = MCDI_OUT2(req, uint8_t,
+		    MAC_STATISTICS_DESCRIPTOR_OUT_ENTRIES);
 
-	for (i = 0; i < nprocessed; ++i)
-		efx_np_stat_describe(entries + i * stride, lut_nentries, lut);
+		for (i = 0; i < count; ++i) {
+			efx_np_stat_describe(entries + i * stride,
+			    lut_nentries, lut);
+		}
+	}
 
-	*nprocessedp = nprocessed;
+	if (nprocessedp != NULL)
+		*nprocessedp = count;
 
-out:
 	EFSYS_KMEM_FREE(enp->en_esip, size, payload);
 
 	return (0);
