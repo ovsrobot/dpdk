@@ -584,6 +584,29 @@ static inline u32 qm_fqd_taildrop_get(const struct qm_fqd_taildrop *td)
 	return (u32)td->mant << td->exp;
 }
 
+/**Order restoration point (ORP) restoration window size*/
+enum {
+	ORP_RWS_WIN_32_FRMS = 0,
+	ORP_RWS_WIN_64_FRMS = 1,
+	ORP_RWS_WIN_128_FRMS = 2,
+	ORP_RWS_WIN_256_FRMS = 3,
+	ORP_RWS_WIN_512_FRMS = 4,
+	ORP_RWS_WIN_1024_FRMS = 5,
+	ORP_RWS_WIN_2048_FRMS = 6,
+	ORP_RWS_WIN_4096_FRMS = 7
+};
+
+enum {
+	ORP_AUTO_ADVANCE_DISABLE = 0,
+	ORP_AUTO_ADVANCE_ENABLE = 1
+};
+
+enum {
+	ORP_LATE_ARRIVE_REJECT = 0,
+	ORP_LATE_ARRIVE_WIN_32 = 1,
+	ORP_LATE_ARRIVE_WIN_RWS = 2,
+	ORP_LATE_ARRIVE_WIN_8192 = 3
+};
 
 /* See "Frame Queue Descriptor (FQD)" */
 /* Frame Queue Descriptor (FQD) field 'fq_ctrl' uses these constants */
@@ -1258,6 +1281,7 @@ struct qman_fq {
 	u16 nb_desc;
 	u16 resv;
 	u64 offloads;
+	int force_ooo;
 };
 
 /*
@@ -1858,6 +1882,10 @@ typedef int (*qman_cb_precommit) (void *arg);
 int qman_enqueue_orp(struct qman_fq *fq, const struct qm_fd *fd, u32 flags,
 		     struct qman_fq *orp, u16 orp_seqnum);
 
+__rte_internal
+int qman_enqueue_multi_orp(struct qman_fq *fq, const struct qm_fd *fd,
+	struct qman_fq *orp, uint32_t *flags, uint16_t *orp_seqnum,
+	int frames_to_send);
 /**
  * qman_alloc_fqid_range - Allocate a contiguous range of FQIDs
  * @result: is set by the API to the base FQID of the allocated range
