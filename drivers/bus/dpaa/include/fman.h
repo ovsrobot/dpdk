@@ -468,6 +468,15 @@ struct __fman_if {
 	void *qmi_map;
 };
 
+#define MEMMAC_REG_OFFSET(reg) offsetof(struct memac_regs, reg)
+#define BMI_RX_REG_OFFSET(reg) offsetof(struct rx_bmi_regs, reg)
+#define BMI_TX_REG_OFFSET(reg) offsetof(struct tx_bmi_regs, reg)
+
+#define FMAN_IF_BMI_RX_STAT_OFFSET_START BMI_RX_REG_OFFSET(fmbm_rfrc)
+#define FMAN_IF_BMI_RX_STAT_OFFSET_END BMI_RX_REG_OFFSET(fmbm_rbdc)
+#define FMAN_IF_BMI_TX_STAT_OFFSET_START BMI_TX_REG_OFFSET(fmbm_tfrc)
+#define FMAN_IF_BMI_TX_STAT_OFFSET_END BMI_TX_REG_OFFSET(fmbm_tbdc)
+
 /* And this is the base list node that the interfaces are added to. (See
  * fman_if_enable_all_rx() below for an example of its use.)
  */
