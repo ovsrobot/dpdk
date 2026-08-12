@@ -1276,6 +1276,9 @@ struct qman_cgr {
 	struct list_head node;
 };
 
+/* Maximum FQID value: frame queue IDs are 24 bits wide. */
+#define QMAN_MAX_FQID			0x00FFFFFFu
+
 /* Flags to qman_create_fq() */
 #define QMAN_FQ_FLAG_NO_ENQUEUE      0x00000001 /* can't enqueue */
 #define QMAN_FQ_FLAG_NO_MODIFY       0x00000002 /* can only enqueue */
@@ -1906,6 +1909,9 @@ static inline int qman_shutdown_fq_by_fqid(u32 fqid)
 	fq.fqid = fqid;
 	return qman_shutdown_fq(&fq);
 }
+
+__rte_internal
+int qman_find_fq_by_cgrid(u32 cgrid, u32 *fqid);
 
 /**
  * qman_reserve_fqid_range - Reserve the specified range of frame queue IDs
