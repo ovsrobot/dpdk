@@ -55,6 +55,15 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **bus/platform: match devices by device-tree compatible string.**
+
+  The platform bus now matches DPDK drivers against the device-tree
+  ``compatible`` sysfs strings exposed by each platform device, in
+  addition to the existing kernel driver name and device name checks.
+  This allows drivers to be probed by DT compatible string when the
+  kernel driver is the generic ``vfio-platform``, which carries no
+  device identity in its name.
+
 
 Removed Items
 -------------
