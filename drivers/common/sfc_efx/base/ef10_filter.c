@@ -690,7 +690,7 @@ fail1:
 
 static			void
 ef10_filter_add_select_action(
-	__in		efx_filter_spec_t *saved_spec,
+	__in_opt	efx_filter_spec_t *saved_spec,
 	__in		efx_filter_spec_t *spec,
 	__out		enum ef10_filter_add_action_e *action,
 	__out		efx_filter_spec_t **overridden_spec)
@@ -752,7 +752,7 @@ ef10_filter_add_select_action(
 static	__checkReturn	efx_rc_t
 ef10_filter_add_execute_action(
 	__in		efx_nic_t *enp,
-	__in		efx_filter_spec_t *saved_spec,
+	__in_opt	efx_filter_spec_t *saved_spec,
 	__in		efx_filter_spec_t *spec,
 	__in		efx_filter_spec_t *overridden_spec,
 	__in		enum ef10_filter_add_action_e action,
@@ -769,7 +769,8 @@ ef10_filter_add_execute_action(
 		goto out_unlock;
 	} else if (action == EF10_FILTER_ADD_STORE) {
 		EFSYS_ASSERT(overridden_spec != NULL);
-		saved_spec->efs_overridden_spec = overridden_spec;
+		if (saved_spec != NULL)
+			saved_spec->efs_overridden_spec = overridden_spec;
 		goto out_unlock;
 	}
 
@@ -806,7 +807,7 @@ ef10_filter_add_execute_action(
 
 	EFSYS_LOCK(enp->en_eslp, state);
 
-	if (action == EF10_FILTER_ADD_REPLACE) {
+	if ((action == EF10_FILTER_ADD_REPLACE) && (saved_spec != NULL)) {
 		/* Update the fields that may differ */
 		saved_spec->efs_priority = spec->efs_priority;
 		saved_spec->efs_flags = spec->efs_flags;
