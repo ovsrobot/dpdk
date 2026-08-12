@@ -272,13 +272,19 @@ class LinuxSession(PosixSession):
         """
         ports_pci_addrs = " ".join(port.pci for port in ports)
 
-        self.send_command(
-            f"{self.devbind_script_path} -b {driver_name} --force {ports_pci_addrs}",
-            privileged=True,
-            verify=True,
-        )
+        if not driver_name:
+            self.send_command(
+                f"{self.devbind_script_path} -u {ports_pci_addrs}", privileged=True, verify=True
+            )
+        else:
+            self.send_command(
+                f"{self.devbind_script_path} -b {driver_name} --force {ports_pci_addrs}",
+                privileged=True,
+                verify=True,
+            )
 
-        del self._lshw_net_info
+        if self._lshw_net_info:
+            del self._lshw_net_info
 
     def bring_up_link(self, ports: Iterable[Port]) -> None:
         """Overrides :meth:`~.os_session.OSSession.bring_up_link`."""
