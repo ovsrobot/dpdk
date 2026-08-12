@@ -295,7 +295,7 @@ hns3_rss_set_algo_key(struct hns3_hw *hw, uint8_t hash_algo,
 
 	req = (struct hns3_rss_generic_config_cmd *)desc.data;
 
-	max_bd_num = DIV_ROUND_UP(key_len, HNS3_RSS_HASH_KEY_NUM);
+	max_bd_num = RTE_DIV_ROUND_UP(key_len, HNS3_RSS_HASH_KEY_NUM);
 	for (idx = 0; idx < max_bd_num; idx++) {
 		hns3_cmd_setup_basic_desc(&desc, HNS3_OPC_RSS_GENERIC_CONFIG,
 					  false);
@@ -335,7 +335,7 @@ hns3_rss_get_algo_key(struct hns3_hw *hw,  uint8_t *hash_algo,
 	int ret;
 
 	req = (struct hns3_rss_generic_config_cmd *)desc.data;
-	max_bd_num = DIV_ROUND_UP(key_len, HNS3_RSS_HASH_KEY_NUM);
+	max_bd_num = RTE_DIV_ROUND_UP(key_len, HNS3_RSS_HASH_KEY_NUM);
 	for (idx = 0; idx < max_bd_num; idx++) {
 		hns3_cmd_setup_basic_desc(&desc, HNS3_OPC_RSS_GENERIC_CONFIG,
 					  true);
@@ -381,7 +381,7 @@ hns3_set_rss_indir_table(struct hns3_hw *hw, uint16_t *indir, uint16_t size)
 	int ret;
 
 	req = (struct hns3_rss_indirection_table_cmd *)desc.data;
-	max_bd_num = DIV_ROUND_UP(size, HNS3_RSS_CFG_TBL_SIZE);
+	max_bd_num = RTE_DIV_ROUND_UP(size, HNS3_RSS_CFG_TBL_SIZE);
 	for (i = 0; i < max_bd_num; i++) {
 		hns3_cmd_setup_basic_desc(&desc, HNS3_OPC_RSS_INDIR_TABLE,
 					  false);
@@ -431,7 +431,7 @@ hns3_get_rss_indir_table(struct hns3_hw *hw, uint16_t *indir, uint16_t size)
 	int ret;
 
 	req = (struct hns3_rss_indirection_table_cmd *)desc.data;
-	max_bd_num = DIV_ROUND_UP(size, HNS3_RSS_CFG_TBL_SIZE);
+	max_bd_num = RTE_DIV_ROUND_UP(size, HNS3_RSS_CFG_TBL_SIZE);
 	for (i = 0; i < max_bd_num; i++) {
 		hns3_cmd_setup_basic_desc(&desc, HNS3_OPC_RSS_INDIR_TABLE,
 					  true);

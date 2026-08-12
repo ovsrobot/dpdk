@@ -341,7 +341,8 @@ static void ecore_ilt_cli_adv_line(struct ecore_hwfn *p_hwfn,
 		p_cli->first.val = *p_line;
 
 	p_cli->active = true;
-	*p_line += DIV_ROUND_UP(p_blk->total_size, p_blk->real_size_in_page);
+	*p_line += RTE_DIV_ROUND_UP(p_blk->total_size,
+				    p_blk->real_size_in_page);
 	p_cli->last.val = *p_line - 1;
 
 	DP_VERBOSE(p_hwfn, ECORE_MSG_ILT,
@@ -761,7 +762,7 @@ static enum _ecore_status_t ecore_cxt_src_t2_alloc(struct ecore_hwfn *p_hwfn)
 	/* use the same page size as the SRC ILT client */
 	psz = ILT_PAGE_IN_BYTES(p_src->p_size.val);
 	p_t2 = &p_mngr->src_t2;
-	p_t2->num_pages = DIV_ROUND_UP(total_size, psz);
+	p_t2->num_pages = RTE_DIV_ROUND_UP(total_size, psz);
 
 	/* allocate t2 */
 	p_t2->dma_mem = OSAL_ZALLOC(p_hwfn->p_dev, GFP_KERNEL,
@@ -877,7 +878,8 @@ ecore_ilt_blk_alloc(struct ecore_hwfn *p_hwfn,
 
 	sz_left = p_blk->total_size;
 	lines_to_skip = p_blk->dynamic_line_cnt;
-	lines = DIV_ROUND_UP(sz_left, p_blk->real_size_in_page) - lines_to_skip;
+	lines = RTE_DIV_ROUND_UP(sz_left, p_blk->real_size_in_page) -
+		lines_to_skip;
 	line = p_blk->start_line + start_line_offset -
 	       p_hwfn->p_cxt_mngr->pf_start_line;
 	first_skipped_line = line + p_blk->dynamic_line_offset;
@@ -1000,7 +1002,7 @@ __ecore_cid_map_alloc_single(struct ecore_hwfn *p_hwfn, u32 type,
 	if (!cid_count)
 		return ECORE_SUCCESS;
 
-	size = MAP_WORD_SIZE * DIV_ROUND_UP(cid_count, BITS_PER_MAP_WORD);
+	size = MAP_WORD_SIZE * RTE_DIV_ROUND_UP(cid_count, BITS_PER_MAP_WORD);
 	p_map->cid_map = OSAL_ZALLOC(p_hwfn->p_dev, GFP_KERNEL, size);
 	if (p_map->cid_map == OSAL_NULL)
 		return ECORE_NOMEM;
@@ -1217,8 +1219,8 @@ void ecore_cxt_mngr_setup(struct ecore_hwfn *p_hwfn)
 		p_cfg = &p_mngr->conn_cfg[type];
 		if (p_cfg->cid_count) {
 			p_map = &p_mngr->acquired[type];
-			len = DIV_ROUND_UP(p_map->max_count,
-					   BITS_PER_MAP_WORD) *
+			len = RTE_DIV_ROUND_UP(p_map->max_count,
+					       BITS_PER_MAP_WORD) *
 			      MAP_WORD_SIZE;
 			OSAL_MEM_ZERO(p_map->cid_map, len);
 		}
@@ -1228,8 +1230,8 @@ void ecore_cxt_mngr_setup(struct ecore_hwfn *p_hwfn)
 
 		for (vf = 0; vf < max_num_vfs; vf++) {
 			p_map = &p_mngr->acquired_vf[type][vf];
-			len = DIV_ROUND_UP(p_map->max_count,
-					   BITS_PER_MAP_WORD) *
+			len = RTE_DIV_ROUND_UP(p_map->max_count,
+					       BITS_PER_MAP_WORD) *
 			      MAP_WORD_SIZE;
 			OSAL_MEM_ZERO(p_map->cid_map, len);
 		}
@@ -2184,7 +2186,7 @@ static u16 ecore_blk_calculate_pages(struct ecore_ilt_cli_blk *p_blk)
 	if (p_blk->real_size_in_page == 0)
 		return 0;
 
-	return DIV_ROUND_UP(p_blk->total_size, p_blk->real_size_in_page);
+	return RTE_DIV_ROUND_UP(p_blk->total_size, p_blk->real_size_in_page);
 }
 
 u16 ecore_get_cdut_num_pf_init_pages(struct ecore_hwfn *p_hwfn)

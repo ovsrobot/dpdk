@@ -24,9 +24,11 @@ static u16 task_region_offsets[1][NUM_OF_CONNECTION_TYPES] = {
 
 /* General constants */
 #define QM_PQ_MEM_4KB(pq_size) \
-	(pq_size ? DIV_ROUND_UP((pq_size + 1) * QM_PQ_ELEMENT_SIZE, 0x1000) : 0)
+	(pq_size \
+		? RTE_DIV_ROUND_UP((pq_size + 1) * QM_PQ_ELEMENT_SIZE, 0x1000) \
+		: 0)
 #define QM_PQ_SIZE_256B(pq_size) \
-	(pq_size ? DIV_ROUND_UP(pq_size, 0x100) - 1 : 0)
+	(pq_size ? RTE_DIV_ROUND_UP(pq_size, 0x100) - 1 : 0)
 #define QM_INVALID_PQ_ID		0xffff
 
 /* Max link speed (in Mbps) */
@@ -1313,10 +1315,10 @@ void ecore_init_brb_ram(struct ecore_hwfn *p_hwfn,
 	u32 active_port_blocks, reg_offset = 0;
 	u8 port, active_ports = 0;
 
-	tc_headroom_blocks = (u32)DIV_ROUND_UP(req->headroom_per_tc,
-					       BRB_BLOCK_SIZE);
-	min_pkt_size_blocks = (u32)DIV_ROUND_UP(req->min_pkt_size,
-						BRB_BLOCK_SIZE);
+	tc_headroom_blocks = (u32)RTE_DIV_ROUND_UP(req->headroom_per_tc,
+						   BRB_BLOCK_SIZE);
+	min_pkt_size_blocks = (u32)RTE_DIV_ROUND_UP(req->min_pkt_size,
+						    BRB_BLOCK_SIZE);
 	total_blocks = ECORE_IS_K2(p_hwfn->p_dev) ? BRB_TOTAL_RAM_BLOCKS_K2 :
 						    BRB_TOTAL_RAM_BLOCKS_BB;
 
@@ -1334,8 +1336,9 @@ void ecore_init_brb_ram(struct ecore_hwfn *p_hwfn,
 		u8 tc;
 
 		/* Calculate per-port sizes */
-		tc_guaranteed_blocks = (u32)DIV_ROUND_UP(req->guranteed_per_tc,
-							 BRB_BLOCK_SIZE);
+		tc_guaranteed_blocks =
+			(u32)RTE_DIV_ROUND_UP(req->guranteed_per_tc,
+					      BRB_BLOCK_SIZE);
 		port_blocks = req->num_active_tcs[port] ? active_port_blocks :
 							  0;
 		port_guaranteed_blocks = req->num_active_tcs[port] *
@@ -2059,7 +2062,7 @@ void ecore_enable_context_validation(struct ecore_hwfn *p_hwfn,
 	ecore_wr(p_hwfn, p_ptt, CDU_REG_TCFC_CTX_VALID0, ctx_validation);
 }
 
-#define PHYS_ADDR_DWORDS        DIV_ROUND_UP(sizeof(dma_addr_t), 4)
+#define PHYS_ADDR_DWORDS        RTE_DIV_ROUND_UP(sizeof(dma_addr_t), 4)
 #define OVERLAY_HDR_SIZE_DWORDS (sizeof(struct fw_overlay_buf_hdr) / 4)
 
 static u32 ecore_get_overlay_addr_ram_addr(struct ecore_hwfn *p_hwfn,

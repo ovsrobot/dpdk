@@ -396,8 +396,6 @@ int qede_save_fw_dump(uint16_t port_id);
 
 /* Utility functions */
 
-#define RTE_DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
-#define DIV_ROUND_UP(size, to_what) RTE_DIV_ROUND_UP(size, to_what)
 #define RTE_ROUNDUP(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
 #define ROUNDUP(value, to_what) RTE_ROUNDUP((value), (to_what))
 

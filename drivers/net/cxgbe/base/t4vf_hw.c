@@ -362,8 +362,8 @@ int t4vf_query_params(struct adapter *adapter, unsigned int nparams,
 	cmd.op_to_vfn = cpu_to_be32(V_FW_CMD_OP(FW_PARAMS_CMD) |
 				    F_FW_CMD_REQUEST |
 				    F_FW_CMD_READ);
-	len16 = DIV_ROUND_UP(offsetof(struct fw_params_cmd,
-			     param[nparams]), 16);
+	len16 = RTE_DIV_ROUND_UP(offsetof(struct fw_params_cmd,
+					  param[nparams]), 16);
 	cmd.retval_len16 = cpu_to_be32(V_FW_CMD_LEN16(len16));
 	for (i = 0, p = &cmd.param[0]; i < nparams; i++, p++)
 		p->mnem = cpu_to_be32(*params++);
@@ -458,8 +458,8 @@ int t4vf_set_params(struct adapter *adapter, unsigned int nparams,
 	cmd.op_to_vfn = cpu_to_be32(V_FW_CMD_OP(FW_PARAMS_CMD) |
 				    F_FW_CMD_REQUEST |
 				    F_FW_CMD_WRITE);
-	len16 = DIV_ROUND_UP(offsetof(struct fw_params_cmd,
-			     param[nparams]), 16);
+	len16 = RTE_DIV_ROUND_UP(offsetof(struct fw_params_cmd,
+					  param[nparams]), 16);
 	cmd.retval_len16 = cpu_to_be32(V_FW_CMD_LEN16(len16));
 	for (i = 0, p = &cmd.param[0]; i < nparams; i++, p++) {
 		p->mnem = cpu_to_be32(*params++);
@@ -626,7 +626,7 @@ static int t4vf_get_port_stats_fw(struct adapter *adapter, int pidx,
 		struct fw_vi_stats_cmd cmd, rpl;
 		size_t len = (offsetof(struct fw_vi_stats_cmd, u) +
 			      sizeof(struct fw_vi_stats_ctl));
-		size_t len16 = DIV_ROUND_UP(len, 16);
+		size_t len16 = RTE_DIV_ROUND_UP(len, 16);
 		int ret;
 
 		memset(&cmd, 0, sizeof(cmd));

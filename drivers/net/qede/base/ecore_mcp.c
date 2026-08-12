@@ -713,7 +713,7 @@ ecore_mcp_cmd_and_union(struct ecore_hwfn *p_hwfn,
 	}
 #endif
 	if (ECORE_MB_FLAGS_IS_SET(p_mb_params, CAN_SLEEP)) {
-		max_retries = DIV_ROUND_UP(max_retries, 1000);
+		max_retries = RTE_DIV_ROUND_UP(max_retries, 1000);
 		usecs *= 1000;
 	}
 
@@ -4243,8 +4243,8 @@ ecore_mcp_resc_lock(struct ecore_hwfn *p_hwfn, struct ecore_ptt *p_ptt,
 		if (retry_cnt) {
 			if (p_params->sleep_b4_retry) {
 				u16 retry_interval_in_ms =
-					DIV_ROUND_UP(p_params->retry_interval,
-						     1000);
+					RTE_DIV_ROUND_UP(p_params->retry_interval,
+							 1000);
 
 				OSAL_MSLEEP(retry_interval_in_ms);
 			} else {

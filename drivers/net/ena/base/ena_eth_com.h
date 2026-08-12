@@ -160,8 +160,8 @@ static inline bool ena_com_is_doorbell_needed(struct ena_com_io_sq *io_sq,
 
 	if (num_descs > llq_info->descs_num_before_header) {
 		descs_after_first_entry = num_descs - llq_info->descs_num_before_header;
-		num_entries_needed += DIV_ROUND_UP(descs_after_first_entry,
-						   llq_info->descs_per_entry);
+		num_entries_needed += RTE_DIV_ROUND_UP(descs_after_first_entry,
+						       llq_info->descs_per_entry);
 	}
 
 	ena_trc_dbg(ena_com_io_sq_to_ena_dev(io_sq),

@@ -2630,8 +2630,8 @@ static int t4_get_exprom_version(struct adapter *adapter, u32 *vers)
 		unsigned char hdr_arr[16];      /* must start with 0x55aa */
 		unsigned char hdr_ver[4];       /* Expansion ROM version */
 	} *hdr;
-	u32 exprom_header_buf[DIV_ROUND_UP(sizeof(struct exprom_header),
-					   sizeof(u32))];
+	u32 exprom_header_buf[RTE_DIV_ROUND_UP(sizeof(struct exprom_header),
+					       sizeof(u32))];
 	int ret;
 
 	ret = t4_read_flash(adapter, FLASH_EXP_ROM_START,
