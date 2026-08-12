@@ -517,15 +517,16 @@ RTE_FINI_PRIO(dpaa_mpool_finish, RTE_PRIORITY_104)
 {
 	uint16_t bpid;
 
+	dpaax_enter_destructor();
+
 	for (bpid = 0; bpid < DPAA_MAX_BPOOLS; bpid++) {
 		if (s_dpaa_bpid_allocated_flag[bpid].used) {
 			bman_free_bpid(bpid, s_dpaa_bpid_allocated_flag[bpid].flags);
 			s_dpaa_bpid_allocated_flag[bpid].used = false;
 		}
 	}
-	/** The rte_dpaa_bpid_info and bman_pool from EAL mem have been released
-	 * with EAL mem pool being destroyed.
-	 */
+	rte_free(rte_dpaa_bpid_info);
+	rte_dpaa_bpid_info = NULL;
 }
 
 RTE_MEMPOOL_REGISTER_OPS(dpaa_mpool_ops);
