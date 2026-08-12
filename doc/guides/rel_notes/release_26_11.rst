@@ -55,6 +55,19 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated AF_XDP driver.**
+
+  * Changed the default AF_XDP Device Plugin endpoint location.
+
+    When set without ``dp_path``, the PMD first looks for
+    ``afxdp_dp/<if_name>/`` in the EAL runtime directory,
+    and would fall back to ``/tmp/afxdp_dp/<if_name>/`` only when
+    nothing is found there.
+    Existing AF_XDP Device Plugin deployments keep working unchanged.
+
+  * A ``dp_path`` value that does not fit the ``sun_path`` field
+    of ``struct sockaddr_un`` is now rejected with ``ENAMETOOLONG``
+    instead of being silently truncated.
 
 Removed Items
 -------------
