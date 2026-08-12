@@ -2677,8 +2677,7 @@ rte_dpaa_remove(struct rte_dpaa_device *dpaa_dev)
 	PMD_INIT_FUNC_TRACE();
 
 	eth_dev = rte_eth_dev_allocated(dpaa_dev->device.name);
-	ret = dpaa_eth_dev_close(eth_dev);
-	if (eth_dev->state !=  RTE_ETH_DEV_UNUSED) {
+	if (eth_dev && eth_dev->state != RTE_ETH_DEV_UNUSED) {
 		dpaa_eth_dev_close(eth_dev);
 		ret = rte_eth_dev_release_port(eth_dev);
 	}
