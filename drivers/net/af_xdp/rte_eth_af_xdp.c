@@ -1188,12 +1188,28 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 		if (get_shared_umem(rxq, internals->if_name, &umem) < 0)
 			return NULL;
 
-		if (umem != NULL &&
-			rte_atomic_load_explicit(&umem->refcnt, rte_memory_order_acquire) <
-					umem->max_xsks) {
+		if (umem != NULL) {
+			uint32_t cnt = rte_atomic_load_explicit(&umem->refcnt,
+					rte_memory_order_acquire);
+
+			/* Reject sharing once the UMEM is at capacity: sharing without
+			 * taking a reference corrupts the refcount and crashes later.
+			 */
+			if (cnt >= umem->max_xsks) {
+				AF_XDP_LOG_LINE(ERR,
+					"UMEM %s is shared by %u socket(s), max %u: "
+					"cannot share with %s,qid%i. "
+					"Increase the mempool size (%d mbufs per socket required).",
+					umem->mb_pool->name, cnt, umem->max_xsks,
+					internals->if_name, rxq->xsk_queue_idx,
+					ETH_AF_XDP_NUM_BUFFERS);
+				return NULL;
+			}
+
 			AF_XDP_LOG_LINE(INFO, "%s,qid%i sharing UMEM",
 					internals->if_name, rxq->xsk_queue_idx);
-			rte_atomic_fetch_add_explicit(&umem->refcnt, 1, rte_memory_order_acquire);
+			rte_atomic_fetch_add_explicit(&umem->refcnt, 1,
+					rte_memory_order_acquire);
 		}
 	}
 
