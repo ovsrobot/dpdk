@@ -654,7 +654,7 @@ setup_fib(const int socketid)
 	config_ipv4.default_nh = FIB_DEFAULT_HOP;
 	config_ipv4.dir24_8.nh_sz = RTE_FIB_DIR24_8_4B;
 	config_ipv4.dir24_8.num_tbl8 = (1 << 15);
-	snprintf(s, sizeof(s), "IPV4_L3FWD_FIB_%d", socketid);
+	snprintf(s, sizeof(s), "L3FWD_FIB_%d", socketid);
 	ipv4_l3fwd_fib_lookup_struct[socketid] =
 			rte_fib_create(s, socketid, &config_ipv4);
 	if (ipv4_l3fwd_fib_lookup_struct[socketid] == NULL)
@@ -705,7 +705,7 @@ setup_fib(const int socketid)
 	/* >8 End of setup fib. */
 
 	/* Create the fib IPv6 table. */
-	snprintf(s, sizeof(s), "IPV6_L3FWD_FIB_%d", socketid);
+	snprintf(s, sizeof(s), "L3FWD_FIB6_%d", socketid);
 
 	config.type = RTE_FIB6_TRIE;
 	config.max_routes = (1 << 16) - 1;

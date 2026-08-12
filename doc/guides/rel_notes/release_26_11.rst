@@ -93,6 +93,11 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* rib: The node mempool created by ``rte_rib_create()`` and ``rte_rib6_create()``
+  is now named ``RIB_<name>`` and ``RIB6_<name>`` instead of ``MP_<name>``.
+
+* fib: The RIB created by ``rte_fib_create()`` and ``rte_fib6_create()``
+  is now named ``FIB_<name>`` and ``FIB6_<name>``.
 
 ABI Changes
 -----------

@@ -37,6 +37,9 @@ EAL_REGISTER_TAILQ(rte_fib6_tailq)
 #define FIB6_RETURN_IF_TRUE(cond, retval)
 #endif
 
+/* Prefix used for the memory objects owned by a FIB6. */
+#define FIB6_MEM_PREFIX		"FIB6_"
+
 struct rte_fib6 {
 	char			name[RTE_FIB6_NAMESIZE];
 	enum rte_fib6_type	type;	/**< Type of FIB struct */
@@ -172,14 +175,16 @@ rte_fib6_create(const char *name, int socket_id, struct rte_fib6_conf *conf)
 	rib_conf.ext_sz = conf->rib_ext_sz;
 	rib_conf.max_nodes = conf->max_routes * 2;
 
-	rib = rte_rib6_create(name, socket_id, &rib_conf);
+	/* Add FIB6 Prefix to its mempool name */
+	snprintf(mem_name, sizeof(mem_name), FIB6_MEM_PREFIX "%s", name);
+
+	rib = rte_rib6_create(mem_name, socket_id, &rib_conf);
 	if (rib == NULL) {
 		FIB_LOG(ERR,
-			"Can not allocate RIB %s", name);
+			"Can not allocate RIB %s", mem_name);
 		return NULL;
 	}
 
-	snprintf(mem_name, sizeof(mem_name), "FIB6_%s", name);
 	fib_list = RTE_TAILQ_CAST(rte_fib6_tailq.head, rte_fib6_list);
 
 	rte_mcfg_tailq_write_lock();

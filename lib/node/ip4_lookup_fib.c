@@ -205,7 +205,7 @@ rte_node_ip4_fib_create(int socket, struct rte_fib_conf *conf)
 		return 0;
 
 	conf->default_nh = FIB_DEFAULT_NH;
-	snprintf(s, sizeof(s), "IPV4_LOOKUP_FIB_%d", socket);
+	snprintf(s, sizeof(s), "IP4_FIB_%d", socket);
 	nm->fib[socket] = rte_fib_create(s, socket, conf);
 	if (nm->fib[socket] == NULL)
 		return -rte_errno;
@@ -266,7 +266,7 @@ setup_fib(int socket)
 	conf.dir24_8.nh_sz = RTE_FIB_DIR24_8_4B;
 	conf.dir24_8.num_tbl8 = FIB_DEFAULT_NUM_TBL8;
 	conf.flags = 0;
-	snprintf(s, sizeof(s), "IPV4_LOOKUP_FIB_%d", socket);
+	snprintf(s, sizeof(s), "IP4_FIB_%d", socket);
 	nm->fib[socket] = rte_fib_create(s, socket, &conf);
 	if (nm->fib[socket] == NULL)
 		return -rte_errno;

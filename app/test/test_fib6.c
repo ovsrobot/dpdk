@@ -56,24 +56,24 @@ test_create_invalid(void)
 		"Call succeeded with invalid parameters\n");
 
 	/* rte_fib6_create: config == NULL */
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, NULL);
+	fib = rte_fib6_create("test_create_inv", SOCKET_ID_ANY, NULL);
 	RTE_TEST_ASSERT(fib == NULL,
 		"Call succeeded with invalid parameters\n");
 
 	/* socket_id < -1 is invalid */
-	fib = rte_fib6_create(__func__, -2, &config);
+	fib = rte_fib6_create("test_create_inv", -2, &config);
 	RTE_TEST_ASSERT(fib == NULL,
 		"Call succeeded with invalid parameters\n");
 
 	/* rte_fib6_create: max_routes = 0 */
 	config.max_routes = 0;
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_create_inv", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib == NULL,
 		"Call succeeded with invalid parameters\n");
 	config.max_routes = MAX_ROUTES;
 
 	config.type = RTE_FIB6_TRIE + 1;
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_create_inv", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib == NULL,
 		"Call succeeded with invalid parameters\n");
 
@@ -81,13 +81,13 @@ test_create_invalid(void)
 	config.trie.num_tbl8 = MAX_TBL8;
 
 	config.trie.nh_sz = RTE_FIB6_TRIE_8B + 1;
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_create_inv", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib == NULL,
 		"Call succeeded with invalid parameters\n");
 	config.trie.nh_sz = RTE_FIB6_TRIE_8B;
 
 	config.trie.num_tbl8 = 0;
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_create_inv", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib == NULL,
 		"Call succeeded with invalid parameters\n");
 
@@ -111,7 +111,7 @@ test_multiple_create(void)
 
 	for (i = 0; i < 100; i++) {
 		config.max_routes = MAX_ROUTES - i;
-		fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+		fib = rte_fib6_create("test_mult_crt", SOCKET_ID_ANY, &config);
 		RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 		rte_fib6_free(fib);
 	}
@@ -136,7 +136,7 @@ test_free_null(void)
 	config.default_nh = 0;
 	config.type = RTE_FIB6_DUMMY;
 
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_free_null", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	rte_fib6_free(fib);
@@ -175,7 +175,7 @@ test_add_del_invalid(void)
 		"Call succeeded with invalid parameters\n");
 
 	/*Create valid fib to use in rest of test. */
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_adddel_inv", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	/* rte_fib6_add: depth > RTE_IPV6_MAX_DEPTH */
@@ -356,7 +356,7 @@ test_lookup(void)
 	config.default_nh = def_nh;
 	config.type = RTE_FIB6_DUMMY;
 
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_lookup", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 	ret = check_fib(fib);
 	RTE_TEST_ASSERT(ret == TEST_SUCCESS,
@@ -367,7 +367,7 @@ test_lookup(void)
 
 	config.trie.nh_sz = RTE_FIB6_TRIE_2B;
 	config.trie.num_tbl8 = MAX_TBL8 - 1;
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_lookup", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 	ret = check_fib(fib);
 	RTE_TEST_ASSERT(ret == TEST_SUCCESS,
@@ -376,7 +376,7 @@ test_lookup(void)
 
 	config.trie.nh_sz = RTE_FIB6_TRIE_4B;
 	config.trie.num_tbl8 = MAX_TBL8;
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_lookup", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 	ret = check_fib(fib);
 	RTE_TEST_ASSERT(ret == TEST_SUCCESS,
@@ -385,7 +385,7 @@ test_lookup(void)
 
 	config.trie.nh_sz = RTE_FIB6_TRIE_8B;
 	config.trie.num_tbl8 = MAX_TBL8;
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_lookup", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 	ret = check_fib(fib);
 	RTE_TEST_ASSERT(ret == TEST_SUCCESS,
@@ -417,7 +417,7 @@ test_invalid_rcu(void)
 	config.rib_ext_sz = 0;
 	config.default_nh = def_nh;
 
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_inval_rcu", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	/* Create RCU QSBR variable */
@@ -442,7 +442,7 @@ test_invalid_rcu(void)
 	config.type = RTE_FIB6_TRIE;
 	config.trie.nh_sz = RTE_FIB6_TRIE_4B;
 	config.trie.num_tbl8 = MAX_TBL8;
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_inval_rcu", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	/* Call rte_fib6_rcu_qsbr_add without fib or config */
@@ -548,7 +548,7 @@ test_fib_rcu_sync_rw(void)
 	config.trie.nh_sz = RTE_FIB6_TRIE_4B;
 	config.trie.num_tbl8 = 1;
 
-	g_fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	g_fib = rte_fib6_create("test_rcu_sync", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(g_fib != NULL, "Failed to create FIB\n");
 
 	/* Create RCU QSBR variable */
@@ -642,7 +642,7 @@ test_drift(void)
 	config.trie.nh_sz = RTE_FIB6_TRIE_2B;
 	config.trie.num_tbl8 = 256;
 
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_drift", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	ret = rte_fib6_add(fib, &parent, 28, 0xa);
@@ -706,7 +706,7 @@ test_drift_compression(void)
 	config.trie.nh_sz = RTE_FIB6_TRIE_2B;
 	config.trie.num_tbl8 = 256;
 
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_drift_comp", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	/* Compressed: child shares the parent's nh, modify_dp is skipped */
@@ -767,7 +767,7 @@ test_drift_multilevel(void)
 	config.trie.nh_sz = RTE_FIB6_TRIE_2B;
 	config.trie.num_tbl8 = 256;
 
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_drift_ml", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	ret = rte_fib6_add(fib, &grand, 28, 1);
@@ -831,7 +831,7 @@ test_drift_stress(void)
 	config.trie.nh_sz = RTE_FIB6_TRIE_2B;
 	config.trie.num_tbl8 = 256;
 
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_drift_str", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	for (i = 0; i < 2000; i++) {
@@ -902,7 +902,7 @@ test_drift_tight_pool(void)
 	config.trie.nh_sz = RTE_FIB6_TRIE_2B;
 	config.trie.num_tbl8 = 3;
 
-	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	fib = rte_fib6_create("test_drift_tp", SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 
 	ret = rte_fib6_add(fib, &parent, 28, 1);
