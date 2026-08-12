@@ -76,5 +76,30 @@ Device Arguments
 ----------------
 
 ``dpaa_dma_err_check=1``
-  Check DMA errors at driver level.
-  Usage example: ``dpaa_bus:dpaa_qdma-1,dpaa_dma_err_check=1``
+  Enable DMA error checking at driver level. When set, the driver reads
+  the hardware error detect register after each dequeue and increments
+  the error statistics counter on any reported error.
+  Usage example: ``-a dpaa_bus:dpaa_qdma-1,dpaa_dma_err_check=1``
+
+``dpaa_dma_sg_disable=1``
+  Disable scatter-gather (SG) batching. By default the driver groups
+  multiple pending descriptors into a single SG command to reduce
+  doorbell overhead. Setting this devarg forces each descriptor to be
+  submitted as an individual single-entry transfer. Useful for latency
+  benchmarking or debugging.
+  Usage example: ``-a dpaa_bus:dpaa_qdma-1,dpaa_dma_sg_disable=1``
+
+``dpaa_dma_data_validation=1``
+  Enable post-DMA data validation. After each completed transfer the
+  driver reads back source and destination buffers and compares them
+  byte by byte, logging any mismatch. This has significant performance
+  impact and is intended for debugging only.
+  Usage example: ``-a dpaa_bus:dpaa_qdma-1,dpaa_dma_data_validation=1``
+
+``dpaa_dma_pci_read_disable=1``
+  Disable the software workaround for erratum ERR050757. The workaround
+  inserts a PCI read-back after each DMA write to flush posted writes.
+  Only available when the driver is built with
+  ``RTE_DMA_DPAA_ERRATA_ERR050757`` enabled. Disabling it may improve
+  throughput on platforms not affected by the erratum.
+  Usage example: ``-a dpaa_bus:dpaa_qdma-1,dpaa_dma_pci_read_disable=1``
