@@ -1120,7 +1120,7 @@ int dpaa_eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 			queue_idx, rxq->fqid);
 
 	/* Shutdown FQ before configure */
-	qman_shutdown_fq(rxq->fqid);
+	qman_shutdown_fq_by_fqid(rxq->fqid);
 
 	if (!fif->num_profiles) {
 		if (dpaa_intf->bp_info && dpaa_intf->bp_info->bp &&
