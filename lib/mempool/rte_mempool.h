@@ -126,9 +126,26 @@ struct rte_mempool_objsz {
 	/**< Total size of an object (header + elt + trailer). */
 };
 
-/**< Maximum length of a memory pool's name. */
-#define RTE_MEMPOOL_NAMESIZE (RTE_RING_NAMESIZE - \
-			      sizeof(RTE_MEMPOOL_MZ_PREFIX) + 1)
+/* Represents the memzone prefix of the default mempool driver. */
+#define RTE_MEMPOOL_DRIVER_REPRESENTATIVE_MZ_PREFIX "RG_"
+
+/**
+ * Maximum length of a memory pool's name.
+ *
+ * Needs room for memzone prefix indicating "mempool" type:
+ * "MP_<name>"
+ * Note:
+ * The mempool driver needs room for its own memzone prefix too, e.g.:
+ * "RG_MP_<name>" (ring driver) or "STK_MP_<name>" (stack driver)
+ * In order to fail early on too long names when creating the mempool,
+ * the length of the memzone name reserved by various mempool drivers is
+ * not considered; only the default driver (ring) is considered here.
+ * If the name eventually turns out to be too long for the chosen mempool driver,
+ * populating the mempool will fail.
+ */
+#define RTE_MEMPOOL_NAMESIZE (RTE_MEMZONE_NAMESIZE - \
+		(sizeof(RTE_MEMPOOL_DRIVER_REPRESENTATIVE_MZ_PREFIX) - 1) - \
+		(sizeof(RTE_MEMPOOL_MZ_PREFIX) - 1))
 #define RTE_MEMPOOL_MZ_PREFIX "MP_"
 
 /* "MP_<name>" */
@@ -240,8 +257,7 @@ struct __rte_cache_aligned rte_mempool {
 	unsigned int flags;              /**< Flags of the mempool. */
 	int socket_id;                   /**< Socket id passed at create. */
 	uint32_t size;                   /**< Max size of the mempool. */
-	uint32_t cache_size;
-	/**< Size of per-lcore default local cache. */
+	uint32_t cache_size;             /**< Size of per-lcore default local cache. */
 
 	uint32_t elt_size;               /**< Size of an element. */
 	uint32_t header_size;            /**< Size of header (before elt). */
@@ -257,12 +273,12 @@ struct __rte_cache_aligned rte_mempool {
 	 */
 	int32_t ops_index;
 
-	struct rte_mempool_cache *local_cache; /**< Per-lcore local cache */
-
 	uint32_t populated_size;         /**< Number of populated objects. */
 	struct rte_mempool_objhdr_list elt_list; /**< List of objects in pool */
 	uint32_t nb_mem_chunks;          /**< Number of memory chunks */
 	struct rte_mempool_memhdr_list mem_list; /**< List of memory chunks */
+
+	struct rte_mempool_cache local_cache[RTE_MAX_LCORE]; /**< Per-lcore local cache */
 
 #ifdef RTE_LIBRTE_MEMPOOL_STATS
 	/** Per-lcore statistics.
@@ -271,6 +287,8 @@ struct __rte_cache_aligned rte_mempool {
 	 */
 	struct rte_mempool_debug_stats stats[RTE_MAX_LCORE + 1];
 #endif
+
+	/* Private data are located immediately after the mempool structure. */
 };
 
 /** Spreading among memory channels not required. */
@@ -361,18 +379,6 @@ struct __rte_cache_aligned rte_mempool {
 #else
 #define RTE_MEMPOOL_CACHE_STAT_ADD(cache, name, n) do {} while (0)
 #endif
-
-/**
- * @internal Calculate the size of the mempool header.
- *
- * @param mp
- *   Pointer to the memory pool.
- * @param cs
- *   Size of the per-lcore cache.
- */
-#define RTE_MEMPOOL_HEADER_SIZE(mp, cs) \
-	(sizeof(*(mp)) + (((cs) == 0) ? 0 : \
-	(sizeof(struct rte_mempool_cache) * RTE_MAX_LCORE)))
 
 /* return the header of a mempool object (internal) */
 static inline struct rte_mempool_objhdr *
@@ -1049,7 +1055,7 @@ rte_mempool_free(struct rte_mempool *mp);
  *   If cache_size is non-zero, the rte_mempool library will try to
  *   limit the accesses to the common lockless pool, by maintaining a
  *   per-lcore object cache. This argument must be lower or equal to
- *   RTE_MEMPOOL_CACHE_MAX_SIZE and n.
+ *   RTE_MEMPOOL_CACHE_MAX_SIZE and n, and it must be divisible by 32.
  *   The access to the per-lcore table is of course
  *   faster than the multi-producer/consumer pool. The cache can be
  *   disabled if the cache_size argument is set to 0; it can be useful to
@@ -1368,15 +1374,16 @@ rte_mempool_cache_free(struct rte_mempool_cache *cache);
 static __rte_always_inline struct rte_mempool_cache *
 rte_mempool_default_cache(struct rte_mempool *mp, unsigned lcore_id)
 {
-	if (unlikely(mp->cache_size == 0))
-		return NULL;
-
 	if (unlikely(lcore_id == LCORE_ID_ANY))
 		return NULL;
 
-	rte_mempool_trace_default_cache(mp, lcore_id,
-		&mp->local_cache[lcore_id]);
-	return &mp->local_cache[lcore_id];
+	struct rte_mempool_cache *cache = &mp->local_cache[lcore_id];
+
+	if (unlikely(cache->size == 0))
+		return NULL;
+
+	rte_mempool_trace_default_cache(mp, lcore_id, cache);
+	return cache;
 }
 
 /**
@@ -1445,9 +1452,24 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 		 * are more hot, from the upper half of the cache.
 		 */
 		__rte_assume(cache->len > cache->size / 2);
-		rte_mempool_ops_enqueue_bulk(mp, &cache->objs[0], cache->size / 2);
-		rte_memcpy(&cache->objs[0], &cache->objs[cache->size / 2],
-				sizeof(void *) * (cache->len - cache->size / 2));
+		rte_mempool_ops_enqueue_bulk(mp, cache->objs, cache->size / 2);
+		/*
+		 * For improved rte_memcpy() performance, move down objects
+		 * from CPU cache line aligned address in chunks of 32 bytes.
+		 * Note: For cache->objs[cache->size / 2] to be cache line aligned, cache->size
+		 * must be divisible by 32 on 32-bit architecture with 64-byte cache line,
+		 * divisible by 32 on 64-bit architecture with 128-byte cache line, and
+		 * be divisible by 16 on 64-bit architecture with 64-byte cache line.
+		 * For API consistency, require mempool cache size is divisible by 32.
+		 * This requirement is enforced when creating the cache.
+		 * @ref rte_mempool_create_empty() implementation.
+		 */
+		const size_t move = RTE_ALIGN_MUL_CEIL(
+				sizeof(void *) * (cache->len - cache->size / 2), 32);
+		__rte_assume(move >= 32);
+		__rte_assume((move & 31) == 0);
+		rte_memcpy(cache->objs, __rte_assume_cache_aligned(&cache->objs[cache->size / 2]),
+				move);
 		cache_objs = &cache->objs[cache->len - cache->size / 2];
 		cache->len = cache->len - cache->size / 2 + n;
 	} else {
@@ -1892,8 +1914,7 @@ void rte_mempool_audit(struct rte_mempool *mp);
  */
 static inline void *rte_mempool_get_priv(struct rte_mempool *mp)
 {
-	return (char *)mp +
-		RTE_MEMPOOL_HEADER_SIZE(mp, mp->cache_size);
+	return (char *)mp + sizeof(struct rte_mempool);
 }
 
 /**
