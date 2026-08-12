@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
  *
  * Copyright 2008-2016 Freescale Semiconductor Inc.
- * Copyright 2017,2019-2025 NXP
+ * Copyright 2017,2019-2026 NXP
  *
  */
 
@@ -2792,7 +2792,7 @@ qman_shutdown_fq(struct qman_fq *fq)
 	int orl_empty, drain = 0, ret = 0;
 	u32 res, fqid = fq->fqid;
 	u8 state;
-	u32 channel, wq;
+	u16 channel;
 
 	DPAA_BUS_DEBUG("In shutdown for queue = %x", fqid);
 	if (!p)
@@ -2806,9 +2806,10 @@ qman_shutdown_fq(struct qman_fq *fq)
 		ret = -ETIMEDOUT;
 		goto out;
 	}
+
 	state = mcr->queryfq_np.state & QM_MCR_NP_STATE_MASK;
 	if (state == QM_MCR_NP_STATE_OOS) {
-		DPAA_BUS_ERR("Already in OOS");
+		DPAA_BUS_DEBUG("fqid(0x%x) Already in OOS", fqid);
 		goto out; /* Already OOS, no need to do anymore checks */
 	}
 
@@ -2824,7 +2825,6 @@ qman_shutdown_fq(struct qman_fq *fq)
 
 	/* Need to store these since the MCR gets reused */
 	channel = qm_fqd_get_chan(&mcr->queryfq.fqd);
-	wq = qm_fqd_get_wq(&mcr->queryfq.fqd);
 
 	switch (state) {
 	case QM_MCR_NP_STATE_TEN_SCHED:
@@ -2858,47 +2858,42 @@ qman_shutdown_fq(struct qman_fq *fq)
 			/* Flag that we need to drain FQ */
 			drain = 1;
 
-			__maybe_unused u16 dequeue_wq = 0;
-			if (channel >= qm_channel_pool1 &&
-				channel < (u16)(qm_channel_pool1 + 15)) {
-				/* Pool channel, enable the bit in the portal */
-				dequeue_wq = (channel -
-						qm_channel_pool1 + 1) << 4 | wq;
-			} else if (channel < qm_channel_pool1) {
+			const u16 pool_ch_start = dpaa_get_qm_channel_pool();
+			const u16 pool_ch_end = pool_ch_start +
+					dpaa_get_qm_channel_pool_num();
+			if (channel >= pool_ch_start && channel < pool_ch_end) {
+				/* Pool channel - must use affine portal */
+				if (p->config->channel != channel) {
+					DPAA_BUS_ERR("Portal ch(0x%04x) != FQ ch(0x%04x)",
+						p->config->channel, channel);
+					ret = -EINVAL;
+					goto out;
+				}
+			} else if (channel < pool_ch_start) {
 				/* Dedicated channel */
-				dequeue_wq = wq;
-			} else {
-				DPAA_BUS_ERR("Can't recover FQ 0x%x, ch: 0x%x",
-					fqid, channel);
-				ret = -EBUSY;
-				goto out;
-			}
-			/* Set the sdqcr to drain this channel */
-			if (channel < qm_channel_pool1)
 				qm_dqrr_sdqcr_set(&p->p,
 						  QM_SDQCR_TYPE_ACTIVE |
 						  QM_SDQCR_CHANNELS_DEDICATED);
-			else
-				qm_dqrr_sdqcr_set(&p->p,
-						  QM_SDQCR_TYPE_ACTIVE |
-						  QM_SDQCR_CHANNELS_POOL_CONV
-						  (channel));
+			} else {
+				DPAA_BUS_ERR("Invalid channel 0x%x for FQ 0x%x",
+					channel, fqid);
+				ret = -EBUSY;
+				goto out;
+			}
 			do {
 				/* Keep draining DQRR while checking the MR*/
 				qm_dqrr_drain_nomatch(&p->p);
 				/* Process message ring too */
-				found_fqrn = qm_mr_drain(&p->p,
-							FQRN);
+				found_fqrn = qm_mr_drain(&p->p, FQRN);
 				cpu_relax();
 			} while (!found_fqrn);
-			/* Restore SDQCR */
-			qm_dqrr_sdqcr_set(&p->p,
-					p->sdqcr);
+			qm_dqrr_sdqcr_set(&p->p, p->sdqcr);
+
 		}
 		if (res != QM_MCR_RESULT_OK &&
 		    res != QM_MCR_RESULT_PENDING) {
 			DPAA_BUS_ERR("retire_fq failed: FQ 0x%x, res=0x%x",
-				      fqid, res);
+				fqid, res);
 			ret = -EIO;
 			goto out;
 		}
@@ -2941,7 +2936,7 @@ qman_shutdown_fq(struct qman_fq *fq)
 
 		if (mcr->result != QM_MCR_RESULT_OK) {
 			DPAA_BUS_ERR("OOS after drain fail: FQ 0x%x (0x%x)",
-				      fqid, mcr->result);
+				fqid, mcr->result);
 			ret = -EIO;
 			goto out;
 		}
@@ -2960,7 +2955,7 @@ qman_shutdown_fq(struct qman_fq *fq)
 
 		if (mcr->result != QM_MCR_RESULT_OK) {
 			DPAA_BUS_ERR("OOS fail: FQ 0x%x (0x%x)",
-				      fqid, mcr->result);
+				fqid, mcr->result);
 			ret = -EIO;
 			goto out;
 		}
