@@ -58,7 +58,11 @@
 #define DRIVER_RX_TAILDROP        "drv_rx_taildrop"
 #define DRIVER_TX_TAILDROP        "drv_tx_taildrop"
 #define DRIVER_FMCLESS_RXQ        "drv_fmcless_rxq"
+#define DRIVER_SH_IF_NAME         "drv_sh_if_name"
 #define RTE_PRIORITY_103 103
+
+static int dpaa_get_devargs_str(struct rte_devargs *devargs, const char *key,
+				char *val, size_t size);
 
 /* Supported Rx offloads */
 static uint64_t dev_rx_offloads_sup =
@@ -247,6 +251,7 @@ dpaa_eth_dev_configure(struct rte_eth_dev *dev)
 	int speed, duplex;
 	int ret, rx_status, socket_fd;
 	struct ifreq ifr;
+	char sh_if_name[IFNAMSIZ];
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -268,7 +273,15 @@ dpaa_eth_dev_configure(struct rte_eth_dev *dev)
 			DPAA_PMD_ERR("Cannot open IF socket");
 			return -errno;
 		}
-		strncpy(ifr.ifr_name, dpaa_intf->name, IFNAMSIZ - 1);
+
+		sh_if_name[0] = '\0';
+		ret = dpaa_get_devargs_str(dpaa_dev->device.devargs,
+					   DRIVER_SH_IF_NAME, sh_if_name,
+					   sizeof(sh_if_name));
+		if (ret <= 0 || sh_if_name[0] == '\0')
+			strlcpy(ifr.ifr_name, dpaa_intf->name, IFNAMSIZ);
+		else
+			strlcpy(ifr.ifr_name, sh_if_name, IFNAMSIZ);
 
 		if (ioctl(socket_fd, SIOCGIFMTU, &ifr) < 0) {
 			DPAA_PMD_ERR("Cannot get interface mtu");
@@ -2271,6 +2284,53 @@ dpaa_get_devargs_int(struct rte_devargs *devargs, const char *key, long *val)
 	return 1;
 }
 
+static int
+parse_str_devarg_handler(__rte_unused const char *key, const char *value,
+			 void *opaque)
+{
+	*(const char **)opaque = value;
+	return 0;
+}
+
+/*
+ * Fetch a string valued device argument into a caller-supplied buffer.
+ * Returns 1 and copies the value into val (up to size bytes, NUL-terminated)
+ * if the key is present, 0 if the key is absent, and a negative errno on error.
+ */
+static int
+dpaa_get_devargs_str(struct rte_devargs *devargs, const char *key,
+		     char *val, size_t size)
+{
+	struct rte_kvargs *kvlist;
+	const char *str = NULL;
+	int ret;
+
+	if (!devargs)
+		return 0;
+
+	kvlist = rte_kvargs_parse(devargs->args, NULL);
+	if (!kvlist)
+		return 0;
+
+	if (!rte_kvargs_count(kvlist, key)) {
+		rte_kvargs_free(kvlist);
+		return 0;
+	}
+
+	ret = rte_kvargs_process(kvlist, key, parse_str_devarg_handler, &str);
+	if (ret < 0 || str == NULL) {
+		rte_kvargs_free(kvlist);
+		return ret < 0 ? ret : 0;
+	}
+
+	ret = rte_strscpy(val, str, size);
+	rte_kvargs_free(kvlist);
+	if (ret < 0)
+		return ret;
+
+	return 1;
+}
+
 /* Initialise a network interface */
 static int
 dpaa_dev_init(struct rte_eth_dev *eth_dev)
@@ -2808,5 +2868,6 @@ RTE_PMD_REGISTER_PARAM_STRING(net_dpaa,
 		DRIVER_RECV_ERR_PKTS "=<int>"
 		DRIVER_RX_TAILDROP "=<int>"
 		DRIVER_TX_TAILDROP "=<int>"
-		DRIVER_FMCLESS_RXQ "=<int>");
+		DRIVER_FMCLESS_RXQ "=<int>"
+		DRIVER_SH_IF_NAME "=<string>");
 RTE_LOG_REGISTER_DEFAULT(dpaa_logtype_pmd, NOTICE);
