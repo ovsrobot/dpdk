@@ -157,7 +157,7 @@ struct ecore_chain {
 	UNUSABLE_ELEMS_PER_PAGE(elem_size, mode)))
 
 #define ECORE_CHAIN_PAGE_CNT(elem_cnt, elem_size, mode)		\
-	DIV_ROUND_UP(elem_cnt, USABLE_ELEMS_PER_PAGE(elem_size, mode))
+	RTE_DIV_ROUND_UP(elem_cnt, USABLE_ELEMS_PER_PAGE(elem_size, mode))
 
 #define is_chain_u16(p)	((p)->cnt_type == ECORE_CHAIN_CNT_TYPE_U16)
 #define is_chain_u32(p)	((p)->cnt_type == ECORE_CHAIN_CNT_TYPE_U32)
