@@ -292,6 +292,11 @@ the ``-a`` EAL option (e.g. ``-a dpaa_bus:fm1-mac3,drv_rx_taildrop=64``):
 
   In FMCLESS mode, override the number of Rx frame queues to create.
 
+* ``drv_sh_if_name``
+
+  Provide the kernel Linux interface name for a shared MAC interface when it
+  differs from the ``fmX-macY`` style name used by DPDK.
+
 FMAN Config
 -----------
 
