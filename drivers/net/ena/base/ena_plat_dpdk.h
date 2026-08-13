@@ -304,7 +304,6 @@ ena_mem_alloc_coherent(struct rte_eth_dev_data *data, size_t size,
 			rte_write64_relaxed(*from, to);			       \
 	} while(0)
 
-#define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
 
 #define ENA_FFS(x) ffs(x)
 
