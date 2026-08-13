@@ -93,6 +93,20 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* rib: The node mempool created by ``rte_rib_create()`` and ``rte_rib6_create()``
+  is now named ``RIB_<name>`` and ``RIB6_<name>`` instead of ``MP_<name>``.
+
+* fib: The RIB created by ``rte_fib_create()`` and ``rte_fib6_create()``
+  is now named ``FIB_<name>`` and ``FIB6_<name>``.
+
+* rib, fib: The name of a RIB, RIB6, FIB or FIB6 is used to derive the name of
+  its node mempool, which is bounded by ``RTE_MEMPOOL_NAMESIZE``.
+  As the prefixes above are added on top of the name,the new maximum length of
+  a name are the following:
+  RIB  - 21 characters.
+  RIB6 - 20 characters.
+  FIB  - 17 characters.
+  FIB6 - 15 characters.
 
 ABI Changes
 -----------

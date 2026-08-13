@@ -199,7 +199,7 @@ rte_node_ip6_fib_create(int socket, struct rte_fib6_conf *conf)
 		return 0;
 
 	conf->default_nh = FIB6_DEFAULT_NH;
-	snprintf(s, sizeof(s), "IPV6_LOOKUP_FIB_%u", socket);
+	snprintf(s, sizeof(s), "IP6_FIB_%u", socket);
 	nm->fib6[socket] = rte_fib6_create(s, socket, conf);
 	if (nm->fib6[socket] == NULL)
 		return -rte_errno;
@@ -257,7 +257,7 @@ setup_fib6(int socket)
 	conf.rib_ext_sz = 0;
 	conf.trie.nh_sz = RTE_FIB6_TRIE_4B;
 	conf.trie.num_tbl8 = FIB6_DEFAULT_NUM_TBL8;
-	snprintf(s, sizeof(s), "IPV6_LOOKUP_FIB_%u", socket);
+	snprintf(s, sizeof(s), "IP6_FIB_%u", socket);
 	nm->fib6[socket] = rte_fib6_create(s, socket, &conf);
 	if (nm->fib6[socket] == NULL)
 		return -rte_errno;
