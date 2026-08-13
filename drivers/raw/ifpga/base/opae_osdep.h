@@ -71,10 +71,9 @@ struct uuid {
 } while (0)
 #endif
 
-#define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
 #define udelay(x) opae_udelay(x)
 #define msleep(x) opae_udelay(1000 * (x))
-#define usleep_range(min, max) msleep(DIV_ROUND_UP(min, 1000))
+#define usleep_range(min, max) msleep(RTE_DIV_ROUND_UP(min, 1000))
 
 #define time_after(a, b)	((long)((b) - (a)) < 0)
 #define time_before(a, b)	time_after(b, a)
