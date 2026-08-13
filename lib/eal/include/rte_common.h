@@ -718,6 +718,11 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 	})
 
 /**
+ * Macro to divide dividend n by divisor d, rounding up if d does not divide n.
+ */
+#define RTE_DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
+
+/**
  * Checks if a pointer is aligned to a given power-of-two value
  *
  * @param ptr
