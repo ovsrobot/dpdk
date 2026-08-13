@@ -855,6 +855,7 @@ enetc4_dev_close(struct rte_eth_dev *dev)
 		if (dev->data->dev_conf.intr_conf.lsc != 0)
 			enetc4_vf_dev_intr(dev, false);
 		ret = enetc4_vf_dev_stop(dev);
+		pthread_mutex_destroy(&hw->vsi_lock);
 	} else {
 		ret = enetc4_dev_stop(dev);
 	}
@@ -1339,6 +1340,11 @@ enetc4_dev_init(struct rte_eth_dev *eth_dev)
 	struct enetc_hw *enetc_hw = &hw->hw;
 
 	PMD_INIT_FUNC_TRACE();
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		eth_dev->dev_ops = &enetc4_ops;
+		return 0;
+	}
 	eth_dev->dev_ops = &enetc4_ops;
 	enetc4_dev_hw_init(eth_dev);
 
