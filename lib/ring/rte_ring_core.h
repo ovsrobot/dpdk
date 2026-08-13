@@ -19,6 +19,7 @@
  * instead.
  */
 
+#include <assert.h>
 #include <stdalign.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -46,8 +47,10 @@ enum rte_ring_queue_behavior {
 
 #define RTE_RING_MZ_PREFIX "RG_"
 /** The maximum length of a ring name. */
-#define RTE_RING_NAMESIZE (RTE_MEMZONE_NAMESIZE - \
-			   sizeof(RTE_RING_MZ_PREFIX) + 1)
+#define RTE_RING_NAMESIZE 32
+
+static_assert(RTE_RING_NAMESIZE <= RTE_MEMZONE_NAMESIZE - sizeof(RTE_RING_MZ_PREFIX) + 1,
+	      "rte_ring name size needs to fit in memzone with 3 character prefix");
 
 /** prod/cons sync types */
 enum rte_ring_sync_type {

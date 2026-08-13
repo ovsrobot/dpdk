@@ -93,6 +93,15 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Increased maximum name sizes.**
+
+  * memzone: The maximum length of a memory zone name ``RTE_MEMZONE_NAMESIZE``
+    was increased from 32 to 64.
+  * mempool: The maximum length of a mempool name ``RTE_MEMPOOL_NAMESIZE`` incre    from 26 to 29.
+  * ring: The maximum length of a ring name ``RTE_RING_NAMESIZE`` was increased from 29 to 32.
+  * stack: The maximum length of a stack name ``RTE_STACK_NAMESIZE`` was increased from 28 to 32.
+  * rcu: The maximum length of a defer queue name ``RTE_RCU_QSBR_DQ_NAMESIZE`` increased from 29 to 32.
+
 
 ABI Changes
 -----------
@@ -108,6 +117,12 @@ ABI Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* **Increased size of names in structures.**
+
+  * memzone: Moved the zone name to the end of ``rte_memzone``
+    and expanded to 64 bytes. Other names in``rte_ring``,
+    ``rte_stack``, ``rte_mempool`` and ``rcu_dq_name`` also increased.
 
 
 Known Issues

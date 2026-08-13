@@ -15,6 +15,7 @@
 #ifndef _RTE_STACK_H_
 #define _RTE_STACK_H_
 
+#include <assert.h>
 #include <stdalign.h>
 
 #include <rte_debug.h>
@@ -25,8 +26,9 @@
 #define RTE_TAILQ_STACK_NAME "RTE_STACK"
 #define RTE_STACK_MZ_PREFIX "STK_"
 /** The maximum length of a stack name. */
-#define RTE_STACK_NAMESIZE (RTE_MEMZONE_NAMESIZE - \
-			   sizeof(RTE_STACK_MZ_PREFIX) + 1)
+#define RTE_STACK_NAMESIZE 32
+static_assert(RTE_STACK_NAMESIZE <= RTE_MEMZONE_NAMESIZE - sizeof(RTE_STACK_MZ_PREFIX) + 1,
+	      "rte_stack name size needs to fit in memzone with 4 character prefix");
 
 struct rte_stack_lf_elem {
 	void *data;			/**< Data pointer */

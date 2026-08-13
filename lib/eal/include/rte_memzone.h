@@ -45,24 +45,21 @@ extern "C" {
  * A structure describing a memzone, which is a contiguous portion of
  * physical memory identified by a name.
  */
-struct __rte_packed_begin rte_memzone {
-
-#define RTE_MEMZONE_NAMESIZE 32       /**< Maximum length of memory zone name.*/
-	char name[RTE_MEMZONE_NAMESIZE];  /**< Name of the memory zone. */
-
+struct rte_memzone {
 	rte_iova_t iova;                  /**< Start IO address. */
 	union {
 		void *addr;                   /**< Start virtual address. */
 		uint64_t addr_64;             /**< Makes sure addr is always 64-bits */
 	};
+	uint64_t hugepage_sz;             /**< The page size of underlying memory */
 	size_t len;                       /**< Length of the memzone. */
 
-	uint64_t hugepage_sz;             /**< The page size of underlying memory */
-
 	int32_t socket_id;                /**< NUMA socket ID. */
-
 	uint32_t flags;                   /**< Characteristics of this memzone. */
-} __rte_packed_end;
+
+#define RTE_MEMZONE_NAMESIZE 64           /**< Maximum length of memory zone name.*/
+	char name[RTE_MEMZONE_NAMESIZE];  /**< Name of the memory zone. */
+};
 
 /**
  * Set the maximum number of memzones.
