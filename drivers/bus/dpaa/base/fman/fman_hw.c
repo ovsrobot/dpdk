@@ -324,6 +324,8 @@ fman_if_bmi_stats_get_all(struct fman_if *p, uint64_t *value)
 {
 	struct __fman_if *m = container_of(p, struct __fman_if, __if);
 	struct rx_bmi_regs *regs = (struct rx_bmi_regs *)m->rx_bmi_map;
+	struct tx_bmi_regs *tx_regs = (struct tx_bmi_regs *)m->tx_bmi_map;
+
 	int i = 0;
 
 	value[i++] = (u32)in_be32(&regs->fmbm_rfrc);
@@ -334,6 +336,11 @@ fman_if_bmi_stats_get_all(struct fman_if *p, uint64_t *value)
 	value[i++] = (u32)in_be32(&regs->fmbm_rfldec);
 	value[i++] = (u32)in_be32(&regs->fmbm_rodc);
 	value[i++] = (u32)in_be32(&regs->fmbm_rbdc);
+
+	value[i++] = (u32)in_be32(&tx_regs->fmbm_tfdc);
+	value[i++] = (u32)in_be32(&tx_regs->fmbm_tfledc);
+	value[i++] = (u32)in_be32(&tx_regs->fmbm_tfufdc);
+	value[i++] = (u32)in_be32(&tx_regs->fmbm_tbdc);
 }
 
 void
