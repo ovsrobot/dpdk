@@ -157,7 +157,7 @@ rte_raw_cksum_mbuf(const struct rte_mbuf *m, uint32_t off, uint32_t len,
 	for (;;) {
 		tmp = __rte_raw_cksum(buf, seglen, 0);
 		if (done & 1)
-			tmp = rte_bswap16((uint16_t)tmp);
+			tmp = rte_bswap16(__rte_raw_cksum_reduce(tmp));
 		sum += tmp;
 		done += seglen;
 		if (done == len)
