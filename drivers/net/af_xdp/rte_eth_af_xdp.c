@@ -1149,6 +1149,13 @@ get_shared_umem(struct pkt_rx_queue *rxq, const char *ifname,
 			if (rxq == list_rxq)
 				continue;
 			if (mb_pool == internals->rx_queues[i].mb_pool) {
+				/*
+				 * A failed queue setup can leave mb_pool set
+				 * with no umem; skip it to avoid a NULL
+				 * dereference below.
+				 */
+				if (internals->rx_queues[i].umem == NULL)
+					continue;
 				if (ctx_exists(rxq, ifname, list_rxq,
 						internals->if_name)) {
 					ret = -1;
@@ -1188,9 +1195,24 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 		if (get_shared_umem(rxq, internals->if_name, &umem) < 0)
 			return NULL;
 
-		if (umem != NULL &&
-			rte_atomic_load_explicit(&umem->refcnt, rte_memory_order_acquire) <
-					umem->max_xsks) {
+		if (umem != NULL) {
+			uint32_t cnt = rte_atomic_load_explicit(&umem->refcnt,
+					rte_memory_order_acquire);
+
+			/* Reject sharing once the UMEM is at capacity: sharing without
+			 * taking a reference corrupts the refcount and crashes later.
+			 */
+			if (cnt >= umem->max_xsks) {
+				AF_XDP_LOG_LINE(ERR,
+					"UMEM %s is shared by %u socket(s), max %u: "
+					"cannot share with %s,qid%i. "
+					"Increase the mempool size (%d mbufs per socket required).",
+					umem->mb_pool->name, cnt, umem->max_xsks,
+					internals->if_name, rxq->xsk_queue_idx,
+					ETH_AF_XDP_NUM_BUFFERS);
+				return NULL;
+			}
+
 			AF_XDP_LOG_LINE(INFO, "%s,qid%i sharing UMEM",
 					internals->if_name, rxq->xsk_queue_idx);
 			rte_atomic_fetch_add_explicit(&umem->refcnt, 1, rte_memory_order_acquire);
@@ -1818,6 +1840,8 @@ out_xsk:
 out_umem:
 	if (rte_atomic_fetch_sub_explicit(&rxq->umem->refcnt, 1, rte_memory_order_acquire) - 1 == 0)
 		xdp_umem_destroy(rxq->umem);
+	/* Drop the dangling pointer so a later shared-UMEM scan skips it. */
+	rxq->umem = NULL;
 
 	return ret;
 }
