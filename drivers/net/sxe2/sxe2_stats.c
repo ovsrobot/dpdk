@@ -318,7 +318,7 @@ int32_t sxe2_stats_info_get(struct rte_eth_dev *dev,
 	struct sxe2_stats   *stats_out = &vsi->vsi_stats.stats;
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
-		return sxe2_mp_req_get_stats(dev, stats, qstats);
+		return sxe2_mp_req_get_stats(dev, stats);
 
 	ret = sxe2_vsi_hw_stats_get_update(adapter);
 	if (ret)
@@ -328,9 +328,11 @@ int32_t sxe2_stats_info_get(struct rte_eth_dev *dev,
 	if (ret)
 		goto end;
 
-	ret = sxe2_drv_queue_info_get_update(adapter, qstats);
-	if (ret)
-		goto end;
+	if (qstats) {
+		ret = sxe2_drv_queue_info_get_update(adapter, qstats);
+		if (ret)
+			goto end;
+	}
 
 	sxe2_stats_update(adapter);
 

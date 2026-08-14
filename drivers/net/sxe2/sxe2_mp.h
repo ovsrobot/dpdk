@@ -56,8 +56,7 @@ int sxe2_mp_request_simple(struct rte_eth_dev *dev,
 			   int *result_out);
 
 int sxe2_mp_req_get_stats(struct rte_eth_dev *dev,
-			  struct rte_eth_stats *stats,
-			  struct eth_queue_stats *qstats);
+			  struct rte_eth_stats *stats);
 
 int sxe2_mp_req_get_xstats(struct rte_eth_dev *dev,
 			   struct rte_eth_xstat *xstats, uint32_t usr_cnt);
