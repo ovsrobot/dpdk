@@ -668,6 +668,18 @@ struct __rte_aligned(4) __rte_packed_begin sxe2_drv_vsi_fc_get_resp {
 	uint8_t rsv[3];
 } __rte_packed_end;
 
+struct __rte_aligned(4) __rte_packed_begin sxe2_drv_acl_query_stat_req {
+	__le32 stat_id;
+	__le32 stat_ctrl;
+	__le32 is_clear;
+} __rte_packed_end;
+
+struct __rte_aligned(4) __rte_packed_begin sxe2_drv_acl_query_stat_resp {
+	__le32 stat_index;
+	__le64 stat_hits;
+	__le64 stat_bytes;
+} __rte_packed_end;
+
 enum sxe2_drv_cmd_module {
 	SXE2_DRV_CMD_MODULE_HANDSHAKE = 0,
 	SXE2_DRV_CMD_MODULE_DEV = 1,
@@ -823,6 +835,11 @@ enum sxe2_drv_cmd_code {
 
 	SXE2_DRV_CMD_OPT_EEP_GET =
 		SXE2_MK_DRV_CMD(SXE2_DRV_CMD_MODULE_OPT, 1),
+
+	SXE2_DRV_CMD_FLOW_ACL_STAT_QUERY =
+		SXE2_MK_DRV_CMD(SXE2_DRV_CMD_MODULE_ACL, 1),
+	SXE2_DRV_CMD_FLOW_ACL_STAT_ALLOC,
+	SXE2_DRV_CMD_FLOW_ACL_STAT_FREE,
 
 };
 
