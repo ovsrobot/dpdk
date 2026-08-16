@@ -340,6 +340,7 @@ struct sxe2_adapter {
 	bool                          flow_isolate_cfg;
 	uint16_t                      dev_port_id;
 	bool                          is_dev_repr;
+	uint16_t                      bond_member_cnt;
 	uint64_t                      cap_flags;
 	enum sxe2_dev_type            dev_type;
 	struct rte_ether_addr         mac_addr;
