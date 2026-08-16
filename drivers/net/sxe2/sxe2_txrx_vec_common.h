@@ -25,10 +25,11 @@
 #define SXE2_TX_FREE_BUFFER_SIZE_MAX_VEC  64
 
 static __rte_always_inline void
-sxe2_tx_pkts_mbuf_fill(struct sxe2_tx_buffer *buffer,
-		struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
+sxe2_tx_pkts_mbuf_fill_vec(struct sxe2_tx_buffer_vec *buffer,
+			   struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 {
 	uint16_t i;
+
 	for (i = 0; i < nb_pkts; ++i)
 		buffer[i].mbuf = tx_pkts[i];
 }

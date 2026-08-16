@@ -319,7 +319,8 @@ int32_t __rte_cold sxe2_rx_queue_setup(struct rte_eth_dev *dev,
 		rxq->mb_pool = mp;
 	}
 
-	rxq->rx_free_thresh = rx_conf->rx_free_thresh;
+	rxq->rx_free_thresh = (rx_conf->rx_free_thresh == 0) ?
+		SXE2_DEFAULT_RX_FREE_THRESH : rx_conf->rx_free_thresh;
 	rxq->port_id = dev->data->port_id;
 	rxq->offloads = offloads;
 	if (offloads & RTE_ETH_RX_OFFLOAD_KEEP_CRC)
@@ -550,7 +551,7 @@ void __rte_cold sxe2_rxqs_all_stop(struct rte_eth_dev *dev)
 static int32_t sxe2_monitor_callback(const uint64_t value,
 				 const uint64_t arg[RTE_POWER_MONITOR_OPAQUE_SZ] __rte_unused)
 {
-	const uint64_t dd_state = rte_cpu_to_le_64(SXE2_RX_DESC_STATUS_DD_MASK);
+	const uint64_t dd_state = rte_cpu_to_le_64(SXE2_RX_DESC_STATUS_DD_SHIFT);
 	return (value & dd_state) == dd_state ? -1 : 0;
 }
 
