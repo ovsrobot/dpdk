@@ -1037,11 +1037,24 @@ int32_t sxe2_flow_parse_action(struct rte_eth_dev *dev,
 			if (engine_type == SXE2_FLOW_ENGINE_FNAV) {
 				sxe2_set_bit(SXE2_FLOW_ACTION_COUNT, flow->action.act_types);
 				act_count = action->conf;
-				flow->action.count.user_id = act_count->id;
+				flow->action.count.user_id =
+					(act_count == NULL) ? 0 : act_count->id;
 				flow->action.count.driver_id = 0;
-				if (flow->action.count.user_id == 0)
+				if (flow->action.count.user_id == 0) {
 					flow->action.count.driver_id =
-						++adapter->flow_ctxt.hw_res.global_index;
+						++adapter->flow_ctxt.fnav_hw_res.global_index;
+				}
+				action_num[SXE2_FLOW_ACTION_COUNT]++;
+			} else if (engine_type == SXE2_FLOW_ENGINE_ACL) {
+				sxe2_set_bit(SXE2_FLOW_ACTION_COUNT, flow->action.act_types);
+				act_count = action->conf;
+				flow->action.count.user_id =
+					(act_count == NULL) ? 0 : act_count->id;
+				flow->action.count.driver_id = 0;
+				if (flow->action.count.user_id == 0) {
+					flow->action.count.driver_id =
+						++adapter->flow_ctxt.acl_hw_res.global_index;
+				}
 				action_num[SXE2_FLOW_ACTION_COUNT]++;
 			} else {
 				rte_flow_error_set(error, ENOTSUP,
