@@ -44,7 +44,7 @@
 
 #define SXE2_PCI_VENDOR_ID_1    0x1ff2
 #define SXE2_PCI_DEVICE_ID_PF_1 0x10b1
-#define SXE2_PCI_DEVICE_ID_VF_1 0x10b
+#define SXE2_PCI_DEVICE_ID_VF_1 0x10b2
 
 #define SXE2_PCI_VENDOR_ID_2    0x1d94
 #define SXE2_PCI_DEVICE_ID_PF_2 0x1260
@@ -72,6 +72,7 @@ static const struct rte_pci_id pci_id_sxe2_tbl[] = {
 #define SXE2_DEVARG_FLOW_DUP_PATTERN_MODE "flow-duplicate-pattern"
 #define SXE2_DEVARG_FUNC_FLOW_DIRCT "function-flow-direct"
 #define SXE2_DEVARG_FNAV_STAT_TYPE "fnav-stat-type"
+#define SXE2_DEVARG_ACL_STAT_TYPE "acl-stat-type"
 #define SXE2_DEVARG_NO_SCHED_MODE "no-sched-mode"
 #define SXE2_DEVARG_SCHED_LAYER_MODE "sched-layer-mode"
 #define SXE2_DEVARG_RX_LOW_LATENCY "rx-low-latency"
@@ -971,11 +972,11 @@ sxe2_buffer_split_supported_hdr_ptypes_get(struct rte_eth_dev *dev __rte_unused,
 	return ptypes;
 }
 
-static int32_t sxe2_parse_fnav_stat_type(const char *key, const char *value, void *args)
+static int32_t sxe2_parse_stat_type(const char *key, const char *value, void *args)
 {
 	int32_t ret = -EINVAL;
 	uint8_t *num = (uint8_t *)args;
-	unsigned long fnav_stat_type;
+	unsigned long stat_type;
 	char *endptr = NULL;
 
 	if (value == NULL || args == NULL) {
@@ -983,19 +984,19 @@ static int32_t sxe2_parse_fnav_stat_type(const char *key, const char *value, voi
 		goto l_end;
 	}
 	errno = 0;
-	fnav_stat_type = strtoul(value, &endptr, 10);
+	stat_type = strtoul(value, &endptr, 10);
 	if (errno != 0 || endptr == value || *endptr != '\0') {
 		PMD_LOG_WARN(INIT, "%s: \"%s\" is not a valid int value.",
 			key, value);
 		goto l_end;
 	}
-	if (fnav_stat_type > SXE2_FNAV_STAT_ENA_ALL ||
-		fnav_stat_type == SXE2_FNAV_STAT_ENA_NONE) {
+	if (stat_type > SXE2_FNAV_STAT_ENA_ALL ||
+		stat_type == SXE2_FNAV_STAT_ENA_NONE) {
 		PMD_LOG_ERR(INIT, "%s: \"%s\" out of range [1-3].",
 			key, value);
 		goto l_end;
 	}
-	*num = (uint8_t)fnav_stat_type;
+	*num = (uint8_t)stat_type;
 	ret = 0;
 l_end:
 	return ret;
@@ -1177,10 +1178,17 @@ static int32_t sxe2_args_parse(struct rte_eth_dev *dev, struct sxe2_dev_kvargs_i
 	if (kvargs == NULL)
 		goto l_end;
 	ret = sxe2_kvargs_process(kvargs, SXE2_DEVARG_FNAV_STAT_TYPE,
-				 &sxe2_parse_fnav_stat_type,
+				 &sxe2_parse_stat_type,
 				 &adapter->devargs.fnav_stat_type);
 	if (ret) {
 		PMD_DEV_LOG_ERR(adapter, INIT, "Failed to parse fnav stat type, ret:%d", ret);
+		goto l_end;
+	}
+
+	ret = sxe2_kvargs_process(kvargs, SXE2_DEVARG_ACL_STAT_TYPE,
+				 &sxe2_parse_stat_type, &adapter->devargs.acl_stat_type);
+	if (ret) {
+		PMD_DEV_LOG_ERR(adapter, INIT, "Failed to parse acl stat type, ret:%d", ret);
 		goto l_end;
 	}
 
@@ -2350,6 +2358,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_sxe2,
 	"flow-duplicate-pattern=<0|1|2> "
 	"function-flow-direct=<0|1> "
 	"fnav-stat-type=<1|2|3> "
+	"acl-stat-type=<1|2|3> "
 	"no-sched-mode=<0|1> "
 	"sched-layer-mode=<0-3> "
 	"rx-low-latency=<0|1>");
