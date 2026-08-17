@@ -314,10 +314,10 @@ struct sxe2_fc_state_ctxt {
 };
 
 struct sxe2_adapter {
-	struct sxe2_common_device      *cdev;
-	struct sxe2_dev_info            dev_info;
-	struct rte_pci_device            *pci_dev;
-	struct sxe2_repr_private_data  *repr_priv_data;
+	struct sxe2_common_device     *cdev;
+	struct sxe2_dev_info          dev_info;
+	struct rte_pci_device         *pci_dev;
+	struct sxe2_repr_private_data *repr_priv_data;
 	struct sxe2_pci_map_context   map_ctxt;
 	struct sxe2_irq_context       irq_ctxt;
 	struct sxe2_queue_context     q_ctxt;
@@ -338,16 +338,16 @@ struct sxe2_adapter {
 	bool                          rule_started;
 	bool                          flow_isolated;
 	bool                          flow_isolate_cfg;
-	uint16_t                           dev_port_id;
+	uint16_t                      dev_port_id;
 	bool                          is_dev_repr;
-	uint64_t                           cap_flags;
+	uint64_t                      cap_flags;
 	enum sxe2_dev_type            dev_type;
-	struct rte_ether_addr           mac_addr;
-	uint8_t                              port_idx;
-	uint8_t                              pf_idx;
-	uint32_t                             tx_mode_flags;
-	uint32_t                             rx_mode_flags;
-	uint8_t                              started;
+	struct rte_ether_addr         mac_addr;
+	uint8_t                       port_idx;
+	uint8_t                       pf_idx;
+	uint32_t                      tx_mode_flags;
+	uint32_t                      rx_mode_flags;
+	uint8_t                       started;
 };
 
 #define SXE2_DEV_PRIVATE_TO_ADAPTER(dev) \
