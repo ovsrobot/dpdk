@@ -8,6 +8,7 @@
 #ifndef _ENETC4_HW_H_
 #define _ENETC4_HW_H_
 #include <rte_io.h>
+#include "enetc_hw.h"
 
 #define BIT(x)		((uint64_t)1 << ((x)))
 
@@ -279,6 +280,16 @@ struct enetc_rx_bd_ext {
 #define enetc4_wr_reg(reg, val)  rte_write32((val), (void *)(reg))
 
 #define enetc4_rd(hw, off)	 enetc4_rd_reg((size_t)(hw)->reg + (off))
+static inline uint64_t
+enetc4_rd64(struct enetc_hw *hw, uint32_t off)
+{
+	size_t base = (size_t)hw->reg + off;
+	uint32_t lo, hi;
+
+	lo = enetc4_rd_reg(base);
+	hi = enetc4_rd_reg(base + 4);
+	return (uint64_t)hi << 32 | lo;
+}
 #define enetc4_wr(hw, off, val)  enetc4_wr_reg((size_t)(hw)->reg + (off), val)
 /* port register accessors - PF only */
 #define enetc4_port_rd(hw, off)  enetc4_rd_reg((size_t)(hw)->port + (off))
