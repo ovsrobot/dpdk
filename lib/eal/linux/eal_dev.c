@@ -241,9 +241,16 @@ dev_uev_handler(__rte_unused void *param)
 
 	ret = recv(rte_intr_fd_get(intr_handle), buf, EAL_UEV_MSG_LEN,
 		   MSG_DONTWAIT);
-	if (ret < 0 && errno == EAGAIN)
+	if (ret < 0 &&
+		(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) {
+		/* non-blocking or interrupted */
 		return;
-	else if (ret <= 0) {
+	} else if (ret < 0 && (errno == ENOBUFS)) {
+		/* non-fatal transient memory condition */
+		EAL_LOG(ERR, "unexpected error on uevent recv: %s",
+			strerror(errno));
+		return;
+	} else if (ret <= 0) {
 		/* connection is closed or broken, can not up again. */
 		EAL_LOG(ERR, "uevent socket connection is broken.");
 		rte_eal_alarm_set(1, dev_delayed_unregister, NULL);
