@@ -230,7 +230,6 @@ struct __rte_aligned(4) __rte_packed_begin sxe2_drv_vsi_info_get_resp {
 struct __rte_aligned(4) __rte_packed_begin sxe2_drv_link_info_resp {
 	uint32_t speed;
 	uint8_t status;
-	uint8_t rsv[3];
 } __rte_packed_end;
 
 struct __rte_aligned(4) __rte_packed_begin sxe2_switchdev_info {
@@ -348,18 +347,17 @@ struct __rte_aligned(4) __rte_packed_begin sxe2_rss_hf_req {
 	uint8_t rsv1[3];
 } __rte_packed_end;
 
-struct __rte_aligned(4) __rte_packed_begin sxe2_tm_res {
+struct sxe2_tm_res {
 	uint16_t teid;
-	uint8_t rsv[2];
-} __rte_packed_end;
+};
 
-struct __rte_aligned(4) __rte_packed_begin sxe2_tm_info {
+struct sxe2_tm_info {
 	uint32_t committed;
 	uint32_t peak;
 	uint8_t priority;
 	uint8_t reserve;
 	uint16_t weight;
-} __rte_packed_end;
+};
 
 struct __rte_aligned(4) __rte_packed_begin sxe2_tm_add_mid_msg {
 	uint16_t parent_teid;
@@ -526,24 +524,24 @@ struct __rte_aligned(4) __rte_packed_begin sxe2_drv_mac_stats_resp {
 	uint64_t prio_xon_2_xoff[SXE2_MAX_USER_PRIORITY];
 } __rte_packed_end;
 
-struct __rte_aligned(4) __rte_packed_begin sxe2_txq_map_info {
+struct sxe2_txq_map_info {
 	uint32_t txq_lan_pkt_cnt;
 	uint32_t txq_lan_byte_cnt;
-} __rte_packed_end;
+};
 
-struct __rte_aligned(4) __rte_packed_begin sxe2_rxq_map_info {
+struct sxe2_rxq_map_info {
 	uint64_t rxq_lan_in_pkt_cnt;
 	uint64_t rxq_lan_in_byte_cnt;
 	uint64_t rxq_fd_in_pkt_cnt;
 	uint64_t rxq_mng_in_pkt_cnt;
 	uint64_t rxq_mng_in_byte_cnt;
 	uint64_t rxq_mng_out_pkt_cnt;
-} __rte_packed_end;
+};
 
-struct __rte_aligned(4) __rte_packed_begin sxe2_queue_map_info {
+struct sxe2_queue_map_info {
 	struct sxe2_rxq_map_info rxq_stats_map_info[SXE2_RXQ_STATS_MAP_MAX_NUM];
 	struct sxe2_txq_map_info txq_stats_map_info[SXE2_TXQ_STATS_MAP_MAX_NUM];
-} __rte_packed_end;
+};
 
 struct __rte_aligned(4) __rte_packed_begin sxe2_drv_rx_map_req {
 	uint16_t queue_id;
@@ -633,7 +631,7 @@ struct __rte_aligned(4) __rte_packed_begin sxe2_drv_udp_tunnel_resp {
 	uint8_t rsv;
 } __rte_packed_end;
 
-struct __rte_aligned(4) __rte_packed_begin sxe2_drv_sfp_req {
+struct sxe2_drv_sfp_req {
 	uint8_t is_wr;
 	uint8_t is_qsfp;
 	uint16_t bus_addr;
@@ -642,14 +640,14 @@ struct __rte_aligned(4) __rte_packed_begin sxe2_drv_sfp_req {
 	uint16_t data_len;
 	uint16_t rvd;
 	uint8_t data[];
-} __rte_packed_end;
+};
 
-struct __rte_aligned(4) __rte_packed_begin sxe2_drv_sfp_resp {
+struct sxe2_drv_sfp_resp {
 	uint8_t is_wr;
 	uint8_t is_qsfp;
 	uint16_t data_len;
 	uint8_t data[];
-} __rte_packed_end;
+};
 
 enum sxe2_fc_type {
 	SXE2_FC_T_DIS = 0,
