@@ -217,6 +217,12 @@ rte_eal_init(int argc, char **argv)
 		user_cfg->no_shconf = true;
 	}
 
+	if (eal_apply_runtime_state() < 0) {
+		rte_eal_init_alert("Cannot apply runtime state.");
+		rte_errno = EINVAL;
+		goto err_out;
+	}
+
 	if (!user_cfg->no_hugetlbfs && (eal_hugepage_info_init() < 0)) {
 		rte_eal_init_alert("Cannot get hugepage information");
 		rte_errno = EACCES;

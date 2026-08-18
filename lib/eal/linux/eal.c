@@ -618,6 +618,12 @@ rte_eal_init(int argc, char **argv)
 		goto err_out;
 	}
 
+	if (eal_apply_runtime_state() < 0) {
+		rte_eal_init_alert("Cannot apply runtime state.");
+		rte_errno = EINVAL;
+		goto err_out;
+	}
+
 	if (eal_plugins_init() < 0) {
 		rte_eal_init_alert("Cannot init plugins");
 		rte_errno = EINVAL;

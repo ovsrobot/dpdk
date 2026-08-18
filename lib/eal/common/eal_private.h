@@ -29,6 +29,39 @@
 int eal_collate_args(int argc, char **argv);
 
 /**
+ * Apply user configuration to runtime state.
+ *
+ * Translates the populated eal_user_cfg into the eal_runtime_state,
+ * including lcore roles, main lcore, service cores, process type
+ * detection, and the runtime directory.
+ *
+ * @return
+ *   0 on success, negative on error
+ */
+int eal_apply_runtime_state(void);
+
+/**
+ * Detect the process type.
+ *
+ * Used to detect process type when the user requests process type auto-detection,
+ * rather than manually specifying primary or secondary.
+ * @return
+ *   The detected process type.
+ */
+enum rte_proc_type_t eal_proc_type_detect(void);
+
+/**
+ * Apply user-provided hugepage memory size overrides to the runtime state.
+ *
+ * Computes the per-hugepage-size memory limits, applying any user-supplied
+ * overrides on top of the default limits.
+ *
+ * @return
+ *   0 on success, negative on error
+ */
+int eal_apply_hugepage_mem_sz_limits(void);
+
+/**
  * Convert an rte_cpuset_t to string form suitable for parsing by argparse.
  *
  * @param cpuset
