@@ -223,7 +223,7 @@ rte_eal_cpu_init(void)
 		runtime_state->lcore_cfg[lcore_id].first_cpu = lcore_id;
 
 		/* This is the first time we discover the lcores, so the bitset should be zeroed */
-		rte_bitset_set(config->core_indices, count);
+		rte_bitset_set(runtime_state->core_indices, count);
 
 		/* By default, each detected core is enabled */
 		config->lcore_role[lcore_id] = ROLE_RTE;
@@ -417,7 +417,7 @@ eal_lcore_non_eal_allocate(void)
 	int core_index = -1;
 
 	rte_rwlock_write_lock(&lcore_lock);
-	core_index = rte_bitset_find_first_clear(cfg->core_indices, RTE_MAX_LCORE);
+	core_index = rte_bitset_find_first_clear(runtime_state->core_indices, RTE_MAX_LCORE);
 	if (core_index == -1) {
 		EAL_LOG(DEBUG, "No core_index available.");
 		lcore_id = RTE_MAX_LCORE;
@@ -426,7 +426,7 @@ eal_lcore_non_eal_allocate(void)
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		if (cfg->lcore_role[lcore_id] != ROLE_OFF)
 			continue;
-		rte_bitset_set(cfg->core_indices, core_index);
+		rte_bitset_set(runtime_state->core_indices, core_index);
 		runtime_state->lcore_cfg[lcore_id].core_index = core_index;
 		cfg->lcore_role[lcore_id] = ROLE_NON_EAL;
 		cfg->lcore_count++;
@@ -449,7 +449,8 @@ eal_lcore_non_eal_allocate(void)
 		}
 		EAL_LOG(DEBUG, "Initialization refused for lcore %u.",
 			lcore_id);
-		rte_bitset_clear(cfg->core_indices, runtime_state->lcore_cfg[lcore_id].core_index);
+		rte_bitset_clear(runtime_state->core_indices,
+				runtime_state->lcore_cfg[lcore_id].core_index);
 		runtime_state->lcore_cfg[lcore_id].core_index = -1;
 		cfg->lcore_role[lcore_id] = ROLE_OFF;
 		cfg->lcore_count--;
@@ -473,7 +474,8 @@ eal_lcore_non_eal_release(unsigned int lcore_id)
 		goto out;
 	TAILQ_FOREACH(callback, &lcore_callbacks, next)
 		callback_uninit(callback, lcore_id);
-	rte_bitset_clear(cfg->core_indices, runtime_state->lcore_cfg[lcore_id].core_index);
+	rte_bitset_clear(runtime_state->core_indices,
+			runtime_state->lcore_cfg[lcore_id].core_index);
 	runtime_state->lcore_cfg[lcore_id].core_index = -1;
 	cfg->lcore_role[lcore_id] = ROLE_OFF;
 	cfg->lcore_count--;

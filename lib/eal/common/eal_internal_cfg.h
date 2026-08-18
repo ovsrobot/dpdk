@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <rte_bitset.h>
 #include <rte_stdatomic.h>
 #include "eal_thread.h"
 
@@ -144,6 +145,7 @@ struct eal_runtime_state {
 	volatile unsigned int init_complete;
 	/**< indicates whether EAL has completed initialization */
 	struct lcore_cfg lcore_cfg[RTE_MAX_LCORE];
+	RTE_BITSET_DECLARE(core_indices, RTE_MAX_LCORE); /**< currently allocated core_indices */
 };
 
 struct eal_user_cfg *eal_get_user_configuration(void);

@@ -11,7 +11,6 @@
 #include <sys/queue.h>
 
 #include <dev_driver.h>
-#include <rte_bitset.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_memory.h>
@@ -22,8 +21,6 @@
  * The global RTE configuration structure.
  */
 struct rte_config {
-	RTE_BITSET_DECLARE(core_indices,
-			   RTE_MAX_LCORE); /**< bitset of currently allocated core_indices */
 	uint32_t main_lcore;         /**< Id of the main lcore */
 	uint32_t lcore_count;        /**< Number of available logical cores. */
 	uint32_t numa_node_count;    /**< Number of detected NUMA nodes. */
