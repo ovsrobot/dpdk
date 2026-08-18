@@ -483,8 +483,16 @@ int32_t sxe2_repr_dev_init(struct rte_eth_dev *dev,
 		goto l_init_sw_err;
 	}
 
+	ret = sxe2_stats_init(dev);
+	if (ret) {
+		PMD_LOG_ERR(INIT, "Failed to initialize stats, ret=[%d]", ret);
+		goto l_init_irq_ctxt_err;
+	}
+
 	goto l_end;
 
+l_init_irq_ctxt_err:
+	sxe2_sw_irq_ctxt_uninit(dev);
 l_init_sw_err:
 	sxe2_eth_uinit(dev);
 l_init_eth_err:
@@ -544,8 +552,8 @@ int32_t sxe2_switchdev_repr_devs_init(struct sxe2_adapter *adapter,
 	}
 
 	for (repr_idx = 0; repr_idx < req_eth_da->nb_representor_ports; ++repr_idx) {
-		snprintf(name, sizeof(name), "sxe2_representor_c%dpf%d%s%u",
-			 adapter->pf_idx, adapter->pf_idx,
+		snprintf(name, sizeof(name), "%s_representor_%s%u",
+			 adapter->cdev->dev->name,
 			 "vf",
 			 req_eth_da->representor_ports[repr_idx]);
 
@@ -554,6 +562,7 @@ int32_t sxe2_switchdev_repr_devs_init(struct sxe2_adapter *adapter,
 			ret = -ENOMEM;
 			goto l_release_port;
 		}
+		eth_dev->data->numa_node = adapter->dev_info.dev_data->numa_node;
 		eth_dev->data->dev_private = rte_zmalloc_socket(name,
 			sizeof(struct sxe2_adapter),
 			RTE_CACHE_LINE_SIZE,
