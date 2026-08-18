@@ -8,6 +8,19 @@
 #include "sxe2_ethdev.h"
 #include "sxe2_common_log.h"
 
+static void sxe2_tx_queue_mbufs_release_vec(struct sxe2_tx_queue *txq);
+
+struct sxe2_txq_ops sxe2_tx_vec_ops_get(void)
+{
+	static const struct sxe2_txq_ops ops = {
+		.queue_reset      = sxe2_tx_queue_reset_vec,
+		.mbufs_release    = sxe2_tx_queue_mbufs_release_vec,
+		.buffer_ring_free = sxe2_tx_buffer_ring_free,
+	};
+
+	return ops;
+}
+
 int32_t __rte_cold sxe2_rx_vec_support_check(struct rte_eth_dev *dev, uint32_t *vec_flags)
 {
 	struct sxe2_rx_queue *rxq;
@@ -157,67 +170,28 @@ l_end:
 
 static void sxe2_tx_queue_mbufs_release_vec(struct sxe2_tx_queue *txq)
 {
-	struct sxe2_tx_buffer *buffer;
+	struct sxe2_tx_buffer_vec *buffer_vec;
 	uint16_t i;
 
-	if (unlikely(txq == NULL || txq->buffer_ring == NULL)) {
+	if (unlikely(txq == NULL || txq->buffer_ring_vec == NULL)) {
 		PMD_LOG_ERR(TX, "Tx release mbufs vec, invalid params.");
 		return;
 	}
+
 	i = txq->next_dd - (txq->rs_thresh - 1);
-#ifdef CC_AVX512_SUPPORT
-	struct rte_eth_dev *dev;
-	struct sxe2_tx_buffer_vec *buffer_vec;
+	buffer_vec = txq->buffer_ring_vec;
 
-	dev = &rte_eth_devices[txq->port_id];
-
-	if (dev->tx_pkt_burst == sxe2_tx_pkts_vec_avx512 ||
-		dev->tx_pkt_burst == sxe2_tx_pkts_vec_avx512_simple) {
-		buffer_vec = (struct sxe2_tx_buffer_vec *)txq->buffer_ring;
-
-		if (txq->next_use < i) {
-			for ( ; i < txq->ring_depth; ++i) {
-				if (buffer_vec[i].mbuf != NULL) {
-					rte_pktmbuf_free_seg(buffer_vec[i].mbuf);
-					buffer_vec[i].mbuf = NULL;
-				}
-			}
-			i = 0;
+	if (txq->next_use < i) {
+		for ( ; i < txq->ring_depth; ++i) {
+			rte_pktmbuf_free_seg(buffer_vec[i].mbuf);
+			buffer_vec[i].mbuf = NULL;
 		}
-		for ( ; i < txq->next_use; ++i) {
-			if (buffer_vec[i].mbuf != NULL) {
-				rte_pktmbuf_free_seg(buffer_vec[i].mbuf);
-				buffer_vec[i].mbuf = NULL;
-			}
-		}
-	} else {
-#endif
-		buffer = txq->buffer_ring;
-		buffer = txq->buffer_ring;
-		if (txq->next_use < i) {
-			for ( ; i < txq->ring_depth; ++i) {
-				if (buffer[i].mbuf != NULL) {
-					rte_pktmbuf_free_seg(buffer[i].mbuf);
-					buffer[i].mbuf = NULL;
-				}
-			}
-			i = 0;
-		}
-		for (; i < txq->next_use; ++i) {
-			if (buffer[i].mbuf != NULL) {
-				rte_pktmbuf_free_seg(buffer[i].mbuf);
-				buffer[i].mbuf = NULL;
-			}
-		}
-#ifdef CC_AVX512_SUPPORT
+		i = 0;
 	}
-#endif
 
-	for (; i < txq->next_use; ++i) {
-		if (buffer[i].mbuf != NULL) {
-			rte_pktmbuf_free_seg(buffer[i].mbuf);
-			buffer[i].mbuf = NULL;
-		}
+	for ( ; i < txq->next_use; ++i) {
+		rte_pktmbuf_free_seg(buffer_vec[i].mbuf);
+		buffer_vec[i].mbuf = NULL;
 	}
 }
 
@@ -233,7 +207,8 @@ int32_t __rte_cold sxe2_tx_queues_vec_prepare(struct rte_eth_dev *dev)
 			PMD_LOG_INFO(TX, "Failed to prepare tx queue, txq[%d] is NULL", i);
 			continue;
 		}
-		txq->ops.mbufs_release = sxe2_tx_queue_mbufs_release_vec;
+		txq->ops = sxe2_tx_vec_ops_get();
+		txq->ops.queue_reset(txq);
 	}
 	return ret;
 }
