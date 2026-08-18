@@ -1,16 +1,39 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright 2018-2023 NXP
+ * Copyright 2018-2023,2026 NXP
  */
 
 #include <eal_export.h>
 #include <rte_memory.h>
 
 #include "dpaax_iova_table.h"
+#include "compat.h"
 #include "dpaax_logs.h"
 
 /* Global table reference */
 RTE_EXPORT_INTERNAL_SYMBOL(dpaax_iova_table_p)
 struct dpaax_iova_table *dpaax_iova_table_p;
+
+/*
+ * Track whether the process is executing DPDK destructors. During
+ * teardown the EAL memory subsystem may already be gone, so freeing
+ * EAL memory from a DPAAx destructor is unsafe. Drivers mark the
+ * destructor context via dpaax_enter_destructor() so that kfree()
+ * (see compat.h) can skip rte_free() in that window.
+ */
+static int s_dpaax_in_destructor;
+
+RTE_EXPORT_INTERNAL_SYMBOL(dpaax_enter_destructor)
+void dpaax_enter_destructor(void)
+{
+	s_dpaax_in_destructor = 1;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(is_dpaax_in_destructor)
+int is_dpaax_in_destructor(void)
+{
+	return s_dpaax_in_destructor;
+}
+
 
 static int dpaax_handle_memevents(void);
 
