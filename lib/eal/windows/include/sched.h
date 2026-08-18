@@ -86,6 +86,16 @@ do { \
 		(dst)->_bits[_i] = (src)->_bits[_i] ^ -1LL; \
 } while (0)
 
+static inline int
+cpu_ffs(const rte_cpuset_t *s)
+{
+	for (unsigned int _i = 0; _i < CPU_SETSIZE; _i++)
+		if (CPU_ISSET(_i, s))
+			return (int)(_i + 1);
+	return 0;
+}
+#define CPU_FFS(s) cpu_ffs(s)
+
 #ifdef __cplusplus
 }
 #endif

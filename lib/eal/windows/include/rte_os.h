@@ -49,6 +49,7 @@ struct { \
 #define RTE_CPU_OR(dst, src1, src2) CPU_OR(dst, src1, src2)
 #define RTE_CPU_FILL(set) CPU_FILL(set)
 #define RTE_CPU_NOT(dst, src) CPU_NOT(dst, src)
+#define RTE_CPU_FFS(s) CPU_FFS(s)
 
 /* This is an exception without "rte_" prefix, because Windows does have
  * ssize_t, but it's defined in <windows.h> which we avoid to expose.
