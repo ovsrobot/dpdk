@@ -515,18 +515,16 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	user_cfg->memory = 0;
 	user_cfg->force_nrank = 0;
 	user_cfg->force_nchannel = 0;
+	user_cfg->force_numa = false;
+	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
+		user_cfg->numa_mem[i] = 0;
+	user_cfg->force_numa_limits = false;
+	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
+		user_cfg->numa_limit[i] = 0;
 	internal_cfg->hugefile_prefix = NULL;
 	internal_cfg->hugepage_dir = NULL;
 	internal_cfg->hugepage_file.unlink_before_mapping = false;
 	internal_cfg->hugepage_file.unlink_existing = true;
-	internal_cfg->force_numa = 0;
-	/* zero out the NUMA config */
-	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		internal_cfg->numa_mem[i] = 0;
-	internal_cfg->force_numa_limits = 0;
-	/* zero out the NUMA limits config */
-	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		internal_cfg->numa_limit[i] = 0;
 	/* zero out hugedir descriptors */
 	for (i = 0; i < MAX_HUGEPAGE_SIZES; i++) {
 		memset(&internal_cfg->hugepage_info[i], 0,
@@ -2307,18 +2305,18 @@ eal_parse_args(void)
 		}
 	}
 	if (args.numa_mem != NULL) {
-		if (eal_parse_socket_arg(args.numa_mem, int_cfg->numa_mem) < 0) {
+		if (eal_parse_socket_arg(args.numa_mem, user_cfg->numa_mem) < 0) {
 			EAL_LOG(ERR, "invalid numa-mem parameter: '%s'", args.numa_mem);
 			return -1;
 		}
-		int_cfg->force_numa = 1;
+		user_cfg->force_numa = true;
 	}
 	if (args.numa_limit != NULL) {
-		if (eal_parse_socket_arg(args.numa_limit, int_cfg->numa_limit) < 0) {
+		if (eal_parse_socket_arg(args.numa_limit, user_cfg->numa_limit) < 0) {
 			EAL_LOG(ERR, "invalid numa-limit parameter: '%s'", args.numa_limit);
 			return -1;
 		}
-		int_cfg->force_numa_limits = 1;
+		user_cfg->force_numa_limits = true;
 	}
 	TAILQ_FOREACH(arg, &args.pagesz_mem, next) {
 		if (eal_parse_pagesz_mem(arg->arg, int_cfg) < 0) {
@@ -2510,7 +2508,7 @@ eal_adjust_config(struct internal_config *internal_cfg)
 	/* if no memory amounts were requested, this will result in 0 and
 	 * will be overridden later, right after eal_hugepage_info_init() */
 	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		user_cfg->memory += internal_cfg->numa_mem[i];
+		user_cfg->memory += user_cfg->numa_mem[i];
 
 	return 0;
 }

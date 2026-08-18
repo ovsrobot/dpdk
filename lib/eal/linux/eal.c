@@ -757,7 +757,7 @@ rte_eal_init(int argc, char **argv)
 		}
 	}
 
-	if (user_cfg->memory == 0 && internal_conf->force_numa == 0) {
+	if (user_cfg->memory == 0 && !user_cfg->force_numa) {
 		if (internal_conf->no_hugetlbfs)
 			user_cfg->memory = MEMSIZE_IF_NO_HUGE_PAGE;
 	}

@@ -274,8 +274,7 @@ map_all_hugepages(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi,
 	struct bitmask *oldmask = NULL;
 	bool have_numa = true;
 	unsigned long maxnode = 0;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* Check if kernel supports NUMA. */
 	if (numa_available() != 0) {
@@ -294,7 +293,7 @@ map_all_hugepages(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi,
 			oldpolicy = MPOL_DEFAULT;
 		}
 		for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-			if (internal_conf->numa_mem[i])
+			if (user_cfg->numa_mem[i])
 				maxnode = i + 1;
 	}
 #endif
@@ -313,7 +312,7 @@ map_all_hugepages(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi,
 
 			if (j == maxnode) {
 				node_id = (node_id + 1) % maxnode;
-				while (!internal_conf->numa_mem[node_id]) {
+				while (!user_cfg->numa_mem[node_id]) {
 					node_id++;
 					node_id %= maxnode;
 				}
@@ -1134,6 +1133,7 @@ eal_legacy_hugepage_init(void)
 	struct hugepage_info used_hp[MAX_HUGEPAGE_SIZES];
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	uint64_t memory[RTE_MAX_NUMA_NODES];
 
@@ -1274,7 +1274,7 @@ eal_legacy_hugepage_init(void)
 
 	/* make a copy of numa_mem, needed for balanced allocation. */
 	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		memory[i] = internal_conf->numa_mem[i];
+		memory[i] = user_cfg->numa_mem[i];
 
 	/* map all hugepages and sort them */
 	for (i = 0; i < (int)internal_conf->num_hugepage_sizes; i++) {
@@ -1342,7 +1342,7 @@ eal_legacy_hugepage_init(void)
 
 	huge_recover_sigbus();
 
-	if (eal_get_user_configuration()->memory == 0 && internal_conf->force_numa == 0)
+	if (eal_get_user_configuration()->memory == 0 && !user_cfg->force_numa)
 		eal_get_user_configuration()->memory = eal_get_hugepage_mem_size();
 
 	nr_hugefiles = nr_hugepages;
@@ -1370,7 +1370,7 @@ eal_legacy_hugepage_init(void)
 
 	/* make a copy of numa_mem, needed for number of pages calculation */
 	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		memory[i] = internal_conf->numa_mem[i];
+		memory[i] = user_cfg->numa_mem[i];
 
 	/* calculate final number of pages */
 	nr_hugepages = eal_dynmem_calc_num_pages_per_socket(memory,
@@ -1704,6 +1704,7 @@ memseg_primary_init_32(void)
 	uint64_t extra_mem_per_socket, total_extra_mem, total_requested_mem;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* no-huge does not need this at all */
 	if (internal_conf->no_hugetlbfs)
@@ -1728,12 +1729,12 @@ memseg_primary_init_32(void)
 	 */
 	active_sockets = 0;
 	total_requested_mem = 0;
-	if (internal_conf->force_numa)
+	if (user_cfg->force_numa)
 		for (i = 0; i < rte_socket_count(); i++) {
 			uint64_t mem;
 
 			socket_id = rte_socket_id_by_idx(i);
-			mem = internal_conf->numa_mem[socket_id];
+			mem = user_cfg->numa_mem[socket_id];
 
 			if (mem == 0)
 				continue;
@@ -1790,7 +1791,7 @@ memseg_primary_init_32(void)
 
 		/* if we didn't specifically request memory on this socket */
 		skip = active_sockets != 0 &&
-				internal_conf->numa_mem[socket_id] == 0;
+				user_cfg->numa_mem[socket_id] == 0;
 		/* ...or if we didn't specifically request memory on *any*
 		 * socket, and this is not main lcore
 		 */
@@ -1805,7 +1806,7 @@ memseg_primary_init_32(void)
 
 		/* max amount of memory on this socket */
 		max_socket_mem = (active_sockets != 0 ?
-					internal_conf->numa_mem[socket_id] :
+					user_cfg->numa_mem[socket_id] :
 					eal_get_user_configuration()->memory) +
 					extra_mem_per_socket;
 		cur_socket_mem = 0;

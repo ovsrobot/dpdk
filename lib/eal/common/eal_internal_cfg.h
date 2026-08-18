@@ -57,6 +57,10 @@ struct eal_user_cfg {
 	size_t memory;           /**< amount of asked memory */
 	uint8_t force_nchannel;  /**< force number of channels */
 	uint8_t force_nrank;     /**< force number of ranks */
+	bool force_numa;         /**< true to request memory on specific NUMA nodes */
+	bool force_numa_limits;  /**< true to apply per-NUMA memory limits */
+	uint64_t numa_mem[RTE_MAX_NUMA_NODES];    /**< amount of memory per NUMA node */
+	uint64_t numa_limit[RTE_MAX_NUMA_NODES];  /**< limit amount of memory per NUMA node */
 };
 
 /**
@@ -93,13 +97,6 @@ struct internal_config {
 	 */
 	volatile unsigned create_uio_dev; /**< true to create /dev/uioX devices */
 	volatile enum rte_proc_type_t process_type; /**< multi-process proc type */
-	/** true to try allocating memory on specific NUMA nodes */
-	volatile unsigned force_numa;
-	/** amount of memory per NUMA node */
-	volatile uint64_t numa_mem[RTE_MAX_NUMA_NODES];
-	volatile unsigned force_numa_limits;
-	/** limit amount of memory per NUMA node */
-	volatile uint64_t numa_limit[RTE_MAX_NUMA_NODES];
 	uintptr_t base_virtaddr;          /**< base address to try and reserve memory from */
 	volatile unsigned legacy_mem;
 	/**< true to enable legacy memory behavior (no dynamic allocation,

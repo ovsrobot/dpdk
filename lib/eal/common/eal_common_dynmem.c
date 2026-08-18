@@ -212,6 +212,7 @@ eal_dynmem_hugepage_init(void)
 	int hp_sz_idx, socket_id;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	memset(used_hp, 0, sizeof(used_hp));
 
@@ -248,7 +249,7 @@ eal_dynmem_hugepage_init(void)
 
 	/* make a copy of numa_mem, needed for balanced allocation. */
 	for (hp_sz_idx = 0; hp_sz_idx < RTE_MAX_NUMA_NODES; hp_sz_idx++)
-		memory[hp_sz_idx] = internal_conf->numa_mem[hp_sz_idx];
+		memory[hp_sz_idx] = user_cfg->numa_mem[hp_sz_idx];
 
 	/* calculate final number of pages */
 	if (eal_dynmem_calc_num_pages_per_socket(memory,
@@ -316,10 +317,10 @@ eal_dynmem_hugepage_init(void)
 	}
 
 	/* if socket limits were specified, set them */
-	if (internal_conf->force_numa_limits) {
+	if (user_cfg->force_numa_limits) {
 		unsigned int i;
 		for (i = 0; i < RTE_MAX_NUMA_NODES; i++) {
-			uint64_t limit = internal_conf->numa_limit[i];
+			uint64_t limit = user_cfg->numa_limit[i];
 			if (limit == 0)
 				continue;
 			if (rte_mem_alloc_validator_register("socket-limit",
@@ -356,8 +357,6 @@ eal_dynmem_calc_num_pages_per_socket(
 	unsigned int requested, available;
 	int total_num_pages = 0;
 	uint64_t remaining_mem, cur_mem;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	uint64_t total_mem = user_cfg->memory;
 
@@ -365,7 +364,7 @@ eal_dynmem_calc_num_pages_per_socket(
 		return -1;
 
 	/* if specific memory amounts per socket weren't requested */
-	if (internal_conf->force_numa == 0) {
+	if (!user_cfg->force_numa) {
 		size_t total_size;
 #ifdef RTE_ARCH_64
 		int cpu_per_socket[RTE_MAX_NUMA_NODES];
@@ -492,8 +491,8 @@ eal_dynmem_calc_num_pages_per_socket(
 
 		/* if we didn't satisfy all memory requirements per socket */
 		if (memory[socket] > 0 &&
-				internal_conf->numa_mem[socket] != 0) {
-			requested = internal_conf->numa_mem[socket] / 0x100000;
+				user_cfg->numa_mem[socket] != 0) {
+			requested = user_cfg->numa_mem[socket] / 0x100000;
 			available = requested - (memory[socket] / 0x100000);
 			EAL_LOG(ERR, "Not enough memory available on socket %u! Requested: %uMB, available: %uMB",
 				socket, requested, available);
