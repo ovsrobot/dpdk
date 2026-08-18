@@ -59,6 +59,16 @@ struct hugepage_file_discipline {
 };
 
 /**
+ * A plugin path provided by the user via -d, staged during arg parsing.
+ * Lives in user_cfg->plugin_list; consumed by eal_plugins_init().
+ */
+struct eal_plugin_path {
+	TAILQ_ENTRY(eal_plugin_path) next;
+	char name[PATH_MAX];
+};
+TAILQ_HEAD(eal_plugin_path_list, eal_plugin_path);
+
+/**
  * A single device option (-a/-b/--vdev) staged during arg parsing.
  * Lives in user_cfg->devopt_list; drained by eal_option_device_parse().
  */
@@ -75,6 +85,7 @@ TAILQ_HEAD(eal_devopt_list, device_option);
  */
 struct eal_user_cfg {
 	struct eal_devopt_list devopt_list; /**< staged device options (-a/-b/--vdev) */
+	struct eal_plugin_path_list plugin_list; /**< user-provided plugin paths (-d) */
 	size_t memory;           /**< amount of asked memory */
 	size_t huge_worker_stack_size; /**< worker thread stack size */
 	enum rte_proc_type_t process_type; /**< requested process type */
@@ -156,6 +167,16 @@ struct lcore_cfg {
 };
 
 /**
+ * A plugin loaded by EAL, including directory-expanded entries.
+ */
+struct shared_driver {
+	TAILQ_ENTRY(shared_driver) next;
+	char name[PATH_MAX];
+	void *lib_handle;
+};
+TAILQ_HEAD(eal_solib_list, shared_driver);
+
+/**
  * Internal EAL runtime state
  * May be modified at runtime, so access must be protected by locks or atomic types
  * as appropriate.
@@ -173,6 +194,7 @@ struct eal_runtime_state {
 	struct lcore_cfg lcore_cfg[RTE_MAX_LCORE];
 	RTE_BITSET_DECLARE(core_indices, RTE_MAX_LCORE); /**< currently allocated core_indices */
 	struct rte_mem_config *mem_config; /**< pointer to memory config (in shared memory) */
+	struct eal_solib_list loaded_plugins; /**< all plugins loaded by eal_plugins_init() */
 };
 
 struct eal_user_cfg *eal_get_user_configuration(void);

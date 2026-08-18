@@ -277,21 +277,6 @@ eal_collate_args(int argc, char **argv)
 	return retval - 1;
 }
 
-TAILQ_HEAD(shared_driver_list, shared_driver);
-
-/* Definition for shared object drivers. */
-struct shared_driver {
-	TAILQ_ENTRY(shared_driver) next;
-
-	char    name[PATH_MAX];
-	void*   lib_handle;
-	bool    from_cmdline; /**< true if from -d flag, false if driver found in a directory */
-};
-
-/* List of external loadable drivers */
-static struct shared_driver_list solib_list =
-TAILQ_HEAD_INITIALIZER(solib_list);
-
 #ifndef RTE_EXEC_ENV_WINDOWS
 /* Default path of external loadable drivers */
 static const char *default_solib_dir = RTE_EAL_PMD_PATH;
@@ -505,6 +490,8 @@ eal_reset_internal_config(void)
 	int i;
 
 	TAILQ_INIT(&user_cfg->devopt_list);
+	TAILQ_INIT(&user_cfg->plugin_list);
+	TAILQ_INIT(&runtime_state->loaded_plugins);
 	user_cfg->memory = 0;
 	user_cfg->force_nrank = 0;
 	user_cfg->force_nchannel = 0;
@@ -561,19 +548,18 @@ eal_reset_internal_config(void)
 }
 
 static int
-eal_plugin_add(const char *path, bool from_cmdline)
+eal_plugin_path_add(const char *path)
 {
-	struct shared_driver *solib;
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_plugin_path *p;
 
-	solib = malloc(sizeof(*solib));
-	if (solib == NULL) {
-		EAL_LOG(ERR, "malloc(solib) failed");
+	p = malloc(sizeof(*p));
+	if (p == NULL) {
+		EAL_LOG(ERR, "malloc(plugin_path) failed");
 		return -1;
 	}
-	memset(solib, 0, sizeof(*solib));
-	strlcpy(solib->name, path, PATH_MAX);
-	solib->from_cmdline = from_cmdline;
-	TAILQ_INSERT_TAIL(&solib_list, solib, next);
+	strlcpy(p->name, path, PATH_MAX);
+	TAILQ_INSERT_TAIL(&user_cfg->plugin_list, p, next);
 
 	return 0;
 }
@@ -593,53 +579,6 @@ ends_with(const char *str, const char *tail)
 	size_t str_len = strlen(str);
 
 	return str_len >= tail_len && strcmp(&str[str_len - tail_len], tail) == 0;
-}
-
-static int
-eal_plugindir_init(const char *path)
-{
-	struct dirent *dent = NULL;
-	DIR *d = NULL;
-
-	if (path == NULL || *path == '\0')
-		return 0;
-
-	d = opendir(path);
-	if (d == NULL) {
-		EAL_LOG(ERR, "failed to open directory %s: %s",
-			path, strerror(errno));
-		return -1;
-	}
-
-	while ((dent = readdir(d)) != NULL) {
-		char *sopath = NULL;
-		struct stat sb;
-
-		if (!ends_with(dent->d_name, ".so") && !ends_with(dent->d_name, ".so."ABI_VERSION))
-			continue;
-
-		if (asprintf(&sopath, "%s/%s", path, dent->d_name) < 0) {
-			EAL_LOG(ERR, "failed to create full path %s/%s",
-				path, dent->d_name);
-			continue;
-		}
-
-		/* if a regular file, add to list to load */
-		if (!(stat(sopath, &sb) == 0 && S_ISREG(sb.st_mode))) {
-			free(sopath);
-			continue;
-		}
-
-		if (eal_plugin_add(sopath, false) == -1) {
-			free(sopath);
-			break;
-		}
-		free(sopath);
-	}
-
-	closedir(d);
-	/* XXX this ignores failures from readdir() itself */
-	return (dent == NULL) ? 0 : -1;
 }
 
 static int
@@ -714,6 +653,65 @@ out:
 }
 
 static int
+eal_plugindir_init(const char *path)
+{
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	struct dirent *dent = NULL;
+	DIR *d = NULL;
+
+	if (path == NULL || *path == '\0')
+		return 0;
+
+	d = opendir(path);
+	if (d == NULL) {
+		EAL_LOG(ERR, "failed to open directory %s: %s",
+			path, strerror(errno));
+		return -1;
+	}
+
+	while ((dent = readdir(d)) != NULL) {
+		char *sopath = NULL;
+		struct shared_driver *solib;
+		struct stat sb;
+
+		if (!ends_with(dent->d_name, ".so") && !ends_with(dent->d_name, ".so."ABI_VERSION))
+			continue;
+
+		if (asprintf(&sopath, "%s/%s", path, dent->d_name) < 0) {
+			EAL_LOG(ERR, "failed to create full path %s/%s",
+				path, dent->d_name);
+			continue;
+		}
+
+		/* if not a regular file, skip */
+		if (!(stat(sopath, &sb) == 0 && S_ISREG(sb.st_mode))) {
+			free(sopath);
+			continue;
+		}
+
+		solib = calloc(1, sizeof(*solib));
+		if (solib == NULL) {
+			free(sopath);
+			break;
+		}
+		strlcpy(solib->name, sopath, PATH_MAX);
+		free(sopath);
+
+		EAL_LOG(DEBUG, "open shared lib %s", solib->name);
+		solib->lib_handle = eal_dlopen(solib->name);
+		if (solib->lib_handle == NULL) {
+			free(solib);
+			break;
+		}
+		TAILQ_INSERT_TAIL(&runtime_state->loaded_plugins, solib, next);
+	}
+
+	closedir(d);
+	/* XXX this ignores failures from readdir() itself */
+	return (dent == NULL) ? 0 : -1;
+}
+
+static int
 is_shared_build(void)
 {
 #define EAL_SO "librte_eal.so"
@@ -753,37 +751,45 @@ is_shared_build(void)
 int
 eal_plugins_init(void)
 {
-	struct shared_driver *solib = NULL;
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	struct eal_plugin_path *p;
 	struct stat sb;
 
-	/* If we are not statically linked, add default driver loading
-	 * path if it exists as a directory.
-	 * (Using dlopen with NOLOAD flag on EAL, will return NULL if the EAL
-	 * shared library is not already loaded i.e. it's statically linked.)
-	 */
+	TAILQ_INIT(&runtime_state->loaded_plugins);
+
+	/* If we are not statically linked, scan the default driver directory. */
 	if (is_shared_build() &&
 			*default_solib_dir != '\0' &&
 			stat(default_solib_dir, &sb) == 0 &&
-			S_ISDIR(sb.st_mode))
-		eal_plugin_add(default_solib_dir, false);
+			S_ISDIR(sb.st_mode)) {
+		if (eal_plugindir_init(default_solib_dir) == -1) {
+			EAL_LOG(ERR, "Cannot init plugin directory %s",
+				default_solib_dir);
+			return -1;
+		}
+	}
 
-	TAILQ_FOREACH(solib, &solib_list, next) {
-
-		if (stat(solib->name, &sb) == 0 && S_ISDIR(sb.st_mode)) {
-			if (eal_plugindir_init(solib->name) == -1) {
-				EAL_LOG(ERR,
-					"Cannot init plugin directory %s",
-					solib->name);
+	TAILQ_FOREACH(p, &user_cfg->plugin_list, next) {
+		if (stat(p->name, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+			if (eal_plugindir_init(p->name) == -1) {
+				EAL_LOG(ERR, "Cannot init plugin directory %s",
+					p->name);
 				return -1;
 			}
 		} else {
-			EAL_LOG(DEBUG, "open shared lib %s",
-				solib->name);
-			solib->lib_handle = eal_dlopen(solib->name);
-			if (solib->lib_handle == NULL)
+			struct shared_driver *solib = calloc(1, sizeof(*solib));
+			if (solib == NULL)
 				return -1;
+			strlcpy(solib->name, p->name, PATH_MAX);
+			EAL_LOG(DEBUG, "open shared lib %s", solib->name);
+			solib->lib_handle = eal_dlopen(solib->name);
+			if (solib->lib_handle == NULL) {
+				free(solib);
+				return -1;
+			}
+			TAILQ_INSERT_TAIL(&runtime_state->loaded_plugins, solib, next);
 		}
-
 	}
 	return 0;
 }
@@ -793,40 +799,58 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_driver_path_next)
 const char *
 rte_eal_driver_path_next(const char *start, bool cmdline_only)
 {
-	struct shared_driver *solib;
-
-	if (start == NULL) {
-		solib = TAILQ_FIRST(&solib_list);
-	} else {
-		/* Find the current entry based on the name string */
-		TAILQ_FOREACH(solib, &solib_list, next) {
-			if (start == solib->name) {
-				solib = TAILQ_NEXT(solib, next);
-				break;
-			}
-		}
-		if (solib == NULL)
-			return NULL;
-	}
-
-	/* Skip entries that were expanded from directories if cmdline_only is true */
 	if (cmdline_only) {
-		while (solib != NULL && !solib->from_cmdline)
-			solib = TAILQ_NEXT(solib, next);
-	}
+		const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+		struct eal_plugin_path *p;
 
-	return solib ? solib->name : NULL;
+		if (start == NULL) {
+			p = TAILQ_FIRST(&user_cfg->plugin_list);
+		} else {
+			TAILQ_FOREACH(p, &user_cfg->plugin_list, next) {
+				if (start == p->name) {
+					p = TAILQ_NEXT(p, next);
+					break;
+				}
+			}
+			if (p == NULL)
+				return NULL;
+		}
+		return p ? p->name : NULL;
+	} else {
+		const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+		struct shared_driver *solib;
+
+		if (start == NULL) {
+			solib = TAILQ_FIRST(&runtime_state->loaded_plugins);
+		} else {
+			TAILQ_FOREACH(solib, &runtime_state->loaded_plugins, next) {
+				if (start == solib->name) {
+					solib = TAILQ_NEXT(solib, next);
+					break;
+				}
+			}
+			if (solib == NULL)
+				return NULL;
+		}
+		return solib ? solib->name : NULL;
+	}
 }
 
 RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_driver_path_count)
 unsigned int
 rte_eal_driver_path_count(bool cmdline_only)
 {
-	struct shared_driver *solib;
 	unsigned int count = 0;
 
-	TAILQ_FOREACH(solib, &solib_list, next) {
-		if (!cmdline_only || solib->from_cmdline)
+	if (cmdline_only) {
+		const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+		struct eal_plugin_path *p;
+		TAILQ_FOREACH(p, &user_cfg->plugin_list, next)
+			count++;
+	} else {
+		const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+		struct shared_driver *solib;
+		TAILQ_FOREACH(solib, &runtime_state->loaded_plugins, next)
 			count++;
 	}
 
@@ -2106,7 +2130,7 @@ eal_parse_args(void)
 			return -1;
 	/* driver loading options */
 	TAILQ_FOREACH(arg, &args.driver_path, next)
-		if (eal_plugin_add(arg->arg, true) < 0)
+		if (eal_plugin_path_add(arg->arg) < 0)
 			return -1;
 
 	if (remap_lcores && args.remap_lcore_ids != (void *)1) {
