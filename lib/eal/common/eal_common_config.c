@@ -88,7 +88,7 @@ RTE_EXPORT_SYMBOL(rte_eal_iova_mode)
 enum rte_iova_mode
 rte_eal_iova_mode(void)
 {
-	return rte_eal_get_configuration()->iova_mode;
+	return eal_get_runtime_state()->iova_mode;
 }
 
 /* Get the EAL base address */
@@ -105,7 +105,7 @@ RTE_EXPORT_SYMBOL(rte_eal_process_type)
 enum rte_proc_type_t
 rte_eal_process_type(void)
 {
-	return rte_config.process_type;
+	return eal_get_runtime_state()->process_type;
 }
 
 /* Return user provided mbuf pool ops name */

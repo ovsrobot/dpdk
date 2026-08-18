@@ -18,7 +18,7 @@ eal_mcfg_complete(void)
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* ALL shared mem_config related INIT DONE */
-	if (cfg->process_type == RTE_PROC_PRIMARY)
+	if (runtime_state->process_type == RTE_PROC_PRIMARY)
 		mcfg->magic = RTE_MAGIC;
 
 	runtime_state->init_complete = 1;

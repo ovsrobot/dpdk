@@ -368,12 +368,12 @@ eal_proc_type_detect(void)
 static int
 rte_config_init(void)
 {
-	struct rte_config *config = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	config->process_type = user_cfg->process_type;
+	runtime_state->process_type = user_cfg->process_type;
 
-	switch (config->process_type) {
+	switch (runtime_state->process_type) {
 	case RTE_PROC_PRIMARY:
 		if (rte_eal_config_create() < 0)
 			return -1;
@@ -398,7 +398,7 @@ rte_config_init(void)
 	case RTE_PROC_AUTO:
 	case RTE_PROC_INVALID:
 		EAL_LOG(ERR, "Invalid process type %d",
-			config->process_type);
+			runtime_state->process_type);
 		return -1;
 	}
 
@@ -707,10 +707,9 @@ rte_eal_init(int argc, char **argv)
 				EAL_LOG(DEBUG, "IOMMU is not available, selecting IOVA as PA mode.");
 			}
 		}
-		rte_eal_get_configuration()->iova_mode = iova_mode;
+		runtime_state->iova_mode = iova_mode;
 	} else {
-		rte_eal_get_configuration()->iova_mode =
-			user_cfg->iova_mode;
+		runtime_state->iova_mode = user_cfg->iova_mode;
 	}
 
 	if (rte_eal_iova_mode() == RTE_IOVA_PA && !phys_addrs) {
