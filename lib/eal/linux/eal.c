@@ -980,7 +980,7 @@ rte_eal_cleanup(void)
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
 	rte_eal_malloc_heap_cleanup();
-	eal_cleanup_config(user_cfg);
+	eal_cleanup_config();
 	eal_lcore_var_cleanup();
 	rte_eal_log_cleanup();
 	return 0;

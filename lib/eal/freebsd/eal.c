@@ -768,7 +768,6 @@ rte_eal_cleanup(void)
 		return -1;
 	}
 
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	rte_service_finalize();
 	eal_bus_cleanup();
 	rte_mp_channel_cleanup();
@@ -777,7 +776,7 @@ rte_eal_cleanup(void)
 	eal_trace_fini();
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
-	eal_cleanup_config(user_cfg);
+	eal_cleanup_config();
 	eal_lcore_var_cleanup();
 	return 0;
 }

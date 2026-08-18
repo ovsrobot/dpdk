@@ -16,6 +16,7 @@
 #include <rte_eal.h>
 #include <rte_os_shim.h>
 #include <rte_pci_dev_feature_defs.h>
+#include <rte_trace.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -59,6 +60,16 @@ struct hugepage_file_discipline {
 };
 
 /**
+ * A saved trace pattern string from --trace, staged during arg parsing.
+ * Lives in user_cfg->trace_patterns; applied during eal_trace_init().
+ */
+struct eal_trace_arg {
+	STAILQ_ENTRY(eal_trace_arg) next;
+	char *val;
+};
+STAILQ_HEAD(eal_trace_arg_list, eal_trace_arg);
+
+/**
  * A plugin path provided by the user via -d, staged during arg parsing.
  * Lives in user_cfg->plugin_list; consumed by eal_plugins_init().
  */
@@ -86,6 +97,10 @@ TAILQ_HEAD(eal_devopt_list, device_option);
 struct eal_user_cfg {
 	struct eal_devopt_list devopt_list; /**< staged device options (-a/-b/--vdev) */
 	struct eal_plugin_path_list plugin_list; /**< user-provided plugin paths (-d) */
+	struct eal_trace_arg_list trace_patterns; /**< saved --trace patterns */
+	char *trace_dir;        /**< trace output directory (NULL = use default) */
+	uint64_t trace_bufsz;   /**< trace buffer size in bytes (0 = use default 1 MB) */
+	enum rte_trace_mode trace_mode; /**< trace mode (default RTE_TRACE_MODE_OVERWRITE) */
 	size_t memory;           /**< amount of asked memory */
 	size_t huge_worker_stack_size; /**< worker thread stack size */
 	enum rte_proc_type_t process_type; /**< requested process type */

@@ -14,6 +14,7 @@
 #include <sys/queue.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <dlfcn.h>
+#include <fnmatch.h>
 #include <libgen.h>
 #endif
 #include <sys/stat.h>
@@ -491,6 +492,7 @@ eal_reset_internal_config(void)
 
 	TAILQ_INIT(&user_cfg->devopt_list);
 	TAILQ_INIT(&user_cfg->plugin_list);
+	STAILQ_INIT(&user_cfg->trace_patterns);
 	TAILQ_INIT(&runtime_state->loaded_plugins);
 	user_cfg->memory = 0;
 	user_cfg->force_nrank = 0;
@@ -2321,28 +2323,56 @@ eal_parse_args(void)
 		EAL_LOG(WARNING, "Tracing is not supported on Windows, ignoring tracing parameters");
 #else
 	TAILQ_FOREACH(arg, &args.trace, next) {
-		if (eal_trace_args_save(arg->arg) < 0) {
-			EAL_LOG(ERR, "invalid trace parameter, '%s'", arg->arg);
+		struct eal_trace_arg *ta = malloc(sizeof(*ta));
+		if (ta == NULL) {
+			EAL_LOG(ERR, "failed to allocate trace arg for '%s'", arg->arg);
 			return -1;
 		}
+		ta->val = strdup(arg->arg);
+		if (ta->val == NULL) {
+			EAL_LOG(ERR, "failed to allocate trace arg for '%s'", arg->arg);
+			free(ta);
+			return -1;
+		}
+		STAILQ_INSERT_TAIL(&user_cfg->trace_patterns, ta, next);
 	}
 	if (args.trace_dir != NULL) {
-		if (eal_trace_dir_args_save(args.trace_dir) < 0) {
+		if (asprintf(&user_cfg->trace_dir, "%s/", args.trace_dir) == -1) {
 			EAL_LOG(ERR, "invalid trace directory, '%s'", args.trace_dir);
 			return -1;
 		}
 	}
 	if (args.trace_bufsz != NULL) {
-		if (eal_trace_bufsz_args_save(args.trace_bufsz) < 0) {
+		uint64_t bufsz = rte_str_to_size(args.trace_bufsz);
+		if (bufsz == 0) {
 			EAL_LOG(ERR, "invalid trace buffer size, '%s'", args.trace_bufsz);
 			return -1;
 		}
+		user_cfg->trace_bufsz = bufsz;
 	}
 	if (args.trace_mode != NULL) {
-		if (eal_trace_mode_args_save(args.trace_mode) < 0) {
-			EAL_LOG(ERR, "invalid trace mode, '%s'", args.trace_mode);
+		size_t len = strlen(args.trace_mode);
+		char *pattern;
+		if (len == 0) {
+			EAL_LOG(ERR, "trace mode value is empty");
 			return -1;
 		}
+		pattern = calloc(1, len + 2);
+		if (pattern == NULL) {
+			EAL_LOG(ERR, "failed to allocate memory for trace mode");
+			return -1;
+		}
+		sprintf(pattern, "%s*", args.trace_mode);
+		if (fnmatch(pattern, "overwrite", 0) == 0)
+			user_cfg->trace_mode = RTE_TRACE_MODE_OVERWRITE;
+		else if (fnmatch(pattern, "discard", 0) == 0)
+			user_cfg->trace_mode = RTE_TRACE_MODE_DISCARD;
+		else {
+			EAL_LOG(ERR, "invalid trace mode, '%s'", args.trace_mode);
+			free(pattern);
+			return -1;
+		}
+		free(pattern);
 	}
 #endif
 
@@ -2461,8 +2491,19 @@ compute_ctrl_threads_cpuset(void)
 }
 
 int
-eal_cleanup_config(const struct eal_user_cfg *user_cfg)
+eal_cleanup_config(void)
 {
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_trace_arg *ta;
+
+	/* free trace patterns list */
+	while (!STAILQ_EMPTY(&user_cfg->trace_patterns)) {
+		ta = STAILQ_FIRST(&user_cfg->trace_patterns);
+		STAILQ_REMOVE_HEAD(&user_cfg->trace_patterns, next);
+		free(ta->val);
+		free(ta);
+	}
+	free(user_cfg->trace_dir);
 	free(user_cfg->hugefile_prefix);
 	free(user_cfg->hugepage_dir);
 	free(user_cfg->user_mbuf_pool_ops_name);

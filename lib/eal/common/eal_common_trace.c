@@ -24,7 +24,7 @@ RTE_DEFINE_PER_LCORE(void *, trace_mem);
 static RTE_DEFINE_PER_LCORE(char *, ctf_field);
 
 static struct trace_point_head tp_list = STAILQ_HEAD_INITIALIZER(tp_list);
-static struct trace trace = { .args = STAILQ_HEAD_INITIALIZER(trace.args), };
+static struct trace trace;
 
 struct trace *
 trace_obj_get(void)
@@ -41,7 +41,8 @@ trace_list_head_get(void)
 int
 eal_trace_init(void)
 {
-	struct trace_arg *arg;
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	const struct eal_trace_arg *arg;
 
 	/* Trace memory should start with 8B aligned for natural alignment */
 	RTE_BUILD_BUG_ON((offsetof(struct __rte_trace_header, mem) % 8) != 0);
@@ -58,13 +59,23 @@ eal_trace_init(void)
 	if (trace_has_duplicate_entry())
 		goto fail;
 
+	/* Copy trace directory from user config (trace.dir may be reallocated later) */
+	if (user_cfg->trace_dir != NULL) {
+		trace.dir = strdup(user_cfg->trace_dir);
+		if (trace.dir == NULL) {
+			rte_errno = ENOMEM;
+			goto fail;
+		}
+	}
+
+	/* Apply buffer size from user config, then fill in default if still 0 */
+	trace.buff_len = user_cfg->trace_bufsz;
+	trace_bufsz_args_apply();
+
 	/* Generate UUID ver 4 with total size of events and number of
 	 * events
 	 */
 	trace_uuid_generate();
-
-	/* Apply buffer size configuration for trace output */
-	trace_bufsz_args_apply();
 
 	/* Generate CTF TDSL metadata */
 	if (trace_metadata_create() < 0)
@@ -74,11 +85,11 @@ eal_trace_init(void)
 	if (trace_epoch_time_save() < 0)
 		goto free_meta;
 
-	/* Apply global configurations */
-	STAILQ_FOREACH(arg, &trace.args, next)
+	/* Apply trace pattern filters from user config */
+	STAILQ_FOREACH(arg, &user_cfg->trace_patterns, next)
 		trace_args_apply(arg->val);
 
-	rte_trace_mode_set(trace.mode);
+	rte_trace_mode_set(user_cfg->trace_mode);
 
 	return 0;
 
@@ -94,7 +105,8 @@ eal_trace_fini(void)
 {
 	trace_mem_free();
 	trace_metadata_destroy();
-	eal_trace_args_free();
+	free(trace.dir);
+	trace.dir = NULL;
 }
 
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_is_enabled, 20.05)

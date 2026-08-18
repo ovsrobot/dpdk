@@ -136,14 +136,12 @@ RTE_EXPORT_SYMBOL(rte_eal_cleanup)
 int
 rte_eal_cleanup(void)
 {
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-
 	eal_intr_thread_cancel();
 	eal_mem_virt2iova_cleanup();
 	eal_bus_cleanup();
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
-	eal_cleanup_config(user_cfg);
+	eal_cleanup_config();
 	eal_lcore_var_cleanup();
 	return 0;
 }
