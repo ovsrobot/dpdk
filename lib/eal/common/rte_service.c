@@ -107,7 +107,7 @@ rte_service_init(void)
 	int i;
 	struct rte_config *cfg = rte_eal_get_configuration();
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		if (lcore_config[i].core_role == ROLE_SERVICE) {
+		if (cfg->lcore_role[i] == ROLE_SERVICE) {
 			if ((unsigned int)i == cfg->main_lcore)
 				continue;
 			rte_service_lcore_add(i);
@@ -714,9 +714,6 @@ set_lcore_state(uint32_t lcore, int32_t state)
 	struct core_state *cs =	RTE_LCORE_VAR_LCORE(lcore, lcore_states);
 	cfg->lcore_role[lcore] = state;
 
-	/* mark state in process local lcore_config */
-	lcore_config[lcore].core_role = state;
-
 	/* update per-lcore optimized state tracking */
 	cs->is_service_core = (state == ROLE_SERVICE);
 
@@ -1104,6 +1101,7 @@ RTE_EXPORT_SYMBOL(rte_service_dump)
 int32_t
 rte_service_dump(FILE *f, uint32_t id)
 {
+	struct rte_config *cfg = rte_eal_get_configuration();
 	uint32_t i;
 	int print_one = (id != UINT32_MAX);
 
@@ -1126,7 +1124,7 @@ rte_service_dump(FILE *f, uint32_t id)
 
 	fprintf(f, "Service Cores Summary\n");
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		if (lcore_config[i].core_role != ROLE_SERVICE)
+		if (cfg->lcore_role[i] != ROLE_SERVICE)
 			continue;
 
 		service_dump_calls_per_lcore(f, i);

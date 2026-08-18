@@ -70,9 +70,6 @@ static struct flock wr_lock = {
 		.l_len = RTE_SIZEOF_FIELD(struct rte_mem_config, memsegs),
 };
 
-/* internal configuration (per-core) */
-struct lcore_config lcore_config[RTE_MAX_LCORE];
-
 /* used by rte_rdtsc() */
 RTE_EXPORT_SYMBOL(rte_cycles_vmware_tsc_map)
 int rte_cycles_vmware_tsc_map;
@@ -408,7 +405,7 @@ rte_eal_init(int argc, char **argv)
 	char thread_name[RTE_THREAD_NAME_SIZE];
 	const struct rte_config *config = rte_eal_get_configuration();
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	bool has_phys_addr;
 	enum rte_iova_mode iova_mode;
 
@@ -656,13 +653,13 @@ rte_eal_init(int argc, char **argv)
 	eal_check_mem_on_local_socket();
 
 	if (rte_thread_set_affinity_by_id(rte_thread_self(),
-			&lcore_config[config->main_lcore].cpuset) != 0) {
+			&runtime_state->lcore_cfg[config->main_lcore].cpuset) != 0) {
 		rte_eal_init_alert("Cannot set affinity");
 		rte_errno = EINVAL;
 		goto err_out;
 	}
 	__rte_thread_init(config->main_lcore,
-		&lcore_config[config->main_lcore].cpuset);
+		&runtime_state->lcore_cfg[config->main_lcore].cpuset);
 
 	ret = eal_thread_dump_current_affinity(cpuset, sizeof(cpuset));
 
@@ -676,15 +673,15 @@ rte_eal_init(int argc, char **argv)
 		 * create communication pipes between main thread
 		 * and children
 		 */
-		if (pipe(lcore_config[i].pipe_main2worker) < 0)
+		if (pipe(runtime_state->lcore_cfg[i].pipe_main2worker) < 0)
 			rte_panic("Cannot create pipe\n");
-		if (pipe(lcore_config[i].pipe_worker2main) < 0)
+		if (pipe(runtime_state->lcore_cfg[i].pipe_worker2main) < 0)
 			rte_panic("Cannot create pipe\n");
 
-		lcore_config[i].state = WAIT;
+		runtime_state->lcore_cfg[i].state = WAIT;
 
 		/* create a thread for each lcore */
-		ret = rte_thread_create(&lcore_config[i].thread_id, NULL,
+		ret = rte_thread_create(&runtime_state->lcore_cfg[i].thread_id, NULL,
 				     eal_thread_loop, (void *)(uintptr_t)i);
 		if (ret != 0)
 			rte_panic("Cannot create thread\n");
@@ -694,10 +691,10 @@ rte_eal_init(int argc, char **argv)
 		if (ret >= RTE_THREAD_NAME_SIZE)
 			EAL_LOG(INFO, "Worker thread name %s truncated", thread_name);
 
-		rte_thread_set_name(lcore_config[i].thread_id, thread_name);
+		rte_thread_set_name(runtime_state->lcore_cfg[i].thread_id, thread_name);
 
-		ret = rte_thread_set_affinity_by_id(lcore_config[i].thread_id,
-			&lcore_config[i].cpuset);
+		ret = rte_thread_set_affinity_by_id(runtime_state->lcore_cfg[i].thread_id,
+			&runtime_state->lcore_cfg[i].cpuset);
 		if (ret != 0)
 			rte_panic("Cannot set affinity\n");
 	}

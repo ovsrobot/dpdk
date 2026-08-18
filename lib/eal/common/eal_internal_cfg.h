@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <rte_stdatomic.h>
 #include "eal_thread.h"
 
 #if defined(RTE_ARCH_ARM)
@@ -115,6 +116,23 @@ struct eal_platform_info {
 };
 
 /**
+ * Per-lcore runtime state, owned by EAL.
+ */
+struct lcore_cfg {
+	int core_index;                   /**< relative index, starting from 0 */
+	rte_cpuset_t cpuset;              /**< cpu set which the lcore affinity to */
+	uint16_t first_cpu;               /**< lowest CPU set in cpuset, UINT16_MAX if none */
+	/* Fields for executing code on a remote lcore */
+	rte_thread_t thread_id;          /**< thread identifier */
+	int pipe_main2worker[2];         /**< communication pipe with main */
+	int pipe_worker2main[2];         /**< communication pipe with main */
+	RTE_ATOMIC(lcore_function_t *) volatile f; /**< function to call */
+	void * volatile arg;             /**< argument of function */
+	volatile int ret;                /**< return value of function */
+	volatile RTE_ATOMIC(enum rte_lcore_state_t) state; /**< lcore state */
+};
+
+/**
  * Internal EAL runtime state
  * May be modified at runtime, so access must be protected by locks or atomic types
  * as appropriate.
@@ -125,6 +143,7 @@ struct eal_runtime_state {
 	rte_cpuset_t ctrl_cpuset;         /**< cpuset for ctrl threads */
 	volatile unsigned int init_complete;
 	/**< indicates whether EAL has completed initialization */
+	struct lcore_cfg lcore_cfg[RTE_MAX_LCORE];
 };
 
 struct eal_user_cfg *eal_get_user_configuration(void);

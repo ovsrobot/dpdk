@@ -910,7 +910,7 @@ eal_parse_service_coremask(const char *coremask)
 				if (cfg->lcore_role[idx] == ROLE_RTE)
 					taken_lcore_count++;
 
-				lcore_config[idx].core_role = ROLE_SERVICE;
+				cfg->lcore_role[idx] = ROLE_SERVICE;
 				count++;
 			}
 		}
@@ -921,8 +921,6 @@ eal_parse_service_coremask(const char *coremask)
 			return -1;
 
 	rte_bitset_clear_all(cfg->core_indices, RTE_MAX_LCORE);
-	for (; idx < RTE_MAX_LCORE; idx++)
-		lcore_config[idx].core_index = -1;
 
 	if (count == 0)
 		return -1;
@@ -941,6 +939,7 @@ static int
 update_lcore_config(const rte_cpuset_t *cpuset, bool remap, uint16_t remap_base)
 {
 	struct rte_config *cfg = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	unsigned int lcore_id = remap_base;
 	unsigned int count = 0;
 	unsigned int i;
@@ -950,7 +949,7 @@ update_lcore_config(const rte_cpuset_t *cpuset, bool remap, uint16_t remap_base)
 	rte_bitset_clear_all(cfg->core_indices, RTE_MAX_LCORE);
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
 		cfg->lcore_role[i] = ROLE_OFF;
-		lcore_config[i].core_index = -1;
+		runtime_state->lcore_cfg[i].core_index = -1;
 	}
 
 	/* now go through the cpuset */
@@ -979,9 +978,10 @@ update_lcore_config(const rte_cpuset_t *cpuset, bool remap, uint16_t remap_base)
 
 			rte_bitset_set(cfg->core_indices, count);
 			cfg->lcore_role[lcore_id] = ROLE_RTE;
-			lcore_config[lcore_id].core_index = count;
-			CPU_ZERO(&lcore_config[lcore_id].cpuset);
-			CPU_SET(i, &lcore_config[lcore_id].cpuset);
+			runtime_state->lcore_cfg[lcore_id].core_index = count;
+			CPU_ZERO(&runtime_state->lcore_cfg[lcore_id].cpuset);
+			CPU_SET(i, &runtime_state->lcore_cfg[lcore_id].cpuset);
+			runtime_state->lcore_cfg[lcore_id].first_cpu = i;
 			EAL_LOG(DEBUG, "lcore %u mapped to physical core %u", lcore_id, i);
 			lcore_id++;
 			count++;
@@ -1154,8 +1154,7 @@ eal_parse_service_corelist(const char *corelist)
 					if (cfg->lcore_role[idx] == ROLE_RTE)
 						taken_lcore_count++;
 
-					lcore_config[idx].core_role =
-							ROLE_SERVICE;
+					cfg->lcore_role[idx] = ROLE_SERVICE;
 					count++;
 				}
 			}
@@ -1178,7 +1177,7 @@ eal_parse_service_corelist(const char *corelist)
 	rte_cpuset_t service_cpuset;
 	CPU_ZERO(&service_cpuset);
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		if (lcore_config[i].core_role == ROLE_SERVICE)
+		if (cfg->lcore_role[i] == ROLE_SERVICE)
 			CPU_SET(i, &service_cpuset);
 	}
 	if (CPU_COUNT(&service_cpuset) > 0) {
@@ -1207,7 +1206,7 @@ eal_parse_main_lcore(const char *arg)
 		return -1;
 
 	/* ensure main core is not used as service core */
-	if (lcore_config[cfg->main_lcore].core_role == ROLE_SERVICE) {
+	if (cfg->lcore_role[cfg->main_lcore] == ROLE_SERVICE) {
 		EAL_LOG(ERR, "Error: Main lcore is used as a service core");
 		return -1;
 	}
@@ -1379,6 +1378,7 @@ static int
 eal_parse_lcores(const char *lcores)
 {
 	struct rte_config *cfg = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	rte_cpuset_t lcore_set;
 	unsigned int set_count;
 	unsigned idx = 0;
@@ -1403,8 +1403,9 @@ eal_parse_lcores(const char *lcores)
 	rte_bitset_clear_all(cfg->core_indices, RTE_MAX_LCORE);
 	for (idx = 0; idx < RTE_MAX_LCORE; idx++) {
 		cfg->lcore_role[idx] = ROLE_OFF;
-		lcore_config[idx].core_index = -1;
-		CPU_ZERO(&lcore_config[idx].cpuset);
+		runtime_state->lcore_cfg[idx].core_index = -1;
+		CPU_ZERO(&runtime_state->lcore_cfg[idx].cpuset);
+		runtime_state->lcore_cfg[idx].first_cpu = UINT16_MAX;
 	}
 
 	/* Get list of cores */
@@ -1466,7 +1467,7 @@ eal_parse_lcores(const char *lcores)
 
 			if (cfg->lcore_role[idx] != ROLE_RTE) {
 				rte_bitset_set(cfg->core_indices, count);
-				lcore_config[idx].core_index = count;
+				runtime_state->lcore_cfg[idx].core_index = count;
 				cfg->lcore_role[idx] = ROLE_RTE;
 				count++;
 			}
@@ -1478,8 +1479,10 @@ eal_parse_lcores(const char *lcores)
 
 			if (check_cpuset(&cpuset) < 0)
 				goto err;
-			rte_memcpy(&lcore_config[idx].cpuset, &cpuset,
+			rte_memcpy(&runtime_state->lcore_cfg[idx].cpuset, &cpuset,
 				   sizeof(rte_cpuset_t));
+			runtime_state->lcore_cfg[idx].first_cpu =
+					(uint16_t)(RTE_CPU_FFS(&cpuset) - 1);
 		}
 
 		/* some cores from the lcore_set can't be handled by EAL */
@@ -2467,7 +2470,7 @@ compute_ctrl_threads_cpuset(void)
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		if (rte_lcore_has_role(lcore_id, ROLE_OFF))
 			continue;
-		RTE_CPU_OR(cpuset, cpuset, &lcore_config[lcore_id].cpuset);
+		RTE_CPU_OR(cpuset, cpuset, &runtime_state->lcore_cfg[lcore_id].cpuset);
 	}
 	RTE_CPU_NOT(cpuset, cpuset);
 
@@ -2478,7 +2481,7 @@ compute_ctrl_threads_cpuset(void)
 
 	/* if no remaining cpu, use main lcore cpu affinity */
 	if (!CPU_COUNT(cpuset)) {
-		memcpy(cpuset, &lcore_config[rte_get_main_lcore()].cpuset,
+		memcpy(cpuset, &runtime_state->lcore_cfg[rte_get_main_lcore()].cpuset,
 			sizeof(*cpuset));
 	}
 
