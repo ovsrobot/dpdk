@@ -834,8 +834,12 @@ test_argparse_parse_type_corelist(void)
 	char *corelist_invalid_special_chars = test_strdup("1,2@3");
 	char *corelist_invalid_comma_only = test_strdup(",");
 	char *corelist_invalid_out_of_range = test_strdup("70000");
+	char corelist_invalid_cpu_set[32];
 	rte_cpuset_t val_cpuset;
 	int ret;
+
+	snprintf(corelist_invalid_cpu_set, sizeof(corelist_invalid_cpu_set),
+		"0-%d", CPU_SETSIZE);
 
 	/* test valid single core */
 	CPU_ZERO(&val_cpuset);
@@ -965,6 +969,12 @@ test_argparse_parse_type_corelist(void)
 	ret = rte_argparse_parse_type(corelist_invalid_out_of_range,
 			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
 	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (out of range) should have failed!");
+
+	/* test invalid corelist that exceeds the destination CPU set */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_invalid_cpu_set,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret != 0, "Argparse parse type for corelist outside CPU set should have failed!");
 
 	return 0;
 }
