@@ -138,7 +138,14 @@ struct eal_user_cfg {
 	} pagesz_mem_overrides[MAX_HUGEPAGE_SIZES];
 	unsigned int num_pagesz_mem_overrides;  /**< number of stored overrides */
 	rte_cpuset_t service_cpuset; /**<  each bit set is one lcore ID to use as service core */
-	int main_lcore;          /**< ID of the main lcore */
+
+	/** Per-lcore cpuset array, always populated at arg-parse time for all input forms
+	 * (-c coremask, -l corelist, --lcores with or without '@'/'()').
+	 * Each non-NULL slot is an individually heap-allocated rte_cpuset_t.
+	 * NULL means the corresponding lcore ID is not configured.
+	 */
+	rte_cpuset_t *lcore_cpusets[RTE_MAX_LCORE];
+	int            main_lcore;    /**< ID of the main lcore */
 };
 
 /**

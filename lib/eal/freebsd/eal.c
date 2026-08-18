@@ -750,6 +750,7 @@ rte_eal_init(int argc, char **argv)
 	return fctret;
 err_out:
 	rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
+	eal_cleanup_config();
 	eal_clean_saved_args();
 	return -1;
 }
