@@ -10,6 +10,7 @@
 #ifndef EAL_INTERNAL_CFG_H
 #define EAL_INTERNAL_CFG_H
 
+#include <stdlib.h>
 #include <sys/queue.h>
 
 #include <rte_devargs.h>
@@ -17,6 +18,7 @@
 #include <rte_os_shim.h>
 #include <rte_pci_dev_feature_defs.h>
 #include <rte_trace.h>
+#include <rte_vect.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -93,6 +95,8 @@ TAILQ_HEAD(eal_devopt_list, device_option);
 /**
  * User-provided EAL initialization configuration.
  * Immutable after initialization, so no need for atomic types or locks.
+ *
+ * NOTE: On modify, always update the initializer, copy, and cleanup functions below.
  */
 struct eal_user_cfg {
 	struct eal_devopt_list devopt_list; /**< staged device options (-a/-b/--vdev) */
@@ -147,6 +151,154 @@ struct eal_user_cfg {
 	rte_cpuset_t *lcore_cpusets[RTE_MAX_LCORE];
 	int            main_lcore;    /**< ID of the main lcore */
 };
+
+#ifdef RTE_LIBEAL_USE_HPET
+#define EAL_NO_HPET_DEFAULT false
+#else
+#define EAL_NO_HPET_DEFAULT true
+#endif
+
+#define EAL_USER_CFG_INITIALIZER(self) (struct eal_user_cfg){ \
+	.devopt_list = TAILQ_HEAD_INITIALIZER((self).devopt_list), \
+	.plugin_list = TAILQ_HEAD_INITIALIZER((self).plugin_list), \
+	.trace_patterns = STAILQ_HEAD_INITIALIZER((self).trace_patterns), \
+	.hugepage_file.unlink_existing = true, \
+	.main_lcore = -1, \
+	.no_hpet = EAL_NO_HPET_DEFAULT, \
+	.max_simd_bitwidth.bitwidth = RTE_VECT_DEFAULT_SIMD_BITWIDTH, \
+}
+
+static inline void
+eal_user_cfg_cleanup(struct eal_user_cfg *cfg)
+{
+	while (!TAILQ_EMPTY(&cfg->devopt_list)) {
+		struct device_option *devopt = TAILQ_FIRST(&cfg->devopt_list);
+		TAILQ_REMOVE(&cfg->devopt_list, devopt, next);
+		free(devopt);
+	}
+
+	while (!TAILQ_EMPTY(&cfg->plugin_list)) {
+		struct eal_plugin_path *p = TAILQ_FIRST(&cfg->plugin_list);
+		TAILQ_REMOVE(&cfg->plugin_list, p, next);
+		free(p);
+	}
+
+	while (!STAILQ_EMPTY(&cfg->trace_patterns)) {
+		struct eal_trace_arg *ta = STAILQ_FIRST(&cfg->trace_patterns);
+		STAILQ_REMOVE_HEAD(&cfg->trace_patterns, next);
+		free(ta->val);
+		free(ta);
+	}
+
+	free(cfg->trace_dir);
+	cfg->trace_dir = NULL;
+	free(cfg->hugefile_prefix);
+	cfg->hugefile_prefix = NULL;
+	free(cfg->hugepage_dir);
+	cfg->hugepage_dir = NULL;
+	free(cfg->user_mbuf_pool_ops_name);
+	cfg->user_mbuf_pool_ops_name = NULL;
+
+	for (unsigned int i = 0; i < RTE_MAX_LCORE; i++) {
+		free(cfg->lcore_cpusets[i]);
+		cfg->lcore_cpusets[i] = NULL;
+	}
+}
+
+static inline int
+eal_user_cfg_copy(struct eal_user_cfg *dst, const struct eal_user_cfg *src)
+{
+
+	/* copy all scalar/fixed-size fields */
+	*dst = *src;
+
+	/* re-initialise list heads — the shallow copy above has stale pointers */
+	TAILQ_INIT(&dst->devopt_list);
+	TAILQ_INIT(&dst->plugin_list);
+	STAILQ_INIT(&dst->trace_patterns);
+
+	/* zero heap string pointers so cleanup is safe on partial failure */
+	dst->trace_dir = NULL;
+	dst->hugefile_prefix = NULL;
+	dst->hugepage_dir = NULL;
+	dst->user_mbuf_pool_ops_name = NULL;
+	for (unsigned int i = 0; i < RTE_MAX_LCORE; i++)
+		dst->lcore_cpusets[i] = NULL;
+
+	/* deep-copy device option list (device_option has a flexible array member) */
+	struct device_option *devopt, *devopt_copy;
+	TAILQ_FOREACH(devopt, &src->devopt_list, next) {
+		size_t arglen = strlen(devopt->arg) + 1;
+		devopt_copy = calloc(1, sizeof(*devopt_copy) + arglen);
+		if (devopt_copy == NULL)
+			goto err;
+		devopt_copy->type = devopt->type;
+		memcpy(devopt_copy->arg, devopt->arg, arglen);
+		TAILQ_INSERT_TAIL(&dst->devopt_list, devopt_copy, next);
+	}
+
+	/* deep-copy plugin path list */
+	struct eal_plugin_path *p, *p_copy;
+	TAILQ_FOREACH(p, &src->plugin_list, next) {
+		p_copy = malloc(sizeof(*p_copy));
+		if (p_copy == NULL)
+			goto err;
+		memcpy(p_copy->name, p->name, sizeof(p_copy->name));
+		TAILQ_INSERT_TAIL(&dst->plugin_list, p_copy, next);
+	}
+
+	/* deep-copy trace pattern list */
+	struct eal_trace_arg *ta, *ta_copy;
+	STAILQ_FOREACH(ta, &src->trace_patterns, next) {
+		ta_copy = malloc(sizeof(*ta_copy));
+		if (ta_copy == NULL)
+			goto err;
+		ta_copy->val = strdup(ta->val);
+		if (ta_copy->val == NULL) {
+			free(ta_copy);
+			goto err;
+		}
+		STAILQ_INSERT_TAIL(&dst->trace_patterns, ta_copy, next);
+	}
+
+	/* deep-copy heap strings */
+	if (src->trace_dir != NULL) {
+		dst->trace_dir = strdup(src->trace_dir);
+		if (dst->trace_dir == NULL)
+			goto err;
+	}
+	if (src->hugefile_prefix != NULL) {
+		dst->hugefile_prefix = strdup(src->hugefile_prefix);
+		if (dst->hugefile_prefix == NULL)
+			goto err;
+	}
+	if (src->hugepage_dir != NULL) {
+		dst->hugepage_dir = strdup(src->hugepage_dir);
+		if (dst->hugepage_dir == NULL)
+			goto err;
+	}
+	if (src->user_mbuf_pool_ops_name != NULL) {
+		dst->user_mbuf_pool_ops_name = strdup(src->user_mbuf_pool_ops_name);
+		if (dst->user_mbuf_pool_ops_name == NULL)
+			goto err;
+	}
+
+	/* deep-copy per-lcore cpusets */
+	for (unsigned int i = 0; i < RTE_MAX_LCORE; i++) {
+		if (src->lcore_cpusets[i] == NULL)
+			continue;
+		dst->lcore_cpusets[i] = malloc(sizeof(rte_cpuset_t));
+		if (dst->lcore_cpusets[i] == NULL)
+			goto err;
+		*dst->lcore_cpusets[i] = *src->lcore_cpusets[i];
+	}
+
+	return 0;
+
+err:
+	eal_user_cfg_cleanup(dst);
+	return -1;
+}
 
 /**
  * Hardware facts about a single physical CPU, populated during CPU discovery.

@@ -1911,17 +1911,7 @@ eal_parse_args(void)
 	 * false or NULL, which is the correct default (RTE_PROC_PRIMARY,
 	 * RTE_INTR_MODE_NONE, RTE_IOVA_DC, etc. are all defined as 0).
 	 */
-	*user_cfg = (struct eal_user_cfg){
-		.devopt_list = TAILQ_HEAD_INITIALIZER(user_cfg->devopt_list),
-		.plugin_list = TAILQ_HEAD_INITIALIZER(user_cfg->plugin_list),
-		.trace_patterns = STAILQ_HEAD_INITIALIZER(user_cfg->trace_patterns),
-		.hugepage_file.unlink_existing = true,
-		.main_lcore = -1,
-#ifndef RTE_LIBEAL_USE_HPET
-		.no_hpet = true,
-#endif
-		.max_simd_bitwidth.bitwidth = RTE_VECT_DEFAULT_SIMD_BITWIDTH,
-	};
+	*user_cfg = EAL_USER_CFG_INITIALIZER(*user_cfg);
 
 	bool remap_lcores = (args.remap_lcore_ids != NULL);
 	struct arg_list_elem *arg;
