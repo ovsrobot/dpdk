@@ -1704,6 +1704,7 @@ memseg_primary_init_32(void)
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* no-huge does not need this at all */
 	if (user_cfg->no_hugetlbfs)
@@ -1824,7 +1825,7 @@ memseg_primary_init_32(void)
 				continue;
 
 			max_pagesz_mem = max_socket_mem - cur_socket_mem;
-			pagesz_mem_limit = internal_conf->hugepage_mem_sz_limits[hpi_idx];
+			pagesz_mem_limit = runtime_state->hugepage_mem_sz_limits[hpi_idx];
 			max_pagesz_mem = RTE_MIN(max_pagesz_mem, pagesz_mem_limit);
 
 			/* make it multiple of page size */

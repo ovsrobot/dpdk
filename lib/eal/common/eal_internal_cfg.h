@@ -74,6 +74,12 @@ struct eal_user_cfg {
 	char *hugepage_dir;      /**< specific hugetlbfs directory to use */
 	uint64_t numa_mem[RTE_MAX_NUMA_NODES];    /**< amount of memory per NUMA node */
 	uint64_t numa_limit[RTE_MAX_NUMA_NODES];  /**< limit amount of memory per NUMA node */
+	/** storage for user-specified pagesz-mem overrides */
+	struct pagesz_mem_override {
+		uint64_t pagesz;   /**< page size in bytes */
+		uint64_t limit;    /**< memory limit in bytes */
+	} pagesz_mem_overrides[MAX_HUGEPAGE_SIZES];
+	unsigned int num_pagesz_mem_overrides;  /**< number of stored overrides */
 };
 
 /**
@@ -90,7 +96,8 @@ struct eal_platform_info {
  * as appropriate.
  */
 struct eal_runtime_state {
-	uint8_t reserved;
+	uint64_t hugepage_mem_sz_limits[MAX_HUGEPAGE_SIZES];
+	/**< default max memory per hugepage size */
 };
 
 /**
@@ -116,14 +123,6 @@ struct internal_config {
 			/**< user defined mbuf pool ops name */
 	unsigned num_hugepage_sizes;      /**< how many sizes on this system */
 	struct hugepage_info hugepage_info[MAX_HUGEPAGE_SIZES];
-	uint64_t hugepage_mem_sz_limits[MAX_HUGEPAGE_SIZES];
-	/**< default max memory per hugepage size */
-	/** storage for user-specified pagesz-mem overrides */
-	struct pagesz_mem_override {
-		uint64_t pagesz;   /**< page size in bytes */
-		uint64_t limit;    /**< memory limit in bytes */
-	} pagesz_mem_overrides[MAX_HUGEPAGE_SIZES];
-	unsigned int num_pagesz_mem_overrides;  /**< number of stored overrides */
 	enum rte_iova_mode iova_mode ;    /**< Set IOVA mode on this system  */
 	rte_cpuset_t ctrl_cpuset;         /**< cpuset for ctrl threads */
 	volatile unsigned int init_complete;

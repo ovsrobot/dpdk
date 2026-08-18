@@ -37,6 +37,7 @@ eal_dynmem_memseg_lists_init(void)
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* no-huge does not need this at all */
 	if (user_cfg->no_hugetlbfs)
@@ -109,7 +110,7 @@ eal_dynmem_memseg_lists_init(void)
 
 		pagesz = type->page_sz;
 		max_mem_per_type =
-			internal_conf->hugepage_mem_sz_limits[type->hpi_idx];
+			runtime_state->hugepage_mem_sz_limits[type->hpi_idx];
 
 		/*
 		 * we need to create a segment list for this type. we must take

@@ -510,6 +510,7 @@ void
 eal_reset_internal_config(struct internal_config *internal_cfg)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	int i;
 
 	user_cfg->memory = 0;
@@ -521,6 +522,12 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	user_cfg->force_numa_limits = false;
 	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
 		user_cfg->numa_limit[i] = 0;
+	for (i = 0; i < MAX_HUGEPAGE_SIZES; i++) {
+		runtime_state->hugepage_mem_sz_limits[i] = 0;
+		user_cfg->pagesz_mem_overrides[i].pagesz = 0;
+		user_cfg->pagesz_mem_overrides[i].limit = 0;
+	}
+	user_cfg->num_pagesz_mem_overrides = 0;
 	user_cfg->process_type = RTE_PROC_PRIMARY;
 	user_cfg->no_hugetlbfs = false;
 	user_cfg->no_pci = false;
@@ -533,11 +540,7 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 		memset(&internal_cfg->hugepage_info[i], 0,
 				sizeof(internal_cfg->hugepage_info[0]));
 		internal_cfg->hugepage_info[i].lock_descriptor = -1;
-		internal_cfg->hugepage_mem_sz_limits[i] = 0;
-		internal_cfg->pagesz_mem_overrides[i].pagesz = 0;
-		internal_cfg->pagesz_mem_overrides[i].limit = 0;
 	}
-	internal_cfg->num_pagesz_mem_overrides = 0;
 	internal_cfg->base_virtaddr = 0;
 
 	/* if set to NONE, interrupt mode is determined automatically */
@@ -1904,7 +1907,7 @@ eal_parse_socket_arg(char *strval, volatile uint64_t *socket_arg)
 }
 
 static int
-eal_parse_pagesz_mem(char *strval, struct internal_config *internal_cfg)
+eal_parse_pagesz_mem(char *strval, struct eal_user_cfg *user_cfg)
 {
 	char strval_cpy[1024];
 	char *fields[3];
@@ -1965,8 +1968,8 @@ eal_parse_pagesz_mem(char *strval, struct internal_config *internal_cfg)
 		return -1;
 	}
 
-	for (i = 0; i < internal_cfg->num_pagesz_mem_overrides; i++) {
-		pmo = &internal_cfg->pagesz_mem_overrides[i];
+	for (i = 0; i < user_cfg->num_pagesz_mem_overrides; i++) {
+		pmo = &user_cfg->pagesz_mem_overrides[i];
 		if (pmo->pagesz != pagesz)
 			continue;
 
@@ -1978,17 +1981,17 @@ eal_parse_pagesz_mem(char *strval, struct internal_config *internal_cfg)
 	}
 
 	/* do we have space? */
-	if (internal_cfg->num_pagesz_mem_overrides >= MAX_HUGEPAGE_SIZES) {
+	if (user_cfg->num_pagesz_mem_overrides >= MAX_HUGEPAGE_SIZES) {
 		EAL_LOG(ERR,
 			"--pagesz-mem: too many page size entries (max %d)",
 			MAX_HUGEPAGE_SIZES);
 		return -1;
 	}
 
-	pmo = &internal_cfg->pagesz_mem_overrides[internal_cfg->num_pagesz_mem_overrides];
+	pmo = &user_cfg->pagesz_mem_overrides[user_cfg->num_pagesz_mem_overrides];
 	pmo->pagesz = pagesz;
 	pmo->limit = mem_limit;
-	internal_cfg->num_pagesz_mem_overrides++;
+	user_cfg->num_pagesz_mem_overrides++;
 
 	return 0;
 }
@@ -2325,7 +2328,7 @@ eal_parse_args(void)
 		user_cfg->force_numa_limits = true;
 	}
 	TAILQ_FOREACH(arg, &args.pagesz_mem, next) {
-		if (eal_parse_pagesz_mem(arg->arg, int_cfg) < 0) {
+		if (eal_parse_pagesz_mem(arg->arg, user_cfg) < 0) {
 			EAL_LOG(ERR, "invalid pagesz-mem parameter: '%s'", arg->arg);
 			return -1;
 		}
@@ -2522,6 +2525,8 @@ eal_adjust_config(struct internal_config *internal_cfg)
 int
 eal_apply_hugepage_mem_sz_limits(struct internal_config *internal_cfg)
 {
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	unsigned int i;
 
 	for (i = 0; i < internal_cfg->num_hugepage_sizes; i++) {
@@ -2534,12 +2539,12 @@ eal_apply_hugepage_mem_sz_limits(struct internal_config *internal_cfg)
 				(uint64_t)RTE_MAX_MEMSEG_PER_TYPE * pagesz);
 
 		/* override with user value for matching page size */
-		for (j = 0; j < (unsigned int)internal_cfg->num_pagesz_mem_overrides; j++) {
-			if (internal_cfg->pagesz_mem_overrides[j].pagesz == pagesz)
-				limit = internal_cfg->pagesz_mem_overrides[j].limit;
+		for (j = 0; j < user_cfg->num_pagesz_mem_overrides; j++) {
+			if (user_cfg->pagesz_mem_overrides[j].pagesz == pagesz)
+				limit = user_cfg->pagesz_mem_overrides[j].limit;
 		}
 
-		internal_cfg->hugepage_mem_sz_limits[i] = limit;
+		runtime_state->hugepage_mem_sz_limits[i] = limit;
 	}
 
 	return 0;
