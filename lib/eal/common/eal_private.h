@@ -18,21 +18,6 @@
 #include "eal_internal_cfg.h"
 
 /**
- * The global RTE configuration structure.
- */
-struct rte_config {
-	int _unused; /**< dummy field to prevent empty struct */
-};
-
-/**
- * Get the global configuration structure.
- *
- * @return
- *   A pointer to the global configuration structure.
- */
-struct rte_config *rte_eal_get_configuration(void);
-
-/**
  * Put the argument list into a structure.
  *
  * This allows the arguments to then be processed out-of-order.

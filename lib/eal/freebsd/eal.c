@@ -145,7 +145,7 @@ rte_eal_config_create(void)
 	rte_mem_cfg_addr = eal_get_virtual_area(rte_mem_cfg_addr,
 			&cfg_len_aligned, page_sz, 0, 0);
 	if (rte_mem_cfg_addr == NULL) {
-		EAL_LOG(ERR, "Cannot mmap memory for rte_config");
+		EAL_LOG(ERR, "Cannot mmap shared memory config");
 		close(mem_cfg_fd);
 		mem_cfg_fd = -1;
 		return -1;
@@ -156,7 +156,7 @@ rte_eal_config_create(void)
 			cfg_len_aligned, PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_FIXED, mem_cfg_fd, 0);
 	if (mapped_mem_cfg_addr == MAP_FAILED) {
-		EAL_LOG(ERR, "Cannot remap memory for rte_config: %s", strerror(errno));
+		EAL_LOG(ERR, "Cannot remap shared memory config: %s", strerror(errno));
 		munmap(rte_mem_cfg_addr, cfg_len);
 		close(mem_cfg_fd);
 		mem_cfg_fd = -1;
@@ -201,7 +201,7 @@ rte_eal_config_attach(void)
 	if (rte_mem_cfg_addr == MAP_FAILED) {
 		close(mem_cfg_fd);
 		mem_cfg_fd = -1;
-		EAL_LOG(ERR, "Cannot mmap memory for rte_config! error %i (%s)",
+		EAL_LOG(ERR, "Cannot mmap shared memory config! error %i (%s)",
 			errno, strerror(errno));
 		return -1;
 	}
@@ -239,12 +239,12 @@ rte_eal_config_reattach(void)
 
 	if (mem_config == MAP_FAILED || mem_config != rte_mem_cfg_addr) {
 		if (mem_config != MAP_FAILED) {
-			EAL_LOG(ERR, "Cannot mmap memory for rte_config at [%p], got [%p] - please use '--base-virtaddr' option",
+			EAL_LOG(ERR, "Cannot mmap shared memory config at [%p], got [%p] - please use '--base-virtaddr' option",
 					rte_mem_cfg_addr, mem_config);
 			munmap(mem_config, sizeof(struct rte_mem_config));
 			return -1;
 		}
-		EAL_LOG(ERR, "Cannot mmap memory for rte_config! error %i (%s)",
+		EAL_LOG(ERR, "Cannot mmap shared memory config! error %i (%s)",
 			errno, strerror(errno));
 		return -1;
 	}
@@ -280,9 +280,9 @@ eal_proc_type_detect(void)
 	return ptype;
 }
 
-/* Sets up rte_config structure with the pointer to shared memory config.*/
+/* Attaches to or creates the shared memory config for this process. */
 static int
-rte_config_init(void)
+eal_mem_config_init(void)
 {
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
@@ -485,7 +485,7 @@ rte_eal_init(int argc, char **argv)
 		goto err_out;
 	}
 
-	if (rte_config_init() < 0) {
+	if (eal_mem_config_init() < 0) {
 		rte_eal_init_alert("Cannot init config");
 		goto err_out;
 	}
@@ -564,7 +564,7 @@ rte_eal_init(int argc, char **argv)
 		rte_eal_iova_mode() == RTE_IOVA_PA ? "PA" : "VA");
 
 	if (!user_cfg->no_hugetlbfs) {
-		/* rte_config isn't initialized yet */
+		/* shared mem config not yet attached */
 		ret = user_cfg->process_type == RTE_PROC_PRIMARY ?
 			eal_hugepage_info_init() :
 			eal_hugepage_info_read();
