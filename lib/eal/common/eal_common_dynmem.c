@@ -36,9 +36,10 @@ eal_dynmem_memseg_lists_init(void)
 	void *mem_va_addr = NULL;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* no-huge does not need this at all */
-	if (internal_conf->no_hugetlbfs)
+	if (user_cfg->no_hugetlbfs)
 		return 0;
 
 	/*

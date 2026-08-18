@@ -536,7 +536,7 @@ rte_eal_init(int argc, char **argv)
 	 * If contigmem is inaccessible, rte_eal_hugepage_init() will fail
 	 * with a message describing the cause.
 	 */
-	has_phys_addr = internal_conf->no_hugetlbfs == 0;
+	has_phys_addr = !user_cfg->no_hugetlbfs;
 
 	/* Always call rte_bus_get_iommu_class() to trigger DMA mask detection and validation */
 	enum rte_iova_mode bus_iova_mode = rte_bus_get_iommu_class();
@@ -576,7 +576,7 @@ rte_eal_init(int argc, char **argv)
 	EAL_LOG(INFO, "Selected IOVA mode '%s'",
 		rte_eal_iova_mode() == RTE_IOVA_PA ? "PA" : "VA");
 
-	if (internal_conf->no_hugetlbfs == 0) {
+	if (!user_cfg->no_hugetlbfs) {
 		/* rte_config isn't initialized yet */
 		ret = internal_conf->process_type == RTE_PROC_PRIMARY ?
 			eal_hugepage_info_init() :
@@ -595,7 +595,7 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	if (user_cfg->memory == 0 && !user_cfg->force_numa) {
-		if (internal_conf->no_hugetlbfs)
+		if (user_cfg->no_hugetlbfs)
 			user_cfg->memory = MEMSIZE_IF_NO_HUGE_PAGE;
 		else
 			user_cfg->memory = eal_get_hugepage_mem_size();

@@ -3,6 +3,7 @@
  * Copyright(c) 2014 6WIND S.A.
  */
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -498,11 +499,10 @@ eal_option_device_parse(void)
 const char *
 eal_get_hugefile_prefix(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->hugefile_prefix != NULL)
-		return internal_conf->hugefile_prefix;
+	if (user_cfg->hugefile_prefix != NULL)
+		return user_cfg->hugefile_prefix;
 	return HUGEFILE_PREFIX_DEFAULT;
 }
 
@@ -521,10 +521,11 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	user_cfg->force_numa_limits = false;
 	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
 		user_cfg->numa_limit[i] = 0;
-	internal_cfg->hugefile_prefix = NULL;
-	internal_cfg->hugepage_dir = NULL;
-	internal_cfg->hugepage_file.unlink_before_mapping = false;
-	internal_cfg->hugepage_file.unlink_existing = true;
+	user_cfg->no_hugetlbfs = false;
+	user_cfg->hugefile_prefix = NULL;
+	user_cfg->hugepage_dir = NULL;
+	user_cfg->hugepage_file.unlink_before_mapping = false;
+	user_cfg->hugepage_file.unlink_existing = true;
 	/* zero out hugedir descriptors */
 	for (i = 0; i < MAX_HUGEPAGE_SIZES; i++) {
 		memset(&internal_cfg->hugepage_info[i], 0,
@@ -2251,7 +2252,7 @@ eal_parse_args(void)
 		user_cfg->force_nrank = (uint8_t)nrank;
 	}
 	if (args.no_huge) {
-		int_cfg->no_hugetlbfs = 1;
+		user_cfg->no_hugetlbfs = true;
 		/* no-huge is legacy mem */
 		int_cfg->legacy_mem = 1;
 	}
@@ -2259,7 +2260,7 @@ eal_parse_args(void)
 		int_cfg->in_memory = 1;
 		/* in-memory is a superset of noshconf and huge-unlink */
 		int_cfg->no_shconf = 1;
-		int_cfg->hugepage_file.unlink_before_mapping = true;
+		user_cfg->hugepage_file.unlink_before_mapping = true;
 	}
 	if (args.legacy_mem) {
 		int_cfg->legacy_mem = 1;
@@ -2273,9 +2274,9 @@ eal_parse_args(void)
 			EAL_LOG(ERR, "Invalid hugepage dir parameter");
 			return -1;
 		}
-		free(int_cfg->hugepage_dir);  /* free old hugepage dir */
-		int_cfg->hugepage_dir = strdup(args.huge_dir);
-		if (int_cfg->hugepage_dir == NULL) {
+		free(user_cfg->hugepage_dir);  /* free old hugepage dir */
+		user_cfg->hugepage_dir = strdup(args.huge_dir);
+		if (user_cfg->hugepage_dir == NULL) {
 			EAL_LOG(ERR, "failed to allocate memory for hugepage dir parameter");
 			return -1;
 		}
@@ -2289,9 +2290,9 @@ eal_parse_args(void)
 			EAL_LOG(ERR, "Invalid char, '%%', in file_prefix parameter");
 			return -1;
 		}
-		free(int_cfg->hugefile_prefix);  /* free old file prefix */
-		int_cfg->hugefile_prefix = strdup(args.file_prefix);
-		if (int_cfg->hugefile_prefix == NULL) {
+		free(user_cfg->hugefile_prefix);  /* free old file prefix */
+		user_cfg->hugefile_prefix = strdup(args.file_prefix);
+		if (user_cfg->hugefile_prefix == NULL) {
 			EAL_LOG(ERR, "failed to allocate memory for file prefix parameter");
 			return -1;
 		}
@@ -2299,7 +2300,7 @@ eal_parse_args(void)
 	if (args.huge_unlink != NULL) {
 		if (args.huge_unlink == (void *)1)
 			args.huge_unlink = NULL;
-		if (eal_parse_huge_unlink(args.huge_unlink, &int_cfg->hugepage_file) < 0) {
+		if (eal_parse_huge_unlink(args.huge_unlink, &user_cfg->hugepage_file) < 0) {
 			EAL_LOG(ERR, "invalid huge-unlink parameter");
 			return -1;
 		}
@@ -2487,8 +2488,8 @@ compute_ctrl_threads_cpuset(struct internal_config *internal_cfg)
 int
 eal_cleanup_config(struct internal_config *internal_cfg)
 {
-	free(internal_cfg->hugefile_prefix);
-	free(internal_cfg->hugepage_dir);
+	free(eal_get_user_configuration()->hugefile_prefix);
+	free(eal_get_user_configuration()->hugepage_dir);
 	free(internal_cfg->user_mbuf_pool_ops_name);
 
 	return 0;

@@ -739,7 +739,7 @@ rte_eal_init(int argc, char **argv)
 	EAL_LOG(INFO, "Selected IOVA mode '%s'",
 		rte_eal_iova_mode() == RTE_IOVA_PA ? "PA" : "VA");
 
-	if (internal_conf->no_hugetlbfs == 0) {
+	if (!user_cfg->no_hugetlbfs) {
 		/* rte_config isn't initialized yet */
 		ret = internal_conf->process_type == RTE_PROC_PRIMARY ?
 				eal_hugepage_info_init() :
@@ -758,7 +758,7 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	if (user_cfg->memory == 0 && !user_cfg->force_numa) {
-		if (internal_conf->no_hugetlbfs)
+		if (user_cfg->no_hugetlbfs)
 			user_cfg->memory = MEMSIZE_IF_NO_HUGE_PAGE;
 	}
 
@@ -980,9 +980,10 @@ rte_eal_cleanup(void)
 	 */
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
-			internal_conf->hugepage_file.unlink_existing)
+			user_cfg->hugepage_file.unlink_existing)
 		rte_memseg_walk(mark_freeable, NULL);
 
 	rte_service_finalize();

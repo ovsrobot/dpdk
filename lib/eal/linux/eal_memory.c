@@ -1148,7 +1148,7 @@ eal_legacy_hugepage_init(void)
 	mcfg = rte_eal_get_configuration()->mem_config;
 
 	/* hugetlbfs can be disabled */
-	if (internal_conf->no_hugetlbfs) {
+	if (user_cfg->no_hugetlbfs) {
 		void *prealloc_addr;
 		size_t mem_sz;
 		struct rte_memseg_list *msl;
@@ -1445,7 +1445,7 @@ eal_legacy_hugepage_init(void)
 	}
 
 	/* free the hugepage backing files */
-	if (internal_conf->hugepage_file.unlink_before_mapping &&
+	if (user_cfg->hugepage_file.unlink_before_mapping &&
 		unlink_hugepage_files(tmp_hp, internal_conf->num_hugepage_sizes) < 0) {
 		EAL_LOG(ERR, "Unlinking hugepage files failed!");
 		goto fail;
@@ -1707,7 +1707,7 @@ memseg_primary_init_32(void)
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* no-huge does not need this at all */
-	if (internal_conf->no_hugetlbfs)
+	if (user_cfg->no_hugetlbfs)
 		return 0;
 
 	/* this is a giant hack, but desperate times call for desperate

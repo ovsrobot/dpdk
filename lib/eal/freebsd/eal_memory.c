@@ -73,16 +73,16 @@ rte_eal_hugepage_init(void)
 	unsigned int i, j, seg_idx = 0;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* get pointer to global configuration */
 	mcfg = rte_eal_get_configuration()->mem_config;
 
 	/* for debug purposes, hugetlbfs can be disabled */
-	if (internal_conf->no_hugetlbfs) {
+	if (user_cfg->no_hugetlbfs) {
 		struct rte_memseg_list *msl;
 		uint64_t mem_sz, page_sz;
 		int n_segs;
-		const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 		/* create a memseg list */
 		msl = &mcfg->memsegs[0];
@@ -122,7 +122,7 @@ rte_eal_hugepage_init(void)
 		hpi = &internal_conf->hugepage_info[i];
 		page_sz = hpi->hugepage_sz;
 		max_pages = hpi->num_pages[0];
-		mem_needed = RTE_ALIGN_CEIL(eal_get_user_configuration()->memory - total_mem,
+		mem_needed = RTE_ALIGN_CEIL(user_cfg->memory - total_mem,
 				page_sz);
 
 		n_pages = RTE_MIN(mem_needed / page_sz, max_pages);
@@ -355,9 +355,10 @@ memseg_primary_init(void)
 	struct rte_memseg_list *msl;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* no-huge does not need this at all */
-	if (internal_conf->no_hugetlbfs)
+	if (user_cfg->no_hugetlbfs)
 		return 0;
 
 	/* FreeBSD has an issue where core dump will dump the entire memory

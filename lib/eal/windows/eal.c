@@ -225,12 +225,12 @@ rte_eal_init(int argc, char **argv)
 		internal_conf->no_shconf = 1;
 	}
 
-	if (!internal_conf->no_hugetlbfs && (eal_hugepage_info_init() < 0)) {
+	if (!user_cfg->no_hugetlbfs && (eal_hugepage_info_init() < 0)) {
 		rte_eal_init_alert("Cannot get hugepage information");
 		rte_errno = EACCES;
 		goto err_out;
 	}
-	if (!internal_conf->no_hugetlbfs &&
+	if (!user_cfg->no_hugetlbfs &&
 			eal_apply_hugepage_mem_sz_limits(internal_conf) < 0) {
 		rte_eal_init_alert("Cannot apply hugepage memory limits");
 		rte_errno = EINVAL;
@@ -238,7 +238,7 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	if (user_cfg->memory == 0 && !user_cfg->force_numa) {
-		if (internal_conf->no_hugetlbfs)
+		if (user_cfg->no_hugetlbfs)
 			user_cfg->memory = MEMSIZE_IF_NO_HUGE_PAGE;
 	}
 

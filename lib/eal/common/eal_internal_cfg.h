@@ -14,6 +14,7 @@
 #include <rte_os_shim.h>
 #include <rte_pci_dev_feature_defs.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "eal_thread.h"
 
@@ -59,6 +60,10 @@ struct eal_user_cfg {
 	uint8_t force_nrank;     /**< force number of ranks */
 	bool force_numa;         /**< true to request memory on specific NUMA nodes */
 	bool force_numa_limits;  /**< true to apply per-NUMA memory limits */
+	bool no_hugetlbfs;       /**< true to disable hugetlbfs */
+	struct hugepage_file_discipline hugepage_file;
+	char *hugefile_prefix;   /**< the base filename of hugetlbfs files */
+	char *hugepage_dir;      /**< specific hugetlbfs directory to use */
 	uint64_t numa_mem[RTE_MAX_NUMA_NODES];    /**< amount of memory per NUMA node */
 	uint64_t numa_limit[RTE_MAX_NUMA_NODES];  /**< limit amount of memory per NUMA node */
 };
@@ -84,8 +89,6 @@ struct eal_runtime_state {
  * internal configuration
  */
 struct internal_config {
-	volatile unsigned no_hugetlbfs;   /**< true to disable hugetlbfs */
-	struct hugepage_file_discipline hugepage_file;
 	volatile unsigned no_pci;         /**< true to disable PCI */
 	volatile unsigned no_hpet;        /**< true to disable HPET */
 	volatile unsigned vmware_tsc_map; /**< true to use VMware TSC mapping
@@ -112,8 +115,6 @@ struct internal_config {
 	volatile enum rte_intr_mode vfio_intr_mode;
 	/** the shared VF token for VFIO-PCI bound PF and VFs devices */
 	rte_uuid_t vfio_vf_token;
-	char *hugefile_prefix;      /**< the base filename of hugetlbfs files */
-	char *hugepage_dir;         /**< specific hugetlbfs directory to use */
 	char *user_mbuf_pool_ops_name;
 			/**< user defined mbuf pool ops name */
 	unsigned num_hugepage_sizes;      /**< how many sizes on this system */

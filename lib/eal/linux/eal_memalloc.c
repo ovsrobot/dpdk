@@ -268,6 +268,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	int ret;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (dirty != NULL)
 		*dirty = false;
@@ -306,7 +307,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 			__func__, path, strerror(errno));
 		return -1;
 	}
-	if (!internal_conf->hugepage_file.unlink_existing && ret == 0 &&
+	if (!user_cfg->hugepage_file.unlink_existing && ret == 0 &&
 			dirty != NULL)
 		*dirty = true;
 
@@ -323,7 +324,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	 * whether they will be dirty depends on the part that is mapped.
 	 */
 	if (!internal_conf->single_file_segments &&
-			internal_conf->hugepage_file.unlink_existing &&
+			user_cfg->hugepage_file.unlink_existing &&
 			rte_eal_process_type() == RTE_PROC_PRIMARY &&
 			ret == 0) {
 		/* coverity[toctou] */
@@ -376,8 +377,7 @@ static int
 resize_hugefile_in_filesystem(int fd, uint64_t fa_offset, uint64_t page_sz,
 		bool grow, bool *dirty)
 {
-	const struct internal_config *internal_conf =
-			eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	bool again = false;
 
 	do {
@@ -449,7 +449,7 @@ resize_hugefile_in_filesystem(int fd, uint64_t fa_offset, uint64_t page_sz,
 				 * dirty, unless the file is a fresh one.
 				 */
 				if (dirty != NULL)
-					*dirty &= !internal_conf->hugepage_file.unlink_existing;
+					*dirty &= !user_cfg->hugepage_file.unlink_existing;
 			}
 		}
 	} while (again);
@@ -517,6 +517,7 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	void *new_addr;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	alloc_sz = hi->hugepage_sz;
 
@@ -549,7 +550,7 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 			EAL_LOG(DEBUG, "%s(): ftruncate() failed: %s", __func__, strerror(errno));
 			goto resized;
 		}
-		if (internal_conf->hugepage_file.unlink_before_mapping &&
+		if (user_cfg->hugepage_file.unlink_before_mapping &&
 				!internal_conf->in_memory) {
 			if (unlink(path)) {
 				EAL_LOG(DEBUG, "%s(): unlink() failed: %s",
@@ -683,7 +684,7 @@ resized:
 			close_hugefile(fd, path, list_idx);
 	} else {
 		/* only remove file if we can take out a write lock */
-		if (!internal_conf->hugepage_file.unlink_before_mapping &&
+		if (!user_cfg->hugepage_file.unlink_before_mapping &&
 				internal_conf->in_memory == 0 &&
 				lock(fd, LOCK_EX) == 1)
 			unlink(path);
@@ -702,6 +703,7 @@ free_seg(struct rte_memseg *ms, struct hugepage_info *hi,
 	int fd, ret = 0;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* erase page data */
 	memset(ms->addr, 0, ms->len);
@@ -737,8 +739,8 @@ free_seg(struct rte_memseg *ms, struct hugepage_info *hi,
 		 * holding onto this page.
 		 */
 		if (!internal_conf->in_memory &&
-				internal_conf->hugepage_file.unlink_existing &&
-				!internal_conf->hugepage_file.unlink_before_mapping) {
+				user_cfg->hugepage_file.unlink_existing &&
+				!user_cfg->hugepage_file.unlink_before_mapping) {
 			ret = lock(fd, LOCK_EX);
 			if (ret >= 0) {
 				/* no one else is using this page */
@@ -1658,6 +1660,7 @@ eal_memalloc_init(void)
 {
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
 		/*  memory_hotplug_lock is held during initialization, so it's
@@ -1674,8 +1677,8 @@ eal_memalloc_init(void)
 			return -1;
 		}
 		/* safety net, should be impossible to configure */
-		if (internal_conf->hugepage_file.unlink_before_mapping &&
-				!internal_conf->hugepage_file.unlink_existing) {
+		if (user_cfg->hugepage_file.unlink_before_mapping &&
+				!user_cfg->hugepage_file.unlink_existing) {
 			EAL_LOG(ERR, "Unlinking existing hugepage files is prohibited, cannot unlink them before mapping.");
 			return -1;
 		}
