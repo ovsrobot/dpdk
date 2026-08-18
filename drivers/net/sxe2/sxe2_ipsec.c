@@ -254,6 +254,11 @@ static bool sxe2_security_valid_key(uint16_t src_key, uint16_t max_key,
 		goto l_end;
 	}
 
+	if (src_key > SXE2_IPSEC_MAX_KEY_LEN) {
+		is_valid = false;
+		goto l_end;
+	}
+
 	is_valid = true;
 
 l_end:
