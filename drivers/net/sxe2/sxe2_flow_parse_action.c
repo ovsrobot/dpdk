@@ -25,15 +25,21 @@ static int32_t sxe2_flow_check_rss_action_attr(const struct rte_flow_action_rss 
 		goto l_end;
 	}
 
-	if (rss->level > 2)
+	if (rss->level > 2) {
 		rte_flow_error_set(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ACTION, NULL,
 			"RSS  level is could not be greater than 2");
-	if (rss->key_len)
+		goto l_end;
+	}
+	if (rss->key_len) {
 		rte_flow_error_set(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ACTION, NULL,
 			"a nonzero RSS key_len is not supported");
-	if (rss->queue_num)
+		goto l_end;
+	}
+	if (rss->queue_num) {
 		rte_flow_error_set(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ACTION, NULL,
 			"a non-NULL RSS queue is not supported");
+		goto l_end;
+	}
 	ret = 0;
 l_end:
 	return ret;
@@ -953,7 +959,8 @@ static int32_t sxe2_flow_check_actions(struct rte_eth_dev *dev __rte_unused, str
 		}
 	}
 
-	if (engine_type == SXE2_FLOW_ENGINE_FNAV) {
+	if (engine_type == SXE2_FLOW_ENGINE_FNAV ||
+		engine_type == SXE2_FLOW_ENGINE_ACL) {
 		if (vsi_num) {
 			flow->action.q_region.q_index = 0;
 			flow->action.q_region.region = 7;
@@ -988,7 +995,8 @@ int32_t sxe2_flow_parse_action(struct rte_eth_dev *dev,
 		case RTE_FLOW_ACTION_TYPE_VOID:
 			break;
 		case RTE_FLOW_ACTION_TYPE_PASSTHRU:
-			if (engine_type == SXE2_FLOW_ENGINE_FNAV) {
+			if (engine_type == SXE2_FLOW_ENGINE_FNAV ||
+				engine_type == SXE2_FLOW_ENGINE_ACL) {
 				sxe2_set_bit(SXE2_FLOW_ACTION_PASSTHRU, flow->action.act_types);
 				action_num[SXE2_FLOW_ACTION_PASSTHRU]++;
 			} else {
