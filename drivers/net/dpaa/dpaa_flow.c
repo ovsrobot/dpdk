@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+#include <eal_export.h>
+#include <dpaa_mempool.h>
 #include <dpaa_ethdev.h>
 #include <dpaa_flow.h>
 #include <rte_dpaa_logs.h>
@@ -673,6 +675,22 @@ static inline int get_rx_port_type(struct fman_if *fif)
 	return e_FM_PORT_TYPE_DUMMY;
 }
 
+static inline int get_tx_port_type(struct fman_if *fif)
+{
+	if (fif->mac_type == fman_offline_internal ||
+			fif->mac_type == fman_onic)
+		return e_FM_PORT_TYPE_OH_OFFLINE_PARSING;
+	else if (fif->mac_type == fman_mac_1g)
+		return e_FM_PORT_TYPE_TX;
+	else if (fif->mac_type == fman_mac_2_5g)
+		return e_FM_PORT_TYPE_TX_2_5G;
+	else if (fif->mac_type == fman_mac_10g)
+		return e_FM_PORT_TYPE_TX_10G;
+
+	DPAA_PMD_ERR("MAC type unsupported");
+	return e_FM_PORT_TYPE_DUMMY;
+}
+
 static inline int set_fm_port_handle(struct dpaa_if *dpaa_intf,
 				     uint64_t req_dist_set,
 				     struct fman_if *fif)
@@ -1077,4 +1095,73 @@ int dpaa_port_vsp_cleanup(struct dpaa_if *dpaa_intf, struct fman_if *fif)
 	}
 
 	return E_OK;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_dpaa_port_set_rate_limit, 26.11)
+int rte_pmd_dpaa_port_set_rate_limit(uint16_t port_id, uint16_t burst,
+				     uint32_t rate)
+{
+	t_fm_port_rate_limit port_rate_limit;
+	t_fm_port_params fm_port_params;
+	void *handle;
+	int ret;
+	struct rte_eth_dev *dev;
+	struct dpaa_if *dpaa_intf;
+	struct fman_if *fif;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	/* Ensure the port is backed by the DPAA PMD before dereferencing
+	 * the DPAA-specific private data and process-private fman_if.
+	 */
+	if (!is_dpaa_supported(dev))
+		return -ENOTSUP;
+
+	dpaa_intf = dev->data->dev_private;
+	fif = dev->process_private;
+
+	memset(&port_rate_limit, 0, sizeof(port_rate_limit));
+	port_rate_limit.max_burst_size = burst;
+	port_rate_limit.rate_limit = rate;
+
+	DPAA_PMD_DEBUG("Setting Rate Limiter for port:%s  Max Burst =%u Max Rate =%u",
+		       dpaa_intf->name, burst, rate);
+
+	memset(&fm_port_params, 0, sizeof(fm_port_params));
+
+	fm_port_params.h_fm = fm_open(0);
+	if (!fm_port_params.h_fm) {
+		DPAA_PMD_ERR("fm_open failed for port %s", dpaa_intf->name);
+		return -ENODEV;
+	}
+	fm_port_params.port_type = get_tx_port_type(fif);
+	fm_port_params.port_id = mac_idx[fif->mac_idx];
+
+	/* FM PORT Open */
+	handle = fm_port_open(&fm_port_params);
+	fm_close(fm_port_params.h_fm);
+	if (!handle) {
+		DPAA_PMD_ERR("fm_port_open failed for port %s",
+			     dpaa_intf->name);
+		return -ENODEV;
+	}
+
+	if (burst == 0 || rate == 0)
+		ret = fm_port_delete_rate_limit(handle);
+	else
+		ret = fm_port_set_rate_limit(handle, &port_rate_limit);
+
+	if (ret) {
+		DPAA_PMD_ERR("Failed to set rate limit ret = %d", ret);
+		fm_port_close(handle);
+		return ret;
+	}
+
+	DPAA_PMD_DEBUG("Rate limit set successfully for port %s",
+		       dpaa_intf->name);
+
+	fm_port_close(handle);
+
+	return 0;
 }

@@ -1895,7 +1895,7 @@ is_device_supported(struct rte_eth_dev *dev, struct rte_dpaa_driver *drv)
 	return true;
 }
 
-static bool
+bool
 is_dpaa_supported(struct rte_eth_dev *dev)
 {
 	return is_device_supported(dev, &rte_dpaa_pmd);

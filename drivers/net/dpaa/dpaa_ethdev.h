@@ -282,6 +282,9 @@ dpaa_timesync_read_rx_timestamp(struct rte_eth_dev *dev,
 uint8_t
 fm_default_vsp_id(struct fman_if *fif);
 
+bool
+is_dpaa_supported(struct rte_eth_dev *dev);
+
 /* PMD related logs */
 extern int dpaa_logtype_pmd;
 #define RTE_LOGTYPE_DPAA_PMD dpaa_logtype_pmd
