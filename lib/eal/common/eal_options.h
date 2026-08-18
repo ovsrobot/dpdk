@@ -11,7 +11,7 @@ struct rte_tel_data;
 struct eal_user_cfg;
 
 int eal_parse_log_options(void);
-int eal_parse_args(void);
+int eal_parse_args(struct eal_user_cfg *user_cfg);
 int eal_option_device_parse(void);
 int eal_cleanup_config(void);
 int eal_plugins_init(void);

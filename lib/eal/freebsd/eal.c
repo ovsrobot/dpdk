@@ -389,20 +389,16 @@ static void rte_eal_init_alert(const char *msg)
 	EAL_LOG(ALERT, "%s", msg);
 }
 
+static int eal_runtime_init(const struct eal_user_cfg *user_provided_cfg);
+
 /* Launch threads, called at application init(). */
 RTE_EXPORT_SYMBOL(rte_eal_init)
 int
 rte_eal_init(int argc, char **argv)
 {
-	int i, fctret, ret;
 	static uint32_t run_once;
+	struct eal_user_cfg user_cfg_from_args = EAL_USER_CFG_INITIALIZER(user_cfg_from_args);
 	uint32_t has_run = 0;
-	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
-	char thread_name[RTE_THREAD_NAME_SIZE];
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
-	bool has_phys_addr;
-	enum rte_iova_mode iova_mode;
 
 	/*
 	 * platform_info is lazily initialized on first use, and that
@@ -427,7 +423,7 @@ rte_eal_init(int argc, char **argv)
 	/* Save and collate args at the top */
 	eal_save_args(argc, argv);
 
-	fctret = eal_collate_args(argc, argv);
+	int fctret = eal_collate_args(argc, argv);
 	if (fctret < 0) {
 		rte_eal_init_alert("invalid command-line arguments.");
 		rte_errno = EINVAL;
@@ -443,6 +439,39 @@ rte_eal_init(int argc, char **argv)
 
 	eal_log_init(getprogname());
 
+	if (eal_parse_args(&user_cfg_from_args) < 0) {
+		rte_eal_init_alert("Error parsing command-line arguments.");
+		rte_errno = EINVAL;
+		goto err_out;
+	}
+
+	if (eal_runtime_init(&user_cfg_from_args) < 0)
+		goto err_out;	/* log message and rte_errno set by eal_runtime_init() */
+
+	eal_user_cfg_cleanup(&user_cfg_from_args);
+	return fctret;
+
+err_out:
+	rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
+	eal_clean_saved_args();
+	eal_user_cfg_cleanup(&user_cfg_from_args);
+	return -1;
+}
+
+/**
+ * take a provided user config, copy it to the internal user config structure
+ * and then use it to initialize the DPDK runtime.
+ */
+static int
+eal_runtime_init(const struct eal_user_cfg *user_provided_cfg)
+{
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
+	char thread_name[RTE_THREAD_NAME_SIZE];
+	bool has_phys_addr;
+	enum rte_iova_mode iova_mode;
+	int i, ret;
+
 	/* checks if the machine is adequate */
 	if (!rte_cpu_is_supported()) {
 		rte_eal_init_alert("unsupported cpu type.");
@@ -457,8 +486,10 @@ rte_eal_init(int argc, char **argv)
 		goto err_out;
 	}
 
-	if (eal_parse_args() < 0) {
-		rte_eal_init_alert("Error parsing command-line arguments.");
+	/* Copy user-provided configuration to EAL global configuration */
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	if (eal_user_cfg_copy(user_cfg, user_provided_cfg) < 0) {
+		rte_eal_init_alert("Cannot copy user configuration.");
 		rte_errno = EINVAL;
 		goto err_out;
 	}
@@ -758,11 +789,10 @@ rte_eal_init(int argc, char **argv)
 
 	eal_mcfg_complete();
 
-	return fctret;
+	return 0;
+
 err_out:
-	rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
 	eal_cleanup_config();
-	eal_clean_saved_args();
 	return -1;
 }
 

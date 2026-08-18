@@ -426,9 +426,8 @@ eal_clean_saved_args(void)
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
 static int
-eal_option_device_add(enum rte_devtype type, const char *arg)
+eal_option_device_add(struct eal_user_cfg *user_cfg, enum rte_devtype type, const char *arg)
 {
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct device_option *devopt;
 	size_t arglen;
 	int ret;
@@ -483,9 +482,8 @@ eal_get_hugefile_prefix(void)
 }
 
 static int
-eal_plugin_path_add(const char *path)
+eal_plugin_path_add(struct eal_user_cfg *user_cfg, const char *path)
 {
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct eal_plugin_path *p;
 
 	p = malloc(sizeof(*p));
@@ -1021,11 +1019,10 @@ rte_eal_parse_coremask(const char *coremask, rte_cpuset_t *cpuset, bool limit_ra
 
 /* Changes the lcore id of the main thread */
 static int
-eal_parse_main_lcore(const char *arg)
+eal_parse_main_lcore(struct eal_user_cfg *user_cfg, const char *arg)
 {
 	char *parsing_end;
 	long main_lcore;
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	errno = 0;
 	main_lcore = strtol(arg, &parsing_end, 0);
@@ -1459,10 +1456,9 @@ eal_parse_proc_type(const char *arg)
 }
 
 static int
-eal_parse_iova_mode(const char *name)
+eal_parse_iova_mode(struct eal_user_cfg *user_cfg, const char *name)
 {
 	int mode;
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (name == NULL)
 		return -1;
@@ -1506,11 +1502,10 @@ eal_parse_simd_bitwidth(const char *arg)
 }
 
 static int
-eal_parse_base_virtaddr(const char *arg)
+eal_parse_base_virtaddr(struct eal_user_cfg *user_cfg, const char *arg)
 {
 	char *end;
 	uint64_t addr;
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	errno = 0;
 	addr = strtoull(arg, &end, 16);
@@ -1823,9 +1818,8 @@ eal_parse_pagesz_mem(char *strval, struct eal_user_cfg *user_cfg)
 }
 
 static int
-eal_parse_vfio_intr(const char *mode)
+eal_parse_vfio_intr(struct eal_user_cfg *user_cfg, const char *mode)
 {
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	static struct {
 		const char *name;
 		enum rte_intr_mode value;
@@ -1845,9 +1839,8 @@ eal_parse_vfio_intr(const char *mode)
 }
 
 static int
-eal_parse_vfio_vf_token(const char *vf_token)
+eal_parse_vfio_vf_token(struct eal_user_cfg *user_cfg, const char *vf_token)
 {
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	rte_uuid_t uuid;
 
 	if (!rte_uuid_parse(vf_token, uuid)) {
@@ -1859,13 +1852,13 @@ eal_parse_vfio_vf_token(const char *vf_token)
 }
 
 static int
-eal_parse_huge_worker_stack(const char *arg)
+eal_parse_huge_worker_stack(struct eal_user_cfg *user_cfg, const char *arg)
 {
 #ifdef RTE_EXEC_ENV_WINDOWS
 	EAL_LOG(WARNING, "Cannot set worker stack size on Windows, parameter ignored");
+	RTE_SET_USED(user_cfg);
 	RTE_SET_USED(arg);
 #else
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (arg == NULL || arg[0] == '\0') {
 		pthread_attr_t attr;
@@ -1902,10 +1895,8 @@ eal_parse_huge_worker_stack(const char *arg)
 
 /* Parse the arguments given in the command line of the application */
 int
-eal_parse_args(void)
+eal_parse_args(struct eal_user_cfg *user_cfg)
 {
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-
 	/*
 	 * Initialise user_cfg to defaults. Fields not listed here are zero,
 	 * false or NULL, which is the correct default (RTE_PROC_PRIMARY,
@@ -1939,17 +1930,17 @@ eal_parse_args(void)
 
 	/* device -a/-b/-vdev options*/
 	TAILQ_FOREACH(arg, &args.allow, next)
-		if (eal_option_device_add(RTE_DEVTYPE_ALLOWED, arg->arg) < 0)
+		if (eal_option_device_add(user_cfg, RTE_DEVTYPE_ALLOWED, arg->arg) < 0)
 			return -1;
 	TAILQ_FOREACH(arg, &args.block, next)
-		if (eal_option_device_add(RTE_DEVTYPE_BLOCKED, arg->arg) < 0)
+		if (eal_option_device_add(user_cfg, RTE_DEVTYPE_BLOCKED, arg->arg) < 0)
 			return -1;
 	TAILQ_FOREACH(arg, &args.vdev, next)
-		if (eal_option_device_add(RTE_DEVTYPE_VIRTUAL, arg->arg) < 0)
+		if (eal_option_device_add(user_cfg, RTE_DEVTYPE_VIRTUAL, arg->arg) < 0)
 			return -1;
 	/* driver loading options */
 	TAILQ_FOREACH(arg, &args.driver_path, next)
-		if (eal_plugin_path_add(arg->arg) < 0)
+		if (eal_plugin_path_add(user_cfg, arg->arg) < 0)
 			return -1;
 
 	if (remap_lcores && args.remap_lcore_ids != (void *)1) {
@@ -2039,7 +2030,7 @@ eal_parse_args(void)
 			return -1;
 		}
 	}
-	if (args.main_lcore != NULL && eal_parse_main_lcore(args.main_lcore) < 0)
+	if (args.main_lcore != NULL && eal_parse_main_lcore(user_cfg, args.main_lcore) < 0)
 		return -1;
 
 	/* memory options */
@@ -2242,13 +2233,13 @@ eal_parse_args(void)
 
 	/* other misc settings */
 	if (args.iova_mode != NULL) {
-		if (eal_parse_iova_mode(args.iova_mode) < 0) {
+		if (eal_parse_iova_mode(user_cfg, args.iova_mode) < 0) {
 			EAL_LOG(ERR, "invalid iova mode parameter '%s'", args.iova_mode);
 			return -1;
 		}
 	};
 	if (args.base_virtaddr != NULL) {
-		if (eal_parse_base_virtaddr(args.base_virtaddr) < 0) {
+		if (eal_parse_base_virtaddr(user_cfg, args.base_virtaddr) < 0) {
 			EAL_LOG(ERR, "invalid base virtaddr '%s'", args.base_virtaddr);
 			return -1;
 		}
@@ -2261,13 +2252,13 @@ eal_parse_args(void)
 		}
 	}
 	if (args.vfio_intr != NULL) {
-		if (eal_parse_vfio_intr(args.vfio_intr) < 0) {
+		if (eal_parse_vfio_intr(user_cfg, args.vfio_intr) < 0) {
 			EAL_LOG(ERR, "invalid vfio interrupt parameter: '%s'", args.vfio_intr);
 			return -1;
 		}
 	}
 	if (args.vfio_vf_token != NULL) {
-		if (eal_parse_vfio_vf_token(args.vfio_vf_token) < 0) {
+		if (eal_parse_vfio_vf_token(user_cfg, args.vfio_vf_token) < 0) {
 			EAL_LOG(ERR, "invalid vfio vf token parameter: '%s'", args.vfio_vf_token);
 			return -1;
 		}
@@ -2276,7 +2267,7 @@ eal_parse_args(void)
 	if (args.huge_worker_stack != NULL) {
 		if (args.huge_worker_stack == (void *)1)
 			args.huge_worker_stack = NULL;
-		if (eal_parse_huge_worker_stack(args.huge_worker_stack) < 0) {
+		if (eal_parse_huge_worker_stack(user_cfg, args.huge_worker_stack) < 0) {
 			EAL_LOG(ERR, "invalid huge worker stack parameter");
 			return -1;
 		}
@@ -2304,25 +2295,7 @@ eal_parse_args(void)
 int
 eal_cleanup_config(void)
 {
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct eal_trace_arg *ta;
-
-	/* free trace patterns list */
-	while (!STAILQ_EMPTY(&user_cfg->trace_patterns)) {
-		ta = STAILQ_FIRST(&user_cfg->trace_patterns);
-		STAILQ_REMOVE_HEAD(&user_cfg->trace_patterns, next);
-		free(ta->val);
-		free(ta);
-	}
-	free(user_cfg->trace_dir);
-	free(user_cfg->hugefile_prefix);
-	free(user_cfg->hugepage_dir);
-	free(user_cfg->user_mbuf_pool_ops_name);
-	for (unsigned int i = 0; i < RTE_MAX_LCORE; i++) {
-		free(user_cfg->lcore_cpusets[i]);
-		user_cfg->lcore_cpusets[i] = NULL;
-	}
-
+	eal_user_cfg_cleanup(eal_get_user_configuration());
 	return 0;
 }
 
