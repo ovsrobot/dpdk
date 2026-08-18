@@ -1276,6 +1276,9 @@ struct qman_cgr {
 	struct list_head node;
 };
 
+/* Maximum FQID value: frame queue IDs are 24 bits wide. */
+#define QMAN_MAX_FQID			0x00FFFFFFu
+
 /* Flags to qman_create_fq() */
 #define QMAN_FQ_FLAG_NO_ENQUEUE      0x00000001 /* can't enqueue */
 #define QMAN_FQ_FLAG_NO_MODIFY       0x00000002 /* can only enqueue */
@@ -1887,6 +1890,7 @@ static inline int qman_alloc_fqid(u32 *result)
  * This function can also be used to seed the allocator with ranges of FQIDs
  * that it can subsequently allocate from.
  */
+__rte_internal
 void qman_release_fqid_range(u32 fqid, unsigned int count);
 static inline void qman_release_fqid(u32 fqid)
 {
@@ -1906,6 +1910,12 @@ static inline int qman_shutdown_fq_by_fqid(u32 fqid)
 	fq.fqid = fqid;
 	return qman_shutdown_fq(&fq);
 }
+
+/**
+ * qman_pending_fq_by_cgrid - Finding fqs which are stil sttached to cgrid
+ */
+__rte_internal
+int qman_pending_fq_by_cgrid(u32 cgrid, u32 *fqid);
 
 /**
  * qman_reserve_fqid_range - Reserve the specified range of frame queue IDs
