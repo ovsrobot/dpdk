@@ -22,9 +22,6 @@
  */
 struct rte_config {
 	uint32_t main_lcore;         /**< Id of the main lcore */
-	uint32_t lcore_count;        /**< Number of available logical cores. */
-	uint32_t service_lcore_count;/**< Number of available service cores. */
-	enum rte_lcore_role_t lcore_role[RTE_MAX_LCORE]; /**< State of cores. */
 
 	/** Primary or secondary configuration */
 	enum rte_proc_type_t process_type;
