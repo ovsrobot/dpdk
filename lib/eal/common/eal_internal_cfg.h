@@ -94,10 +94,22 @@ struct eal_user_cfg {
 };
 
 /**
- * Discovered information about cores, memory, etc. on the system.
- * Immutable after initialization, so no need for atomic types or locks.
+ * Hardware facts about a single physical CPU, populated during CPU discovery.
+ * Indexed by physical CPU ID (not DPDK lcore ID).
+ */
+struct eal_cpu_info {
+	bool detected;         /**< true if this CPU ID is valid and visible to the OS */
+	unsigned int numa_id;  /**< NUMA node this CPU belongs to */
+	unsigned int core_id;  /**< physical core number on its NUMA node */
+};
+
+/**
+ * Discovered information about the system hardware.
+ * Immutable after discovery.
  */
 struct eal_platform_info {
+	size_t cpu_count;                /**< number of entries in cpu_info[] */
+	struct eal_cpu_info *cpu_info;   /**< per-physical-CPU hardware facts */
 	uint8_t num_hugepage_sizes;      /**< how many sizes on this system */
 	struct hugepage_info hugepage_info[MAX_HUGEPAGE_SIZES];
 };

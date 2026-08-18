@@ -405,6 +405,14 @@ unsigned eal_cpu_core_id(unsigned lcore_id);
 int eal_cpu_detected(unsigned lcore_id);
 
 /**
+ * Get the number of CPU IDs to allocate for platform CPU info.
+ * Returns max_cpu_id + 1: all valid CPU IDs are in [0, eal_cpu_max()).
+ *
+ * This function is private to the EAL.
+ */
+size_t eal_cpu_max(void);
+
+/**
  * Set TSC frequency from precise value or estimation
  *
  * This function is private to the EAL.

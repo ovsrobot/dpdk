@@ -153,6 +153,7 @@ rte_eal_cpu_init(void)
 {
 	/* pointer to global configuration */
 	struct rte_config *config = rte_eal_get_configuration();
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 	unsigned lcore_id;
 	unsigned count = 0;
 	unsigned int socket_id, prev_socket_id;
@@ -161,6 +162,24 @@ rte_eal_cpu_init(void)
 #else
 	int lcore_to_socket_id[RTE_MAX_LCORE] = {0};
 #endif
+
+	/* allocate cpu_info for all CPUs visible to the OS */
+	platform_info->cpu_count = eal_cpu_max();
+	platform_info->cpu_info = calloc(platform_info->cpu_count,
+			sizeof(*platform_info->cpu_info));
+	if (platform_info->cpu_info == NULL) {
+		EAL_LOG(ERR, "Cannot allocate cpu_info array");
+		return -1;
+	}
+
+	/* populate cpu_info with hardware topology for all detected CPUs */
+	for (size_t cpu_id = 0; cpu_id < platform_info->cpu_count; cpu_id++) {
+		if (eal_cpu_detected(cpu_id) == 0)
+			continue;
+		platform_info->cpu_info[cpu_id].detected = true;
+		platform_info->cpu_info[cpu_id].numa_id = eal_cpu_socket_id(cpu_id);
+		platform_info->cpu_info[cpu_id].core_id = eal_cpu_core_id(cpu_id);
+	}
 
 	/*
 	 * Parse the maximum set of logical cores, detect the subset of running

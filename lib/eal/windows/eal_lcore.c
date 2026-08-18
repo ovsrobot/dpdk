@@ -273,6 +273,12 @@ eal_cpu_core_id(unsigned int lcore_id)
 	return cpu_map.lcores[lcore_id].core_id;
 }
 
+size_t
+eal_cpu_max(void)
+{
+	return (size_t)cpu_map.lcore_count;
+}
+
 unsigned int
 eal_socket_numa_node(unsigned int socket_id)
 {
