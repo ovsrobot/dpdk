@@ -2079,7 +2079,6 @@ int
 eal_parse_args(void)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	bool remap_lcores = (args.remap_lcore_ids != NULL);
 	struct arg_list_elem *arg;
 	uint16_t lcore_id_base = 0;
@@ -2206,17 +2205,6 @@ eal_parse_args(void)
 	user_cfg->main_lcore = -1;
 	if (args.main_lcore != NULL && eal_parse_main_lcore(args.main_lcore) < 0)
 		return -1;
-
-	if (user_cfg->main_lcore != -1) {
-		runtime_state->main_lcore = user_cfg->main_lcore;
-	} else {
-		/* default main lcore is the first one */
-		runtime_state->main_lcore = rte_get_next_lcore(-1, 0, 0);
-		if (runtime_state->main_lcore >= RTE_MAX_LCORE) {
-			EAL_LOG(ERR, "Main lcore is not enabled for DPDK");
-			return -1;
-		}
-	}
 
 	/* memory options */
 	if (args.memory_size != NULL) {
@@ -2442,23 +2430,11 @@ eal_parse_args(void)
 		}
 	}
 
-#ifndef RTE_EXEC_ENV_WINDOWS
-	/* create runtime data directory. In no_shconf mode, skip any errors */
-	if (eal_create_runtime_dir() < 0) {
-		if (!user_cfg->no_shconf) {
-			EAL_LOG(ERR, "Cannot create runtime directory");
-			return -1;
-		}
-		EAL_LOG(WARNING, "No DPDK runtime directory created");
-	}
-#endif
+	/* sum per-NUMA memory requests into user_cfg->memory */
+	for (int i = 0; i < RTE_MAX_NUMA_NODES; i++)
+		user_cfg->memory += user_cfg->numa_mem[i];
 
-	if (eal_adjust_config() != 0) {
-		EAL_LOG(ERR, "Invalid configuration");
-		return -1;
-	}
-
-	return 0;
+	return eal_apply_runtime_state();
 }
 
 static void
@@ -2506,20 +2482,38 @@ eal_cleanup_config(const struct eal_user_cfg *user_cfg)
 }
 
 int
-eal_adjust_config(void)
+eal_apply_runtime_state(void)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	int i;
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
-	if (user_cfg->process_type == RTE_PROC_AUTO)
-		user_cfg->process_type = eal_proc_type_detect();
+	/* set the main lcore */
+	if (user_cfg->main_lcore != -1) {
+		runtime_state->main_lcore = user_cfg->main_lcore;
+	} else {
+		/* default main lcore is the first one */
+		runtime_state->main_lcore = rte_get_next_lcore(-1, 0, 0);
+		if (runtime_state->main_lcore >= RTE_MAX_LCORE) {
+			EAL_LOG(ERR, "Main lcore is not enabled for DPDK");
+			return -1;
+		}
+	}
+
+#ifndef RTE_EXEC_ENV_WINDOWS
+	/* create runtime data directory. In no_shconf mode, skip any errors */
+	if (eal_create_runtime_dir() < 0) {
+		if (!user_cfg->no_shconf) {
+			EAL_LOG(ERR, "Cannot create runtime directory");
+			return -1;
+		}
+		EAL_LOG(WARNING, "No DPDK runtime directory created");
+	}
+#endif
+
+	runtime_state->process_type = (user_cfg->process_type == RTE_PROC_AUTO) ?
+			eal_proc_type_detect() : user_cfg->process_type;
 
 	compute_ctrl_threads_cpuset();
-
-	/* if no memory amounts were requested, this will result in 0 and
-	 * will be overridden later, right after eal_hugepage_info_init() */
-	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		user_cfg->memory += user_cfg->numa_mem[i];
 
 	return 0;
 }

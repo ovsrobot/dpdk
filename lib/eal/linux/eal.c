@@ -369,9 +369,6 @@ static int
 eal_mem_config_init(void)
 {
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
-	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-
-	runtime_state->process_type = user_cfg->process_type;
 
 	switch (runtime_state->process_type) {
 	case RTE_PROC_PRIMARY:
@@ -729,7 +726,7 @@ rte_eal_init(int argc, char **argv)
 
 	if (!user_cfg->no_hugetlbfs) {
 		/* shared mem config not yet attached */
-		ret = user_cfg->process_type == RTE_PROC_PRIMARY ?
+		ret = rte_eal_process_type() == RTE_PROC_PRIMARY ?
 				eal_hugepage_info_init() :
 				eal_hugepage_info_read();
 		if (ret < 0) {
@@ -737,7 +734,7 @@ rte_eal_init(int argc, char **argv)
 			rte_errno = EACCES;
 			goto err_out;
 		}
-		if (user_cfg->process_type == RTE_PROC_PRIMARY &&
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
 				eal_apply_hugepage_mem_sz_limits() < 0) {
 			rte_eal_init_alert("Cannot apply hugepage memory limits.");
 			rte_errno = EINVAL;
