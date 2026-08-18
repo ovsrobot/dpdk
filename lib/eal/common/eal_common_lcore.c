@@ -89,7 +89,7 @@ rte_eal_lcore_role(unsigned int lcore_id)
 
 	if (lcore_id >= RTE_MAX_LCORE)
 		return ROLE_OFF;
-	return runtime_state->lcore_role[lcore_id];
+	return runtime_state->lcore_cfg[lcore_id].role;
 }
 
 RTE_EXPORT_SYMBOL(rte_lcore_has_role)
@@ -101,7 +101,7 @@ rte_lcore_has_role(unsigned int lcore_id, enum rte_lcore_role_t role)
 	if (lcore_id >= RTE_MAX_LCORE)
 		return 0;
 
-	return runtime_state->lcore_role[lcore_id] == role;
+	return runtime_state->lcore_cfg[lcore_id].role == role;
 }
 
 RTE_EXPORT_SYMBOL(rte_lcore_is_enabled)
@@ -111,7 +111,7 @@ int rte_lcore_is_enabled(unsigned int lcore_id)
 
 	if (lcore_id >= RTE_MAX_LCORE)
 		return 0;
-	return runtime_state->lcore_role[lcore_id] == ROLE_RTE;
+	return runtime_state->lcore_cfg[lcore_id].role == ROLE_RTE;
 }
 
 RTE_EXPORT_SYMBOL(rte_get_next_lcore)
@@ -339,7 +339,7 @@ rte_lcore_callback_register(const char *name, rte_lcore_init_cb init,
 	if (callback->init == NULL)
 		goto no_init;
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		if (runtime_state->lcore_role[lcore_id] == ROLE_OFF)
+		if (runtime_state->lcore_cfg[lcore_id].role == ROLE_OFF)
 			continue;
 		if (callback_init(callback, lcore_id) == 0)
 			continue;
@@ -347,7 +347,7 @@ rte_lcore_callback_register(const char *name, rte_lcore_init_cb init,
 		 * previous lcore.
 		 */
 		while (lcore_id-- != 0) {
-			if (runtime_state->lcore_role[lcore_id] == ROLE_OFF)
+			if (runtime_state->lcore_cfg[lcore_id].role == ROLE_OFF)
 				continue;
 			callback_uninit(callback, lcore_id);
 		}
@@ -379,7 +379,7 @@ rte_lcore_callback_unregister(void *handle)
 	if (callback->uninit == NULL)
 		goto no_uninit;
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		if (runtime_state->lcore_role[lcore_id] == ROLE_OFF)
+		if (runtime_state->lcore_cfg[lcore_id].role == ROLE_OFF)
 			continue;
 		callback_uninit(callback, lcore_id);
 	}
@@ -408,11 +408,11 @@ eal_lcore_non_eal_allocate(void)
 		goto out;
 	}
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		if (runtime_state->lcore_role[lcore_id] != ROLE_OFF)
+		if (runtime_state->lcore_cfg[lcore_id].role != ROLE_OFF)
 			continue;
 		rte_bitset_set(runtime_state->core_indices, core_index);
 		runtime_state->lcore_cfg[lcore_id].core_index = core_index;
-		runtime_state->lcore_role[lcore_id] = ROLE_NON_EAL;
+		runtime_state->lcore_cfg[lcore_id].role = ROLE_NON_EAL;
 		runtime_state->lcore_count++;
 		break;
 	}
@@ -436,7 +436,7 @@ eal_lcore_non_eal_allocate(void)
 		rte_bitset_clear(runtime_state->core_indices,
 				runtime_state->lcore_cfg[lcore_id].core_index);
 		runtime_state->lcore_cfg[lcore_id].core_index = -1;
-		runtime_state->lcore_role[lcore_id] = ROLE_OFF;
+		runtime_state->lcore_cfg[lcore_id].role = ROLE_OFF;
 		runtime_state->lcore_count--;
 		lcore_id = RTE_MAX_LCORE;
 		goto out;
@@ -453,14 +453,14 @@ eal_lcore_non_eal_release(unsigned int lcore_id)
 	struct lcore_callback *callback;
 
 	rte_rwlock_write_lock(&lcore_lock);
-	if (runtime_state->lcore_role[lcore_id] != ROLE_NON_EAL)
+	if (runtime_state->lcore_cfg[lcore_id].role != ROLE_NON_EAL)
 		goto out;
 	TAILQ_FOREACH(callback, &lcore_callbacks, next)
 		callback_uninit(callback, lcore_id);
 	rte_bitset_clear(runtime_state->core_indices,
 			runtime_state->lcore_cfg[lcore_id].core_index);
 	runtime_state->lcore_cfg[lcore_id].core_index = -1;
-	runtime_state->lcore_role[lcore_id] = ROLE_OFF;
+	runtime_state->lcore_cfg[lcore_id].role = ROLE_OFF;
 	runtime_state->lcore_count--;
 out:
 	rte_rwlock_write_unlock(&lcore_lock);
@@ -476,7 +476,7 @@ rte_lcore_iterate(rte_lcore_iterate_cb cb, void *arg)
 
 	rte_rwlock_read_lock(&lcore_lock);
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		if (runtime_state->lcore_role[lcore_id] == ROLE_OFF)
+		if (runtime_state->lcore_cfg[lcore_id].role == ROLE_OFF)
 			continue;
 		ret = cb(lcore_id, arg);
 		if (ret != 0)
@@ -541,7 +541,7 @@ lcore_dump_cb(unsigned int lcore_id, void *arg)
 	cpuset = eal_cpuset_to_str(&runtime_state->lcore_cfg[lcore_id].cpuset);
 	fprintf(f, "lcore %u, socket %u, role %s, cpuset %s\n", lcore_id,
 		rte_lcore_to_socket_id(lcore_id),
-		lcore_role_str(runtime_state->lcore_role[lcore_id]),
+		lcore_role_str(runtime_state->lcore_cfg[lcore_id].role),
 		cpuset != NULL ? cpuset : "<unknown>");
 	free(cpuset);
 	free(usage_str);
@@ -608,7 +608,7 @@ lcore_telemetry_info_cb(unsigned int lcore_id, void *arg)
 	rte_tel_data_add_dict_int(info->d, "lcore_id", lcore_id);
 	rte_tel_data_add_dict_int(info->d, "socket", rte_lcore_to_socket_id(lcore_id));
 	rte_tel_data_add_dict_string(info->d, "role",
-			lcore_role_str(runtime_state->lcore_role[lcore_id]));
+			lcore_role_str(runtime_state->lcore_cfg[lcore_id].role));
 	cpuset = rte_tel_data_alloc();
 	if (cpuset == NULL)
 		return -ENOMEM;

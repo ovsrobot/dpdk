@@ -123,6 +123,7 @@ struct eal_platform_info {
  */
 struct lcore_cfg {
 	int core_index;                   /**< relative index, starting from 0 */
+	enum rte_lcore_role_t role;       /**< role assigned to this lcore */
 	rte_cpuset_t cpuset;              /**< cpu set which the lcore affinity to */
 	uint16_t first_cpu;               /**< lowest CPU set in cpuset, UINT16_MAX if none */
 	/* Fields for executing code on a remote lcore */
@@ -147,7 +148,6 @@ struct eal_runtime_state {
 	volatile unsigned int init_complete;
 	/**< indicates whether EAL has completed initialization */
 	uint32_t lcore_count;         /**< Number of active lcore IDs (role != ROLE_OFF). */
-	enum rte_lcore_role_t lcore_role[RTE_MAX_LCORE]; /**< State of cores. */
 	struct lcore_cfg lcore_cfg[RTE_MAX_LCORE];
 	RTE_BITSET_DECLARE(core_indices, RTE_MAX_LCORE); /**< currently allocated core_indices */
 };

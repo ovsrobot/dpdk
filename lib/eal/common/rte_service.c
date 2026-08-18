@@ -108,7 +108,7 @@ rte_service_init(void)
 	const struct rte_config *cfg = rte_eal_get_configuration();
 	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		if (runtime_state->lcore_role[i] == ROLE_SERVICE) {
+		if (runtime_state->lcore_cfg[i].role == ROLE_SERVICE) {
 			if ((unsigned int)i == cfg->main_lcore)
 				continue;
 			rte_service_lcore_add(i);
@@ -712,7 +712,7 @@ set_lcore_state(uint32_t lcore, int32_t state)
 {
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct core_state *cs =	RTE_LCORE_VAR_LCORE(lcore, lcore_states);
-	runtime_state->lcore_role[lcore] = state;
+	runtime_state->lcore_cfg[lcore].role = state;
 
 	/* update per-lcore optimized state tracking */
 	cs->is_service_core = (state == ROLE_SERVICE);
@@ -1124,7 +1124,7 @@ rte_service_dump(FILE *f, uint32_t id)
 
 	fprintf(f, "Service Cores Summary\n");
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		if (runtime_state->lcore_role[i] != ROLE_SERVICE)
+		if (runtime_state->lcore_cfg[i].role != ROLE_SERVICE)
 			continue;
 
 		service_dump_calls_per_lcore(f, i);
