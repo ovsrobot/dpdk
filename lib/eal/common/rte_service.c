@@ -105,11 +105,10 @@ rte_service_init(void)
 		RTE_LCORE_VAR_ALLOC(lcore_states);
 
 	int i;
-	const struct rte_config *cfg = rte_eal_get_configuration();
 	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
 		if (runtime_state->lcore_cfg[i].role == ROLE_SERVICE) {
-			if ((unsigned int)i == cfg->main_lcore)
+			if ((unsigned int)i == runtime_state->main_lcore)
 				continue;
 			rte_service_lcore_add(i);
 		}

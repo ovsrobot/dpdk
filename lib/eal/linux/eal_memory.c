@@ -1762,7 +1762,6 @@ memseg_primary_init_32(void)
 		int hp_sizes = (int) platform_info->num_hugepage_sizes;
 		uint64_t max_socket_mem, cur_socket_mem;
 		unsigned int main_lcore_socket;
-		struct rte_config *cfg = rte_eal_get_configuration();
 		bool skip;
 		int ret;
 
@@ -1785,7 +1784,7 @@ memseg_primary_init_32(void)
 		/* ...or if we didn't specifically request memory on *any*
 		 * socket, and this is not main lcore
 		 */
-		main_lcore_socket = rte_lcore_to_socket_id(cfg->main_lcore);
+		main_lcore_socket = rte_lcore_to_socket_id(rte_get_main_lcore());
 		skip |= active_sockets == 0 && socket_id != main_lcore_socket;
 
 		if (skip) {

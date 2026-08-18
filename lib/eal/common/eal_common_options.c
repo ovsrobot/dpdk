@@ -1194,23 +1194,24 @@ static int
 eal_parse_main_lcore(const char *arg)
 {
 	char *parsing_end;
-	struct rte_config *cfg = rte_eal_get_configuration();
-	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	long main_lcore;
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	errno = 0;
-	cfg->main_lcore = (uint32_t) strtol(arg, &parsing_end, 0);
-	if (errno || parsing_end[0] != 0)
+	main_lcore = strtol(arg, &parsing_end, 0);
+	if (errno || parsing_end[0] != 0 || main_lcore < 0 ||
+			main_lcore >= RTE_MAX_LCORE)
 		return -1;
-	if (cfg->main_lcore >= RTE_MAX_LCORE)
-		return -1;
+	user_cfg->main_lcore = (int)main_lcore;
 
 	/* ensure main core is not used as service core */
-	if (runtime_state->lcore_cfg[cfg->main_lcore].role == ROLE_SERVICE) {
+	if (runtime_state->lcore_cfg[user_cfg->main_lcore].role == ROLE_SERVICE) {
 		EAL_LOG(ERR, "Error: Main lcore is used as a service core");
 		return -1;
 	}
 	/* check that we have the core recorded in the core list */
-	if (runtime_state->lcore_cfg[cfg->main_lcore].role != ROLE_RTE) {
+	if (runtime_state->lcore_cfg[user_cfg->main_lcore].role != ROLE_RTE) {
 		EAL_LOG(ERR, "Error: Main lcore is not enabled for DPDK");
 		return -1;
 	}
@@ -2078,7 +2079,7 @@ int
 eal_parse_args(void)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct rte_config *rte_cfg = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	bool remap_lcores = (args.remap_lcore_ids != NULL);
 	struct arg_list_elem *arg;
 	uint16_t lcore_id_base = 0;
@@ -2202,13 +2203,16 @@ eal_parse_args(void)
 			return -1;
 		}
 	}
-	if (args.main_lcore != NULL) {
-		if (eal_parse_main_lcore(args.main_lcore) < 0)
-			return -1;
+	user_cfg->main_lcore = -1;
+	if (args.main_lcore != NULL && eal_parse_main_lcore(args.main_lcore) < 0)
+		return -1;
+
+	if (user_cfg->main_lcore != -1) {
+		runtime_state->main_lcore = user_cfg->main_lcore;
 	} else {
 		/* default main lcore is the first one */
-		rte_cfg->main_lcore = rte_get_next_lcore(-1, 0, 0);
-		if (rte_cfg->main_lcore >= RTE_MAX_LCORE) {
+		runtime_state->main_lcore = rte_get_next_lcore(-1, 0, 0);
+		if (runtime_state->main_lcore >= RTE_MAX_LCORE) {
 			EAL_LOG(ERR, "Main lcore is not enabled for DPDK");
 			return -1;
 		}

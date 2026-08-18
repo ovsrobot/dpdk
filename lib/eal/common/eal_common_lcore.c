@@ -23,7 +23,7 @@
 RTE_EXPORT_SYMBOL(rte_get_main_lcore)
 unsigned int rte_get_main_lcore(void)
 {
-	return rte_eal_get_configuration()->main_lcore;
+	return eal_get_runtime_state()->main_lcore;
 }
 
 RTE_EXPORT_SYMBOL(rte_lcore_count)

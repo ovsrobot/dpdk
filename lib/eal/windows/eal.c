@@ -154,7 +154,6 @@ int
 rte_eal_init(int argc, char **argv)
 {
 	int i, fctret, bscan;
-	const struct rte_config *config = rte_eal_get_configuration();
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	bool has_phys_addr;
@@ -346,17 +345,17 @@ rte_eal_init(int argc, char **argv)
 	eal_rand_init();
 
 	if (rte_thread_set_affinity_by_id(rte_thread_self(),
-			&runtime_state->lcore_cfg[config->main_lcore].cpuset) != 0) {
+			&runtime_state->lcore_cfg[rte_get_main_lcore()].cpuset) != 0) {
 		rte_eal_init_alert("Cannot set affinity");
 		rte_errno = EINVAL;
 		goto err_out;
 	}
-	__rte_thread_init(config->main_lcore,
-		&runtime_state->lcore_cfg[config->main_lcore].cpuset);
+	__rte_thread_init(rte_get_main_lcore(),
+		&runtime_state->lcore_cfg[rte_get_main_lcore()].cpuset);
 
 	ret = eal_thread_dump_current_affinity(cpuset, sizeof(cpuset));
 	EAL_LOG(DEBUG, "Main lcore %u is ready (tid=%zx;cpuset=[%s%s])",
-		config->main_lcore, rte_thread_self().opaque_id, cpuset,
+		rte_get_main_lcore(), rte_thread_self().opaque_id, cpuset,
 		ret == 0 ? "" : "...");
 
 	RTE_LCORE_FOREACH_WORKER(i) {
