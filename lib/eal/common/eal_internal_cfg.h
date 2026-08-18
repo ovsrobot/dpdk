@@ -56,11 +56,19 @@ struct hugepage_file_discipline {
  */
 struct eal_user_cfg {
 	size_t memory;           /**< amount of asked memory */
+	enum rte_proc_type_t process_type; /**< requested process type */
 	uint8_t force_nchannel;  /**< force number of channels */
 	uint8_t force_nrank;     /**< force number of ranks */
 	bool force_numa;         /**< true to request memory on specific NUMA nodes */
 	bool force_numa_limits;  /**< true to apply per-NUMA memory limits */
 	bool no_hugetlbfs;       /**< true to disable hugetlbfs */
+	bool no_pci;             /**< true to disable PCI */
+	bool no_hpet;            /**< true to disable HPET */
+	bool vmware_tsc_map;     /**< true to use VMware TSC mapping */
+	bool no_shconf;          /**< true if there is no shared config */
+	bool in_memory;          /**< true to run with no shared runtime files */
+	bool create_uio_dev;     /**< true to create /dev/uioX devices */
+	bool no_telemetry;       /**< true to disable telemetry */
 	struct hugepage_file_discipline hugepage_file;
 	char *hugefile_prefix;   /**< the base filename of hugetlbfs files */
 	char *hugepage_dir;      /**< specific hugetlbfs directory to use */
@@ -89,17 +97,6 @@ struct eal_runtime_state {
  * internal configuration
  */
 struct internal_config {
-	volatile unsigned no_pci;         /**< true to disable PCI */
-	volatile unsigned no_hpet;        /**< true to disable HPET */
-	volatile unsigned vmware_tsc_map; /**< true to use VMware TSC mapping
-										* instead of native TSC */
-	volatile unsigned no_shconf;      /**< true if there is no shared config */
-	volatile unsigned in_memory;
-	/**< true if DPDK should operate entirely in-memory and not create any
-	 * shared files or runtime data.
-	 */
-	volatile unsigned create_uio_dev; /**< true to create /dev/uioX devices */
-	volatile enum rte_proc_type_t process_type; /**< multi-process proc type */
 	uintptr_t base_virtaddr;          /**< base address to try and reserve memory from */
 	volatile unsigned legacy_mem;
 	/**< true to enable legacy memory behavior (no dynamic allocation,
@@ -131,7 +128,6 @@ struct internal_config {
 	rte_cpuset_t ctrl_cpuset;         /**< cpuset for ctrl threads */
 	volatile unsigned int init_complete;
 	/**< indicates whether EAL has completed initialization */
-	unsigned int no_telemetry; /**< true to disable Telemetry */
 	struct simd_bitwidth max_simd_bitwidth;
 	/**< max simd bitwidth path to use */
 	size_t huge_worker_stack_size; /**< worker thread stack size */

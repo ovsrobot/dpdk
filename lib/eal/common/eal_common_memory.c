@@ -1073,13 +1073,12 @@ rte_extmem_detach(void *va_addr, size_t len)
 int
 rte_eal_memory_detach(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	size_t page_sz = rte_mem_page_size();
 	unsigned int i;
 
-	if (internal_conf->in_memory == 1)
+	if (user_cfg->in_memory)
 		return 0;
 
 	rte_rwlock_write_lock(&mcfg->memory_hotplug_lock);
@@ -1122,7 +1121,7 @@ rte_eal_memory_detach(void)
 	 * config - we can't zero it out because it might still be referenced
 	 * by other processes.
 	 */
-	if (internal_conf->no_shconf == 0 && mcfg->mem_cfg_addr != 0) {
+	if (!user_cfg->no_shconf && mcfg->mem_cfg_addr != 0) {
 		if (rte_mem_unmap(mcfg, RTE_ALIGN(sizeof(*mcfg), page_sz)) != 0)
 			EAL_LOG(ERR, "Could not unmap shared memory config: %s",
 					rte_strerror(rte_errno));
@@ -1136,8 +1135,7 @@ rte_eal_memory_detach(void)
 int
 rte_eal_memory_init(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	int retval;
 
 	EAL_LOG(DEBUG, "Setting up physically contiguous memory...");
@@ -1154,7 +1152,7 @@ rte_eal_memory_init(void)
 	if (retval < 0)
 		goto fail;
 
-	if (internal_conf->no_shconf == 0 && rte_eal_memdevice_init() < 0)
+	if (!user_cfg->no_shconf && rte_eal_memdevice_init() < 0)
 		goto fail;
 
 	return 0;

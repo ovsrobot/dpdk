@@ -545,11 +545,10 @@ create_shared_memory(const char *filename, const size_t mem_size)
 {
 	void *retval;
 	int fd;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* if no shared files mode is used, create anonymous memory instead */
-	if (internal_conf->no_shconf) {
+	if (user_cfg->no_shconf) {
 		retval = mmap(NULL, mem_size, PROT_READ | PROT_WRITE,
 				MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		if (retval == MAP_FAILED)

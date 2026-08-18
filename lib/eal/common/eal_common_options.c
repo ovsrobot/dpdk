@@ -521,7 +521,9 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	user_cfg->force_numa_limits = false;
 	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
 		user_cfg->numa_limit[i] = 0;
+	user_cfg->process_type = RTE_PROC_PRIMARY;
 	user_cfg->no_hugetlbfs = false;
+	user_cfg->no_pci = false;
 	user_cfg->hugefile_prefix = NULL;
 	user_cfg->hugepage_dir = NULL;
 	user_cfg->hugepage_file.unlink_before_mapping = false;
@@ -546,12 +548,15 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	internal_cfg->no_auto_probing = 0;
 
 #ifdef RTE_LIBEAL_USE_HPET
-	internal_cfg->no_hpet = 0;
+	user_cfg->no_hpet = false;
 #else
-	internal_cfg->no_hpet = 1;
+	user_cfg->no_hpet = true;
 #endif
-	internal_cfg->vmware_tsc_map = 0;
-	internal_cfg->create_uio_dev = 0;
+	user_cfg->vmware_tsc_map = false;
+	user_cfg->no_shconf = false;
+	user_cfg->in_memory = false;
+	user_cfg->create_uio_dev = false;
+	user_cfg->no_telemetry = false;
 	internal_cfg->iova_mode = RTE_IOVA_DC;
 	internal_cfg->user_mbuf_pool_ops_name = NULL;
 	CPU_ZERO(&internal_cfg->ctrl_cpuset);
@@ -2088,8 +2093,8 @@ eal_parse_args(void)
 
 	/* parse the process type */
 	if (args.proc_type != NULL) {
-		int_cfg->process_type = eal_parse_proc_type(args.proc_type);
-		if (int_cfg->process_type == RTE_PROC_INVALID) {
+		user_cfg->process_type = eal_parse_proc_type(args.proc_type);
+		if (user_cfg->process_type == RTE_PROC_INVALID) {
 			EAL_LOG(ERR, "invalid process type: %s", args.proc_type);
 			return -1;
 		}
@@ -2254,21 +2259,21 @@ eal_parse_args(void)
 	if (args.no_huge) {
 		user_cfg->no_hugetlbfs = true;
 		/* no-huge is legacy mem */
-		int_cfg->legacy_mem = 1;
+		int_cfg->legacy_mem = true;
 	}
 	if (args.in_memory) {
-		int_cfg->in_memory = 1;
+		user_cfg->in_memory = true;
 		/* in-memory is a superset of noshconf and huge-unlink */
-		int_cfg->no_shconf = 1;
+		user_cfg->no_shconf = true;
 		user_cfg->hugepage_file.unlink_before_mapping = true;
 	}
 	if (args.legacy_mem) {
-		int_cfg->legacy_mem = 1;
+		int_cfg->legacy_mem = true;
 		if (args.memory_size == NULL && args.numa_mem == NULL)
 			EAL_LOG(NOTICE, "Static memory layout is selected, amount of reserved memory can be adjusted with -m or --socket-mem");
 	}
 	if (args.single_file_segments)
-		int_cfg->single_file_segments = 1;
+		int_cfg->single_file_segments = true;
 	if (args.huge_dir != NULL) {
 		if (strlen(args.huge_dir) < 1) {
 			EAL_LOG(ERR, "Invalid hugepage dir parameter");
@@ -2365,19 +2370,19 @@ eal_parse_args(void)
 	 * other options above have already set them.
 	 */
 	if (args.no_pci)
-		int_cfg->no_pci = 1;
+		user_cfg->no_pci = true;
 	if (args.no_hpet)
-		int_cfg->no_hpet = 1;
+		user_cfg->no_hpet = true;
 	if (args.vmware_tsc_map)
-		int_cfg->vmware_tsc_map = 1;
+		user_cfg->vmware_tsc_map = true;
 	if (args.no_shconf)
-		int_cfg->no_shconf = 1;
+		user_cfg->no_shconf = true;
 	if (args.no_telemetry)
-		int_cfg->no_telemetry = 1;
+		user_cfg->no_telemetry = true;
 	if (args.match_allocations)
-		int_cfg->match_allocations = 1;
+		int_cfg->match_allocations = true;
 	if (args.create_uio_dev)
-		int_cfg->create_uio_dev = 1;
+		user_cfg->create_uio_dev = true;
 
 	/* other misc settings */
 	if (args.iova_mode != NULL) {
@@ -2436,7 +2441,7 @@ eal_parse_args(void)
 #ifndef RTE_EXEC_ENV_WINDOWS
 	/* create runtime data directory. In no_shconf mode, skip any errors */
 	if (eal_create_runtime_dir() < 0) {
-		if (int_cfg->no_shconf == 0) {
+		if (!user_cfg->no_shconf) {
 			EAL_LOG(ERR, "Cannot create runtime directory");
 			return -1;
 		}
@@ -2501,8 +2506,8 @@ eal_adjust_config(struct internal_config *internal_cfg)
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	int i;
 
-	if (internal_cfg->process_type == RTE_PROC_AUTO)
-		internal_cfg->process_type = eal_proc_type_detect();
+	if (user_cfg->process_type == RTE_PROC_AUTO)
+		user_cfg->process_type = eal_proc_type_detect();
 
 	compute_ctrl_threads_cpuset(internal_cfg);
 

@@ -138,5 +138,5 @@ RTE_EXPORT_SYMBOL(rte_eal_has_pci)
 int
 rte_eal_has_pci(void)
 {
-	return !internal_config.no_pci;
+	return !eal_user_cfg.no_pci;
 }

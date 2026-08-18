@@ -218,11 +218,11 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	/* Prevent creation of shared memory files. */
-	if (internal_conf->in_memory == 0) {
+	if (!user_cfg->in_memory) {
 		EAL_LOG(WARNING, "Multi-process support is requested, "
 			"but not available.");
-		internal_conf->in_memory = 1;
-		internal_conf->no_shconf = 1;
+		user_cfg->in_memory = true;
+		user_cfg->no_shconf = true;
 	}
 
 	if (!user_cfg->no_hugetlbfs && (eal_hugepage_info_init() < 0)) {

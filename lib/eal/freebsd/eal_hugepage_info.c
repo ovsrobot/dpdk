@@ -62,6 +62,7 @@ eal_hugepage_info_init(void)
 
 	/* re-use the linux "internal config" structure for our memory data */
 	struct hugepage_info *hpi = &internal_conf->hugepage_info[0];
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct hugepage_info *tmp_hpi;
 	unsigned int i;
 
@@ -116,7 +117,7 @@ eal_hugepage_info_init(void)
 	hpi->lock_descriptor = fd;
 
 	/* for no shared files mode, do not create shared memory config */
-	if (internal_conf->no_shconf)
+	if (user_cfg->no_shconf)
 		return 0;
 
 	tmp_hpi = create_shared_memory(eal_hugepage_info_path(),

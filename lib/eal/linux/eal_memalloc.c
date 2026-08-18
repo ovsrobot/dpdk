@@ -276,7 +276,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	/* for in-memory mode, we only make it here when we're sure we support
 	 * memfd, and this is a special case.
 	 */
-	if (internal_conf->in_memory)
+	if (user_cfg->in_memory)
 		return get_seg_memfd(hi, list_idx, seg_idx);
 
 	if (internal_conf->single_file_segments) {
@@ -460,13 +460,12 @@ resize_hugefile_in_filesystem(int fd, uint64_t fa_offset, uint64_t page_sz,
 static void
 close_hugefile(int fd, char *path, int list_idx)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	/*
 	 * primary process must unlink the file, but only when not in in-memory
 	 * mode (as in that case there is no file to unlink).
 	 */
-	if (!internal_conf->in_memory &&
+	if (!user_cfg->in_memory &&
 			rte_eal_process_type() == RTE_PROC_PRIMARY &&
 			unlink(path))
 		EAL_LOG(ERR, "%s(): unlinking '%s' failed: %s",
@@ -483,10 +482,9 @@ resize_hugefile(int fd, uint64_t fa_offset, uint64_t page_sz, bool grow,
 	/* in-memory mode is a special case, because we can be sure that
 	 * fallocate() is supported.
 	 */
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->in_memory) {
+	if (user_cfg->in_memory) {
 		if (dirty != NULL)
 			*dirty = false;
 		return resize_hugefile_in_memory(fd, fa_offset,
@@ -522,7 +520,7 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	alloc_sz = hi->hugepage_sz;
 
 	/* these are checked at init, but code analyzers don't know that */
-	if (internal_conf->in_memory && !anonymous_hugepages_supported) {
+	if (user_cfg->in_memory && !anonymous_hugepages_supported) {
 		EAL_LOG(ERR, "Anonymous hugepages not supported, in-memory mode cannot allocate memory");
 		return -1;
 	}
@@ -551,7 +549,7 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 			goto resized;
 		}
 		if (user_cfg->hugepage_file.unlink_before_mapping &&
-				!internal_conf->in_memory) {
+				!user_cfg->in_memory) {
 			if (unlink(path)) {
 				EAL_LOG(DEBUG, "%s(): unlink() failed: %s",
 					__func__, strerror(errno));
@@ -685,7 +683,7 @@ resized:
 	} else {
 		/* only remove file if we can take out a write lock */
 		if (!user_cfg->hugepage_file.unlink_before_mapping &&
-				internal_conf->in_memory == 0 &&
+				!user_cfg->in_memory &&
 				lock(fd, LOCK_EX) == 1)
 			unlink(path);
 		close(fd);
@@ -738,7 +736,7 @@ free_seg(struct rte_memseg *ms, struct hugepage_info *hi,
 		/* if we're able to take out a write lock, we're the last one
 		 * holding onto this page.
 		 */
-		if (!internal_conf->in_memory &&
+		if (!user_cfg->in_memory &&
 				user_cfg->hugepage_file.unlink_existing &&
 				!user_cfg->hugepage_file.unlink_before_mapping) {
 			ret = lock(fd, LOCK_EX);
@@ -776,8 +774,7 @@ alloc_seg_walk(const struct rte_memseg_list *msl, void *arg)
 	size_t page_sz;
 	int cur_idx, start_idx, j, dir_fd = -1;
 	unsigned int msl_idx, need, i;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (msl->page_sz != wa->page_sz)
 		return 0;
@@ -827,7 +824,7 @@ alloc_seg_walk(const struct rte_memseg_list *msl, void *arg)
 	 * during init, we already hold a write lock, so don't try to take out
 	 * another one.
 	 */
-	if (wa->hi->lock_descriptor == -1 && !internal_conf->in_memory) {
+	if (wa->hi->lock_descriptor == -1 && !user_cfg->in_memory) {
 		dir_fd = open(wa->hi->hugedir, O_RDONLY);
 		if (dir_fd < 0) {
 			EAL_LOG(ERR, "%s(): Cannot open '%s': %s",
@@ -910,8 +907,7 @@ free_seg_walk(const struct rte_memseg_list *msl, void *arg)
 	struct free_walk_param *wa = arg;
 	uintptr_t start_addr, end_addr;
 	int msl_idx, seg_idx, ret, dir_fd = -1;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	start_addr = (uintptr_t) msl->base_va;
 	end_addr = start_addr + msl->len;
@@ -934,7 +930,7 @@ free_seg_walk(const struct rte_memseg_list *msl, void *arg)
 	 * during init, we already hold a write lock, so don't try to take out
 	 * another one.
 	 */
-	if (wa->hi->lock_descriptor == -1 && !internal_conf->in_memory) {
+	if (wa->hi->lock_descriptor == -1 && !user_cfg->in_memory) {
 		dir_fd = open(wa->hi->hugedir, O_RDONLY);
 		if (dir_fd < 0) {
 			EAL_LOG(ERR, "%s(): Cannot open '%s': %s",
@@ -1099,8 +1095,7 @@ eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 int
 eal_memalloc_free_seg(struct rte_memseg *ms)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct internal_config *internal_conf = eal_get_internal_configuration();
 
 	/* dynamic free not supported in legacy mode */
 	if (internal_conf->legacy_mem)
@@ -1658,8 +1653,6 @@ eal_memalloc_cleanup(void)
 int
 eal_memalloc_init(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
@@ -1669,7 +1662,7 @@ eal_memalloc_init(void)
 		if (rte_memseg_list_walk_thread_unsafe(secondary_msl_create_walk, NULL) < 0)
 			return -1;
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
-			internal_conf->in_memory) {
+			user_cfg->in_memory) {
 		EAL_LOG(DEBUG, "Using memfd for anonymous memory");
 		/* this cannot ever happen but better safe than sorry */
 		if (!anonymous_hugepages_supported) {

@@ -184,10 +184,11 @@ rte_eal_config_create(void)
 	int retval;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	const char *pathname = eal_runtime_config_path();
 
-	if (internal_conf->no_shconf)
+	if (user_cfg->no_shconf)
 		return 0;
 
 	/* map the config before hugepage address so that we don't waste a page */
@@ -265,12 +266,11 @@ rte_eal_config_attach(void)
 {
 	struct rte_config *config = rte_eal_get_configuration();
 	struct rte_mem_config *mem_config;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	const char *pathname = eal_runtime_config_path();
 
-	if (internal_conf->no_shconf)
+	if (user_cfg->no_shconf)
 		return 0;
 
 	if (mem_cfg_fd < 0){
@@ -305,10 +305,9 @@ rte_eal_config_reattach(void)
 	struct rte_config *config = rte_eal_get_configuration();
 	struct rte_mem_config *mem_config;
 	void *rte_mem_cfg_addr;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->no_shconf)
+	if (user_cfg->no_shconf)
 		return 0;
 
 	/* save the address primary process has mapped shared config to */
@@ -350,11 +349,10 @@ eal_proc_type_detect(void)
 {
 	enum rte_proc_type_t ptype = RTE_PROC_PRIMARY;
 	const char *pathname = eal_runtime_config_path();
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* if there no shared config, there can be no secondary processes */
-	if (!internal_conf->no_shconf) {
+	if (!user_cfg->no_shconf) {
 		/* if we can open the file but not get a write-lock we are a
 		 * secondary process. NOTE: if we get a file handle back, we
 		 * keep that open and don't close it to prevent a race condition
@@ -376,10 +374,9 @@ static int
 rte_config_init(void)
 {
 	struct rte_config *config = rte_eal_get_configuration();
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	config->process_type = internal_conf->process_type;
+	config->process_type = user_cfg->process_type;
 
 	switch (config->process_type) {
 	case RTE_PROC_PRIMARY:
@@ -741,7 +738,7 @@ rte_eal_init(int argc, char **argv)
 
 	if (!user_cfg->no_hugetlbfs) {
 		/* rte_config isn't initialized yet */
-		ret = internal_conf->process_type == RTE_PROC_PRIMARY ?
+		ret = user_cfg->process_type == RTE_PROC_PRIMARY ?
 				eal_hugepage_info_init() :
 				eal_hugepage_info_read();
 		if (ret < 0) {
@@ -749,7 +746,7 @@ rte_eal_init(int argc, char **argv)
 			rte_errno = EACCES;
 			goto err_out;
 		}
-		if (internal_conf->process_type == RTE_PROC_PRIMARY &&
+		if (user_cfg->process_type == RTE_PROC_PRIMARY &&
 				eal_apply_hugepage_mem_sz_limits(internal_conf) < 0) {
 			rte_eal_init_alert("Cannot apply hugepage memory limits.");
 			rte_errno = EINVAL;
@@ -762,7 +759,7 @@ rte_eal_init(int argc, char **argv)
 			user_cfg->memory = MEMSIZE_IF_NO_HUGE_PAGE;
 	}
 
-	if (internal_conf->vmware_tsc_map == 1) {
+	if (user_cfg->vmware_tsc_map) {
 #ifdef RTE_LIBRTE_EAL_VMWARE_TSC_MAP_SUPPORT
 		rte_cycles_vmware_tsc_map = 1;
 		EAL_LOG(DEBUG, "Using VMWARE TSC MAP, "
@@ -923,11 +920,11 @@ rte_eal_init(int argc, char **argv)
 	 * In no_shconf mode, no runtime directory is created in the first
 	 * place, so no cleanup needed.
 	 */
-	if (!internal_conf->no_shconf && eal_clean_runtime_dir() < 0) {
+	if (!user_cfg->no_shconf && eal_clean_runtime_dir() < 0) {
 		rte_eal_init_alert("Cannot clear runtime directory");
 		goto err_out;
 	}
-	if (rte_eal_process_type() == RTE_PROC_PRIMARY && !internal_conf->no_telemetry) {
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY && !user_cfg->no_telemetry) {
 		if (rte_telemetry_init(rte_eal_get_runtime_dir(),
 				rte_version(),
 				&internal_conf->ctrl_cpuset) != 0)
@@ -1006,10 +1003,9 @@ rte_eal_cleanup(void)
 RTE_EXPORT_SYMBOL(rte_eal_create_uio_dev)
 int rte_eal_create_uio_dev(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	return internal_conf->create_uio_dev;
+	return user_cfg->create_uio_dev;
 }
 
 RTE_EXPORT_SYMBOL(rte_eal_vfio_intr_mode)

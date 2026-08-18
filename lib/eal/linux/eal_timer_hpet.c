@@ -88,10 +88,9 @@ RTE_EXPORT_SYMBOL(rte_get_hpet_hz)
 uint64_t
 rte_get_hpet_hz(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->no_hpet)
+	if (user_cfg->no_hpet)
 		rte_panic("Error, HPET called, but no HPET present\n");
 
 	return eal_hpet_resolution_hz;
@@ -103,10 +102,9 @@ rte_get_hpet_cycles(void)
 {
 	uint32_t t, msb;
 	uint64_t ret;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->no_hpet)
+	if (user_cfg->no_hpet)
 		rte_panic("Error, HPET called, but no HPET present\n");
 
 	t = eal_hpet->counter_l;
@@ -126,10 +124,9 @@ int
 rte_eal_hpet_init(int make_default)
 {
 	int fd, ret;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->no_hpet) {
+	if (user_cfg->no_hpet) {
 		EAL_LOG(NOTICE, "HPET is disabled");
 		return -1;
 	}
@@ -138,14 +135,14 @@ rte_eal_hpet_init(int make_default)
 	if (fd < 0) {
 		EAL_LOG(ERR, "ERROR: Cannot open "DEV_HPET": %s!",
 			strerror(errno));
-		internal_conf->no_hpet = 1;
+		user_cfg->no_hpet = true;
 		return -1;
 	}
 	eal_hpet = mmap(NULL, 1024, PROT_READ, MAP_SHARED, fd, 0);
 	if (eal_hpet == MAP_FAILED) {
 		EAL_LOG(ERR, "ERROR: Cannot mmap "DEV_HPET"!");
 		close(fd);
-		internal_conf->no_hpet = 1;
+		user_cfg->no_hpet = true;
 		return -1;
 	}
 	close(fd);
@@ -169,7 +166,7 @@ rte_eal_hpet_init(int make_default)
 			hpet_msb_inc, NULL);
 	if (ret != 0) {
 		EAL_LOG(ERR, "ERROR: Cannot create HPET timer thread!");
-		internal_conf->no_hpet = 1;
+		user_cfg->no_hpet = true;
 		return -1;
 	}
 
