@@ -598,13 +598,13 @@ unlink_hugepage_files(struct hugepage_file *hugepg_tbl,
 {
 	unsigned socket, size;
 	int page, nrpages = 0;
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* get total number of hugepages */
 	for (size = 0; size < num_hp_info; size++)
 		for (socket = 0; socket < RTE_MAX_NUMA_NODES; socket++)
 			nrpages +=
-			platform_info->hugepage_info[size].num_pages[socket];
+			runtime_state->hugepage_info[size].num_pages[socket];
 
 	for (page = 0; page < nrpages; page++) {
 		struct hugepage_file *hp = &hugepg_tbl[page];
@@ -628,12 +628,12 @@ unmap_unneeded_hugepages(struct hugepage_file *hugepg_tbl,
 {
 	unsigned socket, size;
 	int page, nrpages = 0;
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* get total number of hugepages */
 	for (size = 0; size < num_hp_info; size++)
 		for (socket = 0; socket < RTE_MAX_NUMA_NODES; socket++)
-			nrpages += platform_info->hugepage_info[size].num_pages[socket];
+			nrpages += runtime_state->hugepage_info[size].num_pages[socket];
 
 	for (size = 0; size < num_hp_info; size++) {
 		for (socket = 0; socket < RTE_MAX_NUMA_NODES; socket++) {
@@ -838,7 +838,7 @@ memseg_list_free(struct rte_memseg_list *msl)
 static int __rte_unused
 prealloc_segments(struct hugepage_file *hugepages, int n_pages)
 {
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int cur_page, seg_start_page, end_seg, new_memseg;
 	unsigned int hpi_idx, socket, i;
@@ -858,10 +858,10 @@ prealloc_segments(struct hugepage_file *hugepages, int n_pages)
 	/* we cannot know how many page sizes and sockets we have discovered, so
 	 * loop over all of them
 	 */
-	for (hpi_idx = 0; hpi_idx < platform_info->num_hugepage_sizes;
+	for (hpi_idx = 0; hpi_idx < runtime_state->num_hugepage_sizes;
 			hpi_idx++) {
 		uint64_t page_sz =
-			platform_info->hugepage_info[hpi_idx].hugepage_sz;
+			runtime_state->hugepage_info[hpi_idx].hugepage_sz;
 
 		for (i = 0; i < rte_socket_count(); i++) {
 			struct rte_memseg_list *msl;
@@ -1066,10 +1066,10 @@ eal_get_hugepage_mem_size(void)
 {
 	uint64_t size = 0;
 	unsigned i, j;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
-	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
-		struct hugepage_info *hpi = &platform_info->hugepage_info[i];
+	for (i = 0; i < runtime_state->num_hugepage_sizes; i++) {
+		struct hugepage_info *hpi = &runtime_state->hugepage_info[i];
 		if (strnlen(hpi->hugedir, sizeof(hpi->hugedir)) != 0) {
 			for (j = 0; j < RTE_MAX_NUMA_NODES; j++) {
 				size += hpi->hugepage_sz * hpi->num_pages[j];
@@ -1124,7 +1124,7 @@ eal_legacy_hugepage_init(void)
 	struct rte_mem_config *mcfg;
 	struct hugepage_file *hugepage = NULL, *tmp_hp = NULL;
 	struct hugepage_info used_hp[MAX_HUGEPAGE_SIZES];
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	uint64_t memory[RTE_MAX_NUMA_NODES];
@@ -1241,11 +1241,11 @@ eal_legacy_hugepage_init(void)
 
 	/* calculate total number of hugepages available. at this point we haven't
 	 * yet started sorting them so they all are on socket 0 */
-	for (i = 0; i < (int) platform_info->num_hugepage_sizes; i++) {
+	for (i = 0; i < (int) runtime_state->num_hugepage_sizes; i++) {
 		/* meanwhile, also initialize used_hp hugepage sizes in used_hp */
-		used_hp[i].hugepage_sz = platform_info->hugepage_info[i].hugepage_sz;
+		used_hp[i].hugepage_sz = runtime_state->hugepage_info[i].hugepage_sz;
 
-		nr_hugepages += platform_info->hugepage_info[i].num_pages[0];
+		nr_hugepages += runtime_state->hugepage_info[i].num_pages[0];
 	}
 
 	/*
@@ -1269,7 +1269,7 @@ eal_legacy_hugepage_init(void)
 		memory[i] = user_cfg->numa_mem[i];
 
 	/* map all hugepages and sort them */
-	for (i = 0; i < (int)platform_info->num_hugepage_sizes; i++) {
+	for (i = 0; i < (int)runtime_state->num_hugepage_sizes; i++) {
 		unsigned pages_old, pages_new;
 		struct hugepage_info *hpi;
 
@@ -1278,7 +1278,7 @@ eal_legacy_hugepage_init(void)
 		 * we just map all hugepages available to the system
 		 * all hugepages are still located on socket 0
 		 */
-		hpi = &platform_info->hugepage_info[i];
+		hpi = &runtime_state->hugepage_info[i];
 
 		if (hpi->num_pages[0] == 0)
 			continue;
@@ -1341,9 +1341,9 @@ eal_legacy_hugepage_init(void)
 
 
 	/* clean out the numbers of pages */
-	for (i = 0; i < (int) platform_info->num_hugepage_sizes; i++)
+	for (i = 0; i < (int) runtime_state->num_hugepage_sizes; i++)
 		for (j = 0; j < RTE_MAX_NUMA_NODES; j++)
-			platform_info->hugepage_info[i].num_pages[j] = 0;
+			runtime_state->hugepage_info[i].num_pages[j] = 0;
 
 	/* get hugepages for each socket */
 	for (i = 0; i < nr_hugefiles; i++) {
@@ -1351,11 +1351,11 @@ eal_legacy_hugepage_init(void)
 
 		/* find a hugepage info with right size and increment num_pages */
 		const int nb_hpsizes = RTE_MIN(MAX_HUGEPAGE_SIZES,
-				(int)platform_info->num_hugepage_sizes);
+				(int)runtime_state->num_hugepage_sizes);
 		for (j = 0; j < nb_hpsizes; j++) {
 			if (tmp_hp[i].size ==
-					platform_info->hugepage_info[j].hugepage_sz) {
-				platform_info->hugepage_info[j].num_pages[socket]++;
+					runtime_state->hugepage_info[j].hugepage_sz) {
+				runtime_state->hugepage_info[j].num_pages[socket]++;
 			}
 		}
 	}
@@ -1366,15 +1366,15 @@ eal_legacy_hugepage_init(void)
 
 	/* calculate final number of pages */
 	nr_hugepages = eal_dynmem_calc_num_pages_per_socket(memory,
-			platform_info->hugepage_info, used_hp,
-			platform_info->num_hugepage_sizes);
+			runtime_state->hugepage_info, used_hp,
+			runtime_state->num_hugepage_sizes);
 
 	/* error if not enough memory available */
 	if (nr_hugepages < 0)
 		goto fail;
 
 	/* reporting in! */
-	for (i = 0; i < (int) platform_info->num_hugepage_sizes; i++) {
+	for (i = 0; i < (int) runtime_state->num_hugepage_sizes; i++) {
 		for (j = 0; j < RTE_MAX_NUMA_NODES; j++) {
 			if (used_hp[i].num_pages[j] > 0) {
 				EAL_LOG(DEBUG,
@@ -1403,7 +1403,7 @@ eal_legacy_hugepage_init(void)
 	 * also, sets final_va to NULL on pages that were unmapped.
 	 */
 	if (unmap_unneeded_hugepages(tmp_hp, used_hp,
-			platform_info->num_hugepage_sizes) < 0) {
+			runtime_state->num_hugepage_sizes) < 0) {
 		EAL_LOG(ERR, "Unmapping and locking hugepages failed!");
 		goto fail;
 	}
@@ -1438,7 +1438,7 @@ eal_legacy_hugepage_init(void)
 
 	/* free the hugepage backing files */
 	if (user_cfg->hugepage_file.unlink_before_mapping &&
-		unlink_hugepage_files(tmp_hp, platform_info->num_hugepage_sizes) < 0) {
+		unlink_hugepage_files(tmp_hp, runtime_state->num_hugepage_sizes) < 0) {
 		EAL_LOG(ERR, "Unlinking hugepage files failed!");
 		goto fail;
 	}
@@ -1692,7 +1692,6 @@ memseg_primary_init_32(void)
 	unsigned int socket_id, i;
 	struct rte_memseg_list *msl;
 	uint64_t extra_mem_per_socket, total_extra_mem, total_requested_mem;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
@@ -1759,7 +1758,7 @@ memseg_primary_init_32(void)
 
 	/* create memseg lists */
 	for (i = 0; i < rte_socket_count(); i++) {
-		int hp_sizes = (int) platform_info->num_hugepage_sizes;
+		int hp_sizes = (int) runtime_state->num_hugepage_sizes;
 		uint64_t max_socket_mem, cur_socket_mem;
 		unsigned int main_lcore_socket;
 		bool skip;
@@ -1804,9 +1803,9 @@ memseg_primary_init_32(void)
 			uint64_t max_pagesz_mem, cur_pagesz_mem = 0;
 			uint64_t hugepage_sz;
 			uint64_t pagesz_mem_limit;
-			struct hugepage_info *hpi;
+			const struct hugepage_info *hpi;
 
-			hpi = &platform_info->hugepage_info[hpi_idx];
+			hpi = &runtime_state->hugepage_info[hpi_idx];
 			hugepage_sz = hpi->hugepage_sz;
 
 			/* check if pages are actually available */

@@ -95,10 +95,12 @@ int rte_eal_memzone_init(void);
  * Parse /proc/cpuinfo to get the number of physical and logical
  * processors on the machine.
  *
+ * @param platform_info
+ *   Platform info struct to populate with CPU topology.
  * @return
  *   0 on success, negative on error
  */
-int rte_eal_cpu_init(void);
+int rte_eal_cpu_init(struct eal_platform_info *platform_info);
 
 /**
  * Check for architecture supported MMU.
@@ -760,6 +762,20 @@ int eal_asprintf(char **buffer, const char *format, ...);
 
 #define asprintf(buffer, format, ...) \
 		eal_asprintf(buffer, format, ##__VA_ARGS__)
+#endif
+
+/**
+ * Create a map of processors and cores on the system.
+ *
+ * @return
+ *  0 on success, (-1) on failure and rte_errno is set.
+ */
+#ifdef RTE_EXEC_ENV_WINDOWS
+int eal_create_cpu_map(void);
+#else
+/* non-Windows platforms do not require CPU map creation, define stub fn */
+static inline int
+eal_create_cpu_map(void) { return 0; }
 #endif
 
 #define EAL_LOG(level, ...) \

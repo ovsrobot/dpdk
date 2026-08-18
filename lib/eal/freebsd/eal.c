@@ -322,10 +322,11 @@ eal_get_hugepage_mem_size(void)
 {
 	uint64_t size = 0;
 	unsigned i, j;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
-		struct hugepage_info *hpi = &platform_info->hugepage_info[i];
+		struct hugepage_info *hpi = &runtime_state->hugepage_info[i];
 		if (strnlen(hpi->hugedir, sizeof(hpi->hugedir)) != 0) {
 			for (j = 0; j < RTE_MAX_NUMA_NODES; j++) {
 				size += hpi->hugepage_sz * hpi->num_pages[j];
@@ -403,6 +404,18 @@ rte_eal_init(int argc, char **argv)
 	bool has_phys_addr;
 	enum rte_iova_mode iova_mode;
 
+	/*
+	 * platform_info is lazily initialized on first use, and that
+	 * initialization can fail (CPU/NUMA/hugepage detection). Almost
+	 * everything below depends on a valid platform_info, so confirm it
+	 * is available before doing anything else.
+	 */
+	if (eal_get_platform_info() == NULL) {
+		rte_eal_init_alert("Cannot get platform information.");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
+
 	/* first check if we have been run before */
 	if (!rte_atomic_compare_exchange_strong_explicit(&run_once, &has_run, 1,
 					rte_memory_order_relaxed, rte_memory_order_relaxed)) {
@@ -440,12 +453,6 @@ rte_eal_init(int argc, char **argv)
 	/* verify if DPDK supported on architecture MMU */
 	if (!eal_mmu_supported()) {
 		rte_eal_init_alert("unsupported MMU type.");
-		rte_errno = ENOTSUP;
-		goto err_out;
-	}
-
-	if (rte_eal_cpu_init() < 0) {
-		rte_eal_init_alert("Cannot detect lcores.");
 		rte_errno = ENOTSUP;
 		goto err_out;
 	}

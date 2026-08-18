@@ -160,6 +160,18 @@ rte_eal_init(int argc, char **argv)
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 	char thread_name[RTE_THREAD_NAME_SIZE];
 
+	/*
+	 * platform_info is lazily initialized on first use, and that
+	 * initialization can fail (CPU/NUMA/hugepage detection). Almost
+	 * everything below depends on a valid platform_info, so confirm it
+	 * is available before doing anything else.
+	 */
+	if (eal_get_platform_info() == NULL) {
+		rte_eal_init_alert("Cannot get platform information.");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
+
 	/* clone argv to report out later in telemetry */
 	eal_save_args(argc, argv);
 
@@ -179,21 +191,9 @@ rte_eal_init(int argc, char **argv)
 
 	eal_log_init(NULL);
 
-	if (eal_create_cpu_map() < 0) {
-		rte_eal_init_alert("Cannot discover CPU and NUMA.");
-		/* rte_errno is set */
-		goto err_out;
-	}
-
 	/* verify if DPDK supported on architecture MMU */
 	if (!eal_mmu_supported()) {
 		rte_eal_init_alert("Unsupported MMU type.");
-		rte_errno = ENOTSUP;
-		goto err_out;
-	}
-
-	if (rte_eal_cpu_init() < 0) {
-		rte_eal_init_alert("Cannot detect lcores.");
 		rte_errno = ENOTSUP;
 		goto err_out;
 	}

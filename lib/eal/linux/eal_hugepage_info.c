@@ -395,6 +395,82 @@ compare_hpi(const void *a, const void *b)
 	return hpi_b->hugepage_sz - hpi_a->hugepage_sz;
 }
 
+static int
+compare_hp_sizes(const void *a, const void *b)
+{
+	const struct hp_sizes *ha = a;
+	const struct hp_sizes *hb = b;
+
+	if (hb->size > ha->size)
+		return 1;
+	if (hb->size < ha->size)
+		return -1;
+	return 0;
+}
+
+int
+eal_get_platform_hp_info(struct eal_platform_info *platform_info)
+{
+	static const char dirent_start_text[] = "hugepages-";
+	const size_t dirent_start_len = sizeof(dirent_start_text) - 1;
+	unsigned int num_sizes = 0;
+	DIR *dir;
+	struct dirent *dirent;
+
+	dir = opendir(sys_dir_path);
+	if (dir == NULL) {
+		/* if we are using no-huge, unavailabiltity of hugepages may not be a problem,
+		 * so just log a warning and return 0 hugepage sizes.
+		 */
+		EAL_LOG(WARNING, "Cannot open directory %s to read system hugepage info",
+				sys_dir_path);
+		return 0;
+	}
+
+	for (dirent = readdir(dir); dirent != NULL; dirent = readdir(dir)) {
+		struct hp_sizes *hps;
+		uint64_t sz;
+		unsigned int i;
+
+		if (strncmp(dirent->d_name, dirent_start_text,
+			    dirent_start_len) != 0)
+			continue;
+
+		if (num_sizes >= MAX_HUGEPAGE_SIZES)
+			break;
+
+		sz = rte_str_to_size(&dirent->d_name[dirent_start_len]);
+		hps = &platform_info->hugepage_sizes[num_sizes];
+		hps->size = sz;
+
+		/* fill per-socket page counts; fall back to socket 0 total */
+		hps->total_pages = 0;
+		for (i = 0; i < platform_info->numa_node_count; i++) {
+			int socket = (int)platform_info->numa_nodes[i];
+			hps->max_pages[socket] = get_num_hugepages_on_node(dirent->d_name,
+					socket, sz);
+			hps->total_pages += hps->max_pages[socket];
+		}
+		if (hps->total_pages == 0) {
+			hps->max_pages[0] = get_num_hugepages(dirent->d_name, sz, 0);
+			hps->total_pages = hps->max_pages[0];
+		}
+
+		if (get_hugepage_dir(sz, hps->dir, sizeof(hps->dir)) < 0)
+			hps->dir[0] = '\0';
+
+		num_sizes++;
+	}
+	closedir(dir);
+
+	/* sort largest to smallest, matching hugepage_info ordering */
+	qsort(&platform_info->hugepage_sizes[0], num_sizes,
+	      sizeof(platform_info->hugepage_sizes[0]), compare_hp_sizes);
+
+	platform_info->num_hugepage_sizes = num_sizes;
+	return 0;
+}
+
 static void
 calc_num_pages(struct hugepage_info *hpi, struct dirent *dirent,
 		unsigned int reusable_pages)
@@ -453,7 +529,7 @@ hugepage_info_init(void)
 	unsigned int reusable_pages;
 	DIR *dir;
 	struct dirent *dirent;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	dir = opendir(sys_dir_path);
@@ -474,7 +550,7 @@ hugepage_info_init(void)
 		if (num_sizes >= MAX_HUGEPAGE_SIZES)
 			break;
 
-		hpi = &platform_info->hugepage_info[num_sizes];
+		hpi = &runtime_state->hugepage_info[num_sizes];
 		hpi->hugepage_sz =
 			rte_str_to_size(&dirent->d_name[dirent_start_len]);
 
@@ -545,17 +621,17 @@ hugepage_info_init(void)
 	if (dirent != NULL)
 		return -1;
 
-	platform_info->num_hugepage_sizes = num_sizes;
+	runtime_state->num_hugepage_sizes = num_sizes;
 
 	/* sort the page directory entries by size, largest to smallest */
-	qsort(&platform_info->hugepage_info[0], num_sizes,
-	      sizeof(platform_info->hugepage_info[0]), compare_hpi);
+	qsort(&runtime_state->hugepage_info[0], num_sizes,
+	      sizeof(runtime_state->hugepage_info[0]), compare_hpi);
 
 	/* now we have all info, check we have at least one valid size */
 	for (i = 0; i < num_sizes; i++) {
 		/* pages may no longer all be on socket 0, so check all */
 		unsigned int j, num_pages = 0;
-		struct hugepage_info *hpi = &platform_info->hugepage_info[i];
+		struct hugepage_info *hpi = &runtime_state->hugepage_info[i];
 
 		for (j = 0; j < RTE_MAX_NUMA_NODES; j++)
 			num_pages += hpi->num_pages[j];
@@ -577,7 +653,7 @@ eal_hugepage_info_init(void)
 {
 	struct hugepage_info *hpi, *tmp_hpi;
 	unsigned int i;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (hugepage_info_init() < 0)
@@ -587,26 +663,26 @@ eal_hugepage_info_init(void)
 	if (user_cfg->no_shconf)
 		return 0;
 
-	hpi = &platform_info->hugepage_info[0];
+	hpi = &runtime_state->hugepage_info[0];
 
 	tmp_hpi = create_shared_memory(eal_hugepage_info_path(),
-			sizeof(platform_info->hugepage_info));
+			sizeof(runtime_state->hugepage_info));
 	if (tmp_hpi == NULL) {
 		EAL_LOG(ERR, "Failed to create shared memory!");
 		return -1;
 	}
 
-	memcpy(tmp_hpi, hpi, sizeof(platform_info->hugepage_info));
+	memcpy(tmp_hpi, hpi, sizeof(runtime_state->hugepage_info));
 
 	/* we've copied file descriptors along with everything else, but they
 	 * will be invalid in secondary process, so overwrite them
 	 */
-	for (i = 0; i < RTE_DIM(platform_info->hugepage_info); i++) {
+	for (i = 0; i < RTE_DIM(runtime_state->hugepage_info); i++) {
 		struct hugepage_info *tmp = &tmp_hpi[i];
 		tmp->lock_descriptor = -1;
 	}
 
-	if (munmap(tmp_hpi, sizeof(platform_info->hugepage_info)) < 0) {
+	if (munmap(tmp_hpi, sizeof(runtime_state->hugepage_info)) < 0) {
 		EAL_LOG(ERR, "Failed to unmap shared memory!");
 		return -1;
 	}
@@ -615,22 +691,29 @@ eal_hugepage_info_init(void)
 
 int eal_hugepage_info_read(void)
 {
-	struct eal_platform_info *platform_info = eal_get_platform_info();
-	struct hugepage_info *hpi = &platform_info->hugepage_info[0];
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	struct hugepage_info *hpi = &runtime_state->hugepage_info[0];
 	struct hugepage_info *tmp_hpi;
 
 	tmp_hpi = open_shared_memory(eal_hugepage_info_path(),
-				  sizeof(platform_info->hugepage_info));
+				  sizeof(runtime_state->hugepage_info));
 	if (tmp_hpi == NULL) {
 		EAL_LOG(ERR, "Failed to open shared memory!");
 		return -1;
 	}
 
-	memcpy(hpi, tmp_hpi, sizeof(platform_info->hugepage_info));
+	memcpy(hpi, tmp_hpi, sizeof(runtime_state->hugepage_info));
 
-	if (munmap(tmp_hpi, sizeof(platform_info->hugepage_info)) < 0) {
+	if (munmap(tmp_hpi, sizeof(runtime_state->hugepage_info)) < 0) {
 		EAL_LOG(ERR, "Failed to unmap shared memory!");
 		return -1;
+	}
+
+	/* count valid entries copied from primary process */
+	for (unsigned int i = 0; i < MAX_HUGEPAGE_SIZES; i++) {
+		if (runtime_state->hugepage_info[i].hugepage_sz == 0)
+			break;
+		runtime_state->num_hugepage_sizes = i + 1;
 	}
 	return 0;
 }

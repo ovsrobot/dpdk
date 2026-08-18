@@ -967,7 +967,7 @@ eal_memalloc_alloc_seg_bulk(struct rte_memseg **ms, int n_segs, size_t page_sz,
 	struct alloc_walk_param wa;
 	struct hugepage_info *hi = NULL;
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	memset(&wa, 0, sizeof(wa));
 
@@ -975,10 +975,10 @@ eal_memalloc_alloc_seg_bulk(struct rte_memseg **ms, int n_segs, size_t page_sz,
 	if (user_cfg->legacy_mem)
 		return -1;
 
-	for (i = 0; i < (int) RTE_DIM(platform_info->hugepage_info); i++) {
+	for (i = 0; i < (int) RTE_DIM(runtime_state->hugepage_info); i++) {
 		if (page_sz ==
-				platform_info->hugepage_info[i].hugepage_sz) {
-			hi = &platform_info->hugepage_info[i];
+				runtime_state->hugepage_info[i].hugepage_sz) {
+			hi = &runtime_state->hugepage_info[i];
 			break;
 		}
 	}
@@ -1036,7 +1036,7 @@ eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 {
 	int seg, ret = 0;
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* dynamic free not supported in legacy mode */
 	if (user_cfg->legacy_mem)
@@ -1057,13 +1057,13 @@ eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 
 		memset(&wa, 0, sizeof(wa));
 
-		for (i = 0; i < (int)RTE_DIM(platform_info->hugepage_info);
+		for (i = 0; i < (int)RTE_DIM(runtime_state->hugepage_info);
 				i++) {
-			hi = &platform_info->hugepage_info[i];
+			hi = &runtime_state->hugepage_info[i];
 			if (cur->hugepage_sz == hi->hugepage_sz)
 				break;
 		}
-		if (i == (int)RTE_DIM(platform_info->hugepage_info)) {
+		if (i == (int)RTE_DIM(runtime_state->hugepage_info)) {
 			EAL_LOG(ERR, "Can't find relevant hugepage_info entry");
 			ret = -1;
 			continue;
@@ -1327,7 +1327,7 @@ sync_walk(const struct rte_memseg_list *msl, void *arg __rte_unused)
 {
 	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *primary_msl, *local_msl;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct hugepage_info *hi = NULL;
 	unsigned int i;
 	int msl_idx;
@@ -1339,12 +1339,12 @@ sync_walk(const struct rte_memseg_list *msl, void *arg __rte_unused)
 	primary_msl = &mcfg->memsegs[msl_idx];
 	local_msl = &local_memsegs[msl_idx];
 
-	for (i = 0; i < RTE_DIM(platform_info->hugepage_info); i++) {
+	for (i = 0; i < RTE_DIM(runtime_state->hugepage_info); i++) {
 		uint64_t cur_sz =
-			platform_info->hugepage_info[i].hugepage_sz;
+			runtime_state->hugepage_info[i].hugepage_sz;
 		uint64_t msl_sz = primary_msl->page_sz;
 		if (msl_sz == cur_sz) {
-			hi = &platform_info->hugepage_info[i];
+			hi = &runtime_state->hugepage_info[i];
 			break;
 		}
 	}

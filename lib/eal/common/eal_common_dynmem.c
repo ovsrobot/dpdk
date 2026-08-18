@@ -34,7 +34,6 @@ eal_dynmem_memseg_lists_init(void)
 	size_t mem_va_len, mem_va_page_sz;
 	unsigned int n_memtypes, cur_type;
 	void *mem_va_addr = NULL;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
@@ -58,7 +57,7 @@ eal_dynmem_memseg_lists_init(void)
 	 */
 
 	/* maximum number of memtypes we're ever going to get */
-	n_memtypes = platform_info->num_hugepage_sizes * rte_socket_count();
+	n_memtypes = runtime_state->num_hugepage_sizes * rte_socket_count();
 
 	/* can we fit all memtypes into the memseg lists? */
 	if (n_memtypes > RTE_MAX_MEMSEG_LISTS) {
@@ -69,12 +68,12 @@ eal_dynmem_memseg_lists_init(void)
 
 	/* populate mem types */
 	cur_type = 0;
-	for (hpi_idx = 0; hpi_idx < (int) platform_info->num_hugepage_sizes;
+	for (hpi_idx = 0; hpi_idx < (int) runtime_state->num_hugepage_sizes;
 			hpi_idx++) {
-		struct hugepage_info *hpi;
+		const struct hugepage_info *hpi;
 		uint64_t hugepage_sz;
 
-		hpi = &platform_info->hugepage_info[hpi_idx];
+		hpi = &runtime_state->hugepage_info[hpi_idx];
 		hugepage_sz = hpi->hugepage_sz;
 
 		for (i = 0; i < (int) rte_socket_count(); i++, cur_type++) {
@@ -211,13 +210,13 @@ eal_dynmem_hugepage_init(void)
 	struct hugepage_info used_hp[MAX_HUGEPAGE_SIZES];
 	uint64_t memory[RTE_MAX_NUMA_NODES];
 	int hp_sz_idx, socket_id;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	memset(used_hp, 0, sizeof(used_hp));
 
 	for (hp_sz_idx = 0;
-			hp_sz_idx < (int) platform_info->num_hugepage_sizes;
+			hp_sz_idx < (int) runtime_state->num_hugepage_sizes;
 			hp_sz_idx++) {
 #ifndef RTE_ARCH_64
 		struct hugepage_info dummy;
@@ -225,7 +224,7 @@ eal_dynmem_hugepage_init(void)
 #endif
 		/* also initialize used_hp hugepage sizes in used_hp */
 		struct hugepage_info *hpi;
-		hpi = &platform_info->hugepage_info[hp_sz_idx];
+		hpi = &runtime_state->hugepage_info[hp_sz_idx];
 		used_hp[hp_sz_idx].hugepage_sz = hpi->hugepage_sz;
 
 #ifndef RTE_ARCH_64
@@ -253,12 +252,12 @@ eal_dynmem_hugepage_init(void)
 
 	/* calculate final number of pages */
 	if (eal_dynmem_calc_num_pages_per_socket(memory,
-			platform_info->hugepage_info, used_hp,
-			platform_info->num_hugepage_sizes) < 0)
+			runtime_state->hugepage_info, used_hp,
+			runtime_state->num_hugepage_sizes) < 0)
 		return -1;
 
 	for (hp_sz_idx = 0;
-			hp_sz_idx < (int)platform_info->num_hugepage_sizes;
+			hp_sz_idx < (int)runtime_state->num_hugepage_sizes;
 			hp_sz_idx++) {
 		for (socket_id = 0; socket_id < RTE_MAX_NUMA_NODES;
 				socket_id++) {
@@ -337,10 +336,10 @@ get_socket_mem_size(int socket)
 {
 	uint64_t size = 0;
 	unsigned int i;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
-	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
-		struct hugepage_info *hpi = &platform_info->hugepage_info[i];
+	for (i = 0; i < runtime_state->num_hugepage_sizes; i++) {
+		struct hugepage_info *hpi = &runtime_state->hugepage_info[i];
 		size += hpi->hugepage_sz * hpi->num_pages[socket];
 	}
 

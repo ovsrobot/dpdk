@@ -164,11 +164,15 @@ socket_id_cmp(const void *a, const void *b)
  * structure.
  */
 int
-rte_eal_cpu_init(void)
+rte_eal_cpu_init(struct eal_platform_info *platform_info)
 {
-	struct eal_platform_info *platform_info = eal_get_platform_info();
 	int *lcore_to_socket_id;
 	size_t nb_detected_cpus = 0;
+
+	if (eal_create_cpu_map() < 0) {
+		EAL_LOG(ERR, "Failed to create CPU map");
+		return -1;
+	}
 
 	/* allocate cpu_info for all CPUs visible to the OS */
 	platform_info->cpu_count = eal_cpu_max();
@@ -182,6 +186,7 @@ rte_eal_cpu_init(void)
 	if (lcore_to_socket_id == NULL) {
 		EAL_LOG(ERR, "Cannot allocate lcore_to_socket_id array");
 		free(platform_info->cpu_info);
+		platform_info->cpu_info = NULL;
 		return -1;
 	}
 
@@ -203,8 +208,9 @@ rte_eal_cpu_init(void)
 
 	if (nb_detected_cpus == 0) {
 		EAL_LOG(ERR, "No CPUs detected for platform topology");
-		free(platform_info->cpu_info);
 		free(lcore_to_socket_id);
+		free(platform_info->cpu_info);
+		platform_info->cpu_info = NULL;
 		return -1;
 	}
 
@@ -219,6 +225,7 @@ rte_eal_cpu_init(void)
 		EAL_LOG(ERR, "Cannot allocate numa_nodes array");
 		free(lcore_to_socket_id);
 		free(platform_info->cpu_info);
+		platform_info->cpu_info = NULL;
 		return -1;
 	}
 

@@ -158,6 +158,14 @@ struct eal_cpu_info {
 	unsigned int core_id;  /**< physical core number on its NUMA node */
 };
 
+struct hp_sizes {
+	uint64_t size;         /**< hugepage size in bytes */
+	char dir[PATH_MAX];    /**< dir where hugetlbfs is mounted for this size */
+	uint32_t total_pages;  /**< total hugepages of this size across all NUMA nodes */
+	uint32_t max_pages[RTE_MAX_NUMA_NODES];
+	/**< maximum hugepages of this size available on each NUMA node */
+};
+
 /**
  * Discovered information about the system hardware.
  * Immutable after discovery.
@@ -168,7 +176,7 @@ struct eal_platform_info {
 	uint32_t numa_node_count;        /**< number of detected NUMA nodes */
 	uint32_t *numa_nodes;            /**< sorted list of detected NUMA node IDs */
 	uint8_t num_hugepage_sizes;      /**< how many sizes on this system */
-	struct hugepage_info hugepage_info[MAX_HUGEPAGE_SIZES];
+	struct hp_sizes hugepage_sizes[MAX_HUGEPAGE_SIZES];
 };
 
 /**
@@ -216,12 +224,15 @@ struct eal_runtime_state {
 	uint32_t lcore_count;         /**< Number of active lcore IDs (role != ROLE_OFF). */
 	struct lcore_cfg lcore_cfg[RTE_MAX_LCORE];
 	RTE_BITSET_DECLARE(core_indices, RTE_MAX_LCORE); /**< currently allocated core_indices */
+
+	uint32_t num_hugepage_sizes;       /**< how many sizes stored in hugepage_info[] */
+	struct hugepage_info hugepage_info[MAX_HUGEPAGE_SIZES];
 	struct rte_mem_config *mem_config; /**< pointer to memory config (in shared memory) */
 	struct eal_solib_list loaded_plugins; /**< all plugins loaded by eal_plugins_init() */
 };
 
+const struct eal_platform_info *eal_get_platform_info(void);
 struct eal_user_cfg *eal_get_user_configuration(void);
-struct eal_platform_info *eal_get_platform_info(void);
 struct eal_runtime_state *eal_get_runtime_state(void);
 
 #endif /* EAL_INTERNAL_CFG_H */

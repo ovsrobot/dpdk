@@ -11,6 +11,8 @@
 
 #define MAX_HUGEPAGE_PATH PATH_MAX
 
+struct eal_platform_info;
+
 /**
  * Structure used to store information about hugepages that we mapped
  * through the files in hugetlbfs.
@@ -24,6 +26,12 @@ struct hugepage_file {
 	int file_id;        /**< the '%d' in HUGEFILE_FMT */
 	char filepath[MAX_HUGEPAGE_PATH]; /**< path to backing file on filesystem */
 };
+
+/**
+ * Discover hugepage sizes and mounts available on this platform and populate
+ * the hugepage_sizes[] fields of the provided platform_info struct.
+ */
+int eal_get_platform_hp_info(struct eal_platform_info *platform_info);
 
 /**
  * Read the information on what hugepages are available for the EAL to use,

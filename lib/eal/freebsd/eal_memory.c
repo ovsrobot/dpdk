@@ -72,7 +72,8 @@ rte_eal_hugepage_init(void)
 	void *addr;
 	unsigned int i, j, seg_idx = 0;
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* get pointer to global configuration */
 	mcfg = eal_get_mcfg();
@@ -118,7 +119,7 @@ rte_eal_hugepage_init(void)
 		uint64_t page_sz, mem_needed;
 		unsigned int n_pages, max_pages;
 
-		hpi = &platform_info->hugepage_info[i];
+		hpi = &runtime_state->hugepage_info[i];
 		page_sz = hpi->hugepage_sz;
 		max_pages = hpi->num_pages[0];
 		mem_needed = RTE_ALIGN_CEIL(user_cfg->memory - total_mem,
@@ -284,12 +285,13 @@ attach_segment(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 int
 rte_eal_hugepage_attach(void)
 {
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct hugepage_info *hpi;
 	int fd_hugepage = -1;
 	unsigned int i;
 
-	hpi = &platform_info->hugepage_info[0];
+	hpi = &runtime_state->hugepage_info[0];
 
 	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
 		const struct hugepage_info *cur_hpi = &hpi[i];
@@ -352,7 +354,8 @@ memseg_primary_init(void)
 	int hpi_idx, msl_idx = 0;
 	struct rte_memseg_list *msl;
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* no-huge does not need this at all */
 	if (user_cfg->no_hugetlbfs)
@@ -371,7 +374,7 @@ memseg_primary_init(void)
 		uint64_t hugepage_sz;
 		unsigned int n_segs;
 
-		hpi = &platform_info->hugepage_info[hpi_idx];
+		hpi = &runtime_state->hugepage_info[hpi_idx];
 		hugepage_sz = hpi->hugepage_sz;
 
 		/* no NUMA support on FreeBSD */

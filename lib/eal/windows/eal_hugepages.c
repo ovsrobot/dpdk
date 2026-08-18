@@ -62,11 +62,9 @@ hugepage_info_init(void)
 	struct hugepage_info *hpi;
 	unsigned int socket_id;
 	int ret = 0;
-	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
-	/* Only one hugepage size available on Windows. */
-	platform_info->num_hugepage_sizes = 1;
-	hpi = &platform_info->hugepage_info[0];
+	hpi = &runtime_state->hugepage_info[0];
 
 	hpi->hugepage_sz = GetLargePageMinimum();
 	if (hpi->hugepage_sz == 0)
@@ -96,8 +94,37 @@ hugepage_info_init(void)
 	/* No hugepage filesystem on Windows. */
 	hpi->lock_descriptor = -1;
 	memset(hpi->hugedir, 0, sizeof(hpi->hugedir));
+	runtime_state->num_hugepage_sizes = 1;
 
 	return ret;
+}
+
+int
+eal_get_platform_hp_info(struct eal_platform_info *platform_info)
+{
+	size_t hp_sz;
+	unsigned int socket_id;
+
+	hp_sz = GetLargePageMinimum();
+	if (hp_sz == 0)
+		return -ENOTSUP;
+
+	for (socket_id = 0; socket_id < platform_info->numa_node_count; socket_id++) {
+		ULONGLONG bytes;
+		unsigned int numa_node;
+
+		numa_node = eal_socket_numa_node(socket_id);
+		if (GetNumaAvailableMemoryNodeEx(numa_node, &bytes)) {
+			platform_info->hugepage_sizes[0].max_pages[socket_id] = bytes / hp_sz;
+			platform_info->hugepage_sizes[0].total_pages += bytes / hp_sz;
+		}
+	}
+
+	platform_info->num_hugepage_sizes = 1;
+	platform_info->hugepage_sizes[0].size = hp_sz;
+	platform_info->hugepage_sizes[0].dir[0] = '\0'; /* no hugetlbfs on Windows */
+
+	return 0;
 }
 
 int
