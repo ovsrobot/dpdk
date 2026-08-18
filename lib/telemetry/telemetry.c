@@ -56,7 +56,7 @@ static struct socket v1_socket; /* socket for v1 telemetry */
 
 static const char *telemetry_version; /* save rte_version */
 static const char *socket_dir;        /* runtime directory */
-static rte_cpuset_t *thread_cpuset;
+static const rte_cpuset_t *thread_cpuset;
 
 RTE_LOG_REGISTER_DEFAULT(logtype, WARNING);
 #define RTE_LOGTYPE_TELEMETRY logtype
@@ -658,7 +658,7 @@ telemetry_v2_init(void)
 
 RTE_EXPORT_INTERNAL_SYMBOL(rte_telemetry_init)
 int32_t
-rte_telemetry_init(const char *runtime_dir, const char *rte_version, rte_cpuset_t *cpuset)
+rte_telemetry_init(const char *runtime_dir, const char *rte_version, const rte_cpuset_t *cpuset)
 {
 	telemetry_version = rte_version;
 	socket_dir = runtime_dir;
