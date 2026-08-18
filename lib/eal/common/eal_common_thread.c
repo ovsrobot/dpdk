@@ -37,30 +37,25 @@ unsigned rte_socket_id(void)
 	return RTE_PER_LCORE(_numa_id);
 }
 
-static int
-eal_cpuset_socket_id(rte_cpuset_t *cpusetp)
+int
+eal_cpuset_socket_id(const rte_cpuset_t *cpusetp)
 {
-	unsigned cpu = 0;
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
 	int socket_id = SOCKET_ID_ANY;
-	int sid;
 
 	if (cpusetp == NULL)
 		return SOCKET_ID_ANY;
 
-	do {
+	for (unsigned int cpu = 0; cpu < CPU_SETSIZE && cpu < platform_info->cpu_count; cpu++) {
 		if (!CPU_ISSET(cpu, cpusetp))
 			continue;
 
+		int sid = (int)platform_info->cpu_info[cpu].numa_id;
 		if (socket_id == SOCKET_ID_ANY)
-			socket_id = eal_cpu_socket_id(cpu);
-
-		sid = eal_cpu_socket_id(cpu);
-		if (socket_id != sid) {
-			socket_id = SOCKET_ID_ANY;
-			break;
-		}
-
-	} while (++cpu < CPU_SETSIZE);
+			socket_id = sid;
+		else if (socket_id != sid)
+			return SOCKET_ID_ANY;
+	}
 
 	return socket_id;
 }
@@ -70,19 +65,17 @@ thread_update_affinity(rte_cpuset_t *cpusetp)
 {
 	unsigned int lcore_id = rte_lcore_id();
 
-	/* store numa_id in TLS for quick access */
-	RTE_PER_LCORE(_numa_id) =
-		eal_cpuset_socket_id(cpusetp);
-
 	/* store cpuset in TLS for quick access */
-	memmove(&RTE_PER_LCORE(_cpuset), cpusetp,
-		sizeof(rte_cpuset_t));
+	memmove(&RTE_PER_LCORE(_cpuset), cpusetp, sizeof(rte_cpuset_t));
 
 	if (lcore_id != (unsigned)LCORE_ID_ANY) {
-		/* EAL thread will update lcore_config */
-		lcore_config[lcore_id].numa_id = RTE_PER_LCORE(_numa_id);
+		/* EAL thread: update lcore_config cpuset first then find numa based on that */
 		memmove(&lcore_config[lcore_id].cpuset, cpusetp,
 			sizeof(rte_cpuset_t));
+		RTE_PER_LCORE(_numa_id) = rte_lcore_to_socket_id(lcore_id);
+	} else {
+		/* Non-EAL thread: preserve SOCKET_ID_ANY if cpuset spans NUMA nodes. */
+		RTE_PER_LCORE(_numa_id) = (unsigned int)eal_cpuset_socket_id(cpusetp);
 	}
 }
 

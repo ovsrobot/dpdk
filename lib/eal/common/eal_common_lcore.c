@@ -51,6 +51,9 @@ int rte_lcore_index(int lcore_id)
 RTE_EXPORT_SYMBOL(rte_lcore_to_cpu_id)
 int rte_lcore_to_cpu_id(int lcore_id)
 {
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	unsigned int cpu;
+
 	if (unlikely(lcore_id >= RTE_MAX_LCORE))
 		return -1;
 
@@ -61,7 +64,11 @@ int rte_lcore_to_cpu_id(int lcore_id)
 		lcore_id = (int)rte_lcore_id();
 	}
 
-	return lcore_config[lcore_id].core_id;
+	for (cpu = 0; cpu < CPU_SETSIZE && cpu < platform_info->cpu_count; cpu++) {
+		if (CPU_ISSET(cpu, &lcore_config[lcore_id].cpuset))
+			return (int)platform_info->cpu_info[cpu].core_id;
+	}
+	return -1;
 }
 
 RTE_EXPORT_SYMBOL(rte_lcore_cpuset)
@@ -127,7 +134,10 @@ RTE_EXPORT_SYMBOL(rte_lcore_to_socket_id)
 unsigned int
 rte_lcore_to_socket_id(unsigned int lcore_id)
 {
-	return lcore_config[lcore_id].numa_id;
+	if (unlikely(lcore_id >= RTE_MAX_LCORE))
+		return (unsigned int)SOCKET_ID_ANY;
+
+	return (unsigned int)eal_cpuset_socket_id(&lcore_config[lcore_id].cpuset);
 }
 
 static int
@@ -191,15 +201,15 @@ rte_eal_cpu_init(void)
 		/* init cpuset for per lcore config */
 		CPU_ZERO(&lcore_config[lcore_id].cpuset);
 
-		/* find socket first */
-		socket_id = eal_cpu_socket_id(lcore_id);
-		lcore_to_socket_id[lcore_id] = socket_id;
-
 		if (eal_cpu_detected(lcore_id) == 0) {
 			config->lcore_role[lcore_id] = ROLE_OFF;
 			lcore_config[lcore_id].core_index = -1;
 			continue;
 		}
+
+		/* find socket first */
+		socket_id = platform_info->cpu_info[lcore_id].numa_id;
+		lcore_to_socket_id[lcore_id] = socket_id;
 
 		/* By default, lcore 1:1 map to cpu id */
 		CPU_SET(lcore_id, &lcore_config[lcore_id].cpuset);
@@ -210,22 +220,22 @@ rte_eal_cpu_init(void)
 		/* By default, each detected core is enabled */
 		config->lcore_role[lcore_id] = ROLE_RTE;
 		lcore_config[lcore_id].core_role = ROLE_RTE;
-		lcore_config[lcore_id].core_id = eal_cpu_core_id(lcore_id);
-		lcore_config[lcore_id].numa_id = socket_id;
 		EAL_LOG(DEBUG, "Detected lcore %u as "
 				"core %u on NUMA node %u",
-				lcore_id, lcore_config[lcore_id].core_id,
-				lcore_config[lcore_id].numa_id);
+				lcore_id,
+				platform_info->cpu_info[lcore_id].core_id,
+				platform_info->cpu_info[lcore_id].numa_id);
 		count++;
 	}
 	for (; lcore_id < CPU_SETSIZE; lcore_id++) {
 		if (eal_cpu_detected(lcore_id) == 0)
 			continue;
-		socket_id = eal_cpu_socket_id(lcore_id);
-		lcore_to_socket_id[lcore_id] = socket_id;
+		if (unlikely(lcore_id >= platform_info->cpu_count))
+			break;
+		lcore_to_socket_id[lcore_id] = platform_info->cpu_info[lcore_id].numa_id;
 		EAL_LOG(DEBUG, "Skipped lcore %u as core %u on NUMA node %u",
-			lcore_id, eal_cpu_core_id(lcore_id),
-			socket_id);
+			lcore_id, platform_info->cpu_info[lcore_id].core_id,
+			platform_info->cpu_info[lcore_id].numa_id);
 	}
 
 	/* Set the count of enabled logical cores of the EAL configuration */
