@@ -137,6 +137,7 @@ struct eal_user_cfg {
 		uint64_t limit;    /**< memory limit in bytes */
 	} pagesz_mem_overrides[MAX_HUGEPAGE_SIZES];
 	unsigned int num_pagesz_mem_overrides;  /**< number of stored overrides */
+	rte_cpuset_t service_cpuset; /**<  each bit set is one lcore ID to use as service core */
 	int main_lcore;          /**< ID of the main lcore */
 };
 

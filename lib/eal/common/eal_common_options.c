@@ -545,6 +545,7 @@ eal_reset_internal_config(void)
 	user_cfg->user_mbuf_pool_ops_name = NULL;
 	CPU_ZERO(&runtime_state->ctrl_cpuset);
 	runtime_state->init_complete = 0;
+	CPU_ZERO(&user_cfg->service_cpuset);
 	user_cfg->max_simd_bitwidth.bitwidth = RTE_VECT_DEFAULT_SIMD_BITWIDTH;
 	user_cfg->max_simd_bitwidth.forced = 0;
 }
@@ -852,21 +853,20 @@ static int xdigit2val(unsigned char c)
 }
 
 static int
-eal_parse_service_coremask(const char *coremask)
+eal_parse_service_coremask(const char *coremask, rte_cpuset_t *cpuset)
 {
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	int i, j, idx = 0;
 	unsigned int count = 0;
 	char c;
 	int val;
-	uint32_t taken_lcore_count = 0;
 
 	EAL_LOG(WARNING, "'-s <service-coremask>' is deprecated, and will be removed in a future release.");
 	EAL_LOG(WARNING, "\tUse '-S <service-corelist>' option instead.");
 
 	if (coremask == NULL)
 		return -1;
-	/* Remove all blank characters ahead and after .
+	/* Remove all blank characters ahead and after.
 	 * Remove 0x/0X if exists.
 	 */
 	while (isblank(*coremask))
@@ -888,20 +888,9 @@ eal_parse_service_coremask(const char *coremask)
 			return -1;
 		}
 		val = xdigit2val(c);
-		for (j = 0; j < BITS_PER_HEX && idx < RTE_MAX_LCORE;
-				j++, idx++) {
+		for (j = 0; j < BITS_PER_HEX && idx < RTE_MAX_LCORE; j++, idx++) {
 			if ((1 << j) & val) {
-
-				if (eal_cpu_detected(idx) == 0) {
-					EAL_LOG(ERR,
-						"lcore %u unavailable", idx);
-					return -1;
-				}
-
-				if (runtime_state->lcore_cfg[idx].role == ROLE_RTE)
-					taken_lcore_count++;
-
-				runtime_state->lcore_cfg[idx].role = ROLE_SERVICE;
+				CPU_SET(idx, cpuset);
 				count++;
 			}
 		}
@@ -913,16 +902,15 @@ eal_parse_service_coremask(const char *coremask)
 
 	rte_bitset_clear_all(runtime_state->core_indices, RTE_MAX_LCORE);
 
-	if (count == 0)
+	return count > 0 ? 0 : -1;
+}
+
+static int
+eal_parse_service_corelist(const char *corelist, rte_cpuset_t *cpuset)
+{
+	if (rte_argparse_parse_type(corelist, RTE_ARGPARSE_VALUE_TYPE_CORELIST, cpuset) != 0)
 		return -1;
-
-	if (taken_lcore_count != count) {
-		EAL_LOG(WARNING,
-			"Not all service cores are in the coremask. "
-			"Please ensure -c or -l includes service cores");
-	}
-
-	return 0;
+	return CPU_COUNT(cpuset) > 0 ? 0 : -1;
 }
 
 static int
@@ -1097,89 +1085,6 @@ rte_eal_parse_coremask(const char *coremask, rte_cpuset_t *cpuset, bool limit_ra
 	return 0;
 }
 
-static int
-eal_parse_service_corelist(const char *corelist)
-{
-	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
-	int i;
-	unsigned count = 0;
-	char *end = NULL;
-	uint32_t min, max, idx;
-	uint32_t taken_lcore_count = 0;
-
-	if (corelist == NULL)
-		return -1;
-
-	/* Remove all blank characters ahead and after */
-	while (isblank(*corelist))
-		corelist++;
-	i = strlen(corelist);
-	while ((i > 0) && isblank(corelist[i - 1]))
-		i--;
-
-	/* Get list of cores */
-	min = RTE_MAX_LCORE;
-	do {
-		while (isblank(*corelist))
-			corelist++;
-		if (*corelist == '\0')
-			return -1;
-		errno = 0;
-		idx = strtoul(corelist, &end, 10);
-		if (errno || end == NULL)
-			return -1;
-		if (idx >= RTE_MAX_LCORE)
-			return -1;
-		while (isblank(*end))
-			end++;
-		if (*end == '-') {
-			min = idx;
-		} else if ((*end == ',') || (*end == '\0')) {
-			max = idx;
-			if (min == RTE_MAX_LCORE)
-				min = idx;
-			for (idx = min; idx <= max; idx++) {
-				if (runtime_state->lcore_cfg[idx].role != ROLE_SERVICE) {
-					if (runtime_state->lcore_cfg[idx].role == ROLE_RTE)
-						taken_lcore_count++;
-
-					runtime_state->lcore_cfg[idx].role = ROLE_SERVICE;
-					count++;
-				}
-			}
-			min = RTE_MAX_LCORE;
-		} else
-			return -1;
-		corelist = end + 1;
-	} while (*end != '\0');
-
-	if (count == 0)
-		return -1;
-
-	if (taken_lcore_count != count) {
-		EAL_LOG(WARNING,
-			"Not all service cores were in the coremask. "
-			"Please ensure -c or -l includes service cores");
-	}
-
-	/* log the configured service cores for debugging */
-	rte_cpuset_t service_cpuset;
-	CPU_ZERO(&service_cpuset);
-	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		if (runtime_state->lcore_cfg[i].role == ROLE_SERVICE)
-			CPU_SET(i, &service_cpuset);
-	}
-	if (CPU_COUNT(&service_cpuset) > 0) {
-		char *cpuset_str = eal_cpuset_to_str(&service_cpuset);
-		if (cpuset_str != NULL) {
-			EAL_LOG(DEBUG, "Service cores configured: %s", cpuset_str);
-			free(cpuset_str);
-		}
-	}
-
-	return 0;
-}
-
 /* Changes the lcore id of the main thread */
 static int
 eal_parse_main_lcore(const char *arg)
@@ -1196,8 +1101,8 @@ eal_parse_main_lcore(const char *arg)
 		return -1;
 	user_cfg->main_lcore = (int)main_lcore;
 
-	/* ensure main core is not used as service core */
-	if (runtime_state->lcore_cfg[user_cfg->main_lcore].role == ROLE_SERVICE) {
+	/* check main core is not already down as a service core */
+	if (CPU_ISSET(user_cfg->main_lcore, &user_cfg->service_cpuset)) {
 		EAL_LOG(ERR, "Error: Main lcore is used as a service core");
 		return -1;
 	}
@@ -2181,13 +2086,15 @@ eal_parse_args(void)
 
 	/* service core options */
 	if (args.service_coremask != NULL) {
-		if (eal_parse_service_coremask(args.service_coremask) < 0) {
+		if (eal_parse_service_coremask(args.service_coremask,
+				&user_cfg->service_cpuset) < 0) {
 			EAL_LOG(ERR, "invalid service coremask: '%s'",
 					args.service_coremask);
 			return -1;
 		}
 	} else if (args.service_corelist != NULL) {
-		if (eal_parse_service_corelist(args.service_corelist) < 0) {
+		if (eal_parse_service_corelist(args.service_corelist,
+				&user_cfg->service_cpuset) < 0) {
 			EAL_LOG(ERR, "invalid service core list: '%s'",
 					args.service_corelist);
 			return -1;
@@ -2516,6 +2423,32 @@ eal_apply_runtime_state(void)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+
+	/* Apply service core roles: service_cpuset bits are lcore IDs */
+	if (CPU_COUNT(&user_cfg->service_cpuset) > 0) {
+		unsigned int i;
+		char *cpuset_str;
+
+		for (i = 0; i < RTE_MAX_LCORE; i++) {
+			if (!CPU_ISSET(i, &user_cfg->service_cpuset))
+				continue;
+			if (eal_cpu_detected(i) == 0) {
+				EAL_LOG(ERR, "Requested service lcore %u unavailable", i);
+				return -1;
+			}
+			if (runtime_state->lcore_cfg[i].role != ROLE_RTE) {
+				EAL_LOG(WARNING,
+					"service lcore %u is not in the enabled lcore set; please ensure -c or -l includes service cores",
+					i);
+			}
+			runtime_state->lcore_cfg[i].role = ROLE_SERVICE;
+		}
+		cpuset_str = eal_cpuset_to_str(&user_cfg->service_cpuset);
+		if (cpuset_str != NULL) {
+			EAL_LOG(DEBUG, "Service cores configured: %s", cpuset_str);
+			free(cpuset_str);
+		}
+	}
 
 	/* set the main lcore */
 	if (user_cfg->main_lcore != -1) {
