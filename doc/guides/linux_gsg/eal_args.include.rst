@@ -89,13 +89,45 @@ Lcore-related options
     and the use of ``()`` for core groupings,
     are not allowed when ``-R`` or ``--remap-lcore-ids`` is also used.
 
-*   ``--main-lcore <core ID>``
+*   ``--main-lcore <lcore ID>``
 
-    Core ID that is used as main.
+    Set the lcore ID to use for the main thread.
+    The value is a DPDK lcore ID, not a physical CPU ID,
+    and must be present in the enabled lcore set (as configured by ``-l``/``--lcores``).
+
+    In the simple case, without any explicit lcore-to-CPU mapping,
+    lcore IDs equal physical CPU IDs so the distinction does not matter.
+    The two differ when ``-R``/``--remap-lcore-ids`` assigns sequential lcore IDs to higher-numbered physical CPUs,
+    or when the ``@`` mapping syntax in ``--lcores`` is used.
+    In those cases the lcore ID must be specified here, not the physical CPU ID.
+
+    Example using ``--lcores`` explicit mapping:
+    ``--lcores=1@31,2@32,3@33 --main-lcore 2`` selects the thread with lcore ID 2,
+    running on physical CPU 32, as the main thread.
+
+    Example using ``-R`` remapping:
+    ``-l 31-33 -R --main-lcore 1`` starts three threads on physical CPUs 31, 32 and 33, remapped to lcore IDs 0, 1 and 2.
+    ``--main-lcore 1`` selects the thread remapped to lcore ID 1, which runs on physical CPU 32.
 
 *   ``-S, --service-corelist <service core list>``
 
-    List of cores to be used as service cores.
+    List of lcore IDs to be used as service cores.
+    The list format is the same as for ``-l``/``--lcores``:
+    a comma-separated set of lcore IDs or ranges (e.g. ``2,3`` or ``2-5``).
+    Each specified lcore ID must be present in the enabled lcore set.
+
+    The values are lcore IDs, not physical CPU IDs.
+    In the simple case, without any explicit lcore-to-CPU mapping, the two are equal so the distinction does not matter.
+    When using ``-R``/``--remap-lcore-ids`` or the ``@`` mapping syntax in ``--lcores``, lcore IDs and physical CPU IDs differ,
+    and the lcore IDs must be used here.
+
+    Example using ``--lcores`` explicit mapping:
+    ``--lcores=1@31,2@32,3@33 -S 2,3`` assigns the threads with
+    lcore IDs 2 and 3 (running on physical CPUs 32 and 33) as service cores.
+
+    Example using ``-R`` remapping:
+    ``-l 31-33 -R -S 1,2`` starts three threads on physical CPUs 31, 32 and 33, remapped to lcore IDs 0, 1 and 2.
+    ``-S 1,2`` assigns the threads with lcore IDs 1 and 2 (running on physical CPUs 32 and 33) as service cores.
 
 
 Device-related options
