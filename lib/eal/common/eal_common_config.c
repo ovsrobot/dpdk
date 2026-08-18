@@ -37,9 +37,6 @@ static struct eal_platform_info eal_platform_info;
 /* internal runtime configuration */
 static struct eal_runtime_state eal_runtime_state;
 
-/* internal configuration */
-static struct internal_config internal_config;
-
 RTE_EXPORT_SYMBOL(rte_eal_get_runtime_dir)
 const char *
 rte_eal_get_runtime_dir(void)
@@ -64,13 +61,6 @@ struct rte_config *
 rte_eal_get_configuration(void)
 {
 	return &rte_config;
-}
-
-/* Return a pointer to the internal configuration structure */
-struct internal_config *
-eal_get_internal_configuration(void)
-{
-	return &internal_config;
 }
 
 /* Return a pointer to the user configuration structure */

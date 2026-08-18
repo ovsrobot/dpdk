@@ -234,9 +234,8 @@ struct control_thread_params {
 
 static int control_thread_init(void *arg)
 {
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-	rte_cpuset_t *cpuset = &internal_conf->ctrl_cpuset;
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	rte_cpuset_t *cpuset = &runtime_state->ctrl_cpuset;
 	struct control_thread_params *params = arg;
 
 	__rte_thread_init(rte_lcore_id(), cpuset);
@@ -354,11 +353,12 @@ RTE_EXPORT_SYMBOL(rte_thread_register)
 int
 rte_thread_register(void)
 {
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	unsigned int lcore_id;
 	rte_cpuset_t cpuset;
 
 	/* EAL init flushes all lcores, we can't register before. */
-	if (eal_get_internal_configuration()->init_complete != 1) {
+	if (runtime_state->init_complete != 1) {
 		EAL_LOG(DEBUG, "Called %s before EAL init.", __func__);
 		rte_errno = EINVAL;
 		return -1;

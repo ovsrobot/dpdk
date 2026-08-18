@@ -15,14 +15,13 @@ eal_mcfg_complete(void)
 {
 	struct rte_config *cfg = rte_eal_get_configuration();
 	struct rte_mem_config *mcfg = cfg->mem_config;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* ALL shared mem_config related INIT DONE */
 	if (cfg->process_type == RTE_PROC_PRIMARY)
 		mcfg->magic = RTE_MAGIC;
 
-	internal_conf->init_complete = 1;
+	runtime_state->init_complete = 1;
 }
 
 void

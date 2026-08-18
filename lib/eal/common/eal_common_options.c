@@ -507,7 +507,7 @@ eal_get_hugefile_prefix(void)
 }
 
 void
-eal_reset_internal_config(struct internal_config *internal_cfg)
+eal_reset_internal_config(void)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
@@ -563,8 +563,8 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	user_cfg->no_telemetry = false;
 	user_cfg->iova_mode = RTE_IOVA_DC;
 	user_cfg->user_mbuf_pool_ops_name = NULL;
-	CPU_ZERO(&internal_cfg->ctrl_cpuset);
-	internal_cfg->init_complete = 0;
+	CPU_ZERO(&runtime_state->ctrl_cpuset);
+	runtime_state->init_complete = 0;
 	user_cfg->max_simd_bitwidth.bitwidth = RTE_VECT_DEFAULT_SIMD_BITWIDTH;
 	user_cfg->max_simd_bitwidth.forced = 0;
 }
@@ -2076,7 +2076,6 @@ eal_parse_huge_worker_stack(const char *arg)
 int
 eal_parse_args(void)
 {
-	struct internal_config *int_cfg = eal_get_internal_configuration();
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct rte_config *rte_cfg = rte_eal_get_configuration();
 	bool remap_lcores = (args.remap_lcore_ids != NULL);
@@ -2449,7 +2448,7 @@ eal_parse_args(void)
 	}
 #endif
 
-	if (eal_adjust_config(int_cfg) != 0) {
+	if (eal_adjust_config() != 0) {
 		EAL_LOG(ERR, "Invalid configuration");
 		return -1;
 	}
@@ -2458,9 +2457,10 @@ eal_parse_args(void)
 }
 
 static void
-compute_ctrl_threads_cpuset(struct internal_config *internal_cfg)
+compute_ctrl_threads_cpuset(void)
 {
-	rte_cpuset_t *cpuset = &internal_cfg->ctrl_cpuset;
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	rte_cpuset_t *cpuset = &runtime_state->ctrl_cpuset;
 	rte_cpuset_t default_set;
 	unsigned int lcore_id;
 
@@ -2501,7 +2501,7 @@ eal_cleanup_config(const struct eal_user_cfg *user_cfg)
 }
 
 int
-eal_adjust_config(struct internal_config *internal_cfg)
+eal_adjust_config(void)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	int i;
@@ -2509,7 +2509,7 @@ eal_adjust_config(struct internal_config *internal_cfg)
 	if (user_cfg->process_type == RTE_PROC_AUTO)
 		user_cfg->process_type = eal_proc_type_detect();
 
-	compute_ctrl_threads_cpuset(internal_cfg);
+	compute_ctrl_threads_cpuset();
 
 	/* if no memory amounts were requested, this will result in 0 and
 	 * will be overridden later, right after eal_hugepage_info_init() */

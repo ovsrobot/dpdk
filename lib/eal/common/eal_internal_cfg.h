@@ -110,12 +110,6 @@ struct eal_platform_info {
 struct eal_runtime_state {
 	uint64_t hugepage_mem_sz_limits[MAX_HUGEPAGE_SIZES];
 	/**< default max memory per hugepage size */
-};
-
-/**
- * internal configuration
- */
-struct internal_config {
 	rte_cpuset_t ctrl_cpuset;         /**< cpuset for ctrl threads */
 	volatile unsigned int init_complete;
 	/**< indicates whether EAL has completed initialization */
@@ -124,6 +118,6 @@ struct internal_config {
 struct eal_user_cfg *eal_get_user_configuration(void);
 struct eal_platform_info *eal_get_platform_info(void);
 struct eal_runtime_state *eal_get_runtime_state(void);
-void eal_reset_internal_config(struct internal_config *internal_cfg);
+void eal_reset_internal_config(void);
 
 #endif /* EAL_INTERNAL_CFG_H */

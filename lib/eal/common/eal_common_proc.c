@@ -359,8 +359,8 @@ process_msg(struct mp_msg_internal *m, struct sockaddr_un *s)
 	struct action_entry *entry;
 	struct rte_mp_msg *msg = &m->msg;
 	rte_mp_t action = NULL;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_runtime_state *runtime_state =
+		eal_get_runtime_state();
 
 	EAL_LOG(DEBUG, "msg: %s", msg->name);
 
@@ -397,7 +397,7 @@ process_msg(struct mp_msg_internal *m, struct sockaddr_un *s)
 	pthread_mutex_unlock(&mp_mutex_action);
 
 	if (!action) {
-		if (m->type == MP_REQ && !internal_conf->init_complete) {
+		if (m->type == MP_REQ && !runtime_state->init_complete) {
 			/* if this is a request, and init is not yet complete,
 			 * and callback wasn't registered, we should tell the
 			 * requester to ignore our existence because we're not

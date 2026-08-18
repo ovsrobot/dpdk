@@ -727,15 +727,6 @@ int
 eal_set_runtime_dir(const char *run_dir);
 
 /**
- * Get the internal configuration structure.
- *
- * @return
- *   A pointer to the internal configuration structure.
- */
-struct internal_config *
-eal_get_internal_configuration(void);
-
-/**
  * Get the current value of the rte_application_usage pointer
  *
  * @return
