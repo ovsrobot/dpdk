@@ -797,62 +797,36 @@ eal_plugins_init(void)
 
 RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_driver_path_next)
 const char *
-rte_eal_driver_path_next(const char *start, bool cmdline_only)
+rte_eal_driver_path_next(const char *start)
 {
-	if (cmdline_only) {
-		const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-		struct eal_plugin_path *p;
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_plugin_path *p;
 
-		if (start == NULL) {
-			p = TAILQ_FIRST(&user_cfg->plugin_list);
-		} else {
-			TAILQ_FOREACH(p, &user_cfg->plugin_list, next) {
-				if (start == p->name) {
-					p = TAILQ_NEXT(p, next);
-					break;
-				}
-			}
-			if (p == NULL)
-				return NULL;
-		}
-		return p ? p->name : NULL;
+	if (start == NULL) {
+		p = TAILQ_FIRST(&user_cfg->plugin_list);
 	} else {
-		const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
-		struct shared_driver *solib;
-
-		if (start == NULL) {
-			solib = TAILQ_FIRST(&runtime_state->loaded_plugins);
-		} else {
-			TAILQ_FOREACH(solib, &runtime_state->loaded_plugins, next) {
-				if (start == solib->name) {
-					solib = TAILQ_NEXT(solib, next);
-					break;
-				}
+		TAILQ_FOREACH(p, &user_cfg->plugin_list, next) {
+			if (start == p->name) {
+				p = TAILQ_NEXT(p, next);
+				break;
 			}
-			if (solib == NULL)
-				return NULL;
 		}
-		return solib ? solib->name : NULL;
+		if (p == NULL)
+			return NULL;
 	}
+	return p ? p->name : NULL;
 }
 
 RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_driver_path_count)
 unsigned int
-rte_eal_driver_path_count(bool cmdline_only)
+rte_eal_driver_path_count(void)
 {
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_plugin_path *p;
 	unsigned int count = 0;
 
-	if (cmdline_only) {
-		const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-		struct eal_plugin_path *p;
-		TAILQ_FOREACH(p, &user_cfg->plugin_list, next)
-			count++;
-	} else {
-		const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
-		struct shared_driver *solib;
-		TAILQ_FOREACH(solib, &runtime_state->loaded_plugins, next)
-			count++;
-	}
+	TAILQ_FOREACH(p, &user_cfg->plugin_list, next)
+		count++;
 
 	return count;
 }

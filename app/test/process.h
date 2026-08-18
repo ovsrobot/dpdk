@@ -62,7 +62,7 @@ add_parameter_driver_path(char **argv, int max_capacity)
 	const char *driver_path;
 	int count = 0;
 
-	RTE_EAL_DRIVER_PATH_FOREACH(driver_path, true) {
+	RTE_EAL_DRIVER_PATH_FOREACH(driver_path) {
 		if (asprintf(&argv[count], PREFIX_DRIVER_PATH"%s", driver_path) < 0)
 			break;
 
@@ -100,7 +100,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 		return -1;
 	else if (pid == 0) {
 		allow_num = rte_devargs_type_count(RTE_DEVTYPE_ALLOWED);
-		driver_path_num = rte_eal_driver_path_count(true);
+		driver_path_num = rte_eal_driver_path_count();
 		argv_num = numargs + allow_num + driver_path_num + 1;
 		argv_cpy = calloc(argv_num, sizeof(char *));
 		if (!argv_cpy)
