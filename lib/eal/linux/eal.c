@@ -412,20 +412,18 @@ rte_config_init(void)
 static void
 eal_hugedirs_unlock(void)
 {
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 	int i;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-
 	for (i = 0; i < MAX_HUGEPAGE_SIZES; i++)
 	{
 		/* skip uninitialized */
-		if (internal_conf->hugepage_info[i].lock_descriptor < 0)
+		if (platform_info->hugepage_info[i].lock_descriptor < 0)
 			continue;
 		/* unlock hugepage file */
-		flock(internal_conf->hugepage_info[i].lock_descriptor, LOCK_UN);
-		close(internal_conf->hugepage_info[i].lock_descriptor);
+		flock(platform_info->hugepage_info[i].lock_descriptor, LOCK_UN);
+		close(platform_info->hugepage_info[i].lock_descriptor);
 		/* reset the field */
-		internal_conf->hugepage_info[i].lock_descriptor = -1;
+		platform_info->hugepage_info[i].lock_descriptor = -1;
 	}
 }
 
@@ -746,7 +744,7 @@ rte_eal_init(int argc, char **argv)
 			goto err_out;
 		}
 		if (user_cfg->process_type == RTE_PROC_PRIMARY &&
-				eal_apply_hugepage_mem_sz_limits(internal_conf) < 0) {
+				eal_apply_hugepage_mem_sz_limits() < 0) {
 			rte_eal_init_alert("Cannot apply hugepage memory limits.");
 			rte_errno = EINVAL;
 			goto err_out;

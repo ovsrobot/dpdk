@@ -329,11 +329,10 @@ eal_get_hugepage_mem_size(void)
 {
 	uint64_t size = 0;
 	unsigned i, j;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 
-	for (i = 0; i < internal_conf->num_hugepage_sizes; i++) {
-		struct hugepage_info *hpi = &internal_conf->hugepage_info[i];
+	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
+		struct hugepage_info *hpi = &platform_info->hugepage_info[i];
 		if (strnlen(hpi->hugedir, sizeof(hpi->hugedir)) != 0) {
 			for (j = 0; j < RTE_MAX_NUMA_NODES; j++) {
 				size += hpi->hugepage_sz * hpi->num_pages[j];
@@ -582,7 +581,7 @@ rte_eal_init(int argc, char **argv)
 			goto err_out;
 		}
 		if (user_cfg->process_type == RTE_PROC_PRIMARY &&
-				eal_apply_hugepage_mem_sz_limits(internal_conf) < 0) {
+				eal_apply_hugepage_mem_sz_limits() < 0) {
 			rte_eal_init_alert("Cannot apply hugepage memory limits.");
 			rte_errno = EINVAL;
 			goto err_out;

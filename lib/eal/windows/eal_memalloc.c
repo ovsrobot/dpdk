@@ -33,7 +33,7 @@ eal_memalloc_get_seg_fd_offset(int list_idx, int seg_idx, size_t *offset)
 
 static int
 alloc_seg(struct rte_memseg *ms, void *requested_addr, int socket_id,
-	struct hugepage_info *hi)
+	const struct hugepage_info *hi)
 {
 	HANDLE current_process;
 	unsigned int numa_node;
@@ -166,7 +166,7 @@ free_seg(struct rte_memseg *ms)
 }
 
 struct alloc_walk_param {
-	struct hugepage_info *hi;
+	const struct hugepage_info *hi;
 	struct rte_memseg **ms;
 	size_t page_sz;
 	unsigned int segs_allocated;
@@ -273,7 +273,7 @@ out:
 }
 
 struct free_walk_param {
-	struct hugepage_info *hi;
+	const struct hugepage_info *hi;
 	struct rte_memseg *ms;
 };
 static int
@@ -313,9 +313,8 @@ eal_memalloc_alloc_seg_bulk(struct rte_memseg **ms, int n_segs,
 	unsigned int i;
 	int ret = -1;
 	struct alloc_walk_param wa;
-	struct hugepage_info *hi = NULL;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct hugepage_info *hi = NULL;
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (user_cfg->legacy_mem) {
@@ -323,8 +322,8 @@ eal_memalloc_alloc_seg_bulk(struct rte_memseg **ms, int n_segs,
 		return -ENOTSUP;
 	}
 
-	for (i = 0; i < internal_conf->num_hugepage_sizes; i++) {
-		struct hugepage_info *hpi = &internal_conf->hugepage_info[i];
+	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
+		const struct hugepage_info *hpi = &platform_info->hugepage_info[i];
 		if (page_sz == hpi->hugepage_sz) {
 			hi = hpi;
 			break;
@@ -368,8 +367,7 @@ int
 eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 {
 	int seg, ret = 0;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* dynamic free not supported in legacy mode */
@@ -378,7 +376,7 @@ eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 
 	for (seg = 0; seg < n_segs; seg++) {
 		struct rte_memseg *cur = ms[seg];
-		struct hugepage_info *hi = NULL;
+		const struct hugepage_info *hi = NULL;
 		struct free_walk_param wa;
 		size_t i;
 		int walk_res;
@@ -392,12 +390,12 @@ eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 
 		memset(&wa, 0, sizeof(wa));
 
-		for (i = 0; i < RTE_DIM(internal_conf->hugepage_info); i++) {
-			hi = &internal_conf->hugepage_info[i];
+		for (i = 0; i < RTE_DIM(platform_info->hugepage_info); i++) {
+			hi = &platform_info->hugepage_info[i];
 			if (cur->hugepage_sz == hi->hugepage_sz)
 				break;
 		}
-		if (i == RTE_DIM(internal_conf->hugepage_info)) {
+		if (i == RTE_DIM(platform_info->hugepage_info)) {
 			EAL_LOG(ERR, "Can't find relevant hugepage_info entry");
 			ret = -1;
 			continue;

@@ -158,8 +158,6 @@ rte_eal_init(int argc, char **argv)
 {
 	int i, fctret, bscan;
 	const struct rte_config *config = rte_eal_get_configuration();
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	bool has_phys_addr;
 	enum rte_iova_mode iova_mode;
@@ -230,7 +228,7 @@ rte_eal_init(int argc, char **argv)
 		goto err_out;
 	}
 	if (!user_cfg->no_hugetlbfs &&
-			eal_apply_hugepage_mem_sz_limits(internal_conf) < 0) {
+			eal_apply_hugepage_mem_sz_limits() < 0) {
 		rte_eal_init_alert("Cannot apply hugepage memory limits");
 		rte_errno = EINVAL;
 		goto err_out;

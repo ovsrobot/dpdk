@@ -511,6 +511,7 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 	int i;
 
 	user_cfg->memory = 0;
@@ -537,9 +538,9 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	user_cfg->hugepage_file.unlink_existing = true;
 	/* zero out hugedir descriptors */
 	for (i = 0; i < MAX_HUGEPAGE_SIZES; i++) {
-		memset(&internal_cfg->hugepage_info[i], 0,
-				sizeof(internal_cfg->hugepage_info[0]));
-		internal_cfg->hugepage_info[i].lock_descriptor = -1;
+		memset(&platform_info->hugepage_info[i], 0,
+				sizeof(platform_info->hugepage_info[0]));
+		platform_info->hugepage_info[i].lock_descriptor = -1;
 	}
 	user_cfg->base_virtaddr = 0;
 
@@ -2519,15 +2520,16 @@ eal_adjust_config(struct internal_config *internal_cfg)
 }
 
 int
-eal_apply_hugepage_mem_sz_limits(struct internal_config *internal_cfg)
+eal_apply_hugepage_mem_sz_limits(void)
 {
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	unsigned int i;
 
-	for (i = 0; i < internal_cfg->num_hugepage_sizes; i++) {
+	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
 		unsigned int j;
-		const uint64_t pagesz = internal_cfg->hugepage_info[i].hugepage_sz;
+		const uint64_t pagesz = platform_info->hugepage_info[i].hugepage_sz;
 		uint64_t limit;
 
 		/* assign default limits */

@@ -71,9 +71,8 @@ rte_eal_hugepage_init(void)
 	uint64_t total_mem = 0;
 	void *addr;
 	unsigned int i, j, seg_idx = 0;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 
 	/* get pointer to global configuration */
 	mcfg = rte_eal_get_configuration()->mem_config;
@@ -113,13 +112,13 @@ rte_eal_hugepage_init(void)
 	}
 
 	/* map all hugepages and sort them */
-	for (i = 0; i < internal_conf->num_hugepage_sizes; i++) {
+	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
 		struct hugepage_info *hpi;
 		rte_iova_t prev_end = 0;
 		uint64_t page_sz, mem_needed;
 		unsigned int n_pages, max_pages;
 
-		hpi = &internal_conf->hugepage_info[i];
+		hpi = &platform_info->hugepage_info[i];
 		page_sz = hpi->hugepage_sz;
 		max_pages = hpi->num_pages[0];
 		mem_needed = RTE_ALIGN_CEIL(user_cfg->memory - total_mem,
@@ -285,15 +284,14 @@ attach_segment(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 int
 rte_eal_hugepage_attach(void)
 {
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 	struct hugepage_info *hpi;
 	int fd_hugepage = -1;
 	unsigned int i;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 
-	hpi = &internal_conf->hugepage_info[0];
+	hpi = &platform_info->hugepage_info[0];
 
-	for (i = 0; i < internal_conf->num_hugepage_sizes; i++) {
+	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
 		const struct hugepage_info *cur_hpi = &hpi[i];
 		struct attach_walk_args wa;
 
@@ -353,9 +351,8 @@ memseg_primary_init(void)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int hpi_idx, msl_idx = 0;
 	struct rte_memseg_list *msl;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 
 	/* no-huge does not need this at all */
 	if (user_cfg->no_hugetlbfs)
@@ -368,13 +365,13 @@ memseg_primary_init(void)
 	 */
 
 	/* create memseg lists */
-	for (hpi_idx = 0; hpi_idx < (int) internal_conf->num_hugepage_sizes;
+	for (hpi_idx = 0; hpi_idx < (int) platform_info->num_hugepage_sizes;
 			hpi_idx++) {
 		struct hugepage_info *hpi;
 		uint64_t hugepage_sz;
 		unsigned int n_segs;
 
-		hpi = &internal_conf->hugepage_info[hpi_idx];
+		hpi = &platform_info->hugepage_info[hpi_idx];
 		hugepage_sz = hpi->hugepage_sz;
 
 		/* no NUMA support on FreeBSD */
