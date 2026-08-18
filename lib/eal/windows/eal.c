@@ -34,6 +34,9 @@
 
 #define MEMSIZE_IF_NO_HUGE_PAGE (64ULL * 1024ULL * 1024ULL)
 
+/* flag to prevent double-init of EAL */
+static RTE_ATOMIC(uint32_t) init_has_run;
+
 /* define fd variable here, because file needs to be kept open for the
  * duration of the program, as we hold a write lock on it in the primary proc
  */
@@ -154,6 +157,7 @@ int
 rte_eal_init(int argc, char **argv)
 {
 	struct eal_user_cfg user_cfg_from_args = EAL_USER_CFG_INITIALIZER(user_cfg_from_args);
+	uint32_t has_run = 0;
 
 	/*
 	 * platform_info is lazily initialized on first use, and that
@@ -161,9 +165,17 @@ rte_eal_init(int argc, char **argv)
 	 * everything below depends on a valid platform_info, so confirm it
 	 * is available before doing anything else.
 	 */
-	if (eal_get_platform_info() == NULL) {
+	if (rte_eal_get_platform_info() == NULL) {
 		rte_eal_init_alert("Cannot get platform information.");
 		rte_errno = ENOTSUP;
+		return -1;
+	}
+
+	/* first check if we have been run before */
+	if (!rte_atomic_compare_exchange_strong_explicit(&init_has_run, &has_run, 1,
+					rte_memory_order_relaxed, rte_memory_order_relaxed)) {
+		rte_eal_init_alert("already called initialization.");
+		rte_errno = EALREADY;
 		return -1;
 	}
 
@@ -199,6 +211,7 @@ rte_eal_init(int argc, char **argv)
 	return fctret;
 
 err_out:
+	rte_atomic_store_explicit(&init_has_run, 0, rte_memory_order_relaxed);
 	eal_clean_saved_args();
 	eal_user_cfg_cleanup(&user_cfg_from_args);
 	return -1;
@@ -452,6 +465,51 @@ eal_runtime_init(const struct eal_user_cfg *user_provided_cfg)
 err_out:
 	eal_cleanup_config();
 	return -1;
+}
+
+/**
+ * Initialize the DPDK runtime with a user-provided configuration.
+ * This is an alternative to rte_eal_init() that allows the caller to provide
+ * a configuration struct directly, instead of parsing command line arguments.
+ * Both parameters to the function must be non-NULL,
+ * and the user_provided_cfg must be fully initialized by the caller.
+ */
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_runtime_init)
+int
+rte_eal_runtime_init(const char *progname, const struct eal_user_cfg *user_provided_cfg)
+{
+	uint32_t has_run = 0;
+
+	rte_errno = 0;
+	if (progname == NULL || user_provided_cfg == NULL) {
+		rte_eal_init_alert("Invalid arguments to rte_eal_runtime_init.");
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	if (rte_eal_get_platform_info() == NULL) {
+		rte_eal_init_alert("Platform information is not available.");
+		/* Set an error if previous caller has not set one.*/
+		if (rte_errno == 0)
+			rte_errno = ENOTSUP;
+		return -1;
+	}
+
+	/* first check if we have been run before */
+	if (!rte_atomic_compare_exchange_strong_explicit(&init_has_run, &has_run, 1,
+					rte_memory_order_relaxed, rte_memory_order_relaxed)) {
+		rte_eal_init_alert("already called initialization.");
+		rte_errno = EALREADY;
+		return -1;
+	}
+
+	eal_log_init(progname);
+
+	if (eal_runtime_init(user_provided_cfg) < 0) {
+		rte_atomic_store_explicit(&init_has_run, 0, rte_memory_order_relaxed);
+		return -1;
+	}
+	return 0;
 }
 
 /* Don't use MinGW asprintf() to have identical code with all toolchains. */

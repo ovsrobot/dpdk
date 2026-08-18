@@ -54,7 +54,7 @@ RTE_EXPORT_SYMBOL(rte_lcore_to_cpu_id)
 int rte_lcore_to_cpu_id(int lcore_id)
 {
 	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = rte_eal_get_platform_info();
 	unsigned int cpu;
 
 	if (unlikely(lcore_id >= RTE_MAX_LCORE))
@@ -267,7 +267,7 @@ RTE_EXPORT_SYMBOL(rte_socket_count)
 unsigned int
 rte_socket_count(void)
 {
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = rte_eal_get_platform_info();
 	return platform_info->numa_node_count;
 }
 
@@ -275,7 +275,7 @@ RTE_EXPORT_SYMBOL(rte_socket_id_by_idx)
 int
 rte_socket_id_by_idx(unsigned int idx)
 {
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = rte_eal_get_platform_info();
 	if (idx >= platform_info->numa_node_count) {
 		rte_errno = EINVAL;
 		return -1;

@@ -25,6 +25,7 @@
 #include <rte_bitset.h>
 #include <rte_stdatomic.h>
 #include "eal_thread.h"
+#include "rte_compat.h"
 
 /* Forward declaration — full definition is in eal_memcfg.h */
 struct rte_mem_config;
@@ -384,8 +385,13 @@ struct eal_runtime_state {
 	struct eal_solib_list loaded_plugins; /**< all plugins loaded by eal_plugins_init() */
 };
 
-const struct eal_platform_info *eal_get_platform_info(void);
+__rte_internal
+const struct eal_platform_info *rte_eal_get_platform_info(void);
 struct eal_user_cfg *eal_get_user_configuration(void);
 struct eal_runtime_state *eal_get_runtime_state(void);
+
+__rte_internal
+int
+rte_eal_runtime_init(const char *progname, const struct eal_user_cfg *user_provided_cfg);
 
 #endif /* EAL_INTERNAL_CFG_H */

@@ -40,7 +40,7 @@ unsigned rte_socket_id(void)
 int
 eal_cpuset_socket_id(const rte_cpuset_t *cpusetp)
 {
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = rte_eal_get_platform_info();
 	int socket_id = SOCKET_ID_ANY;
 
 	if (cpusetp == NULL)
