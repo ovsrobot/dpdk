@@ -95,7 +95,7 @@ static struct sxe2_pci_map_addr_info sxe2_net_map_addr_info_pf[SXE2_PCI_MAP_RES_
 				      .reg_width = 4},
 	[SXE2_PCI_MAP_RES_IRQ_MSIX] = {.addr_base = SXE2_BAR4_MSIX_CTL(0),
 				      .bar_idx = 4,
-				      .reg_width = 10},
+				      .reg_width = 0x10},
 };
 
 static struct sxe2_pci_map_addr_info sxe2_net_map_addr_info_vf[SXE2_PCI_MAP_RES_MAX_COUNT] = {
@@ -630,6 +630,10 @@ int32_t sxe2_udp_tunnel_port_add_common(struct sxe2_adapter *ad,
 	struct sxe2_udp_tunnel_cfg *tunnel_config;
 	int32_t ret = -1;
 
+	if (ad->dev_type != SXE2_DEV_T_PF || ad->is_dev_repr) {
+		ret = -ENOTSUP;
+		goto l_end;
+	}
 	rte_spinlock_lock(&ad->udp_tunnel_ctx.lock);
 
 	tunnel_config = &ad->udp_tunnel_ctx.tunnel_conf[tunnel_proto];
@@ -659,6 +663,7 @@ int32_t sxe2_udp_tunnel_port_add_common(struct sxe2_adapter *ad,
 
 l_unlock_end:
 	rte_spinlock_unlock(&ad->udp_tunnel_ctx.lock);
+l_end:
 	return ret;
 }
 
@@ -782,6 +787,10 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 	struct sxe2_adapter *adapter = SXE2_DEV_PRIVATE_TO_ADAPTER(dev);
 	struct sxe2_vsi *vsi = adapter->vsi_ctxt.main_vsi;
 
+	if (unlikely(vsi == NULL)) {
+		PMD_LOG_ERR(INIT, "main vsi is NULL");
+		return -EINVAL;
+	}
 	dev_info->max_rx_queues = vsi->rxqs.q_cnt;
 	dev_info->max_tx_queues = vsi->txqs.q_cnt;
 	dev_info->min_rx_bufsize = SXE2_MIN_BUF_SIZE;
@@ -789,6 +798,7 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 	dev_info->max_lro_pkt_size = SXE2_FRAME_SIZE_MAX * SXE2_RX_LRO_DESC_MAX_NUM;
 	dev_info->max_mtu = dev_info->max_rx_pktlen - SXE2_ETH_OVERHEAD;
 	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
+	dev_info->max_mac_addrs = SXE2_NUM_MACADDR_MAX;
 
 	dev_info->rx_offload_capa =
 		RTE_ETH_RX_OFFLOAD_VLAN_STRIP |
@@ -800,11 +810,9 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 		RTE_ETH_RX_OFFLOAD_SCTP_CKSUM |
 		RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM |
 		RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT |
-#ifndef RTE_LIBRTE_SXE2_16BYTE_RX_DESC
-		RTE_ETH_RX_OFFLOAD_QINQ_STRIP |
-#endif
 		RTE_ETH_RX_OFFLOAD_VLAN_EXTEND |
-		RTE_ETH_RX_OFFLOAD_TCP_LRO;
+		RTE_ETH_RX_OFFLOAD_TCP_LRO |
+		RTE_ETH_RX_OFFLOAD_RSS_HASH;
 
 	dev_info->tx_offload_capa =
 		RTE_ETH_TX_OFFLOAD_VLAN_INSERT |
@@ -850,13 +858,20 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 		RTE_ETH_TX_OFFLOAD_IPIP_TNL_TSO |
 		RTE_ETH_TX_OFFLOAD_GENEVE_TNL_TSO;
 
+	if (sxe2_ipsec_supported(adapter)) {
+		dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_SECURITY;
+		dev_info->tx_offload_capa |= RTE_ETH_TX_OFFLOAD_SECURITY;
+	}
 
 	if (adapter->cap_flags & SXE2_DEV_CAPS_OFFLOAD_PTP)
 		dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_TIMESTAMP;
 
-	if (sxe2_ipsec_supported(adapter)) {
-		dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_SECURITY;
-		dev_info->tx_offload_capa |= RTE_ETH_TX_OFFLOAD_SECURITY;
+	if (!sxe2_dev_port_vlan_check(dev)) {
+		dev_info->tx_offload_capa |= RTE_ETH_TX_OFFLOAD_QINQ_INSERT;
+#ifndef RTE_LIBRTE_SXE2_16BYTE_RX_DESC
+		dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_QINQ_STRIP;
+#endif
+		dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_VLAN_FILTER;
 	}
 
 	if (adapter->cap_flags & SXE2_DEV_CAPS_OFFLOAD_RSS) {
@@ -909,7 +924,8 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 
 	dev_info->speed_capa = RTE_ETH_LINK_SPEED_10G | RTE_ETH_LINK_SPEED_25G |
 				RTE_ETH_LINK_SPEED_50G | RTE_ETH_LINK_SPEED_100G;
-
+	dev_info->nb_rx_queues = dev->data->nb_rx_queues;
+	dev_info->nb_tx_queues = dev->data->nb_tx_queues;
 	dev_info->default_rxportconf.burst_size = SXE2_RX_MAX_BURST;
 	dev_info->default_txportconf.burst_size = SXE2_TX_MAX_BURST;
 	dev_info->default_rxportconf.nb_queues = 1;
@@ -918,11 +934,8 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 	dev_info->default_txportconf.ring_size = SXE2_RING_SIZE_MIN;
 
 	dev_info->rx_seg_capa.max_nseg = SXE2_RX_MAX_NSEG;
-
 	dev_info->rx_seg_capa.multi_pools = true;
-
 	dev_info->rx_seg_capa.offset_allowed = false;
-
 	dev_info->rx_seg_capa.offset_align_log2 = false;
 
 	return 0;
@@ -930,7 +943,7 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 
 static const uint32_t *
 sxe2_buffer_split_supported_hdr_ptypes_get(struct rte_eth_dev *dev __rte_unused,
-					   size_t *no_of_elements __rte_unused)
+					   size_t *no_of_elements)
 {
 	static const uint32_t ptypes[] = {
 		RTE_PTYPE_L2_ETHER,
@@ -968,6 +981,7 @@ sxe2_buffer_split_supported_hdr_ptypes_get(struct rte_eth_dev *dev __rte_unused,
 
 		RTE_PTYPE_UNKNOWN
 	};
+	*no_of_elements = RTE_DIM(ptypes);
 
 	return ptypes;
 }
@@ -1352,6 +1366,8 @@ static int32_t sxe2_func_caps_get(struct sxe2_adapter *adapter)
 		goto l_end;
 
 	adapter->dev_type = dev_caps.dev_type;
+	adapter->port_idx = dev_caps.port_idx;
+	adapter->pf_idx = dev_caps.pf_idx;
 
 	sxe2_drv_dev_caps_set(adapter,  &dev_caps);
 
@@ -1437,7 +1453,7 @@ void sxe2_pci_map_write_reg(struct sxe2_adapter *adapter,
 		goto l_ret;
 	}
 
-	SXE2_PCI_REG_WRITE_WC(reg_addr, value);
+	SXE2_PCI_REG_WRITE(reg_addr, value);
 l_ret:
 	return;
 }
@@ -1549,6 +1565,12 @@ int32_t sxe2_dev_pci_res_seg_map(struct sxe2_adapter *adapter,
 {
 	struct sxe2_pci_map_addr_info *addr_info = NULL;
 	int32_t ret = 0;
+
+	if (unlikely(res_type >= SXE2_PCI_MAP_RES_MAX_COUNT)) {
+		PMD_DEV_LOG_ERR(adapter, INIT, "Invalid resource type %u", res_type);
+		ret = -EINVAL;
+		goto l_end;
+	}
 
 	addr_info = &adapter->map_ctxt.addr_info[res_type];
 	if (!addr_info || addr_info->bar_idx == SXE2_PCI_MAP_BAR_INVALID) {
@@ -1765,14 +1787,13 @@ void sxe2_dev_pci_map_uinit(struct rte_eth_dev *dev)
 	uint8_t i = 0;
 
 	PMD_INIT_FUNC_TRACE();
+	if (map_ctxt->bar_info != NULL) {
+		(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_DOORBELL_RX_TAIL);
+		(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_DOORBELL_TX);
+		(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_IRQ_DYN);
+		(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_IRQ_ITR);
+		(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_IRQ_MSIX);
 
-	(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_DOORBELL_RX_TAIL);
-	(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_DOORBELL_TX);
-	(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_IRQ_DYN);
-	(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_IRQ_ITR);
-	(void)sxe2_dev_pci_seg_unmap(adapter, SXE2_PCI_MAP_RES_IRQ_MSIX);
-
-	if (map_ctxt != NULL && map_ctxt->bar_info != NULL) {
 		for (i = 0; i < map_ctxt->bar_cnt; i++) {
 			bar_info = &map_ctxt->bar_info[i];
 			if (bar_info != NULL && bar_info->seg_info != NULL) {
@@ -1783,7 +1804,6 @@ void sxe2_dev_pci_map_uinit(struct rte_eth_dev *dev)
 		rte_free(map_ctxt->bar_info);
 		map_ctxt->bar_info = NULL;
 	}
-
 	adapter->dev_info.dev_data = NULL;
 }
 
@@ -1936,6 +1956,12 @@ static int32_t sxe2_dev_init(struct rte_eth_dev *dev,
 		goto init_switchdev_err;
 	}
 
+	ret = sxe2_eth_init(dev);
+	if (ret) {
+		PMD_LOG_ERR(INIT, "Failed to initialize eth parameters, ret=%d", ret);
+		goto init_eth_err;
+	}
+
 	ret = sxe2_sw_init(dev);
 	if (ret) {
 		PMD_LOG_ERR(INIT, "Failed to initialize sw parameters, ret=[%d]", ret);
@@ -1946,12 +1972,6 @@ static int32_t sxe2_dev_init(struct rte_eth_dev *dev,
 	if (ret != 0) {
 		PMD_LOG_ERR(INIT, "Failed to initialize interrupt, ret:%d", ret);
 		goto init_irq_err;
-	}
-
-	ret = sxe2_eth_init(dev);
-	if (ret) {
-		PMD_LOG_ERR(INIT, "Failed to initialize eth parameters, ret=%d", ret);
-		goto init_eth_err;
 	}
 
 	ret = sxe2_security_init(dev);
@@ -2005,15 +2025,15 @@ init_sched_err:
 init_fc_state_err:
 	(void)sxe2_flow_uninit(dev);
 init_flow_err:
-init_rss_err:
 	sxe2_security_uinit(dev);
+init_rss_err:
 init_security_err:
-	sxe2_eth_uinit(dev);
-init_eth_err:
 	sxe2_intr_uninit(dev);
 init_irq_err:
 	sxe2_sw_uninit(dev);
 init_sw_err:
+	sxe2_eth_uinit(dev);
+init_eth_err:
 	(void)sxe2_switchdev_uninit(dev);
 init_switchdev_err:
 init_dev_info_err:
@@ -2035,17 +2055,15 @@ static int32_t sxe2_dev_close(struct rte_eth_dev *dev)
 	(void)sxe2_queues_release(dev);
 	sxe2_mp_uninit(dev);
 	(void)sxe2_sched_uinit(dev);
-	(void)sxe2_rss_disable(dev);
 	(void)sxe2_flow_uninit(dev);
+	(void)sxe2_rss_disable(dev);
 	(void)sxe2_udp_tunnel_port_clear(dev);
-	sxe2_vsi_uninit(dev);
 	sxe2_security_uinit(dev);
 	sxe2_intr_uninit(dev);
 	(void)sxe2_switchdev_uninit(dev);
 	sxe2_sw_uninit(dev);
-	(void)sxe2_switchdev_uninit(dev);
-	sxe2_dev_pci_map_uinit(dev);
 	sxe2_eth_uinit(dev);
+	sxe2_vsi_uninit(dev);
 	sxe2_dev_pci_map_uinit(dev);
 	sxe2_free_repr_info(dev);
 	sxe2_fc_state_uinit(dev);
@@ -2068,9 +2086,11 @@ static int32_t sxe2_dev_uninit(struct rte_eth_dev *dev)
 	for (i = 0; i < adapter->repr_ctxt.nb_repr_vf; i++) {
 		rep_dev = adapter->repr_ctxt.vf_rep_eth_dev[i];
 		if (rep_dev) {
-			ret = rep_dev->dev_ops->dev_close(rep_dev);
-			if (ret)
-				goto l_end;
+			if (rep_dev->dev_ops && rep_dev->dev_ops->dev_close) {
+				ret = rep_dev->dev_ops->dev_close(rep_dev);
+				if (ret)
+					goto l_end;
+			}
 			if (rep_dev->intr_handle)
 				rte_intr_instance_free(rep_dev->intr_handle);
 			ret = rte_eth_dev_release_port(rep_dev);
@@ -2143,42 +2163,25 @@ out:
 	return ret;
 }
 
-static uint16_t sxe2_switchdev_repr_id_encode_get(struct sxe2_switchdev_info *switchdev_info)
-{
-	enum rte_eth_representor_type type;
-	uint16_t repr = switchdev_info->vf_num;
-	uint32_t pf = switchdev_info->pf_num;
-
-	switch (switchdev_info->port_name_type) {
-	case SXE2_PHYS_PORT_NAME_TYPE_UPLINK:
-		if (!switchdev_info->representor)
-			return UINT16_MAX;
-		type = RTE_ETH_REPRESENTOR_PF;
-		pf = switchdev_info->mpesw_owner;
-		break;
-	case SXE2_PHYS_PORT_NAME_TYPE_PFVF:
-	default:
-		type = RTE_ETH_REPRESENTOR_VF;
-		break;
-	}
-
-	return SXE2_REPRESENTOR_ID(pf, type, repr);
-}
-
 static bool sxe2_switchdev_repr_match(struct sxe2_adapter *adapter,
 				   struct rte_eth_devargs *req_eth_da)
 {
-	uint32_t port_idx = 0;
-	uint32_t repr_idx;
-	uint16_t kernel_repr_id = sxe2_switchdev_repr_id_encode_get(&adapter->switchdev_info);
-	uint16_t repr_id;
+	uint16_t port_idx = UINT16_MAX;
+	uint16_t repr_idx;
+	uint16_t vf_id;
+	uint16_t i;
 
 	switch (req_eth_da->type) {
 	case RTE_ETH_REPRESENTOR_PF:
+		if (adapter->switchdev_info.port_name_type !=
+			SXE2_PHYS_PORT_NAME_TYPE_UPLINK) {
+			rte_errno = EBUSY;
+			return false;
+		}
 		break;
 	case RTE_ETH_REPRESENTOR_VF:
 		if (adapter->switchdev_info.port_name_type !=
-		SXE2_PHYS_PORT_NAME_TYPE_PFVF) {
+			SXE2_PHYS_PORT_NAME_TYPE_PFVF) {
 			rte_errno = EBUSY;
 			return false;
 		}
@@ -2191,15 +2194,30 @@ static bool sxe2_switchdev_repr_match(struct sxe2_adapter *adapter,
 		return false;
 	}
 
-	for (repr_idx = 0; repr_idx < req_eth_da->nb_representor_ports; ++repr_idx) {
-		repr_id = SXE2_REPRESENTOR_ID(req_eth_da->ports[port_idx],
-					      req_eth_da->type,
-					      req_eth_da->representor_ports[repr_idx]);
-		if (repr_id == kernel_repr_id)
-			return true;
+	for (port_idx = 0; port_idx < req_eth_da->nb_ports; ++port_idx) {
+		if (adapter->switchdev_info.pf_num != req_eth_da->ports[port_idx]) {
+			PMD_DEV_LOG_DEBUG(adapter, DRV, "switchdev pf %u not match req pf %u",
+				adapter->switchdev_info.pf_num, req_eth_da->ports[port_idx]);
+			rte_errno = EBUSY;
+			return false;
+		}
 	}
-	rte_errno = EBUSY;
-	return false;
+
+	for (repr_idx = 0; repr_idx < req_eth_da->nb_representor_ports; ++repr_idx) {
+		for (i = 0; i < adapter->repr_ctxt.nb_vf; ++i) {
+			vf_id = rte_le_to_cpu_16(adapter->repr_ctxt.repr_vf_id[i].func_id);
+			if (vf_id == req_eth_da->representor_ports[repr_idx])
+				break;
+		}
+		if (i == adapter->repr_ctxt.nb_vf) {
+			PMD_DEV_LOG_DEBUG(adapter, DRV, "switchdev vf %u not match req vf(cnt:%u)",
+				req_eth_da->representor_ports[repr_idx], adapter->repr_ctxt.nb_vf);
+			rte_errno = EBUSY;
+			return false;
+		}
+	}
+
+	return true;
 }
 
 static int32_t sxe2_eth_pmd_probe_pf(struct sxe2_common_device *cdev,
@@ -2317,6 +2335,7 @@ static int32_t sxe2_eth_pmd_probe(struct sxe2_common_device *cdev,
 {
 	struct rte_eth_devargs eth_da = { .nb_ports = 0 };
 	int32_t ret = 0;
+	uint16_t port;
 
 	ret = sxe2_parse_eth_devargs(cdev->dev, &eth_da);
 	if (ret != 0) {
@@ -2324,7 +2343,18 @@ static int32_t sxe2_eth_pmd_probe(struct sxe2_common_device *cdev,
 		goto l_end;
 	}
 
-	ret = sxe2_eth_pmd_probe_pf(cdev, &eth_da, 0, kvargs);
+	if (eth_da.nb_ports > 0) {
+		for (port = 0; port < eth_da.nb_ports; port++) {
+			ret = sxe2_eth_pmd_probe_pf(cdev, &eth_da, port, kvargs);
+			if (ret != 0) {
+				PMD_LOG_ERR(INIT, "sxe2 eth pmd probe failed, ret=%d", ret);
+				(void)sxe2_eth_pmd_remove(cdev);
+				goto l_end;
+			}
+		}
+	} else {
+		ret = sxe2_eth_pmd_probe_pf(cdev, &eth_da, 0, kvargs);
+	}
 
 l_end:
 	return ret;
