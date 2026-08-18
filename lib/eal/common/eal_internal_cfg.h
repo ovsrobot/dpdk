@@ -223,6 +223,5 @@ struct eal_runtime_state {
 struct eal_user_cfg *eal_get_user_configuration(void);
 struct eal_platform_info *eal_get_platform_info(void);
 struct eal_runtime_state *eal_get_runtime_state(void);
-void eal_reset_internal_config(void);
 
 #endif /* EAL_INTERNAL_CFG_H */

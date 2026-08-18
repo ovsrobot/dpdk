@@ -482,78 +482,6 @@ eal_get_hugefile_prefix(void)
 	return HUGEFILE_PREFIX_DEFAULT;
 }
 
-void
-eal_reset_internal_config(void)
-{
-	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
-	struct eal_platform_info *platform_info = eal_get_platform_info();
-	int i;
-
-	TAILQ_INIT(&user_cfg->devopt_list);
-	TAILQ_INIT(&user_cfg->plugin_list);
-	STAILQ_INIT(&user_cfg->trace_patterns);
-	TAILQ_INIT(&runtime_state->loaded_plugins);
-	user_cfg->memory = 0;
-	user_cfg->force_nrank = 0;
-	user_cfg->force_nchannel = 0;
-	user_cfg->force_numa = false;
-	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		user_cfg->numa_mem[i] = 0;
-	user_cfg->force_numa_limits = false;
-	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		user_cfg->numa_limit[i] = 0;
-	for (i = 0; i < MAX_HUGEPAGE_SIZES; i++) {
-		runtime_state->hugepage_mem_sz_limits[i] = 0;
-		user_cfg->pagesz_mem_overrides[i].pagesz = 0;
-		user_cfg->pagesz_mem_overrides[i].limit = 0;
-	}
-	user_cfg->num_pagesz_mem_overrides = 0;
-	user_cfg->process_type = RTE_PROC_PRIMARY;
-	user_cfg->no_hugetlbfs = false;
-	user_cfg->no_pci = false;
-	user_cfg->hugefile_prefix = NULL;
-	user_cfg->hugepage_dir = NULL;
-	user_cfg->hugepage_file.unlink_before_mapping = false;
-	user_cfg->hugepage_file.unlink_existing = true;
-	/* zero out hugedir descriptors */
-	for (i = 0; i < MAX_HUGEPAGE_SIZES; i++) {
-		memset(&platform_info->hugepage_info[i], 0,
-				sizeof(platform_info->hugepage_info[0]));
-		platform_info->hugepage_info[i].lock_descriptor = -1;
-	}
-	user_cfg->base_virtaddr = 0;
-
-	/* if set to NONE, interrupt mode is determined automatically */
-	user_cfg->vfio_intr_mode = RTE_INTR_MODE_NONE;
-	memset(user_cfg->vfio_vf_token, 0,
-			sizeof(user_cfg->vfio_vf_token));
-
-	user_cfg->no_auto_probing = false;
-
-#ifdef RTE_LIBEAL_USE_HPET
-	user_cfg->no_hpet = false;
-#else
-	user_cfg->no_hpet = true;
-#endif
-	user_cfg->vmware_tsc_map = false;
-	user_cfg->no_shconf = false;
-	user_cfg->in_memory = false;
-	user_cfg->create_uio_dev = false;
-	user_cfg->no_telemetry = false;
-	user_cfg->iova_mode = RTE_IOVA_DC;
-	user_cfg->user_mbuf_pool_ops_name = NULL;
-	CPU_ZERO(&runtime_state->ctrl_cpuset);
-	runtime_state->init_complete = 0;
-	CPU_ZERO(&user_cfg->service_cpuset);
-	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		free(user_cfg->lcore_cpusets[i]);
-		user_cfg->lcore_cpusets[i] = NULL;
-	}
-	user_cfg->max_simd_bitwidth.bitwidth = RTE_VECT_DEFAULT_SIMD_BITWIDTH;
-	user_cfg->max_simd_bitwidth.forced = 0;
-}
-
 static int
 eal_plugin_path_add(const char *path)
 {
@@ -1977,6 +1905,24 @@ int
 eal_parse_args(void)
 {
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+
+	/*
+	 * Initialise user_cfg to defaults. Fields not listed here are zero,
+	 * false or NULL, which is the correct default (RTE_PROC_PRIMARY,
+	 * RTE_INTR_MODE_NONE, RTE_IOVA_DC, etc. are all defined as 0).
+	 */
+	*user_cfg = (struct eal_user_cfg){
+		.devopt_list = TAILQ_HEAD_INITIALIZER(user_cfg->devopt_list),
+		.plugin_list = TAILQ_HEAD_INITIALIZER(user_cfg->plugin_list),
+		.trace_patterns = STAILQ_HEAD_INITIALIZER(user_cfg->trace_patterns),
+		.hugepage_file.unlink_existing = true,
+		.main_lcore = -1,
+#ifndef RTE_LIBEAL_USE_HPET
+		.no_hpet = true,
+#endif
+		.max_simd_bitwidth.bitwidth = RTE_VECT_DEFAULT_SIMD_BITWIDTH,
+	};
+
 	bool remap_lcores = (args.remap_lcore_ids != NULL);
 	struct arg_list_elem *arg;
 	uint16_t lcore_id_base = 0;
@@ -2103,7 +2049,6 @@ eal_parse_args(void)
 			return -1;
 		}
 	}
-	user_cfg->main_lcore = -1;
 	if (args.main_lcore != NULL && eal_parse_main_lcore(args.main_lcore) < 0)
 		return -1;
 
@@ -2374,6 +2319,7 @@ compute_ctrl_threads_cpuset(void)
 	rte_cpuset_t default_set;
 	unsigned int lcore_id;
 
+	CPU_ZERO(cpuset);
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		if (rte_lcore_has_role(lcore_id, ROLE_OFF))
 			continue;

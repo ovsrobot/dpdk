@@ -27,7 +27,13 @@ static char runtime_dir[UNIX_PATH_MAX];
 static struct eal_user_cfg eal_user_cfg;
 
 /* platform-discovered and runtime EAL state */
-static struct eal_platform_info eal_platform_info;
+static struct eal_platform_info eal_platform_info = {
+	.hugepage_info = {
+		[0] = {.lock_descriptor = -1 },
+		[1] = {.lock_descriptor = -1 },
+		[2] = {.lock_descriptor = -1 }
+	}
+};
 
 /* internal runtime configuration */
 static struct eal_runtime_state eal_runtime_state = {
