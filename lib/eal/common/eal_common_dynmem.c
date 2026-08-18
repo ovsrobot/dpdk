@@ -358,7 +358,8 @@ eal_dynmem_calc_num_pages_per_socket(
 	uint64_t remaining_mem, cur_mem;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	uint64_t total_mem = internal_conf->memory;
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	uint64_t total_mem = user_cfg->memory;
 
 	if (num_hp_info == 0)
 		return -1;
@@ -382,12 +383,12 @@ eal_dynmem_calc_num_pages_per_socket(
 		 * sockets according to number of cores from CPU mask present
 		 * on each socket.
 		 */
-		total_size = internal_conf->memory;
+		total_size = user_cfg->memory;
 		for (socket = 0; socket < RTE_MAX_NUMA_NODES && total_size != 0;
 				socket++) {
 
 			/* Set memory amount per socket */
-			default_size = internal_conf->memory *
+			default_size = user_cfg->memory *
 				cpu_per_socket[socket] / rte_lcore_count();
 
 			/* Limit to maximum available memory on socket */
@@ -418,7 +419,7 @@ eal_dynmem_calc_num_pages_per_socket(
 		/* in 32-bit mode, allocate all of the memory only on main
 		 * lcore socket
 		 */
-		total_size = internal_conf->memory;
+		total_size = user_cfg->memory;
 		for (socket = 0; socket < RTE_MAX_NUMA_NODES && total_size != 0;
 				socket++) {
 			struct rte_config *cfg = rte_eal_get_configuration();
@@ -502,7 +503,7 @@ eal_dynmem_calc_num_pages_per_socket(
 
 	/* if we didn't satisfy total memory requirements */
 	if (total_mem > 0) {
-		requested = internal_conf->memory / 0x100000;
+		requested = user_cfg->memory / 0x100000;
 		available = requested - (total_mem / 0x100000);
 		EAL_LOG(ERR, "Not enough memory available! Requested: %uMB, available: %uMB",
 			requested, available);

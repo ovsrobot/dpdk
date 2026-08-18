@@ -577,6 +577,7 @@ rte_eal_init(int argc, char **argv)
 	const struct rte_config *config = rte_eal_get_configuration();
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* first check if we have been run before */
 	if (!rte_atomic_compare_exchange_strong_explicit(&run_once, &has_run, 1,
@@ -756,9 +757,9 @@ rte_eal_init(int argc, char **argv)
 		}
 	}
 
-	if (internal_conf->memory == 0 && internal_conf->force_numa == 0) {
+	if (user_cfg->memory == 0 && internal_conf->force_numa == 0) {
 		if (internal_conf->no_hugetlbfs)
-			internal_conf->memory = MEMSIZE_IF_NO_HUGE_PAGE;
+			user_cfg->memory = MEMSIZE_IF_NO_HUGE_PAGE;
 	}
 
 	if (internal_conf->vmware_tsc_map == 1) {

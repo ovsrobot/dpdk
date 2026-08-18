@@ -681,15 +681,15 @@ static int
 rte_eal_memdevice_init(void)
 {
 	struct rte_config *config;
-	const struct internal_config *internal_conf;
+	const struct eal_user_cfg *user_cfg;
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
 		return 0;
 
-	internal_conf = eal_get_internal_configuration();
+	user_cfg = eal_get_user_configuration();
 	config = rte_eal_get_configuration();
-	config->mem_config->nchannel = internal_conf->force_nchannel;
-	config->mem_config->nrank = internal_conf->force_nrank;
+	config->mem_config->nchannel = user_cfg->force_nchannel;
+	config->mem_config->nrank = user_cfg->force_nrank;
 
 	return 0;
 }

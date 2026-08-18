@@ -13,6 +13,7 @@
 #include <rte_eal.h>
 #include <rte_os_shim.h>
 #include <rte_pci_dev_feature_defs.h>
+#include <stdint.h>
 
 #include "eal_thread.h"
 
@@ -53,7 +54,9 @@ struct hugepage_file_discipline {
  * Immutable after initialization, so no need for atomic types or locks.
  */
 struct eal_user_cfg {
-	uint8_t reserved;
+	size_t memory;           /**< amount of asked memory */
+	uint8_t force_nchannel;  /**< force number of channels */
+	uint8_t force_nrank;     /**< force number of ranks */
 };
 
 /**
@@ -77,9 +80,6 @@ struct eal_runtime_state {
  * internal configuration
  */
 struct internal_config {
-	volatile size_t memory;           /**< amount of asked memory */
-	volatile unsigned force_nchannel; /**< force number of channels */
-	volatile unsigned force_nrank;    /**< force number of ranks */
 	volatile unsigned no_hugetlbfs;   /**< true to disable hugetlbfs */
 	struct hugepage_file_discipline hugepage_file;
 	volatile unsigned no_pci;         /**< true to disable PCI */

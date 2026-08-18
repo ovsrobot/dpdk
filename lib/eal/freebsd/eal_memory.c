@@ -82,11 +82,12 @@ rte_eal_hugepage_init(void)
 		struct rte_memseg_list *msl;
 		uint64_t mem_sz, page_sz;
 		int n_segs;
+		const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 		/* create a memseg list */
 		msl = &mcfg->memsegs[0];
 
-		mem_sz = internal_conf->memory;
+		mem_sz = user_cfg->memory;
 		page_sz = RTE_PGSIZE_4K;
 		n_segs = mem_sz / page_sz;
 
@@ -121,7 +122,7 @@ rte_eal_hugepage_init(void)
 		hpi = &internal_conf->hugepage_info[i];
 		page_sz = hpi->hugepage_sz;
 		max_pages = hpi->num_pages[0];
-		mem_needed = RTE_ALIGN_CEIL(internal_conf->memory - total_mem,
+		mem_needed = RTE_ALIGN_CEIL(eal_get_user_configuration()->memory - total_mem,
 				page_sz);
 
 		n_pages = RTE_MIN(mem_needed / page_sz, max_pages);
@@ -244,14 +245,14 @@ rte_eal_hugepage_init(void)
 
 			total_mem += seg->len;
 		}
-		if (total_mem >= internal_conf->memory)
+		if (total_mem >= eal_get_user_configuration()->memory)
 			break;
 	}
-	if (total_mem < internal_conf->memory) {
+	if (total_mem < eal_get_user_configuration()->memory) {
 		EAL_LOG(ERR, "Couldn't reserve requested memory, "
 				"requested: %" PRIu64 "M "
 				"available: %" PRIu64 "M",
-				internal_conf->memory >> 20, total_mem >> 20);
+				eal_get_user_configuration()->memory >> 20, total_mem >> 20);
 		return -1;
 	}
 	return 0;

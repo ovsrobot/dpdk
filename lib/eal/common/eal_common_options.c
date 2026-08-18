@@ -509,11 +509,12 @@ eal_get_hugefile_prefix(void)
 void
 eal_reset_internal_config(struct internal_config *internal_cfg)
 {
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	int i;
 
-	internal_cfg->memory = 0;
-	internal_cfg->force_nrank = 0;
-	internal_cfg->force_nchannel = 0;
+	user_cfg->memory = 0;
+	user_cfg->force_nrank = 0;
+	user_cfg->force_nchannel = 0;
 	internal_cfg->hugefile_prefix = NULL;
 	internal_cfg->hugepage_dir = NULL;
 	internal_cfg->hugepage_file.unlink_before_mapping = false;
@@ -2072,6 +2073,7 @@ int
 eal_parse_args(void)
 {
 	struct internal_config *int_cfg = eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct rte_config *rte_cfg = rte_eal_get_configuration();
 	bool remap_lcores = (args.remap_lcore_ids != NULL);
 	struct arg_list_elem *arg;
@@ -2210,23 +2212,45 @@ eal_parse_args(void)
 
 	/* memory options */
 	if (args.memory_size != NULL) {
-		int_cfg->memory = atoi(args.memory_size);
-		int_cfg->memory *= 1024ULL;
-		int_cfg->memory *= 1024ULL;
+		char *end = NULL;
+		unsigned long long memory_mb;
+
+		errno = 0;
+		memory_mb = strtoull(args.memory_size, &end, 10);
+		if (errno != 0 || args.memory_size[0] == '\0' || end[0] != '\0' ||
+				memory_mb > SIZE_MAX / (1024ULL * 1024ULL)) {
+			EAL_LOG(ERR, "invalid memory size parameter");
+			return -1;
+		}
+		user_cfg->memory = (size_t)memory_mb * 1024ULL * 1024ULL;
 	}
 	if (args.memory_channels != NULL) {
-		int_cfg->force_nchannel = atoi(args.memory_channels);
-		if (int_cfg->force_nchannel == 0) {
+		char *end = NULL;
+		unsigned long nchannel;
+
+		errno = 0;
+		nchannel = strtoul(args.memory_channels, &end, 10);
+
+		if (errno != 0 || args.memory_channels[0] == '\0' || end[0] != '\0' ||
+				nchannel == 0 || nchannel > UINT8_MAX) {
 			EAL_LOG(ERR, "invalid memory channel parameter");
 			return -1;
 		}
+		user_cfg->force_nchannel = (uint8_t)nchannel;
 	}
 	if (args.memory_ranks != NULL) {
-		int_cfg->force_nrank = atoi(args.memory_ranks);
-		if (int_cfg->force_nrank == 0 || int_cfg->force_nrank > 16) {
+		char *end = NULL;
+		unsigned long nrank;
+
+		errno = 0;
+		nrank = strtoul(args.memory_ranks, &end, 10);
+
+		if (errno != 0 || args.memory_ranks[0] == '\0' || end[0] != '\0' ||
+				nrank == 0 || nrank > 16) {
 			EAL_LOG(ERR, "invalid memory rank parameter");
 			return -1;
 		}
+		user_cfg->force_nrank = (uint8_t)nrank;
 	}
 	if (args.no_huge) {
 		int_cfg->no_hugetlbfs = 1;
@@ -2475,6 +2499,7 @@ eal_cleanup_config(struct internal_config *internal_cfg)
 int
 eal_adjust_config(struct internal_config *internal_cfg)
 {
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	int i;
 
 	if (internal_cfg->process_type == RTE_PROC_AUTO)
@@ -2485,7 +2510,7 @@ eal_adjust_config(struct internal_config *internal_cfg)
 	/* if no memory amounts were requested, this will result in 0 and
 	 * will be overridden later, right after eal_hugepage_info_init() */
 	for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
-		internal_cfg->memory += internal_cfg->numa_mem[i];
+		user_cfg->memory += internal_cfg->numa_mem[i];
 
 	return 0;
 }

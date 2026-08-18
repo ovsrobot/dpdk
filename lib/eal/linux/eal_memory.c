@@ -1165,7 +1165,7 @@ eal_legacy_hugepage_init(void)
 		/* create a memseg list */
 		msl = &mcfg->memsegs[0];
 
-		mem_sz = internal_conf->memory;
+		mem_sz = eal_get_user_configuration()->memory;
 		page_sz = RTE_PGSIZE_4K;
 		n_segs = mem_sz / page_sz;
 
@@ -1186,7 +1186,7 @@ eal_legacy_hugepage_init(void)
 			EAL_LOG(DEBUG, "Falling back to anonymous map");
 		} else {
 			/* we got an fd - now resize it */
-			if (ftruncate(memfd, internal_conf->memory) < 0) {
+			if (ftruncate(memfd, eal_get_user_configuration()->memory) < 0) {
 				EAL_LOG(ERR, "Cannot resize memfd: %s",
 						strerror(errno));
 				EAL_LOG(ERR, "Falling back to anonymous map");
@@ -1342,8 +1342,8 @@ eal_legacy_hugepage_init(void)
 
 	huge_recover_sigbus();
 
-	if (internal_conf->memory == 0 && internal_conf->force_numa == 0)
-		internal_conf->memory = eal_get_hugepage_mem_size();
+	if (eal_get_user_configuration()->memory == 0 && internal_conf->force_numa == 0)
+		eal_get_user_configuration()->memory = eal_get_hugepage_mem_size();
 
 	nr_hugefiles = nr_hugepages;
 
@@ -1742,7 +1742,7 @@ memseg_primary_init_32(void)
 			total_requested_mem += mem;
 		}
 	else
-		total_requested_mem = internal_conf->memory;
+		total_requested_mem = eal_get_user_configuration()->memory;
 
 	if (total_requested_mem > mem32_max_mem) {
 		EAL_LOG(ERR, "Invalid parameters: 32-bit process can at most use %uM of memory",
@@ -1806,7 +1806,7 @@ memseg_primary_init_32(void)
 		/* max amount of memory on this socket */
 		max_socket_mem = (active_sockets != 0 ?
 					internal_conf->numa_mem[socket_id] :
-					internal_conf->memory) +
+					eal_get_user_configuration()->memory) +
 					extra_mem_per_socket;
 		cur_socket_mem = 0;
 
