@@ -59,33 +59,21 @@ exit:
 static int
 hugepage_info_init(void)
 {
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
 	struct hugepage_info *hpi;
 	unsigned int socket_id;
 	int ret = 0;
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
-	hpi = &runtime_state->hugepage_info[0];
-
-	hpi->hugepage_sz = GetLargePageMinimum();
-	if (hpi->hugepage_sz == 0)
+	if (platform_info->num_hugepage_sizes == 0)
 		return -ENOTSUP;
 
-	/* Assume all memory on each NUMA node available for hugepages,
-	 * because Windows neither advertises additional limits,
-	 * nor provides an API to query them.
-	 */
+	hpi = &runtime_state->hugepage_info[0];
+	hpi->hugepage_sz = platform_info->hugepage_sizes[0].size;
+
 	for (socket_id = 0; socket_id < rte_socket_count(); socket_id++) {
-		ULONGLONG bytes;
-		unsigned int numa_node;
-
-		numa_node = eal_socket_numa_node(socket_id);
-		if (!GetNumaAvailableMemoryNodeEx(numa_node, &bytes)) {
-			RTE_LOG_WIN32_ERR("GetNumaAvailableMemoryNodeEx(%u)",
-				numa_node);
-			continue;
-		}
-
-		hpi->num_pages[socket_id] = bytes / hpi->hugepage_sz;
+		hpi->num_pages[socket_id] =
+			platform_info->hugepage_sizes[0].max_pages[socket_id];
 		EAL_LOG(DEBUG,
 			"Found %u hugepages of %zu bytes on socket %u",
 			hpi->num_pages[socket_id], hpi->hugepage_sz, socket_id);

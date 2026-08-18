@@ -87,9 +87,9 @@ eal_get_platform_hp_info(struct eal_platform_info *platform_info)
 int
 eal_hugepage_info_init(void)
 {
-	size_t sysctl_size;
-	int num_buffers, fd, error;
-	int64_t buffer_size = 0;
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	int num_buffers, fd;
+	int64_t buffer_size;
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* re-use the linux "internal config" structure for our memory data */
@@ -98,28 +98,13 @@ eal_hugepage_info_init(void)
 	struct hugepage_info *tmp_hpi;
 	unsigned int i;
 
-	sysctl_size = sizeof(num_buffers);
-	error = sysctlbyname("hw.contigmem.num_buffers", &num_buffers,
-			&sysctl_size, NULL, 0);
-
-	if (error != 0) {
-		EAL_LOG(ERR, "could not read sysctl hw.contigmem.num_buffers");
+	if (platform_info->num_hugepage_sizes == 0) {
+		EAL_LOG(ERR, "could not read hugepage info from platform");
 		return -1;
 	}
 
-	sysctl_size = sizeof(buffer_size);
-	error = sysctlbyname("hw.contigmem.buffer_size", &buffer_size,
-			&sysctl_size, NULL, 0);
-
-	if (error != 0) {
-		error = sysctlbyname("hw.contigmem.buffer_size_MB", &buffer_size,
-				&sysctl_size, NULL, 0);
-		buffer_size *= 1024 * 1024;  /* convert to bytes, harmless to multiple on error*/
-	}
-	if (error != 0) {
-		EAL_LOG(ERR, "could not read sysctl hw.contigmem.buffer_size");
-		return -1;
-	}
+	buffer_size = (int64_t)platform_info->hugepage_sizes[0].size;
+	num_buffers = (int)platform_info->hugepage_sizes[0].max_pages[0];
 
 	fd = open(CONTIGMEM_DEV, O_RDWR);
 	if (fd < 0) {

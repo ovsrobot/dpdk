@@ -161,6 +161,7 @@ struct eal_cpu_info {
 struct hp_sizes {
 	uint64_t size;         /**< hugepage size in bytes */
 	char dir[PATH_MAX];    /**< dir where hugetlbfs is mounted for this size */
+	char subdir[32];       /**< sysfs subdir name for this size, e.g. "hugepages-2048kB" */
 	uint32_t total_pages;  /**< total hugepages of this size across all NUMA nodes */
 	uint32_t max_pages[RTE_MAX_NUMA_NODES];
 	/**< maximum hugepages of this size available on each NUMA node */
