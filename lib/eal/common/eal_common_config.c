@@ -5,6 +5,7 @@
 #include <rte_string_fns.h>
 
 #include <eal_export.h>
+#include "eal_internal_cfg.h"
 #include "eal_private.h"
 #include "eal_filesystem.h"
 #include "eal_memcfg.h"
@@ -26,6 +27,15 @@ static struct rte_config rte_config = {
 
 /* platform-specific runtime dir */
 static char runtime_dir[UNIX_PATH_MAX];
+
+/* user-provided EAL configuration */
+static struct eal_user_cfg eal_user_cfg;
+
+/* platform-discovered and runtime EAL state */
+static struct eal_platform_info eal_platform_info;
+
+/* internal runtime configuration */
+static struct eal_runtime_state eal_runtime_state;
 
 /* internal configuration */
 static struct internal_config internal_config;
@@ -61,6 +71,27 @@ struct internal_config *
 eal_get_internal_configuration(void)
 {
 	return &internal_config;
+}
+
+/* Return a pointer to the user configuration structure */
+struct eal_user_cfg *
+eal_get_user_configuration(void)
+{
+	return &eal_user_cfg;
+}
+
+/* Return a pointer to the platform state structure */
+struct eal_platform_info *
+eal_get_platform_info(void)
+{
+	return &eal_platform_info;
+}
+
+/* Return a pointer to the runtime state structure */
+struct eal_runtime_state *
+eal_get_runtime_state(void)
+{
+	return &eal_runtime_state;
 }
 
 RTE_EXPORT_SYMBOL(rte_eal_iova_mode)

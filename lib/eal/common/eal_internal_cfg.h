@@ -49,6 +49,31 @@ struct hugepage_file_discipline {
 };
 
 /**
+ * User-provided EAL initialization configuration.
+ * Immutable after initialization, so no need for atomic types or locks.
+ */
+struct eal_user_cfg {
+	uint8_t reserved;
+};
+
+/**
+ * Discovered information about cores, memory, etc. on the system.
+ * Immutable after initialization, so no need for atomic types or locks.
+ */
+struct eal_platform_info {
+	uint8_t reserved;
+};
+
+/**
+ * Internal EAL runtime state
+ * May be modified at runtime, so access must be protected by locks or atomic types
+ * as appropriate.
+ */
+struct eal_runtime_state {
+	uint8_t reserved;
+};
+
+/**
  * internal configuration
  */
 struct internal_config {
@@ -115,6 +140,9 @@ struct internal_config {
 	unsigned int no_auto_probing; /**< true to switch from block-listing to allow-listing */
 };
 
+struct eal_user_cfg *eal_get_user_configuration(void);
+struct eal_platform_info *eal_get_platform_info(void);
+struct eal_runtime_state *eal_get_runtime_state(void);
 void eal_reset_internal_config(struct internal_config *internal_cfg);
 
 #endif /* EAL_INTERNAL_CFG_H */
