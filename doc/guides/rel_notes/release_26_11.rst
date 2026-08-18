@@ -55,6 +55,46 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added NXP DPAA offline (O/H) port device support.**
+
+  Added support for the DPAA Offline/Host-command (O/H) port, allowing
+  a DPDK application to use an offline port for packet processing.
+  The feature is selected through the ``drv_oldev`` bus device argument.
+
+* **Added NXP DPAA Rx/Tx taildrop threshold device arguments.**
+
+  Added ``drv_rx_taildrop`` and ``drv_tx_taildrop`` device arguments
+  to configure per-port frame queue taildrop congestion thresholds
+  at device probe time.
+
+* **Added NXP DPAA Tx rate limiting API.**
+
+  Added ``rte_pmd_dpaa_port_set_rate_limit()`` to configure the
+  transmit rate limit (burst size and rate) on a DPAA port using the
+  FMAN port rate limiter.
+
+* **Added NXP DPAA fmcless Rx queue count device argument.**
+
+  Added ``drv_fmcless_rxq`` device argument to set the number of
+  Rx queues when running without FMC configuration.
+
+* **Added NXP DPAA shared MAC kernel interface name device argument.**
+
+  Added ``drv_sh_if_name`` device argument to provide the Linux kernel
+  interface name of a shared MAC interface when it differs from the
+  ``fmX-macY`` style name used by DPDK.
+
+* **Added NXP DPAA DMA scatter-gather support and new device arguments.**
+
+  Added scatter-gather (SG) batching to the DPAA QDMA driver, enabled by
+  default, along with the ``dpaa_dma_sg_disable`` and
+  ``dpaa_dma_data_validation`` device arguments to disable SG batching and
+  to enable post-transfer data validation for debugging.
+  When the driver is built with ``RTE_DMA_DPAA_ERRATA_ERR050757``, the
+  source read type and stride are programmed to work around hardware
+  erratum ERR050757, and the ``dpaa_dma_pci_read_disable`` device argument
+  can be used to disable that programming.
+
 
 Removed Items
 -------------
