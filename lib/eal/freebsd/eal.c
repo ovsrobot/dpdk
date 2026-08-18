@@ -97,8 +97,6 @@ static int
 rte_eal_config_create(void)
 {
 	struct rte_config *config = rte_eal_get_configuration();
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	size_t page_sz = rte_mem_page_size();
 	size_t cfg_len = sizeof(struct rte_mem_config);
@@ -112,9 +110,9 @@ rte_eal_config_create(void)
 		return 0;
 
 	/* map the config before base address so that we don't waste a page */
-	if (internal_conf->base_virtaddr != 0)
+	if (user_cfg->base_virtaddr != 0)
 		rte_mem_cfg_addr = (void *)
-			RTE_ALIGN_FLOOR(internal_conf->base_virtaddr -
+			RTE_ALIGN_FLOOR(user_cfg->base_virtaddr -
 			sizeof(struct rte_mem_config), page_sz);
 	else
 		rte_mem_cfg_addr = NULL;
@@ -472,7 +470,7 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	/* FreeBSD always uses legacy memory model */
-	internal_conf->legacy_mem = true;
+	user_cfg->legacy_mem = true;
 	if (user_cfg->in_memory) {
 		EAL_LOG(WARNING, "Warning: ignoring unsupported flag, '--in-memory'");
 		user_cfg->in_memory = false;
@@ -538,7 +536,7 @@ rte_eal_init(int argc, char **argv)
 	/* Always call rte_bus_get_iommu_class() to trigger DMA mask detection and validation */
 	enum rte_iova_mode bus_iova_mode = rte_bus_get_iommu_class();
 
-	iova_mode = internal_conf->iova_mode;
+	iova_mode = user_cfg->iova_mode;
 	if (iova_mode == RTE_IOVA_DC) {
 		EAL_LOG(DEBUG, "Specific IOVA mode is not requested, autodetecting");
 		if (has_phys_addr) {
@@ -781,8 +779,7 @@ rte_eal_cleanup(void)
 		return -1;
 	}
 
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	rte_service_finalize();
 	eal_bus_cleanup();
 	rte_mp_channel_cleanup();
@@ -791,7 +788,7 @@ rte_eal_cleanup(void)
 	eal_trace_fini();
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
-	eal_cleanup_config(internal_conf);
+	eal_cleanup_config(user_cfg);
 	eal_lcore_var_cleanup();
 	return 0;
 }

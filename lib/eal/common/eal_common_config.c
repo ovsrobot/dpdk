@@ -106,8 +106,8 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_get_baseaddr)
 uint64_t
 rte_eal_get_baseaddr(void)
 {
-	return (internal_config.base_virtaddr != 0) ?
-		       (uint64_t) internal_config.base_virtaddr :
+	return (eal_user_cfg.base_virtaddr != 0) ?
+		       (uint64_t) eal_user_cfg.base_virtaddr :
 		       eal_get_baseaddr();
 }
 
@@ -123,7 +123,7 @@ RTE_EXPORT_SYMBOL(rte_eal_mbuf_user_pool_ops)
 const char *
 rte_eal_mbuf_user_pool_ops(void)
 {
-	return internal_config.user_mbuf_pool_ops_name;
+	return eal_user_cfg.user_mbuf_pool_ops_name;
 }
 
 /* return non-zero if hugepages are enabled. */

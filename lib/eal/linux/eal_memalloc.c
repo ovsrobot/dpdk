@@ -222,10 +222,9 @@ get_seg_memfd(struct hugepage_info *hi __rte_unused,
 	char segname[250]; /* as per manpage, limit is 249 bytes plus null */
 
 	int flags = MFD_HUGETLB | pagesz_flags(hi->hugepage_sz);
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->single_file_segments) {
+	if (user_cfg->single_file_segments) {
 		fd = fd_list[list_idx].memseg_list_fd;
 
 		if (fd < 0) {
@@ -266,8 +265,6 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	const char *huge_path;
 	struct stat st;
 	int ret;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (dirty != NULL)
@@ -279,7 +276,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	if (user_cfg->in_memory)
 		return get_seg_memfd(hi, list_idx, seg_idx);
 
-	if (internal_conf->single_file_segments) {
+	if (user_cfg->single_file_segments) {
 		out_fd = &fd_list[list_idx].memseg_list_fd;
 		huge_path = eal_get_hugefile_path(path, buflen, hi->hugedir, list_idx);
 	} else {
@@ -323,7 +320,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	 * When multiple hugepages are mapped from the same file,
 	 * whether they will be dirty depends on the part that is mapped.
 	 */
-	if (!internal_conf->single_file_segments &&
+	if (!user_cfg->single_file_segments &&
 			user_cfg->hugepage_file.unlink_existing &&
 			rte_eal_process_type() == RTE_PROC_PRIMARY &&
 			ret == 0) {
@@ -513,8 +510,6 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	size_t alloc_sz;
 	int flags;
 	void *new_addr;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	alloc_sz = hi->hugepage_sz;
@@ -535,7 +530,7 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 		return -1;
 	}
 
-	if (internal_conf->single_file_segments) {
+	if (user_cfg->single_file_segments) {
 		map_offset = seg_idx * alloc_sz;
 		ret = resize_hugefile(fd, map_offset, alloc_sz, true, &dirty);
 		if (ret < 0)
@@ -666,14 +661,14 @@ unmapped:
 		EAL_LOG(CRIT, "Can't mmap holes in our virtual address space");
 	}
 	/* roll back the ref count */
-	if (internal_conf->single_file_segments)
+	if (user_cfg->single_file_segments)
 		fd_list[list_idx].count--;
 resized:
 	/* some codepaths will return negative fd, so exit early */
 	if (fd < 0)
 		return -1;
 
-	if (internal_conf->single_file_segments) {
+	if (user_cfg->single_file_segments) {
 		resize_hugefile(fd, map_offset, alloc_sz, false, NULL);
 		/* ignore failure, can't make it any worse */
 
@@ -699,8 +694,6 @@ free_seg(struct rte_memseg *ms, struct hugepage_info *hi,
 	uint64_t map_offset;
 	char path[PATH_MAX];
 	int fd, ret = 0;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* erase page data */
@@ -723,7 +716,7 @@ free_seg(struct rte_memseg *ms, struct hugepage_info *hi,
 	if (fd < 0)
 		return -1;
 
-	if (internal_conf->single_file_segments) {
+	if (user_cfg->single_file_segments) {
 		map_offset = seg_idx * ms->len;
 		if (resize_hugefile(fd, map_offset, ms->len, false, NULL))
 			return -1;
@@ -975,11 +968,12 @@ eal_memalloc_alloc_seg_bulk(struct rte_memseg **ms, int n_segs, size_t page_sz,
 	struct hugepage_info *hi = NULL;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	memset(&wa, 0, sizeof(wa));
 
 	/* dynamic allocation not supported in legacy mode */
-	if (internal_conf->legacy_mem)
+	if (user_cfg->legacy_mem)
 		return -1;
 
 	for (i = 0; i < (int) RTE_DIM(internal_conf->hugepage_info); i++) {
@@ -1044,9 +1038,10 @@ eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 	int seg, ret = 0;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* dynamic free not supported in legacy mode */
-	if (internal_conf->legacy_mem)
+	if (user_cfg->legacy_mem)
 		return -1;
 
 	for (seg = 0; seg < n_segs; seg++) {
@@ -1095,10 +1090,10 @@ eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 int
 eal_memalloc_free_seg(struct rte_memseg *ms)
 {
-	const struct internal_config *internal_conf = eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* dynamic free not supported in legacy mode */
-	if (internal_conf->legacy_mem)
+	if (user_cfg->legacy_mem)
 		return -1;
 
 	return eal_memalloc_free_seg_bulk(&ms, 1);
@@ -1461,11 +1456,10 @@ alloc_list(int list_idx, int len)
 {
 	int *data;
 	int i;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* single-file segments mode does not need fd list */
-	if (!internal_conf->single_file_segments) {
+	if (!user_cfg->single_file_segments) {
 		/* ensure we have space to store fd per each possible segment */
 		data = malloc(sizeof(int) * len);
 		if (data == NULL) {
@@ -1491,11 +1485,10 @@ alloc_list(int list_idx, int len)
 static int
 destroy_list(int list_idx)
 {
-	const struct internal_config *internal_conf =
-			eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* single-file segments mode does not need fd list */
-	if (!internal_conf->single_file_segments) {
+	if (!user_cfg->single_file_segments) {
 		int *fds = fd_list[list_idx].fds;
 		int i;
 		/* go through each fd and ensure it's closed */
@@ -1551,11 +1544,10 @@ int
 eal_memalloc_set_seg_fd(int list_idx, int seg_idx, int fd)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* single file segments mode doesn't support individual segment fd's */
-	if (internal_conf->single_file_segments)
+	if (user_cfg->single_file_segments)
 		return -ENOTSUP;
 
 	/* if list is not allocated, allocate it */
@@ -1573,11 +1565,10 @@ eal_memalloc_set_seg_fd(int list_idx, int seg_idx, int fd)
 int
 eal_memalloc_set_seg_list_fd(int list_idx, int fd)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* non-single file segment mode doesn't support segment list fd's */
-	if (!internal_conf->single_file_segments)
+	if (!user_cfg->single_file_segments)
 		return -ENOTSUP;
 
 	fd_list[list_idx].memseg_list_fd = fd;
@@ -1589,10 +1580,9 @@ int
 eal_memalloc_get_seg_fd(int list_idx, int seg_idx)
 {
 	int fd;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->single_file_segments) {
+	if (user_cfg->single_file_segments) {
 		fd = fd_list[list_idx].memseg_list_fd;
 	} else if (fd_list[list_idx].len == 0) {
 		/* list not initialized */
@@ -1609,10 +1599,9 @@ int
 eal_memalloc_get_seg_fd_offset(int list_idx, int seg_idx, size_t *offset)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->single_file_segments) {
+	if (user_cfg->single_file_segments) {
 		size_t pgsz = mcfg->memsegs[list_idx].page_sz;
 
 		/* segment not active? */

@@ -690,10 +690,7 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 	uint64_t page_sz;
 	size_t memseg_len;
 	int socket_id;
-#ifndef RTE_ARCH_64
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-#endif
+
 	page_sz = hugepages[seg_start].size;
 	socket_id = hugepages[seg_start].socket_id;
 	seg_len = seg_end - seg_start;
@@ -786,7 +783,8 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 		/* we have a new address, so unmap previous one */
 #ifndef RTE_ARCH_64
 		/* in 32-bit legacy mode, we have already unmapped the page */
-		if (!internal_conf->legacy_mem)
+		const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+		if (!user_cfg->legacy_mem)
 			munmap(hfile->orig_va, page_sz);
 #else
 		munmap(hfile->orig_va, page_sz);
@@ -1132,7 +1130,7 @@ eal_legacy_hugepage_init(void)
 	struct hugepage_info used_hp[MAX_HUGEPAGE_SIZES];
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	uint64_t memory[RTE_MAX_NUMA_NODES];
 
@@ -1156,10 +1154,10 @@ eal_legacy_hugepage_init(void)
 		uint64_t page_sz;
 
 		/* nohuge mode is legacy mode */
-		internal_conf->legacy_mem = 1;
+		user_cfg->legacy_mem = 1;
 
 		/* nohuge mode is single-file segments mode */
-		internal_conf->single_file_segments = 1;
+		user_cfg->single_file_segments = 1;
 
 		/* create a memseg list */
 		msl = &mcfg->memsegs[0];
@@ -1428,7 +1426,7 @@ eal_legacy_hugepage_init(void)
 
 #ifndef RTE_ARCH_64
 	/* for legacy 32-bit mode, we did not preallocate VA space, so do it */
-	if (internal_conf->legacy_mem &&
+	if (user_cfg->legacy_mem &&
 			prealloc_segments(hugepage, nr_hugefiles)) {
 		EAL_LOG(ERR, "Could not preallocate VA space for hugepages");
 		goto fail;
@@ -1656,10 +1654,9 @@ eal_hugepage_attach(void)
 int
 rte_eal_hugepage_init(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	return internal_conf->legacy_mem ?
+	return user_cfg->legacy_mem ?
 			eal_legacy_hugepage_init() :
 			eal_dynmem_hugepage_init();
 }
@@ -1667,10 +1664,9 @@ rte_eal_hugepage_init(void)
 int
 rte_eal_hugepage_attach(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	return internal_conf->legacy_mem ?
+	return user_cfg->legacy_mem ?
 			eal_legacy_hugepage_attach() :
 			eal_hugepage_attach();
 }
@@ -1720,7 +1716,7 @@ memseg_primary_init_32(void)
 	 * unneeded pages. this will not affect secondary processes, as those
 	 * should be able to mmap the space without (too many) problems.
 	 */
-	if (internal_conf->legacy_mem)
+	if (user_cfg->legacy_mem)
 		return 0;
 
 	/* 32-bit mode is a very special case. we cannot know in advance where
@@ -1785,7 +1781,7 @@ memseg_primary_init_32(void)
 
 #ifndef RTE_EAL_NUMA_AWARE_HUGEPAGES
 		/* we can still sort pages by socket in legacy mode */
-		if (!internal_conf->legacy_mem && socket_id > 0)
+		if (!user_cfg->legacy_mem && socket_id > 0)
 			break;
 #endif
 
@@ -1982,11 +1978,10 @@ static int
 memseg_secondary_init(void)
 {
 #ifdef RTE_ARCH_64
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* for 32-bit dynmem init is same as legacy */
-	if (!internal_conf->legacy_mem)
+	if (!user_cfg->legacy_mem)
 		return memseg_secondary_init_dynmem();
 #endif
 
@@ -2000,8 +1995,8 @@ rte_eal_memseg_init(void)
 	struct rlimit lim;
 
 #ifndef RTE_EAL_NUMA_AWARE_HUGEPAGES
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg =
+		eal_get_user_configuration();
 #endif
 	if (getrlimit(RLIMIT_NOFILE, &lim) == 0) {
 		/* set limit to maximum */
@@ -2019,7 +2014,7 @@ rte_eal_memseg_init(void)
 		EAL_LOG(ERR, "Cannot get current resource limits");
 	}
 #ifndef RTE_EAL_NUMA_AWARE_HUGEPAGES
-	if (!internal_conf->legacy_mem && rte_socket_count() > 1) {
+	if (!user_cfg->legacy_mem && rte_socket_count() > 1) {
 		EAL_LOG(WARNING, "DPDK is running on a NUMA system, but is compiled without NUMA support.");
 		EAL_LOG(WARNING, "This will have adverse consequences for performance and usability.");
 		EAL_LOG(WARNING, "Please use --legacy-mem option, or recompile with NUMA support.");

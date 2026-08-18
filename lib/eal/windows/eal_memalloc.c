@@ -316,8 +316,9 @@ eal_memalloc_alloc_seg_bulk(struct rte_memseg **ms, int n_segs,
 	struct hugepage_info *hi = NULL;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	if (internal_conf->legacy_mem) {
+	if (user_cfg->legacy_mem) {
 		EAL_LOG(ERR, "dynamic allocation not supported in legacy mode");
 		return -ENOTSUP;
 	}
@@ -369,9 +370,10 @@ eal_memalloc_free_seg_bulk(struct rte_memseg **ms, int n_segs)
 	int seg, ret = 0;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* dynamic free not supported in legacy mode */
-	if (internal_conf->legacy_mem)
+	if (user_cfg->legacy_mem)
 		return -1;
 
 	for (seg = 0; seg < n_segs; seg++) {

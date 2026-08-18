@@ -8,13 +8,14 @@
 #include "getopt.h"
 
 struct rte_tel_data;
+struct eal_user_cfg;
 
 int eal_parse_log_options(void);
 int eal_parse_args(void);
 int eal_option_device_parse(void);
 int eal_apply_hugepage_mem_sz_limits(struct internal_config *internal_cfg);
 int eal_adjust_config(struct internal_config *internal_cfg);
-int eal_cleanup_config(struct internal_config *internal_cfg);
+int eal_cleanup_config(const struct eal_user_cfg *user_cfg);
 enum rte_proc_type_t eal_proc_type_detect(void);
 int eal_plugins_init(void);
 int eal_save_args(int argc, char **argv);

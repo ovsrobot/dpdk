@@ -182,8 +182,6 @@ rte_eal_config_create(void)
 	size_t cfg_len_aligned = RTE_ALIGN(cfg_len, page_sz);
 	void *rte_mem_cfg_addr, *mapped_mem_cfg_addr;
 	int retval;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	const char *pathname = eal_runtime_config_path();
@@ -192,9 +190,9 @@ rte_eal_config_create(void)
 		return 0;
 
 	/* map the config before hugepage address so that we don't waste a page */
-	if (internal_conf->base_virtaddr != 0)
+	if (user_cfg->base_virtaddr != 0)
 		rte_mem_cfg_addr = (void *)
-			RTE_ALIGN_FLOOR(internal_conf->base_virtaddr -
+			RTE_ALIGN_FLOOR(user_cfg->base_virtaddr -
 			sizeof(struct rte_mem_config), page_sz);
 	else
 		rte_mem_cfg_addr = NULL;
@@ -522,8 +520,9 @@ eal_worker_thread_create(unsigned int lcore_id)
 	pthread_attr_t attr;
 	size_t stack_size;
 	int ret = -1;
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	stack_size = eal_get_internal_configuration()->huge_worker_stack_size;
+	stack_size = user_cfg->huge_worker_stack_size;
 	if (stack_size != 0) {
 		/* Allocate NUMA aware stack memory and set pthread attributes */
 		stack_ptr = rte_zmalloc_socket("lcore_stack", stack_size,
@@ -687,7 +686,7 @@ rte_eal_init(int argc, char **argv)
 	enum rte_iova_mode bus_iova_mode = rte_bus_get_iommu_class();
 
 	/* if no EAL option "--iova-mode=<pa|va>", use bus IOVA scheme */
-	if (internal_conf->iova_mode == RTE_IOVA_DC) {
+	if (user_cfg->iova_mode == RTE_IOVA_DC) {
 		/* autodetect the IOVA mapping mode */
 		enum rte_iova_mode iova_mode = bus_iova_mode;
 
@@ -718,7 +717,7 @@ rte_eal_init(int argc, char **argv)
 		rte_eal_get_configuration()->iova_mode = iova_mode;
 	} else {
 		rte_eal_get_configuration()->iova_mode =
-			internal_conf->iova_mode;
+			user_cfg->iova_mode;
 	}
 
 	if (rte_eal_iova_mode() == RTE_IOVA_PA && !phys_addrs) {
@@ -975,8 +974,6 @@ rte_eal_cleanup(void)
 	/* if we're in a primary process, we need to mark hugepages as freeable
 	 * so that finalization can release them back to the system.
 	 */
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
@@ -994,7 +991,7 @@ rte_eal_cleanup(void)
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
 	rte_eal_malloc_heap_cleanup();
-	eal_cleanup_config(internal_conf);
+	eal_cleanup_config(user_cfg);
 	eal_lcore_var_cleanup();
 	rte_eal_log_cleanup();
 	return 0;
@@ -1012,19 +1009,18 @@ RTE_EXPORT_SYMBOL(rte_eal_vfio_intr_mode)
 enum rte_intr_mode
 rte_eal_vfio_intr_mode(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	return internal_conf->vfio_intr_mode;
+	return user_cfg->vfio_intr_mode;
 }
 
 RTE_EXPORT_SYMBOL(rte_eal_vfio_get_vf_token)
 void
 rte_eal_vfio_get_vf_token(rte_uuid_t vf_token)
 {
-	struct internal_config *cfg = eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	rte_uuid_copy(vf_token, cfg->vfio_vf_token);
+	rte_uuid_copy(vf_token, user_cfg->vfio_vf_token);
 }
 
 int

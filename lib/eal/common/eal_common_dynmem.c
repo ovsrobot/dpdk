@@ -83,7 +83,7 @@ eal_dynmem_memseg_lists_init(void)
 
 #ifndef RTE_EAL_NUMA_AWARE_HUGEPAGES
 			/* we can still sort pages by socket in legacy mode */
-			if (!internal_conf->legacy_mem && socket_id > 0)
+			if (!user_cfg->legacy_mem && socket_id > 0)
 				break;
 #endif
 			memtypes[cur_type].page_sz = hugepage_sz;

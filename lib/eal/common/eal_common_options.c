@@ -541,14 +541,14 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 				sizeof(internal_cfg->hugepage_info[0]));
 		internal_cfg->hugepage_info[i].lock_descriptor = -1;
 	}
-	internal_cfg->base_virtaddr = 0;
+	user_cfg->base_virtaddr = 0;
 
 	/* if set to NONE, interrupt mode is determined automatically */
-	internal_cfg->vfio_intr_mode = RTE_INTR_MODE_NONE;
-	memset(internal_cfg->vfio_vf_token, 0,
-			sizeof(internal_cfg->vfio_vf_token));
+	user_cfg->vfio_intr_mode = RTE_INTR_MODE_NONE;
+	memset(user_cfg->vfio_vf_token, 0,
+			sizeof(user_cfg->vfio_vf_token));
 
-	internal_cfg->no_auto_probing = 0;
+	user_cfg->no_auto_probing = false;
 
 #ifdef RTE_LIBEAL_USE_HPET
 	user_cfg->no_hpet = false;
@@ -560,12 +560,12 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	user_cfg->in_memory = false;
 	user_cfg->create_uio_dev = false;
 	user_cfg->no_telemetry = false;
-	internal_cfg->iova_mode = RTE_IOVA_DC;
-	internal_cfg->user_mbuf_pool_ops_name = NULL;
+	user_cfg->iova_mode = RTE_IOVA_DC;
+	user_cfg->user_mbuf_pool_ops_name = NULL;
 	CPU_ZERO(&internal_cfg->ctrl_cpuset);
 	internal_cfg->init_complete = 0;
-	internal_cfg->max_simd_bitwidth.bitwidth = RTE_VECT_DEFAULT_SIMD_BITWIDTH;
-	internal_cfg->max_simd_bitwidth.forced = 0;
+	user_cfg->max_simd_bitwidth.bitwidth = RTE_VECT_DEFAULT_SIMD_BITWIDTH;
+	user_cfg->max_simd_bitwidth.forced = 0;
 }
 
 static int
@@ -1633,8 +1633,7 @@ static int
 eal_parse_iova_mode(const char *name)
 {
 	int mode;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (name == NULL)
 		return -1;
@@ -1646,7 +1645,7 @@ eal_parse_iova_mode(const char *name)
 	else
 		return -1;
 
-	internal_conf->iova_mode = mode;
+	user_cfg->iova_mode = mode;
 	return 0;
 }
 
@@ -1656,8 +1655,7 @@ eal_parse_simd_bitwidth(const char *arg)
 	char *end;
 	unsigned long bitwidth;
 	int ret;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (arg == NULL || arg[0] == '\0')
 		return -1;
@@ -1674,7 +1672,7 @@ eal_parse_simd_bitwidth(const char *arg)
 	ret = rte_vect_set_max_simd_bitwidth(bitwidth);
 	if (ret < 0)
 		return -1;
-	internal_conf->max_simd_bitwidth.forced = 1;
+	user_cfg->max_simd_bitwidth.forced = 1;
 	return 0;
 }
 
@@ -1683,8 +1681,7 @@ eal_parse_base_virtaddr(const char *arg)
 {
 	char *end;
 	uint64_t addr;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	errno = 0;
 	addr = strtoull(arg, &end, 16);
@@ -1704,7 +1701,7 @@ eal_parse_base_virtaddr(const char *arg)
 	 * it can align to 2MB for x86. So this alignment can also be used
 	 * on x86 and other architectures.
 	 */
-	internal_conf->base_virtaddr =
+	user_cfg->base_virtaddr =
 		RTE_PTR_ALIGN_CEIL((uintptr_t)addr, (size_t)RTE_PGSIZE_16M);
 
 	return 0;
@@ -1999,8 +1996,7 @@ eal_parse_pagesz_mem(char *strval, struct eal_user_cfg *user_cfg)
 static int
 eal_parse_vfio_intr(const char *mode)
 {
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	static struct {
 		const char *name;
 		enum rte_intr_mode value;
@@ -2012,7 +2008,7 @@ eal_parse_vfio_intr(const char *mode)
 
 	for (size_t i = 0; i < RTE_DIM(map); i++) {
 		if (!strcmp(mode, map[i].name)) {
-			internal_conf->vfio_intr_mode = map[i].value;
+			user_cfg->vfio_intr_mode = map[i].value;
 			return 0;
 		}
 	}
@@ -2022,11 +2018,11 @@ eal_parse_vfio_intr(const char *mode)
 static int
 eal_parse_vfio_vf_token(const char *vf_token)
 {
-	struct internal_config *cfg = eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	rte_uuid_t uuid;
 
 	if (!rte_uuid_parse(vf_token, uuid)) {
-		rte_uuid_copy(cfg->vfio_vf_token, uuid);
+		rte_uuid_copy(user_cfg->vfio_vf_token, uuid);
 		return 0;
 	}
 
@@ -2040,7 +2036,7 @@ eal_parse_huge_worker_stack(const char *arg)
 	EAL_LOG(WARNING, "Cannot set worker stack size on Windows, parameter ignored");
 	RTE_SET_USED(arg);
 #else
-	struct internal_config *cfg = eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (arg == NULL || arg[0] == '\0') {
 		pthread_attr_t attr;
@@ -2050,7 +2046,7 @@ eal_parse_huge_worker_stack(const char *arg)
 			EAL_LOG(ERR, "Could not retrieve default stack size");
 			return -1;
 		}
-		ret = pthread_attr_getstacksize(&attr, &cfg->huge_worker_stack_size);
+		ret = pthread_attr_getstacksize(&attr, &user_cfg->huge_worker_stack_size);
 		pthread_attr_destroy(&attr);
 		if (ret != 0) {
 			EAL_LOG(ERR, "Could not retrieve default stack size");
@@ -2066,11 +2062,11 @@ eal_parse_huge_worker_stack(const char *arg)
 				stack_size >= (size_t)-1 / 1024)
 			return -1;
 
-		cfg->huge_worker_stack_size = stack_size * 1024;
+		user_cfg->huge_worker_stack_size = stack_size * 1024;
 	}
 
 	EAL_LOG(DEBUG, "Each worker thread will use %zu kB of DPDK memory as stack",
-		cfg->huge_worker_stack_size / 1024);
+		user_cfg->huge_worker_stack_size / 1024);
 #endif
 	return 0;
 }
@@ -2104,7 +2100,7 @@ eal_parse_args(void)
 	}
 
 	if (args.no_auto_probing)
-		int_cfg->no_auto_probing = 1;
+		user_cfg->no_auto_probing = true;
 
 	/* device -a/-b/-vdev options*/
 	TAILQ_FOREACH(arg, &args.allow, next)
@@ -2262,7 +2258,7 @@ eal_parse_args(void)
 	if (args.no_huge) {
 		user_cfg->no_hugetlbfs = true;
 		/* no-huge is legacy mem */
-		int_cfg->legacy_mem = true;
+		user_cfg->legacy_mem = true;
 	}
 	if (args.in_memory) {
 		user_cfg->in_memory = true;
@@ -2271,12 +2267,12 @@ eal_parse_args(void)
 		user_cfg->hugepage_file.unlink_before_mapping = true;
 	}
 	if (args.legacy_mem) {
-		int_cfg->legacy_mem = true;
+		user_cfg->legacy_mem = true;
 		if (args.memory_size == NULL && args.numa_mem == NULL)
 			EAL_LOG(NOTICE, "Static memory layout is selected, amount of reserved memory can be adjusted with -m or --socket-mem");
 	}
 	if (args.single_file_segments)
-		int_cfg->single_file_segments = true;
+		user_cfg->single_file_segments = true;
 	if (args.huge_dir != NULL) {
 		if (strlen(args.huge_dir) < 1) {
 			EAL_LOG(ERR, "Invalid hugepage dir parameter");
@@ -2383,7 +2379,7 @@ eal_parse_args(void)
 	if (args.no_telemetry)
 		user_cfg->no_telemetry = true;
 	if (args.match_allocations)
-		int_cfg->match_allocations = true;
+		user_cfg->match_allocations = true;
 	if (args.create_uio_dev)
 		user_cfg->create_uio_dev = true;
 
@@ -2429,13 +2425,13 @@ eal_parse_args(void)
 		}
 	}
 	if (args.mbuf_pool_ops_name != NULL) {
-		free(int_cfg->user_mbuf_pool_ops_name); /* free old ops name */
-		int_cfg->user_mbuf_pool_ops_name = strdup(args.mbuf_pool_ops_name);
-		if (int_cfg->user_mbuf_pool_ops_name == NULL) {
+		free(user_cfg->user_mbuf_pool_ops_name); /* free old ops name */
+		user_cfg->user_mbuf_pool_ops_name = strdup(args.mbuf_pool_ops_name);
+		if (user_cfg->user_mbuf_pool_ops_name == NULL) {
 			EAL_LOG(ERR, "failed to allocate memory for mbuf pool ops name parameter");
 			return -1;
 		}
-		if (strlen(int_cfg->user_mbuf_pool_ops_name) < 1) {
+		if (strlen(user_cfg->user_mbuf_pool_ops_name) < 1) {
 			EAL_LOG(ERR, "Invalid mbuf pool ops name parameter");
 			return -1;
 		}
@@ -2494,11 +2490,11 @@ compute_ctrl_threads_cpuset(struct internal_config *internal_cfg)
 }
 
 int
-eal_cleanup_config(struct internal_config *internal_cfg)
+eal_cleanup_config(const struct eal_user_cfg *user_cfg)
 {
-	free(eal_get_user_configuration()->hugefile_prefix);
-	free(eal_get_user_configuration()->hugepage_dir);
-	free(internal_cfg->user_mbuf_pool_ops_name);
+	free(user_cfg->hugefile_prefix);
+	free(user_cfg->hugepage_dir);
+	free(user_cfg->user_mbuf_pool_ops_name);
 
 	return 0;
 }
@@ -2554,18 +2550,16 @@ RTE_EXPORT_SYMBOL(rte_vect_get_max_simd_bitwidth)
 uint16_t
 rte_vect_get_max_simd_bitwidth(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-	return internal_conf->max_simd_bitwidth.bitwidth;
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	return user_cfg->max_simd_bitwidth.bitwidth;
 }
 
 RTE_EXPORT_SYMBOL(rte_vect_set_max_simd_bitwidth)
 int
 rte_vect_set_max_simd_bitwidth(uint16_t bitwidth)
 {
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-	if (internal_conf->max_simd_bitwidth.forced) {
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	if (user_cfg->max_simd_bitwidth.forced) {
 		EAL_LOG(NOTICE, "Cannot set max SIMD bitwidth - user runtime override enabled");
 		return -EPERM;
 	}
@@ -2574,6 +2568,6 @@ rte_vect_set_max_simd_bitwidth(uint16_t bitwidth)
 		EAL_LOG(ERR, "Invalid bitwidth value!");
 		return -EINVAL;
 	}
-	internal_conf->max_simd_bitwidth.bitwidth = bitwidth;
+	user_cfg->max_simd_bitwidth.bitwidth = bitwidth;
 	return 0;
 }

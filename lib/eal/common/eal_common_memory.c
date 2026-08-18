@@ -53,8 +53,7 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 	uint64_t map_sz;
 	void *mapped_addr, *aligned_addr;
 	uint8_t try = 0;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (system_page_sz == 0)
 		system_page_sz = rte_mem_page_size();
@@ -65,12 +64,12 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 	allow_shrink = (flags & EAL_VIRTUAL_AREA_ALLOW_SHRINK) > 0;
 	unmap = (flags & EAL_VIRTUAL_AREA_UNMAP) > 0;
 
-	if (next_baseaddr == NULL && internal_conf->base_virtaddr != 0 &&
+	if (next_baseaddr == NULL && user_cfg->base_virtaddr != 0 &&
 			rte_eal_process_type() == RTE_PROC_PRIMARY)
-		next_baseaddr = (void *) internal_conf->base_virtaddr;
+		next_baseaddr = (void *) user_cfg->base_virtaddr;
 
 #ifdef RTE_ARCH_64
-	if (next_baseaddr == NULL && internal_conf->base_virtaddr == 0 &&
+	if (next_baseaddr == NULL && user_cfg->base_virtaddr == 0 &&
 			rte_eal_process_type() == RTE_PROC_PRIMARY)
 		next_baseaddr = (void *) eal_get_baseaddr();
 #endif
@@ -151,7 +150,7 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		 * demote this warning to debug if we did not explicitly request
 		 * a base virtual address.
 		 */
-		if (internal_conf->base_virtaddr != 0) {
+		if (user_cfg->base_virtaddr != 0) {
 			EAL_LOG(WARNING, "WARNING! Base virtual address hint (%p != %p) not respected!",
 				requested_addr, aligned_addr);
 			EAL_LOG(WARNING, "   This may cause issues with mapping memory into secondary processes");
@@ -404,8 +403,7 @@ void *
 rte_mem_iova2virt(rte_iova_t iova)
 {
 	struct virtiova vi;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	memset(&vi, 0, sizeof(vi));
 
@@ -413,7 +411,7 @@ rte_mem_iova2virt(rte_iova_t iova)
 	/* for legacy mem, we can get away with scanning VA-contiguous segments,
 	 * as we know they are PA-contiguous as well
 	 */
-	if (internal_conf->legacy_mem)
+	if (user_cfg->legacy_mem)
 		rte_memseg_contig_walk(find_virt_legacy, &vi);
 	else
 		rte_memseg_walk(find_virt, &vi);
@@ -497,11 +495,10 @@ int
 rte_mem_event_callback_register(const char *name, rte_mem_event_callback_t clb,
 		void *arg)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* FreeBSD boots with legacy mem enabled by default */
-	if (internal_conf->legacy_mem) {
+	if (user_cfg->legacy_mem) {
 		EAL_LOG(DEBUG, "Registering mem event callbacks not supported");
 		rte_errno = ENOTSUP;
 		return -1;
@@ -513,11 +510,10 @@ RTE_EXPORT_SYMBOL(rte_mem_event_callback_unregister)
 int
 rte_mem_event_callback_unregister(const char *name, void *arg)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* FreeBSD boots with legacy mem enabled by default */
-	if (internal_conf->legacy_mem) {
+	if (user_cfg->legacy_mem) {
 		EAL_LOG(DEBUG, "Registering mem event callbacks not supported");
 		rte_errno = ENOTSUP;
 		return -1;
@@ -530,11 +526,10 @@ int
 rte_mem_alloc_validator_register(const char *name,
 		rte_mem_alloc_validator_t clb, int socket_id, size_t limit)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* FreeBSD boots with legacy mem enabled by default */
-	if (internal_conf->legacy_mem) {
+	if (user_cfg->legacy_mem) {
 		EAL_LOG(DEBUG, "Registering mem alloc validators not supported");
 		rte_errno = ENOTSUP;
 		return -1;
@@ -547,11 +542,10 @@ RTE_EXPORT_SYMBOL(rte_mem_alloc_validator_unregister)
 int
 rte_mem_alloc_validator_unregister(const char *name, int socket_id)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* FreeBSD boots with legacy mem enabled by default */
-	if (internal_conf->legacy_mem) {
+	if (user_cfg->legacy_mem) {
 		EAL_LOG(DEBUG, "Registering mem alloc validators not supported");
 		rte_errno = ENOTSUP;
 		return -1;
