@@ -10,6 +10,9 @@
 #ifndef EAL_INTERNAL_CFG_H
 #define EAL_INTERNAL_CFG_H
 
+#include <sys/queue.h>
+
+#include <rte_devargs.h>
 #include <rte_eal.h>
 #include <rte_os_shim.h>
 #include <rte_pci_dev_feature_defs.h>
@@ -56,10 +59,22 @@ struct hugepage_file_discipline {
 };
 
 /**
+ * A single device option (-a/-b/--vdev) staged during arg parsing.
+ * Lives in user_cfg->devopt_list; drained by eal_option_device_parse().
+ */
+struct device_option {
+	TAILQ_ENTRY(device_option) next;
+	enum rte_devtype type;
+	char arg[];
+};
+TAILQ_HEAD(eal_devopt_list, device_option);
+
+/**
  * User-provided EAL initialization configuration.
  * Immutable after initialization, so no need for atomic types or locks.
  */
 struct eal_user_cfg {
+	struct eal_devopt_list devopt_list; /**< staged device options (-a/-b/--vdev) */
 	size_t memory;           /**< amount of asked memory */
 	size_t huge_worker_stack_size; /**< worker thread stack size */
 	enum rte_proc_type_t process_type; /**< requested process type */

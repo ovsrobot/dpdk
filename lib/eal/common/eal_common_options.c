@@ -305,18 +305,6 @@ static const char *default_solib_dir = RTE_EAL_PMD_PATH;
 RTE_PMD_EXPORT_SYMBOL(const char, dpdk_solib_path)[] =
 "DPDK_PLUGIN_PATH=" RTE_EAL_PMD_PATH;
 
-TAILQ_HEAD(device_option_list, device_option);
-
-struct device_option {
-	TAILQ_ENTRY(device_option) next;
-
-	enum rte_devtype type;
-	char arg[];
-};
-
-static struct device_option_list devopt_list =
-TAILQ_HEAD_INITIALIZER(devopt_list);
-
 /* Returns rte_usage_hook_t */
 rte_usage_hook_t
 eal_get_application_usage_hook(void)
@@ -454,6 +442,7 @@ eal_clean_saved_args(void)
 static int
 eal_option_device_add(enum rte_devtype type, const char *arg)
 {
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct device_option *devopt;
 	size_t arglen;
 	int ret;
@@ -472,25 +461,26 @@ eal_option_device_add(enum rte_devtype type, const char *arg)
 		free(devopt);
 		return -EINVAL;
 	}
-	TAILQ_INSERT_TAIL(&devopt_list, devopt, next);
+	TAILQ_INSERT_TAIL(&user_cfg->devopt_list, devopt, next);
 	return 0;
 }
 
 int
 eal_option_device_parse(void)
 {
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct device_option *devopt;
 	void *tmp;
 	int ret = 0;
 
-	RTE_TAILQ_FOREACH_SAFE(devopt, &devopt_list, next, tmp) {
+	RTE_TAILQ_FOREACH_SAFE(devopt, &user_cfg->devopt_list, next, tmp) {
 		if (ret == 0) {
 			ret = rte_devargs_add(devopt->type, devopt->arg);
 			if (ret)
 				EAL_LOG(ERR, "Unable to parse device '%s'",
 					devopt->arg);
 		}
-		TAILQ_REMOVE(&devopt_list, devopt, next);
+		TAILQ_REMOVE(&user_cfg->devopt_list, devopt, next);
 		free(devopt);
 	}
 	return ret;
@@ -514,6 +504,7 @@ eal_reset_internal_config(void)
 	struct eal_platform_info *platform_info = eal_get_platform_info();
 	int i;
 
+	TAILQ_INIT(&user_cfg->devopt_list);
 	user_cfg->memory = 0;
 	user_cfg->force_nrank = 0;
 	user_cfg->force_nchannel = 0;
