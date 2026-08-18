@@ -112,6 +112,8 @@ struct eal_cpu_info {
 struct eal_platform_info {
 	size_t cpu_count;                /**< number of entries in cpu_info[] */
 	struct eal_cpu_info *cpu_info;   /**< per-physical-CPU hardware facts */
+	uint32_t numa_node_count;        /**< number of detected NUMA nodes */
+	uint32_t *numa_nodes;            /**< sorted list of detected NUMA node IDs */
 	uint8_t num_hugepage_sizes;      /**< how many sizes on this system */
 	struct hugepage_info hugepage_info[MAX_HUGEPAGE_SIZES];
 };

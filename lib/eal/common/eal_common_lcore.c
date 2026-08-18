@@ -166,7 +166,6 @@ socket_id_cmp(const void *a, const void *b)
 int
 rte_eal_cpu_init(void)
 {
-	struct rte_config *config = rte_eal_get_configuration();
 	struct eal_platform_info *platform_info = eal_get_platform_info();
 	int *lcore_to_socket_id;
 	size_t nb_detected_cpus = 0;
@@ -213,19 +212,47 @@ rte_eal_cpu_init(void)
 	qsort(lcore_to_socket_id, nb_detected_cpus,
 			sizeof(lcore_to_socket_id[0]), socket_id_cmp);
 
-	int prev_socket_id = -1;
-	config->numa_node_count = 0;
-	for (size_t i = 0; i < nb_detected_cpus; i++) {
-		int socket_id = lcore_to_socket_id[i];
-		if (socket_id != prev_socket_id)
-			config->numa_nodes[config->numa_node_count++] =	socket_id;
-		prev_socket_id = socket_id;
-		if (config->numa_node_count >= RTE_MAX_NUMA_NODES)
-			break;
+	/* allocate worst-case (one NUMA node per CPU), then dedup and shrink */
+	platform_info->numa_nodes = calloc(platform_info->cpu_count,
+			sizeof(*platform_info->numa_nodes));
+	if (platform_info->numa_nodes == NULL) {
+		EAL_LOG(ERR, "Cannot allocate numa_nodes array");
+		free(lcore_to_socket_id);
+		free(platform_info->cpu_info);
+		return -1;
 	}
-	EAL_LOG(INFO, "Detected NUMA nodes: %u", config->numa_node_count);
 
+	uint32_t numa_node_count = 0;
+	int prev_socket_id = -1;
+	for (size_t cpu_id = 0; cpu_id < nb_detected_cpus; cpu_id++) {
+		int socket_id = lcore_to_socket_id[cpu_id];
+		if (socket_id != prev_socket_id) {
+			platform_info->numa_nodes[numa_node_count++] = socket_id;
+			prev_socket_id = socket_id;
+		}
+	}
 	free(lcore_to_socket_id);
+
+	if (numa_node_count > RTE_MAX_NUMA_NODES) {
+		EAL_LOG(ERR, "Detected %u NUMA nodes, but only RTE_MAX_NUMA_NODES (%u) are supported",
+				numa_node_count, RTE_MAX_NUMA_NODES);
+		free(platform_info->numa_nodes);
+		platform_info->numa_nodes = NULL;
+		free(platform_info->cpu_info);
+		platform_info->cpu_info = NULL;
+		return -1;
+	}
+	platform_info->numa_node_count = numa_node_count;
+
+	/* shrink to the actual number of unique NUMA nodes found,
+	 * realloc may fail, in that case we keep the original allocation
+	 */
+	uint32_t *tmp = realloc(platform_info->numa_nodes,
+			numa_node_count * sizeof(*platform_info->numa_nodes));
+	if (tmp != NULL)
+		platform_info->numa_nodes = tmp;
+	EAL_LOG(INFO, "Detected NUMA nodes: %u", platform_info->numa_node_count);
+
 	return 0;
 }
 
@@ -233,20 +260,20 @@ RTE_EXPORT_SYMBOL(rte_socket_count)
 unsigned int
 rte_socket_count(void)
 {
-	const struct rte_config *config = rte_eal_get_configuration();
-	return config->numa_node_count;
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	return platform_info->numa_node_count;
 }
 
 RTE_EXPORT_SYMBOL(rte_socket_id_by_idx)
 int
 rte_socket_id_by_idx(unsigned int idx)
 {
-	const struct rte_config *config = rte_eal_get_configuration();
-	if (idx >= config->numa_node_count) {
+	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	if (idx >= platform_info->numa_node_count) {
 		rte_errno = EINVAL;
 		return -1;
 	}
-	return config->numa_nodes[idx];
+	return platform_info->numa_nodes[idx];
 }
 
 static rte_rwlock_t lcore_lock = RTE_RWLOCK_INITIALIZER;
