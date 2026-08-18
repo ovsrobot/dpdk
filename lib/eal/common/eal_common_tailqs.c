@@ -29,7 +29,7 @@ struct rte_tailq_head *
 rte_eal_tailq_lookup(const char *name)
 {
 	unsigned i;
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 
 	if (name == NULL) {
 		rte_errno = EINVAL;
@@ -53,7 +53,7 @@ rte_dump_tailq(FILE *f)
 	struct rte_mem_config *mcfg;
 	unsigned i = 0;
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 
 	rte_mcfg_tailq_read_lock();
 	for (i = 0; i < RTE_MAX_TAILQ; i++) {
@@ -81,7 +81,7 @@ rte_eal_tailq_create(const char *name)
 	    (rte_tailqs_count + 1 < RTE_MAX_TAILQ)) {
 		struct rte_mem_config *mcfg;
 
-		mcfg = rte_eal_get_configuration()->mem_config;
+		mcfg = eal_get_mcfg();
 		head = &mcfg->tailq_head[rte_tailqs_count];
 		strlcpy(head->name, name, sizeof(head->name));
 		TAILQ_INIT(&head->tailq_head);

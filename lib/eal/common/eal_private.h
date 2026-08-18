@@ -21,11 +21,7 @@
  * The global RTE configuration structure.
  */
 struct rte_config {
-	/**
-	 * Pointer to memory configuration, which may be shared across multiple
-	 * DPDK instances
-	 */
-	struct rte_mem_config *mem_config;
+	int _unused; /**< dummy field to prevent empty struct */
 };
 
 /**

@@ -761,7 +761,7 @@ struct alloc_walk_param {
 static int
 alloc_seg_walk(const struct rte_memseg_list *msl, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct alloc_walk_param *wa = arg;
 	struct rte_memseg_list *cur_msl;
 	size_t page_sz;
@@ -895,7 +895,7 @@ struct free_walk_param {
 static int
 free_seg_walk(const struct rte_memseg_list *msl, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *found_msl;
 	struct free_walk_param *wa = arg;
 	uintptr_t start_addr, end_addr;
@@ -1325,7 +1325,7 @@ fail:
 static int
 sync_walk(const struct rte_memseg_list *msl, void *arg __rte_unused)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *primary_msl, *local_msl;
 	struct eal_platform_info *platform_info = eal_get_platform_info();
 	struct hugepage_info *hi = NULL;
@@ -1378,7 +1378,7 @@ static int
 secondary_msl_create_walk(const struct rte_memseg_list *msl,
 		void *arg __rte_unused)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *primary_msl, *local_msl;
 	char name[RTE_FBARRAY_NAME_LEN];
 	int msl_idx, ret;
@@ -1427,7 +1427,7 @@ static int
 secondary_msl_destroy_walk(const struct rte_memseg_list *msl,
 		void *arg __rte_unused)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *local_msl;
 	int msl_idx, ret;
 
@@ -1510,7 +1510,7 @@ static int
 fd_list_create_walk(const struct rte_memseg_list *msl,
 		void *arg __rte_unused)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	unsigned int len;
 	int msl_idx;
 
@@ -1526,7 +1526,7 @@ fd_list_create_walk(const struct rte_memseg_list *msl,
 static int
 fd_list_destroy_walk(const struct rte_memseg_list *msl, void *arg __rte_unused)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int msl_idx;
 
 	if (msl->external)
@@ -1540,7 +1540,7 @@ fd_list_destroy_walk(const struct rte_memseg_list *msl, void *arg __rte_unused)
 int
 eal_memalloc_set_seg_fd(int list_idx, int seg_idx, int fd)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* single file segments mode doesn't support individual segment fd's */
@@ -1595,7 +1595,7 @@ eal_memalloc_get_seg_fd(int list_idx, int seg_idx)
 int
 eal_memalloc_get_seg_fd_offset(int list_idx, int seg_idx, size_t *offset)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (user_cfg->single_file_segments) {

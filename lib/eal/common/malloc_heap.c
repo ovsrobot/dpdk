@@ -71,7 +71,7 @@ check_hugepage_sz(unsigned flags, uint64_t hugepage_sz)
 int
 malloc_socket_to_heap_id(unsigned int socket_id)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int i;
 
 	for (i = 0; i < RTE_MAX_HEAPS; i++) {
@@ -107,7 +107,7 @@ static int
 malloc_add_seg(const struct rte_memseg_list *msl,
 		const struct rte_memseg *ms, size_t len, void *arg __rte_unused)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *found_msl;
 	struct malloc_heap *heap;
 	int msl_idx, heap_idx;
@@ -294,7 +294,7 @@ alloc_pages_on_heap(struct malloc_heap *heap, uint64_t pg_sz, size_t elt_size,
 		int socket, unsigned int flags, size_t align, size_t bound,
 		bool contig, struct rte_memseg **ms, int n_segs)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *msl;
 	struct malloc_elem *elem = NULL;
 	size_t alloc_sz;
@@ -465,7 +465,7 @@ try_expand_heap_secondary(struct malloc_heap *heap, uint64_t pg_sz,
 		size_t elt_size, int socket, unsigned int flags, size_t align,
 		size_t bound, bool contig)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct malloc_mp_req req;
 	int req_result;
 
@@ -534,7 +534,7 @@ static int
 alloc_more_mem_on_socket(struct malloc_heap *heap, size_t size, int socket,
 		unsigned int flags, size_t align, size_t bound, bool contig)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *requested_msls[RTE_MAX_MEMSEG_LISTS];
 	struct rte_memseg_list *other_msls[RTE_MAX_MEMSEG_LISTS];
 	uint64_t requested_pg_sz[RTE_MAX_MEMSEG_LISTS];
@@ -642,7 +642,7 @@ static void *
 malloc_heap_alloc_on_heap_id(size_t size, unsigned int heap_id, unsigned int flags, size_t align,
 		size_t bound, bool contig)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct malloc_heap *heap = &mcfg->malloc_heaps[heap_id];
 	unsigned int size_flags = flags & ~RTE_MEMZONE_SIZE_HINT_ONLY;
 	int socket_id;
@@ -773,7 +773,7 @@ static void *
 heap_alloc_biggest_on_heap_id(unsigned int heap_id,
 		unsigned int flags, size_t align, bool contig)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct malloc_heap *heap = &mcfg->malloc_heaps[heap_id];
 	void *ret;
 
@@ -1175,7 +1175,7 @@ malloc_heap_create_external_seg(void *va_addr, rte_iova_t iova_addrs[],
 		unsigned int n_pages, size_t page_sz, const char *seg_name,
 		unsigned int socket_id)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	char fbarray_name[RTE_FBARRAY_NAME_LEN];
 	struct rte_memseg_list *msl = NULL;
 	struct rte_fbarray *arr;
@@ -1242,7 +1242,7 @@ struct extseg_walk_arg {
 static int
 extseg_walk(const struct rte_memseg_list *msl, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct extseg_walk_arg *wa = arg;
 
 	if (msl->base_va == wa->va_addr && msl->len == wa->len) {
@@ -1343,7 +1343,7 @@ malloc_heap_remove_external_memory(struct malloc_heap *heap, void *va_addr,
 int
 malloc_heap_create(struct malloc_heap *heap, const char *heap_name)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	uint32_t next_socket_id = mcfg->next_socket_id;
 
 	/* prevent overflow. did you really create 2 billion heaps??? */
@@ -1397,7 +1397,7 @@ malloc_heap_destroy(struct malloc_heap *heap)
 int
 rte_eal_malloc_heap_init(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	unsigned int i;
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 

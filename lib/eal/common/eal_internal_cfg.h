@@ -20,6 +20,9 @@
 #include <rte_stdatomic.h>
 #include "eal_thread.h"
 
+/* Forward declaration — full definition is in eal_memcfg.h */
+struct rte_mem_config;
+
 #if defined(RTE_ARCH_ARM)
 #define MAX_HUGEPAGE_SIZES 4  /**< support up to 4 page sizes */
 #else
@@ -154,6 +157,7 @@ struct eal_runtime_state {
 	uint32_t lcore_count;         /**< Number of active lcore IDs (role != ROLE_OFF). */
 	struct lcore_cfg lcore_cfg[RTE_MAX_LCORE];
 	RTE_BITSET_DECLARE(core_indices, RTE_MAX_LCORE); /**< currently allocated core_indices */
+	struct rte_mem_config *mem_config; /**< pointer to memory config (in shared memory) */
 };
 
 struct eal_user_cfg *eal_get_user_configuration(void);

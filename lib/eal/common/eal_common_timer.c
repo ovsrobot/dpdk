@@ -55,7 +55,7 @@ estimate_tsc_freq(void)
 void
 set_tsc_freq(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	uint64_t freq;
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {

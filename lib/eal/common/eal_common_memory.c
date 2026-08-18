@@ -341,7 +341,7 @@ virt2memseg(const void *addr, const struct rte_memseg_list *msl)
 static struct rte_memseg_list *
 virt2memseg_list(const void *addr)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *msl;
 	int msl_idx;
 
@@ -456,7 +456,7 @@ static int
 dump_memseg(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 		void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int msl_idx, ms_idx, fd;
 	FILE *f = arg;
 
@@ -588,7 +588,7 @@ check_iova(const struct rte_memseg_list *msl __rte_unused,
 static int
 check_dma_mask(uint8_t maskbits, bool thread_unsafe)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	uint64_t mask;
 	int ret;
 
@@ -651,7 +651,7 @@ RTE_EXPORT_SYMBOL(rte_mem_set_dma_mask)
 void
 rte_mem_set_dma_mask(uint8_t maskbits)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 
 	mcfg->dma_maskbits = mcfg->dma_maskbits == 0 ? maskbits :
 			     RTE_MIN(mcfg->dma_maskbits, maskbits);
@@ -661,29 +661,27 @@ rte_mem_set_dma_mask(uint8_t maskbits)
 RTE_EXPORT_SYMBOL(rte_memory_get_nchannel)
 unsigned rte_memory_get_nchannel(void)
 {
-	return rte_eal_get_configuration()->mem_config->nchannel;
+	return eal_get_mcfg()->nchannel;
 }
 
 /* return the number of memory rank */
 RTE_EXPORT_SYMBOL(rte_memory_get_nrank)
 unsigned rte_memory_get_nrank(void)
 {
-	return rte_eal_get_configuration()->mem_config->nrank;
+	return eal_get_mcfg()->nrank;
 }
 
 static int
 rte_eal_memdevice_init(void)
 {
-	struct rte_config *config;
 	const struct eal_user_cfg *user_cfg;
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
 		return 0;
 
 	user_cfg = eal_get_user_configuration();
-	config = rte_eal_get_configuration();
-	config->mem_config->nchannel = user_cfg->force_nchannel;
-	config->mem_config->nrank = user_cfg->force_nrank;
+	eal_get_mcfg()->nchannel = user_cfg->force_nchannel;
+	eal_get_mcfg()->nrank = user_cfg->force_nrank;
 
 	return 0;
 }
@@ -703,7 +701,7 @@ RTE_EXPORT_SYMBOL(rte_memseg_contig_walk_thread_unsafe)
 int
 rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int i, ms_idx, ret = 0;
 
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
@@ -757,7 +755,7 @@ RTE_EXPORT_SYMBOL(rte_memseg_walk_thread_unsafe)
 int
 rte_memseg_walk_thread_unsafe(rte_memseg_walk_t func, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int i, ms_idx, ret = 0;
 
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
@@ -800,7 +798,7 @@ RTE_EXPORT_SYMBOL(rte_memseg_list_walk_thread_unsafe)
 int
 rte_memseg_list_walk_thread_unsafe(rte_memseg_list_walk_t func, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int i, ret = 0;
 
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
@@ -834,7 +832,7 @@ RTE_EXPORT_SYMBOL(rte_memseg_get_fd_thread_unsafe)
 int
 rte_memseg_get_fd_thread_unsafe(const struct rte_memseg *ms)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
 	int msl_idx, seg_idx, ret;
@@ -891,7 +889,7 @@ int
 rte_memseg_get_fd_offset_thread_unsafe(const struct rte_memseg *ms,
 		size_t *offset)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
 	int msl_idx, seg_idx, ret;
@@ -948,7 +946,7 @@ int
 rte_extmem_register(void *va_addr, size_t len, rte_iova_t iova_addrs[],
 		unsigned int n_pages, size_t page_sz)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	unsigned int socket_id, n;
 	int ret = 0;
 
@@ -1068,7 +1066,7 @@ int
 rte_eal_memory_detach(void)
 {
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	size_t page_sz = rte_mem_page_size();
 	unsigned int i;
 
@@ -1120,7 +1118,7 @@ rte_eal_memory_detach(void)
 			EAL_LOG(ERR, "Could not unmap shared memory config: %s",
 					rte_strerror(rte_errno));
 	}
-	rte_eal_get_configuration()->mem_config = NULL;
+	eal_get_runtime_state()->mem_config = NULL;
 
 	return 0;
 }
@@ -1173,7 +1171,7 @@ static int
 handle_eal_heap_info_request(const char *cmd __rte_unused, const char *params,
 			     struct rte_tel_data *d)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_malloc_socket_stats sock_stats;
 	struct malloc_heap *heap;
 	unsigned int heap_id;
@@ -1210,7 +1208,7 @@ handle_eal_heap_list_request(const char *cmd __rte_unused,
 				const char *params __rte_unused,
 				struct rte_tel_data *d)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_malloc_socket_stats sock_stats;
 	unsigned int heap_id;
 
@@ -1232,7 +1230,7 @@ static int
 handle_eal_memzone_info_request(const char *cmd __rte_unused,
 				const char *params, struct rte_tel_data *d)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *msl = NULL;
 	int ms_idx, ms_count = 0;
 	void *cur_addr, *mz_end;
@@ -1294,7 +1292,7 @@ static void
 memzone_list_cb(const struct rte_memzone *mz __rte_unused,
 		 void *arg __rte_unused)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_tel_data *d = arg;
 	int mz_idx;
 
@@ -1359,7 +1357,7 @@ handle_eal_memseg_lists_request(const char *cmd __rte_unused,
 	rte_tel_data_start_array(d, RTE_TEL_INT_VAL);
 
 	rte_mcfg_mem_read_lock();
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
 		struct rte_memseg_list *msl = &mcfg->memsegs[i];
@@ -1395,7 +1393,7 @@ handle_eal_memseg_list_info_request(const char *cmd __rte_unused,
 	rte_tel_data_start_array(d, RTE_TEL_INT_VAL);
 
 	rte_mcfg_mem_read_lock();
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	msl = &mcfg->memsegs[ms_list_idx];
 	if (msl->memseg_arr.count == 0)
 		goto done;
@@ -1442,7 +1440,7 @@ handle_eal_memseg_info_request(const char *cmd __rte_unused,
 
 	rte_mcfg_mem_read_lock();
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	msl = &mcfg->memsegs[ms_list_idx];
 	if (msl->memseg_arr.count == 0) {
 		rte_mcfg_mem_read_unlock();
@@ -1521,7 +1519,7 @@ handle_eal_element_list_request(const char *cmd __rte_unused,
 
 	rte_mcfg_mem_read_lock();
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	msl = &mcfg->memsegs[ms_list_idx];
 	ms = rte_fbarray_get(&msl->memseg_arr, ms_idx);
 	if (ms == NULL) {
@@ -1599,7 +1597,7 @@ handle_eal_element_info_request(const char *cmd __rte_unused,
 
 	rte_mcfg_mem_read_lock();
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	msl = &mcfg->memsegs[ms_list_idx];
 	ms = rte_fbarray_get(&msl->memseg_arr, ms_idx);
 	if (ms == NULL) {

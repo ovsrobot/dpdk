@@ -679,7 +679,7 @@ unmap_unneeded_hugepages(struct hugepage_file *hugepg_tbl,
 static int
 remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
 	int cur_page, seg_len;
@@ -839,7 +839,7 @@ static int __rte_unused
 prealloc_segments(struct hugepage_file *hugepages, int n_pages)
 {
 	const struct eal_platform_info *platform_info = eal_get_platform_info();
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int cur_page, seg_start_page, end_seg, new_memseg;
 	unsigned int hpi_idx, socket, i;
 	int n_contig_segs, n_segs;
@@ -1137,7 +1137,7 @@ eal_legacy_hugepage_init(void)
 	memset(used_hp, 0, sizeof(used_hp));
 
 	/* get pointer to global configuration */
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 
 	/* hugetlbfs can be disabled */
 	if (user_cfg->no_hugetlbfs) {
@@ -1514,7 +1514,7 @@ getFileSize(int fd)
 static int
 eal_legacy_hugepage_attach(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct hugepage_file *hp = NULL;
 	unsigned int num_hp = 0;
 	unsigned int i = 0;
@@ -1687,7 +1687,7 @@ memseg_primary_init_32(void)
 {
 	/* limit total amount of memory on 32-bit */
 	const uint64_t mem32_max_mem = 2ULL << 30;
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int active_sockets, hpi_idx, msl_idx = 0;
 	unsigned int socket_id, i;
 	struct rte_memseg_list *msl;
@@ -1889,7 +1889,7 @@ memseg_primary_init(void)
 static int __rte_unused
 memseg_secondary_init_dynmem(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int msl_idx = 0;
 	struct rte_memseg_list *msl;
 	void *mem_va_addr;
@@ -1940,7 +1940,7 @@ memseg_secondary_init_dynmem(void)
 static int
 memseg_secondary_init_legacy(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int msl_idx = 0;
 	struct rte_memseg_list *msl;
 

@@ -93,7 +93,7 @@ eal_clean_runtime_dir(void)
 static int
 rte_eal_config_create(void)
 {
-	struct rte_config *config = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	size_t page_sz = rte_mem_page_size();
 	size_t cfg_len = sizeof(struct rte_mem_config);
@@ -163,13 +163,13 @@ rte_eal_config_create(void)
 		return -1;
 	}
 
-	memcpy(rte_mem_cfg_addr, config->mem_config, sizeof(struct rte_mem_config));
-	config->mem_config = rte_mem_cfg_addr;
+	memcpy(rte_mem_cfg_addr, runtime_state->mem_config, sizeof(struct rte_mem_config));
+	runtime_state->mem_config = rte_mem_cfg_addr;
 
 	/* store address of the config in the config itself so that secondary
 	 * processes could later map the config into this exact location
 	 */
-	config->mem_config->mem_cfg_addr = (uintptr_t) rte_mem_cfg_addr;
+	runtime_state->mem_config->mem_cfg_addr = (uintptr_t) rte_mem_cfg_addr;
 	return 0;
 }
 
@@ -179,7 +179,7 @@ rte_eal_config_attach(void)
 {
 	void *rte_mem_cfg_addr;
 	const char *pathname = eal_runtime_config_path();
-	struct rte_config *config = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 
@@ -195,7 +195,7 @@ rte_eal_config_attach(void)
 		}
 	}
 
-	rte_mem_cfg_addr = mmap(NULL, sizeof(*config->mem_config),
+	rte_mem_cfg_addr = mmap(NULL, sizeof(*runtime_state->mem_config),
 				PROT_READ, MAP_SHARED, mem_cfg_fd, 0);
 	/* don't close the fd here, it will be closed on reattach */
 	if (rte_mem_cfg_addr == MAP_FAILED) {
@@ -206,7 +206,7 @@ rte_eal_config_attach(void)
 		return -1;
 	}
 
-	config->mem_config = rte_mem_cfg_addr;
+	runtime_state->mem_config = rte_mem_cfg_addr;
 
 	return 0;
 }
@@ -217,7 +217,7 @@ rte_eal_config_reattach(void)
 {
 	struct rte_mem_config *mem_config;
 	void *rte_mem_cfg_addr;
-	struct rte_config *config = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (user_cfg->no_shconf)
@@ -225,10 +225,10 @@ rte_eal_config_reattach(void)
 
 	/* save the address primary process has mapped shared config to */
 	rte_mem_cfg_addr =
-			(void *)(uintptr_t)config->mem_config->mem_cfg_addr;
+			(void *)(uintptr_t)runtime_state->mem_config->mem_cfg_addr;
 
 	/* unmap original config */
-	munmap(config->mem_config, sizeof(struct rte_mem_config));
+	munmap(runtime_state->mem_config, sizeof(struct rte_mem_config));
 
 	/* remap the config at proper address */
 	mem_config = (struct rte_mem_config *) mmap(rte_mem_cfg_addr,
@@ -249,7 +249,7 @@ rte_eal_config_reattach(void)
 		return -1;
 	}
 
-	config->mem_config = mem_config;
+	runtime_state->mem_config = mem_config;
 
 	return 0;
 }

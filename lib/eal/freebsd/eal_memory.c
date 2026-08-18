@@ -75,7 +75,7 @@ rte_eal_hugepage_init(void)
 	struct eal_platform_info *platform_info = eal_get_platform_info();
 
 	/* get pointer to global configuration */
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 
 	/* for debug purposes, hugetlbfs can be disabled */
 	if (user_cfg->no_hugetlbfs) {
@@ -348,7 +348,7 @@ memseg_list_alloc(struct rte_memseg_list *msl)
 static int
 memseg_primary_init(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int hpi_idx, msl_idx = 0;
 	struct rte_memseg_list *msl;
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
@@ -412,7 +412,7 @@ memseg_primary_init(void)
 static int
 memseg_secondary_init(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int msl_idx = 0;
 	struct rte_memseg_list *msl;
 

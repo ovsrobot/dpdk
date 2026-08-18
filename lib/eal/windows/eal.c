@@ -45,7 +45,7 @@ eal_proc_type_detect(void)
 {
 	enum rte_proc_type_t ptype = RTE_PROC_PRIMARY;
 	const char *pathname = eal_runtime_config_path();
-	const struct rte_config *config = rte_eal_get_configuration();
+	const struct rte_mem_config *config = eal_get_mcfg();
 
 	/* if we can open the file but not get a write-lock we are a secondary
 	 * process. NOTE: if we get a file handle back, we keep that open
@@ -55,14 +55,14 @@ eal_proc_type_detect(void)
 		_O_RDWR, _SH_DENYNO, _S_IREAD | _S_IWRITE);
 	if (err == 0) {
 		OVERLAPPED soverlapped = { 0 };
-		soverlapped.Offset = sizeof(*config->mem_config);
+		soverlapped.Offset = sizeof(*config);
 		soverlapped.OffsetHigh = 0;
 
 		HANDLE hwinfilehandle = (HANDLE)_get_osfhandle(mem_cfg_fd);
 
 		if (!LockFileEx(hwinfilehandle,
 			LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0,
-			sizeof(*config->mem_config), 0, &soverlapped))
+			sizeof(*config), 0, &soverlapped))
 			ptype = RTE_PROC_SECONDARY;
 	}
 

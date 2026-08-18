@@ -86,6 +86,9 @@ struct rte_mem_config {
 	size_t max_memzone; /**< Maximum number of allocated memzones. */
 };
 
+/* Return a pointer to the shared memory config */
+struct rte_mem_config *eal_get_mcfg(void);
+
 /* update internal config from shared mem config */
 void
 eal_mcfg_update_internal(void);

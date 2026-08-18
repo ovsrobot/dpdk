@@ -1359,7 +1359,7 @@ enum mp_status {
 static bool
 set_mp_status(enum mp_status status)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	uint8_t expected;
 	uint8_t desired;
 

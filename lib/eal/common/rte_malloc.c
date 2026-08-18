@@ -265,7 +265,7 @@ int
 rte_malloc_get_socket_stats(int socket,
 		struct rte_malloc_socket_stats *socket_stats)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	int heap_idx;
 
 	heap_idx = malloc_socket_to_heap_id(socket);
@@ -283,7 +283,7 @@ RTE_EXPORT_SYMBOL(rte_malloc_dump_heaps)
 void
 rte_malloc_dump_heaps(FILE *f)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	unsigned int idx;
 
 	for (idx = 0; idx < RTE_MAX_HEAPS; idx++) {
@@ -296,7 +296,7 @@ RTE_EXPORT_SYMBOL(rte_malloc_heap_get_socket)
 int
 rte_malloc_heap_get_socket(const char *name)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct malloc_heap *heap = NULL;
 	unsigned int idx;
 	int ret;
@@ -333,7 +333,7 @@ RTE_EXPORT_SYMBOL(rte_malloc_heap_socket_is_external)
 int
 rte_malloc_heap_socket_is_external(int socket_id)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	unsigned int idx;
 	int ret = -1;
 
@@ -362,7 +362,7 @@ RTE_EXPORT_SYMBOL(rte_malloc_dump_stats)
 void
 rte_malloc_dump_stats(FILE *f, __rte_unused const char *type)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	unsigned int heap_id;
 	struct rte_malloc_socket_stats sock_stats;
 
@@ -414,7 +414,7 @@ rte_malloc_virt2iova(const void *addr)
 static struct malloc_heap *
 find_named_heap(const char *name)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	unsigned int i;
 
 	for (i = 0; i < RTE_MAX_HEAPS; i++) {
@@ -616,7 +616,7 @@ RTE_EXPORT_SYMBOL(rte_malloc_heap_create)
 int
 rte_malloc_heap_create(const char *heap_name)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct malloc_heap *heap = NULL;
 	int i, ret;
 
