@@ -166,18 +166,10 @@ socket_id_cmp(const void *a, const void *b)
 int
 rte_eal_cpu_init(void)
 {
-	/* pointer to global configuration */
 	struct rte_config *config = rte_eal_get_configuration();
 	struct eal_platform_info *platform_info = eal_get_platform_info();
-	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
-	unsigned lcore_id;
-	unsigned count = 0;
-	unsigned int socket_id, prev_socket_id;
-#if CPU_SETSIZE > RTE_MAX_LCORE
-	int lcore_to_socket_id[CPU_SETSIZE] = {0};
-#else
-	int lcore_to_socket_id[RTE_MAX_LCORE] = {0};
-#endif
+	int *lcore_to_socket_id;
+	size_t nb_detected_cpus = 0;
 
 	/* allocate cpu_info for all CPUs visible to the OS */
 	platform_info->cpu_count = eal_cpu_max();
@@ -185,6 +177,12 @@ rte_eal_cpu_init(void)
 			sizeof(*platform_info->cpu_info));
 	if (platform_info->cpu_info == NULL) {
 		EAL_LOG(ERR, "Cannot allocate cpu_info array");
+		return -1;
+	}
+	lcore_to_socket_id = calloc(platform_info->cpu_count, sizeof(*lcore_to_socket_id));
+	if (lcore_to_socket_id == NULL) {
+		EAL_LOG(ERR, "Cannot allocate lcore_to_socket_id array");
+		free(platform_info->cpu_info);
 		return -1;
 	}
 
@@ -195,71 +193,30 @@ rte_eal_cpu_init(void)
 		platform_info->cpu_info[cpu_id].detected = true;
 		platform_info->cpu_info[cpu_id].numa_id = eal_cpu_socket_id(cpu_id);
 		platform_info->cpu_info[cpu_id].core_id = eal_cpu_core_id(cpu_id);
+		/* store numa id for later processing to determine all unique numa nodes */
+		lcore_to_socket_id[nb_detected_cpus++] = platform_info->cpu_info[cpu_id].numa_id;
+
+		EAL_LOG(DEBUG, "Detected CPU %zu as core %u on NUMA node %u",
+				cpu_id,
+				platform_info->cpu_info[cpu_id].core_id,
+				platform_info->cpu_info[cpu_id].numa_id);
 	}
 
-	/*
-	 * Parse the maximum set of logical cores, detect the subset of running
-	 * ones and enable them by default.
-	 */
-	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		runtime_state->lcore_cfg[lcore_id].core_index = count;
-
-		/* init cpuset for per lcore config */
-		CPU_ZERO(&runtime_state->lcore_cfg[lcore_id].cpuset);
-		runtime_state->lcore_cfg[lcore_id].first_cpu = UINT16_MAX;
-
-		if (eal_cpu_detected(lcore_id) == 0) {
-			config->lcore_role[lcore_id] = ROLE_OFF;
-			runtime_state->lcore_cfg[lcore_id].core_index = -1;
-			continue;
-		}
-
-		/* find socket first */
-		socket_id = platform_info->cpu_info[lcore_id].numa_id;
-		lcore_to_socket_id[lcore_id] = socket_id;
-
-		/* By default, lcore 1:1 map to cpu id */
-		CPU_SET(lcore_id, &runtime_state->lcore_cfg[lcore_id].cpuset);
-		runtime_state->lcore_cfg[lcore_id].first_cpu = lcore_id;
-
-		/* This is the first time we discover the lcores, so the bitset should be zeroed */
-		rte_bitset_set(runtime_state->core_indices, count);
-
-		/* By default, each detected core is enabled */
-		config->lcore_role[lcore_id] = ROLE_RTE;
-		EAL_LOG(DEBUG, "Detected lcore %u as "
-				"core %u on NUMA node %u",
-				lcore_id,
-				platform_info->cpu_info[lcore_id].core_id,
-				platform_info->cpu_info[lcore_id].numa_id);
-		count++;
+	if (nb_detected_cpus == 0) {
+		EAL_LOG(ERR, "No CPUs detected for platform topology");
+		free(platform_info->cpu_info);
+		free(lcore_to_socket_id);
+		return -1;
 	}
-	for (; lcore_id < CPU_SETSIZE; lcore_id++) {
-		if (eal_cpu_detected(lcore_id) == 0)
-			continue;
-		if (unlikely(lcore_id >= platform_info->cpu_count))
-			break;
-		lcore_to_socket_id[lcore_id] = platform_info->cpu_info[lcore_id].numa_id;
-		EAL_LOG(DEBUG, "Skipped lcore %u as core %u on NUMA node %u",
-			lcore_id, platform_info->cpu_info[lcore_id].core_id,
-			platform_info->cpu_info[lcore_id].numa_id);
-	}
-
-	/* Set the count of enabled logical cores of the EAL configuration */
-	config->lcore_count = count;
-	EAL_LOG(DEBUG,
-			"Maximum logical cores by configuration: %u",
-			RTE_MAX_LCORE);
-	EAL_LOG(INFO, "Detected CPU lcores: %u", config->lcore_count);
 
 	/* sort all socket id's in ascending order */
-	qsort(lcore_to_socket_id, RTE_DIM(lcore_to_socket_id),
+	qsort(lcore_to_socket_id, nb_detected_cpus,
 			sizeof(lcore_to_socket_id[0]), socket_id_cmp);
 
-	prev_socket_id = -1;
+	int prev_socket_id = -1;
 	config->numa_node_count = 0;
-	for (lcore_id = 0; lcore_id < RTE_DIM(lcore_to_socket_id); lcore_id++) {
-		socket_id = lcore_to_socket_id[lcore_id];
+	for (size_t i = 0; i < nb_detected_cpus; i++) {
+		int socket_id = lcore_to_socket_id[i];
 		if (socket_id != prev_socket_id)
 			config->numa_nodes[config->numa_node_count++] =	socket_id;
 		prev_socket_id = socket_id;
@@ -268,6 +225,7 @@ rte_eal_cpu_init(void)
 	}
 	EAL_LOG(INFO, "Detected NUMA nodes: %u", config->numa_node_count);
 
+	free(lcore_to_socket_id);
 	return 0;
 }
 
