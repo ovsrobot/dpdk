@@ -1514,6 +1514,7 @@ int qman_create_fq(u32 fqid, u32 flags, struct qman_fq *fq)
 	fq->flags = flags;
 	fq->state = qman_fq_state_oos;
 	fq->cgr_groupid = 0;
+	fq->force_ooo = false;
 #ifdef CONFIG_FSL_QMAN_FQ_LOOKUP
 	if (unlikely(find_empty_fq_table_entry(&fq->key, fq))) {
 		DPAA_BUS_ERR("Find empty table entry failed");
@@ -2401,6 +2402,113 @@ int qman_enqueue_multi(struct qman_fq *fq,
 	return sent;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(qman_enqueue_multi_orp)
+int
+qman_enqueue_multi_orp(struct qman_fq *fq,
+	const struct qm_fd *fd, struct qman_fq *orp,
+	uint32_t *flags, uint16_t *orp_seqnum,
+	int frames_to_send)
+{
+	struct qman_portal *p = get_affine_portal();
+	struct qm_portal *portal = &p->p;
+
+	register struct qm_eqcr *eqcr = &portal->eqcr;
+	struct qm_eqcr_entry *eq = eqcr->cursor;
+
+	uint8_t i = 0, diff, old_ci, sent = 0;
+	uint8_t eq_verbs[QM_EQCR_SIZE];
+
+	if (unlikely(!orp || !orp_seqnum || fq->force_ooo))
+		return qman_enqueue_multi(fq, fd, flags, frames_to_send);
+
+	if (!eqcr->available) {
+		old_ci = eqcr->ci;
+		eqcr->ci = qm_cl_in(EQCR_CI) & (QM_EQCR_SIZE - 1);
+		diff = qm_cyc_diff(QM_EQCR_SIZE, old_ci, eqcr->ci);
+		eqcr->available += diff;
+		if (!diff)
+			return 0;
+	}
+
+	/* try to send as many frames as possible */
+	while (eqcr->available && frames_to_send--) {
+		eq->fqid = fq->fqid_be;
+		eq->fd.opaque_addr = fd->opaque_addr;
+		eq->fd.addr = cpu_to_be40(fd->addr);
+		eq->fd.status = cpu_to_be32(fd->status);
+		eq->fd.opaque = cpu_to_be32(fd->opaque);
+
+		eq->orp = cpu_to_be32(orp->fqid);
+
+		if (flags && flags[i] & QMAN_ENQUEUE_FLAG_NLIS) {
+			orp_seqnum[i] |= QM_EQCR_SEQNUM_NLIS;
+		} else if (flags) {
+			orp_seqnum[i] &= ~QM_EQCR_SEQNUM_NLIS;
+			if (flags[i] & QMAN_ENQUEUE_FLAG_NESN)
+				orp_seqnum[i] |= QM_EQCR_SEQNUM_NESN;
+			else
+				orp_seqnum[i] &= ~QM_EQCR_SEQNUM_NESN;
+		}
+		eq->seqnum = cpu_to_be16(orp_seqnum[i]);
+
+		/*
+		 * Compute the per-frame verb but do NOT write it to the ring
+		 * yet. The verb byte is what makes an EQCR entry valid to QMan,
+		 * so it must be stored only after all frame data has been
+		 * written and a store barrier has been issued. Stash the verb
+		 * (without the vbit) here and apply it in the second pass. The
+		 * vbit is added in the second pass so ring-wrap toggling stays
+		 * in sync with the verb writes.
+		 */
+		eq_verbs[i] = QM_EQCR_VERB_ORP;
+		if (likely(!flags || !(flags[i] & (QMAN_ENQUEUE_FLAG_HOLE |
+			QMAN_ENQUEUE_FLAG_NESN))))
+			eq_verbs[i] |= QM_EQCR_VERB_CMD_ENQUEUE;
+		eq_verbs[i] |= flags ? (flags[i] & (QM_EQCR_VERB_COLOUR_MASK |
+			QM_EQCR_VERB_INTERRUPT)) : 0;
+
+		i++;
+		eq++;
+		if (unlikely(eq >= (eqcr->ring + QM_EQCR_SIZE)))
+			eq = eqcr->ring;
+		eqcr->available--;
+		sent++;
+		fd++;
+	}
+
+	/*
+	 * Ensure all frame data stores above are visible to QMan before any
+	 * verb byte is written, so an entry never becomes valid with stale
+	 * frame contents on weak-memory architectures.
+	 */
+	lwsync();
+
+	/* Second pass: publish each entry by writing its verb byte. */
+	eq = eqcr->cursor;
+	for (i = 0; i < sent; i++) {
+		eq->__dont_write_directly__verb = eq_verbs[i] | eqcr->vbit;
+		eq++;
+		if (unlikely(eq >= (eqcr->ring + QM_EQCR_SIZE))) {
+			eqcr->vbit ^= QM_EQCR_VERB_VBIT;
+			eq = eqcr->ring;
+		}
+	}
+
+	/*
+	 * Flush all the cache lines without load/store operations between
+	 * them so the flushes complete faster.
+	 */
+	eq = eqcr->cursor;
+	for (i = 0; i < sent; i++) {
+		dcbf(eq);
+		eq = (void *)((unsigned long)(eq + 1) &
+			(~(unsigned long)(QM_EQCR_SIZE << 6)));
+	}
+
+	eqcr->cursor = eq;
+	return sent;
+}
+
 int
 qman_enqueue_multi_fq(struct qman_fq *fq[], const struct qm_fd *fd,
 		      u32 *flags, int frames_to_send)
@@ -2427,6 +2535,7 @@ qman_enqueue_multi_fq(struct qman_fq *fq[], const struct qm_fd *fd,
 	while (eqcr->available && frames_to_send--) {
 		eq->fqid = fq[sent]->fqid_be;
 		eq->fd.opaque_addr = fd->opaque_addr;
+
 		eq->fd.addr = cpu_to_be40(fd->addr);
 		eq->fd.status = cpu_to_be32(fd->status);
 		eq->fd.opaque = cpu_to_be32(fd->opaque);
@@ -2479,6 +2588,9 @@ int qman_enqueue_orp(struct qman_fq *fq, const struct qm_fd *fd, u32 flags,
 {
 	struct qman_portal *p  = get_affine_portal();
 	struct qm_eqcr_entry *eq;
+
+	if (unlikely(fq->force_ooo))
+		return qman_enqueue(fq, fd, flags);
 
 	eq = try_p_eq_start(p, fq, fd, flags);
 	if (!eq)
