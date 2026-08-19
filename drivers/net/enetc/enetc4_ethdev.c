@@ -881,6 +881,7 @@ enetc4_dev_close(struct rte_eth_dev *dev)
 		if (dev->data->dev_conf.intr_conf.lsc != 0)
 			enetc4_vf_dev_intr(dev, false);
 		ret = enetc4_vf_dev_stop(dev);
+		pthread_mutex_destroy(&hw->vsi_lock);
 	} else {
 		ret = enetc4_dev_stop(dev);
 	}
@@ -1367,7 +1368,23 @@ enetc4_dev_init(struct rte_eth_dev *eth_dev)
 	struct enetc_hw *enetc_hw = &hw->hw;
 
 	PMD_INIT_FUNC_TRACE();
+
 	eth_dev->dev_ops = &enetc4_ops;
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		/*
+		 * Secondary process: dev_ops is set above, but the fast-path
+		 * burst function pointers must also be set here or
+		 * rte_eth_rx_burst()/rte_eth_tx_burst() would dereference NULL.
+		 * Use the cacheable defaults; the primary refines them
+		 * (nc/lso/rsc) during queue setup, which the secondary does not
+		 * run. This matches the pre-guard behaviour where
+		 * enetc4_dev_hw_init() set these defaults in both processes.
+		 */
+		eth_dev->rx_pkt_burst = &enetc_recv_pkts_cacheable;
+		eth_dev->tx_pkt_burst = &enetc_xmit_pkts_cacheable;
+		return 0;
+	}
 	enetc4_dev_hw_init(eth_dev);
 
 	si_cap = enetc_rd(enetc_hw, ENETC_SICAPR0);
