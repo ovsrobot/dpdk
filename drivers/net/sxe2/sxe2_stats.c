@@ -288,18 +288,19 @@ static void sxe2_stats_update(struct sxe2_adapter *adapter)
 		stats->rx_frame_good_bad = hw_stats->rx_frame_good_bad;
 		stats->rx_unicast_good = hw_stats->rx_unicast_good;
 		stats->rx_vlan_packets = hw_stats->rx_vlan_packets;
-		rte_memcpy(stats->rx_prio_buf_discard, hw_stats->rx_prio_buf_discard,
-				sizeof(hw_stats->rx_prio_buf_discard));
-		rte_memcpy(stats->prio_xoff_rx, hw_stats->prio_xoff_rx,
-				sizeof(hw_stats->prio_xoff_rx));
-		rte_memcpy(stats->prio_xon_rx, hw_stats->prio_xon_rx,
-				sizeof(hw_stats->prio_xon_rx));
-		rte_memcpy(stats->prio_xon_tx, hw_stats->prio_xon_tx,
-				sizeof(hw_stats->prio_xon_tx));
-		rte_memcpy(stats->prio_xoff_tx, hw_stats->prio_xoff_tx,
-				sizeof(hw_stats->prio_xoff_tx));
-		rte_memcpy(stats->prio_xon_2_xoff, hw_stats->prio_xon_2_xoff,
-				sizeof(hw_stats->prio_xon_2_xoff));
+		memcpy(stats->rx_prio_buf_discard,
+		       hw_stats->rx_prio_buf_discard,
+		       sizeof(hw_stats->rx_prio_buf_discard));
+		memcpy(stats->prio_xoff_rx, hw_stats->prio_xoff_rx,
+		       sizeof(hw_stats->prio_xoff_rx));
+		memcpy(stats->prio_xon_rx, hw_stats->prio_xon_rx,
+		       sizeof(hw_stats->prio_xon_rx));
+		memcpy(stats->prio_xon_tx, hw_stats->prio_xon_tx,
+		       sizeof(hw_stats->prio_xon_tx));
+		memcpy(stats->prio_xoff_tx, hw_stats->prio_xoff_tx,
+		       sizeof(hw_stats->prio_xoff_tx));
+		memcpy(stats->prio_xon_2_xoff, hw_stats->prio_xon_2_xoff,
+		       sizeof(hw_stats->prio_xon_2_xoff));
 
 		stats->imissed = hw_stats->rx_out_of_buffer +
 				hw_stats->rx_qblock_drop;

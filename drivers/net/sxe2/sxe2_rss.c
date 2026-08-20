@@ -35,7 +35,7 @@ int32_t sxe2_rss_hash_key_init(struct rte_eth_dev *dev)
 		for (i = 0; i < rss_ctxt->rss_key_size; i++)
 			rss_ctxt->rss_key[i] = (uint8_t)rte_rand();
 	} else {
-		rte_memcpy(rss_ctxt->rss_key, rss_conf->rss_key,
+		memcpy(rss_ctxt->rss_key, rss_conf->rss_key,
 			   RTE_MIN(rss_conf->rss_key_len, rss_ctxt->rss_key_size));
 	}
 
@@ -421,7 +421,7 @@ int32_t sxe2_dev_rss_reta_update(struct rte_eth_dev *dev,
 		ret = -ENOMEM;
 		goto l_end;
 	}
-	rte_memcpy(lut_tmp, rss_ctxt->rss_lut, reta_size);
+	memcpy(lut_tmp, rss_ctxt->rss_lut, reta_size);
 
 	for (i = 0; i < reta_size; i++) {
 		idx = i / RTE_ETH_RETA_GROUP_SIZE;
@@ -436,7 +436,7 @@ int32_t sxe2_dev_rss_reta_update(struct rte_eth_dev *dev,
 		goto l_end;
 	}
 
-	rte_memcpy(rss_ctxt->rss_lut, lut_tmp, reta_size);
+	memcpy(rss_ctxt->rss_lut, lut_tmp, reta_size);
 
 l_end:
 	if (lut_tmp)
@@ -514,7 +514,7 @@ static int32_t sxe2_rss_hash_key_update(struct rte_eth_dev *dev,
 		goto l_end;
 	}
 
-	rte_memcpy(rss_ctxt->rss_key, rss_conf->rss_key, rss_conf->rss_key_len);
+	memcpy(rss_ctxt->rss_key, rss_conf->rss_key, rss_conf->rss_key_len);
 l_end:
 	return ret;
 }
@@ -575,7 +575,7 @@ int32_t sxe2_dev_rss_hash_conf_get(struct rte_eth_dev *dev,
 
 	if (rss_conf->rss_key) {
 		rss_conf->rss_key_len = rss_ctxt->rss_key_size;
-		rte_memcpy(rss_conf->rss_key, rss_ctxt->rss_key, rss_ctxt->rss_key_size);
+		memcpy(rss_conf->rss_key, rss_ctxt->rss_key, rss_ctxt->rss_key_size);
 	}
 	rss_conf->rss_hf = rss_ctxt->rss_hf;
 	rss_conf->algorithm = rss_ctxt->hash_func;

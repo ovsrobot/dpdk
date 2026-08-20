@@ -787,20 +787,20 @@ static int32_t sxe2_flow_parse_pattern_eth(const struct rte_flow_item *item,
 			sxe2_set_bit(SXE2_FLOW_FLD_ID_ETH_DA, pattern->map_mask);
 
 		sxe2_set_bit(SXE2_FLOW_FLD_ID_ETH_DA, pattern->map_spec);
-		rte_memcpy(pattern->item_spec.eth.dst_addr, dst_addr_spec,
-			RTE_ETHER_ADDR_LEN);
-		rte_memcpy(pattern->item_mask.eth.dst_addr, dst_addr_mask,
-			RTE_ETHER_ADDR_LEN);
+		memcpy(pattern->item_spec.eth.dst_addr, dst_addr_spec,
+		       RTE_ETHER_ADDR_LEN);
+		memcpy(pattern->item_mask.eth.dst_addr, dst_addr_mask,
+		       RTE_ETHER_ADDR_LEN);
 	}
 	if (!rte_is_zero_ether_addr(src_addr_mask)) {
 		if (!rte_is_broadcast_ether_addr(src_addr_mask))
 			sxe2_set_bit(SXE2_FLOW_FLD_ID_ETH_SA, pattern->map_mask);
 
 		sxe2_set_bit(SXE2_FLOW_FLD_ID_ETH_SA, pattern->map_spec);
-		rte_memcpy(pattern->item_spec.eth.src_addr, src_addr_spec,
-			RTE_ETHER_ADDR_LEN);
-		rte_memcpy(pattern->item_mask.eth.src_addr, src_addr_mask,
-			RTE_ETHER_ADDR_LEN);
+		memcpy(pattern->item_spec.eth.src_addr, src_addr_spec,
+		       RTE_ETHER_ADDR_LEN);
+		memcpy(pattern->item_mask.eth.src_addr, src_addr_mask,
+		       RTE_ETHER_ADDR_LEN);
 	}
 	if (type_mask != 0) {
 		if (type_mask != UINT16_MAX) {
@@ -1130,10 +1130,12 @@ static int32_t sxe2_flow_parse_pattern_ipv6(const struct rte_flow_item *item,
 			   sizeof(ipv6_addr_mask)) != 0)
 			sxe2_set_bit(SXE2_FLOW_FLD_ID_IPV6_SA, pattern->map_mask);
 		sxe2_set_bit(SXE2_FLOW_FLD_ID_IPV6_SA, pattern->map_spec);
-		rte_memcpy(&pattern->item_spec.ipv6.saddr, &ipv6_spec->hdr.src_addr,
-			   sizeof(ipv6_spec->hdr.src_addr));
-		rte_memcpy(&pattern->item_mask.ipv6.saddr, &ipv6_mask->hdr.src_addr,
-			   sizeof(ipv6_mask->hdr.src_addr));
+		memcpy(&pattern->item_spec.ipv6.saddr,
+		       &ipv6_spec->hdr.src_addr,
+		       sizeof(ipv6_spec->hdr.src_addr));
+		memcpy(&pattern->item_mask.ipv6.saddr,
+		       &ipv6_mask->hdr.src_addr,
+		       sizeof(ipv6_mask->hdr.src_addr));
 	}
 	if (memcmp(&ipv6_mask->hdr.dst_addr, ipv6_addr_empty,
 		    sizeof(ipv6_addr_empty)) != 0) {
@@ -1141,10 +1143,12 @@ static int32_t sxe2_flow_parse_pattern_ipv6(const struct rte_flow_item *item,
 			   sizeof(ipv6_addr_mask)) != 0)
 			sxe2_set_bit(SXE2_FLOW_FLD_ID_IPV6_DA, pattern->map_mask);
 		sxe2_set_bit(SXE2_FLOW_FLD_ID_IPV6_DA, pattern->map_spec);
-		rte_memcpy(&pattern->item_spec.ipv6.daddr, &ipv6_spec->hdr.dst_addr,
-			   sizeof(ipv6_spec->hdr.dst_addr));
-		rte_memcpy(&pattern->item_mask.ipv6.daddr, &ipv6_mask->hdr.dst_addr,
-			   sizeof(ipv6_mask->hdr.dst_addr));
+		memcpy(&pattern->item_spec.ipv6.daddr,
+		       &ipv6_spec->hdr.dst_addr,
+		       sizeof(ipv6_spec->hdr.dst_addr));
+		memcpy(&pattern->item_mask.ipv6.daddr,
+		       &ipv6_mask->hdr.dst_addr,
+		       sizeof(ipv6_mask->hdr.dst_addr));
 	}
 	if (ipv6_mask->hdr.vtc_flow) {
 		vtc_flow_mask = rte_be_to_cpu_32(ipv6_mask->hdr.vtc_flow);
