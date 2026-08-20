@@ -12,7 +12,6 @@ uint8_t
 i40e_flow_fdir_get_pctype_value(struct i40e_pf *pf,
 		enum rte_flow_item_type item_type,
 		struct i40e_fdir_filter_conf *filter);
-int i40e_check_tunnel_filter_type(uint8_t filter_type);
 
 extern const struct ci_flow_engine_list i40e_flow_engine_list;
 
@@ -23,5 +22,6 @@ extern const struct ci_flow_engine i40e_flow_engine_tunnel_vxlan;
 extern const struct ci_flow_engine i40e_flow_engine_tunnel_nvgre;
 extern const struct ci_flow_engine i40e_flow_engine_tunnel_mpls;
 extern const struct ci_flow_engine i40e_flow_engine_tunnel_gtp;
+extern const struct ci_flow_engine i40e_flow_engine_tunnel_l4;
 
 #endif /* _I40E_FLOW_H_ */

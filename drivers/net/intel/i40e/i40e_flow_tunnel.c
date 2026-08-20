@@ -19,6 +19,27 @@ struct i40e_tunnel_flow {
 	struct i40e_tunnel_filter_conf filter;
 };
 
+static int
+i40e_check_tunnel_filter_type(uint8_t filter_type)
+{
+	const uint16_t i40e_supported_tunnel_filter_types[] = {
+		RTE_ETH_TUNNEL_FILTER_IMAC | RTE_ETH_TUNNEL_FILTER_TENID |
+		RTE_ETH_TUNNEL_FILTER_IVLAN,
+		RTE_ETH_TUNNEL_FILTER_IMAC | RTE_ETH_TUNNEL_FILTER_IVLAN,
+		RTE_ETH_TUNNEL_FILTER_IMAC | RTE_ETH_TUNNEL_FILTER_TENID,
+		RTE_ETH_TUNNEL_FILTER_OMAC | RTE_ETH_TUNNEL_FILTER_TENID |
+		RTE_ETH_TUNNEL_FILTER_IMAC,
+		RTE_ETH_TUNNEL_FILTER_IMAC,
+	};
+	uint8_t i;
+
+	for (i = 0; i < RTE_DIM(i40e_supported_tunnel_filter_types); i++) {
+		if (filter_type == i40e_supported_tunnel_filter_types[i])
+			return 0;
+	}
+	return -1;
+}
+
 /**
  * QinQ tunnel filter graph implementation
  * Pattern: START -> ETH -> OUTER_VLAN -> INNER_VLAN -> END
@@ -997,6 +1018,281 @@ static const struct rte_flow_graph i40e_tunnel_gtp_graph = {
 	},
 };
 
+/**
+ * L4 tunnel filter graph implementation
+ * Pattern: START -> ETH -> (IPv4 | IPv6) -> (TCP | UDP | SCTP) -> END
+ */
+enum i40e_tunnel_l4_node_id {
+	I40E_TUNNEL_L4_NODE_START  = RTE_FLOW_NODE_FIRST,
+	I40E_TUNNEL_L4_NODE_ETH,
+	I40E_TUNNEL_L4_NODE_IPV4,
+	I40E_TUNNEL_L4_NODE_IPV6,
+	I40E_TUNNEL_L4_NODE_TCP,
+	I40E_TUNNEL_L4_NODE_UDP,
+	I40E_TUNNEL_L4_NODE_SCTP,
+	I40E_TUNNEL_L4_NODE_END,
+	I40E_TUNNEL_L4_NODE_MAX,
+};
+
+static int
+i40e_tunnel_node_tcp_validate(const void *ctx __rte_unused,
+		const struct rte_flow_item *item,
+		struct rte_flow_error *error)
+{
+	const struct rte_flow_item_tcp *tcp_mask = item->mask;
+
+	/* only source/destination ports are supported */
+	if (tcp_mask->hdr.sent_seq ||
+	    tcp_mask->hdr.recv_ack ||
+	    tcp_mask->hdr.data_off ||
+	    tcp_mask->hdr.tcp_flags ||
+	    tcp_mask->hdr.rx_win ||
+	    tcp_mask->hdr.cksum ||
+	    tcp_mask->hdr.tcp_urp) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid TCP mask");
+	}
+
+	/* src/dst ports have to be fully masked or fully unmasked */
+	if (!CI_FIELD_IS_ZERO_OR_MASKED(&tcp_mask->hdr.src_port) ||
+	    !CI_FIELD_IS_ZERO_OR_MASKED(&tcp_mask->hdr.dst_port)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid TCP mask");
+	}
+	/* there can be only one! */
+	if (tcp_mask->hdr.src_port && tcp_mask->hdr.dst_port) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid TCP mask");
+	}
+	return 0;
+}
+
+static int
+i40e_tunnel_node_tcp_process(void *ctx, const struct rte_flow_item *item,
+		struct rte_flow_error *error __rte_unused)
+{
+	struct i40e_tunnel_ctx *tunnel_ctx = ctx;
+	struct i40e_tunnel_filter_conf *tunnel_filter = &tunnel_ctx->filter;
+	const struct rte_flow_item_tcp *tcp_spec = item->spec;
+	const struct rte_flow_item_tcp *tcp_mask = item->mask;
+
+	if (tcp_mask->hdr.src_port) {
+		tunnel_filter->l4_port_type = I40E_L4_PORT_TYPE_SRC;
+		tunnel_filter->tenant_id = rte_be_to_cpu_32(tcp_spec->hdr.src_port);
+	} else if (tcp_mask->hdr.dst_port) {
+		tunnel_filter->l4_port_type = I40E_L4_PORT_TYPE_DST;
+		tunnel_filter->tenant_id = rte_be_to_cpu_32(tcp_spec->hdr.dst_port);
+	}
+	tunnel_filter->tunnel_type = I40E_CLOUD_TYPE_TCP;
+
+	return 0;
+}
+
+static int
+i40e_tunnel_node_udp_validate(const void *ctx __rte_unused,
+		const struct rte_flow_item *item,
+		struct rte_flow_error *error)
+{
+	const struct rte_flow_item_udp *udp_mask = item->mask;
+
+	/* only source/destination ports are supported */
+	if (udp_mask->hdr.dgram_len ||
+	    udp_mask->hdr.dgram_cksum) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid UDP mask");
+	}
+
+	/* src/dst ports have to be fully masked or fully unmasked */
+	if (!CI_FIELD_IS_ZERO_OR_MASKED(&udp_mask->hdr.src_port) ||
+	    !CI_FIELD_IS_ZERO_OR_MASKED(&udp_mask->hdr.dst_port)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid UDP mask");
+	}
+	/* there can be only one! */
+	if (udp_mask->hdr.src_port && udp_mask->hdr.dst_port) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid UDP mask");
+	}
+	return 0;
+}
+
+static int
+i40e_tunnel_node_udp_process(void *ctx, const struct rte_flow_item *item,
+		struct rte_flow_error *error __rte_unused)
+{
+	struct i40e_tunnel_ctx *tunnel_ctx = ctx;
+	struct i40e_tunnel_filter_conf *tunnel_filter = &tunnel_ctx->filter;
+	const struct rte_flow_item_udp *udp_spec = item->spec;
+	const struct rte_flow_item_udp *udp_mask = item->mask;
+
+	if (udp_mask->hdr.src_port) {
+		tunnel_filter->l4_port_type = I40E_L4_PORT_TYPE_SRC;
+		tunnel_filter->tenant_id = rte_be_to_cpu_32(udp_spec->hdr.src_port);
+	} else if (udp_mask->hdr.dst_port) {
+		tunnel_filter->l4_port_type = I40E_L4_PORT_TYPE_DST;
+		tunnel_filter->tenant_id = rte_be_to_cpu_32(udp_spec->hdr.dst_port);
+	}
+	tunnel_filter->tunnel_type = I40E_CLOUD_TYPE_UDP;
+
+	return 0;
+}
+
+static int
+i40e_tunnel_node_sctp_validate(const void *ctx __rte_unused,
+		const struct rte_flow_item *item,
+		struct rte_flow_error *error)
+{
+	const struct rte_flow_item_sctp *sctp_mask = item->mask;
+
+	/* only source/destination ports are supported */
+	if (sctp_mask->hdr.cksum || sctp_mask->hdr.tag) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid SCTP mask");
+	}
+
+	/* src/dst ports have to be fully masked or fully unmasked */
+	if (!CI_FIELD_IS_ZERO_OR_MASKED(&sctp_mask->hdr.src_port) ||
+	    !CI_FIELD_IS_ZERO_OR_MASKED(&sctp_mask->hdr.dst_port)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid SCTP mask");
+	}
+	/* there can be only one! */
+	if (sctp_mask->hdr.src_port && sctp_mask->hdr.dst_port) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid SCTP mask");
+	}
+	return 0;
+}
+
+static int
+i40e_tunnel_node_sctp_process(void *ctx, const struct rte_flow_item *item,
+		struct rte_flow_error *error __rte_unused)
+{
+	struct i40e_tunnel_ctx *tunnel_ctx = ctx;
+	struct i40e_tunnel_filter_conf *tunnel_filter = &tunnel_ctx->filter;
+	const struct rte_flow_item_sctp *sctp_spec = item->spec;
+	const struct rte_flow_item_sctp *sctp_mask = item->mask;
+
+	if (sctp_mask->hdr.src_port) {
+		tunnel_filter->l4_port_type = I40E_L4_PORT_TYPE_SRC;
+		tunnel_filter->tenant_id = rte_be_to_cpu_32(sctp_spec->hdr.src_port);
+	} else if (sctp_mask->hdr.dst_port) {
+		tunnel_filter->l4_port_type = I40E_L4_PORT_TYPE_DST;
+		tunnel_filter->tenant_id = rte_be_to_cpu_32(sctp_spec->hdr.dst_port);
+	}
+	tunnel_filter->tunnel_type = I40E_CLOUD_TYPE_SCTP;
+
+	return 0;
+}
+
+static const struct rte_flow_graph i40e_tunnel_l4_graph = {
+	.nodes = (struct rte_flow_graph_node[]) {
+		[I40E_TUNNEL_L4_NODE_START] = {
+			.name = "START",
+		},
+		[I40E_TUNNEL_L4_NODE_ETH] = {
+			.name = "ETH",
+			.type = RTE_FLOW_ITEM_TYPE_ETH,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+		},
+		[I40E_TUNNEL_L4_NODE_IPV4] = {
+			.name = "IPv4",
+			.type = RTE_FLOW_ITEM_TYPE_IPV4,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+			.process = i40e_tunnel_node_ipv4_process,
+		},
+		[I40E_TUNNEL_L4_NODE_IPV6] = {
+			.name = "IPv6",
+			.type = RTE_FLOW_ITEM_TYPE_IPV6,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+			.process = i40e_tunnel_node_ipv6_process,
+		},
+		[I40E_TUNNEL_L4_NODE_TCP] = {
+			.name = "TCP",
+			.type = RTE_FLOW_ITEM_TYPE_TCP,
+			.constraints = RTE_FLOW_NODE_EXPECT_SPEC_MASK,
+			.validate = i40e_tunnel_node_tcp_validate,
+			.process = i40e_tunnel_node_tcp_process,
+		},
+		[I40E_TUNNEL_L4_NODE_UDP] = {
+			.name = "UDP",
+			.type = RTE_FLOW_ITEM_TYPE_UDP,
+			.constraints = RTE_FLOW_NODE_EXPECT_SPEC_MASK,
+			.validate = i40e_tunnel_node_udp_validate,
+			.process = i40e_tunnel_node_udp_process,
+		},
+		[I40E_TUNNEL_L4_NODE_SCTP] = {
+			.name = "SCTP",
+			.type = RTE_FLOW_ITEM_TYPE_SCTP,
+			.constraints = RTE_FLOW_NODE_EXPECT_SPEC_MASK,
+			.validate = i40e_tunnel_node_sctp_validate,
+			.process = i40e_tunnel_node_sctp_process,
+		},
+		[I40E_TUNNEL_L4_NODE_END] = {
+			.name = "END",
+			.type = RTE_FLOW_ITEM_TYPE_END,
+		},
+	},
+	.edges = (struct rte_flow_graph_edge[]) {
+		[I40E_TUNNEL_L4_NODE_START] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_L4_NODE_ETH,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_L4_NODE_ETH] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_L4_NODE_IPV4,
+				I40E_TUNNEL_L4_NODE_IPV6,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_L4_NODE_IPV4] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_L4_NODE_TCP,
+				I40E_TUNNEL_L4_NODE_UDP,
+				I40E_TUNNEL_L4_NODE_SCTP,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_L4_NODE_IPV6] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_L4_NODE_TCP,
+				I40E_TUNNEL_L4_NODE_UDP,
+				I40E_TUNNEL_L4_NODE_SCTP,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_L4_NODE_TCP] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_L4_NODE_END,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_L4_NODE_UDP] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_L4_NODE_END,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_L4_NODE_SCTP] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_L4_NODE_END,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+	},
+};
+
 static int
 i40e_tunnel_action_check(const struct ci_flow_actions *actions,
 		const struct ci_flow_actions_check_param *param,
@@ -1189,6 +1485,14 @@ const struct ci_flow_engine i40e_flow_engine_tunnel_gtp = {
 	.ctx_size = sizeof(struct i40e_tunnel_ctx),
 	.flow_size = sizeof(struct i40e_tunnel_flow),
 	.graph = &i40e_tunnel_gtp_graph,
+};
+
+const struct ci_flow_engine i40e_flow_engine_tunnel_l4 = {
+	.name = "tunnel_l4",
+	.ops = &i40e_flow_engine_tunnel_ops,
+	.ctx_size = sizeof(struct i40e_tunnel_ctx),
+	.flow_size = sizeof(struct i40e_tunnel_flow),
+	.graph = &i40e_tunnel_l4_graph,
 };
 
 const struct ci_flow_engine i40e_flow_engine_tunnel_qinq = {
