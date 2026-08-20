@@ -95,7 +95,7 @@ static ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
 
 	ptr = tmp_buf;
 	for (i = 0; i < iovcnt; i++) {
-		rte_memcpy(ptr, iov[i].iov_base, iov[i].iov_len);
+		memcpy(ptr, iov[i].iov_base, iov[i].iov_len);
 		ptr += iov[i].iov_len;
 	}
 
