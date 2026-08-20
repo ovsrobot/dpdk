@@ -42,8 +42,8 @@ timvf_ring_info_get(const struct rte_event_timer_adapter *adptr,
 	struct timvf_ring *timr = adptr->data->adapter_priv;
 	adptr_info->max_tmo_ns = timr->max_tout;
 	adptr_info->min_resolution_ns = timr->tck_nsec;
-	rte_memcpy(&adptr_info->conf, &adptr->data->conf,
-			sizeof(struct rte_event_timer_adapter_conf));
+	memcpy(&adptr_info->conf, &adptr->data->conf,
+	       sizeof(struct rte_event_timer_adapter_conf));
 }
 
 static int

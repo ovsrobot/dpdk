@@ -20,7 +20,6 @@
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_memory.h>
 #include <rte_pci.h>
 #include <bus_vdev_driver.h>
@@ -159,7 +158,7 @@ skip_linking:
 					"Unable to allocate event object");
 				goto send_partial;
 			}
-			rte_memcpy(ev_temp, event, sizeof(struct rte_event));
+			memcpy(ev_temp, event, sizeof(struct rte_event));
 			DPAA2_SET_FD_ADDR((&fd_arr[loop]), (size_t)ev_temp);
 			DPAA2_SET_FD_LEN((&fd_arr[loop]),
 					 sizeof(struct rte_event));

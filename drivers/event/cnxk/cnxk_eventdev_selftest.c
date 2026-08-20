@@ -13,7 +13,6 @@
 #include <rte_lcore.h>
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
-#include <rte_memcpy.h>
 #include <rte_per_lcore.h>
 #include <rte_random.h>
 #include <rte_test.h>
