@@ -3163,7 +3163,22 @@ sfc_eth_dev_clear_ops(struct rte_eth_dev *dev)
 	sa->priv.dp_rx = NULL;
 }
 
+static int
+sfc_dev_infos_get_secondary(struct rte_eth_dev *dev,
+			    struct rte_eth_dev_info *dev_info)
+{
+	*dev_info = sfc_adapter_shared_by_eth_dev(dev)->dev_info_cache;
+
+	/*
+	 * The cache holds a stale primary-process device pointer;
+	 * restore the process-local one passed in by the caller.
+	 */
+	dev_info->device = dev->device;
+	return 0;
+}
+
 static const struct eth_dev_ops sfc_eth_dev_secondary_ops = {
+	.dev_infos_get			= sfc_dev_infos_get_secondary,
 	.dev_supported_ptypes_get	= sfc_dev_supported_ptypes_get,
 	.reta_query			= sfc_dev_rss_reta_query,
 	.rss_hash_conf_get		= sfc_dev_rss_hash_conf_get,
@@ -3442,6 +3457,20 @@ sfc_eth_dev_init(struct rte_eth_dev *dev, void *init_params)
 		goto fail_nic_dma_attach;
 
 	sa->link_ev_need_poll = encp->enc_link_ev_need_poll;
+
+	/*
+	 * Pre-populate the dev info cache for the secondary process.
+	 * All prerequisites (probe, attach) are met at this point.
+	 * The 'sfc_dev_infos_get' helper always returns 0.
+	 *
+	 * Care to initialise the switch info and reset the device
+	 * pointer as it is going to be stale in the context of
+	 * the secondary process and it will have to fix it.
+	 */
+	sas->dev_info_cache.switch_info.domain_id =
+		RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID;
+	(void)sfc_dev_infos_get(dev, &sas->dev_info_cache);
+	sas->dev_info_cache.device = NULL;
 
 	sfc_adapter_unlock(sa);
 

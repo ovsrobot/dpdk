@@ -156,6 +156,13 @@ struct sfc_adapter_shared {
 	unsigned int			nb_repr_txq;
 
 	struct sfc_nic_dma_info		nic_dma_info;
+
+	/*
+	 * Snapshot of the 'sfc_dev_infos_get' output created by the primary
+	 * process attach path for the secondary process to use in its own
+	 * implementation of the 'dev_infos_get' method.
+	 */
+	struct rte_eth_dev_info		dev_info_cache;
 };
 
 /* Adapter process private data */
