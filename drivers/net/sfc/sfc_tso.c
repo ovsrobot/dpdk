@@ -159,7 +159,7 @@ sfc_efx_tso_do(struct sfc_efx_txq *txq, unsigned int idx,
 	/* Handle TCP header */
 	th = (const struct rte_tcp_hdr *)(tsoh + tcph_off);
 
-	rte_memcpy(&sent_seq, &th->sent_seq, sizeof(uint32_t));
+	memcpy(&sent_seq, &th->sent_seq, sizeof(uint32_t));
 	sent_seq = rte_be_to_cpu_32(sent_seq);
 
 	efx_tx_qdesc_tso2_create(txq->common, packet_id, 0, sent_seq,
