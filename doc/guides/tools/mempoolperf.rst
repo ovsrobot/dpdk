@@ -5,8 +5,11 @@ dpdk-test-mempool-perf Application
 ====================================
 
 The ``dpdk-test-mempool-perf`` tool measures the alloc/free throughput of DPDK mempool implementations.
-Worker threads repeatedly allocate and free objects in configurable burst sizes following a randomised pattern,
+In the default run-to-completion mode,
+worker threads repeatedly allocate and free objects in configurable burst sizes following a randomised pattern,
 exercising the pool under varying levels of occupancy.
+An optional pipeline mode pairs threads as producers and consumers connected by rings,
+modelling multi-stage packet processing pipelines.
 Any mempool driver registered with the DPDK mempool ops table can be tested.
 Pool elements are sized to match ``rte_pktmbuf_pool_create()`` with default data room.
 
@@ -67,6 +70,7 @@ Application Options
    A larger value means workers hold more in-flight objects on average
    and vary their occupancy over a wider range,
    exercising the pool under a more realistic mix of pressure levels.
+   Not used in pipeline mode (``--pipeline``).
 
 ``--burst-size <n>`` / ``-b <n>``
    Number of objects per alloc or free call.
@@ -87,6 +91,17 @@ Application Options
    Print only the aggregate total in the results, suppressing the per-worker-lcore breakdown.
    Useful when scripting comparisons across pool types or configurations.
 
+``--pipeline`` / ``-p``
+   Enable pipeline mode.
+   Worker lcores are paired as producers and consumers.
+   Each producer allocates a burst of objects, writes to them,
+   and enqueues it to a ring shared with its paired consumer.
+   The consumer dequeues the burst, reads and writes the objects, then frees them to the pool.
+   This models a pipeline application where objects traverse processing stages on different cores,
+   in contrast to run-to-completion mode where each core handles the full object lifecycle.
+   ``--rand-factor`` is not applicable in this mode.
+   The thread count must be at least 2; if ``--nb-threads`` is odd, the last lcore is unused.
+
 
 Interactive Mode
 ----------------
@@ -98,6 +113,8 @@ Running the tool with only EAL options enters interactive mode::
 The application lists all available mempool drivers then prompts for each parameter.
 Pressing Enter at any prompt keeps the displayed default value.
 ``--mempool-type`` is the only mandatory entry.
+The pipeline mode prompt appears before the rand-factor prompt;
+if pipeline mode is selected, the rand-factor prompt is skipped.
 
 After configuration the tool prints an equivalent non-interactive command::
 
@@ -139,6 +156,36 @@ it does not include a put rate.
 With ``--summary``, only the ``Total`` row is printed.
 
 
+Pipeline Mode Output
+~~~~~~~~~~~~~~~~~~~~
+
+In pipeline mode the results table adds a ``role`` column:
+
+.. code-block:: console
+
+   lcore    role             Mops/s  fail/burst
+   ------   ----------  ----------  ----------
+   1        producer        23.871           0
+   3        producer        23.652           0
+   2        consumer        23.871           0
+   4        consumer        23.652           0
+   Total                    47.523           0
+
+role
+   ``producer`` or ``consumer``.
+
+Mops/s
+   For producers: objects successfully allocated and sent through the ring per second (Mops/s).
+   For consumers: objects dequeued, processed, and freed per second (Mops/s).
+
+fail/burst
+   For producers: number of allocation calls that failed because the pool was exhausted.
+   For consumers: always zero.
+
+The ``Total`` Mops/s is the consumer completion rate,
+representing the end-to-end pipeline throughput.
+
+
 Examples
 --------
 
@@ -171,3 +218,9 @@ Print only the aggregate total, suitable for scripted comparisons:
 .. code-block:: console
 
    dpdk-test-mempool-perf -l 0-4 -- -M ring_mp_mc -s
+
+Run in pipeline mode with 4 workers (2 producer/consumer pairs):
+
+.. code-block:: console
+
+   dpdk-test-mempool-perf -l 0-4 -- -M ring_mp_mc -p
