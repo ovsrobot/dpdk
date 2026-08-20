@@ -42,6 +42,9 @@
 #include "i40e_regs.h"
 #include "rte_pmd_i40e.h"
 #include "i40e_hash.h"
+#include "i40e_flow.h"
+
+#include "../common/flow_engine.h"
 
 #define ETH_I40E_FLOATING_VEB_ARG	"enable_floating_veb"
 #define ETH_I40E_FLOATING_VEB_LIST_ARG	"floating_veb_list"
@@ -1844,6 +1847,10 @@ eth_i40e_dev_init(struct rte_eth_dev *dev, void *init_params __rte_unused)
 	/* reset all stats of the device, including pf and main vsi */
 	i40e_dev_stats_reset(dev);
 
+	/* initialize flow engine configuration */
+	ci_flow_engine_conf_init(&pf->flow_engine_conf,
+			&i40e_flow_engine_list, dev->data);
+
 	return 0;
 
 err_init_fdir_filter_list:
@@ -2700,6 +2707,9 @@ i40e_dev_close(struct rte_eth_dev *dev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
+	/* uninstall all flows while the HW is still alive */
+	ci_flow_flush(&pf->flow_engine_conf, NULL);
+
 	ret = rte_eth_switch_domain_free(pf->switch_domain_id);
 	if (ret)
 		PMD_INIT_LOG(WARNING, "failed to free switch domain: %d", ret);
@@ -2784,6 +2794,8 @@ i40e_dev_close(struct rte_eth_dev *dev)
 		if (p_flow->filter_type != RTE_ETH_FILTER_FDIR)
 			rte_free(p_flow);
 	}
+
+	ci_flow_engine_conf_reset(&pf->flow_engine_conf);
 
 	/* release the fdir static allocated memory */
 	i40e_fdir_memory_cleanup(pf);
