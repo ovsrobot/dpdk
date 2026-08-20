@@ -46,6 +46,7 @@
 #include "base/ixgbe_phy.h"
 #include "base/ixgbe_osdep.h"
 #include "ixgbe_regs.h"
+#include "ixgbe_flow.h"
 
 /*
  * High threshold controlling when to start sending XOFF frames. Must be at
@@ -1342,6 +1343,10 @@ eth_ixgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 
 	/* initialize Traffic Manager configuration */
 	ixgbe_tm_conf_init(eth_dev);
+
+	/* initialize flow engine configuration */
+	ci_flow_engine_conf_init(&ad->flow_engine_conf,
+			&ixgbe_flow_engine_list, eth_dev->data);
 
 	return 0;
 
@@ -3089,8 +3094,8 @@ ixgbe_dev_set_link_down(struct rte_eth_dev *dev)
 static int
 ixgbe_dev_close(struct rte_eth_dev *dev)
 {
-	struct ixgbe_hw *hw =
-		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ixgbe_adapter *ad = dev->data->dev_private;
+	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(ad);
 	struct rte_pci_device *pci_dev = RTE_CLASS_TO_BUS_DEVICE(dev, *pci_dev);
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	int retries = 0;
@@ -3099,6 +3104,9 @@ ixgbe_dev_close(struct rte_eth_dev *dev)
 	PMD_INIT_FUNC_TRACE();
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
+
+	/* uninstall all flows */
+	ci_flow_flush(&ad->flow_engine_conf, NULL);
 
 	ixgbe_pf_reset_hw(hw);
 
@@ -3153,6 +3161,9 @@ ixgbe_dev_close(struct rte_eth_dev *dev)
 
 	rte_free(dev->security_ctx);
 	dev->security_ctx = NULL;
+
+	/* reset flow engines */
+	ci_flow_engine_conf_reset(&ad->flow_engine_conf);
 
 	return ret;
 }
