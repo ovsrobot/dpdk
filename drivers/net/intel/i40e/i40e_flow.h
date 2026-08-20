@@ -17,5 +17,6 @@ extern const struct ci_flow_engine_list i40e_flow_engine_list;
 
 extern const struct ci_flow_engine i40e_flow_engine_ethertype;
 extern const struct ci_flow_engine i40e_flow_engine_fdir;
+extern const struct ci_flow_engine i40e_flow_engine_tunnel_qinq;
 
 #endif /* _I40E_FLOW_H_ */

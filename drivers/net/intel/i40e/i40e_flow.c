@@ -34,6 +34,7 @@ const struct ci_flow_engine_list i40e_flow_engine_list = {
 	{
 		&i40e_flow_engine_ethertype,
 		&i40e_flow_engine_fdir,
+		&i40e_flow_engine_tunnel_qinq,
 	}
 };
 
@@ -87,17 +88,6 @@ static int i40e_flow_parse_gtp_filter(struct rte_eth_dev *dev,
 static int i40e_flow_destroy_tunnel_filter(struct i40e_pf *pf,
 					   struct i40e_tunnel_filter *filter);
 static int i40e_flow_flush_tunnel_filter(struct i40e_pf *pf);
-static int
-i40e_flow_parse_qinq_filter(struct rte_eth_dev *dev,
-			      const struct rte_flow_item pattern[],
-			      const struct rte_flow_action actions[],
-			      struct rte_flow_error *error,
-			      struct i40e_filter_ctx *filter);
-static int
-i40e_flow_parse_qinq_pattern(struct rte_eth_dev *dev,
-			      const struct rte_flow_item *pattern,
-			      struct rte_flow_error *error,
-			      struct i40e_tunnel_filter_conf *filter);
 
 static int i40e_flow_parse_l4_cloud_filter(struct rte_eth_dev *dev,
 					   const struct rte_flow_item pattern[],
@@ -292,13 +282,6 @@ static enum rte_flow_item_type pattern_mpls_4[] = {
 	RTE_FLOW_ITEM_TYPE_END,
 };
 
-static enum rte_flow_item_type pattern_qinq_1[] = {
-	RTE_FLOW_ITEM_TYPE_ETH,
-	RTE_FLOW_ITEM_TYPE_VLAN,
-	RTE_FLOW_ITEM_TYPE_VLAN,
-	RTE_FLOW_ITEM_TYPE_END,
-};
-
 static struct i40e_valid_pattern i40e_supported_patterns[] = {
 	/* VXLAN */
 	{ pattern_vxlan_1, i40e_flow_parse_vxlan_filter },
@@ -320,8 +303,6 @@ static struct i40e_valid_pattern i40e_supported_patterns[] = {
 	{ pattern_fdir_ipv4_gtpu, i40e_flow_parse_gtp_filter },
 	{ pattern_fdir_ipv6_gtpc, i40e_flow_parse_gtp_filter },
 	{ pattern_fdir_ipv6_gtpu, i40e_flow_parse_gtp_filter },
-	/* QINQ */
-	{ pattern_qinq_1, i40e_flow_parse_qinq_filter },
 	/* L4 over port */
 	{ pattern_fdir_ipv4_udp, i40e_flow_parse_l4_cloud_filter },
 	{ pattern_fdir_ipv4_tcp, i40e_flow_parse_l4_cloud_filter },
@@ -1711,117 +1692,6 @@ i40e_flow_parse_gtp_filter(struct rte_eth_dev *dev,
 	return ret;
 }
 
-/* 1. Last in item should be NULL as range is not supported.
- * 2. Supported filter types: QINQ.
- * 3. Mask of fields which need to be matched should be
- *    filled with 1.
- * 4. Mask of fields which needn't to be matched should be
- *    filled with 0.
- */
-static int
-i40e_flow_parse_qinq_pattern(__rte_unused struct rte_eth_dev *dev,
-			      const struct rte_flow_item *pattern,
-			      struct rte_flow_error *error,
-			      struct i40e_tunnel_filter_conf *filter)
-{
-	const struct rte_flow_item *item = pattern;
-	const struct rte_flow_item_vlan *vlan_spec = NULL;
-	const struct rte_flow_item_vlan *vlan_mask = NULL;
-	const struct rte_flow_item_vlan *i_vlan_spec = NULL;
-	const struct rte_flow_item_vlan *i_vlan_mask = NULL;
-	const struct rte_flow_item_vlan *o_vlan_spec = NULL;
-	const struct rte_flow_item_vlan *o_vlan_mask = NULL;
-
-	enum rte_flow_item_type item_type;
-	bool vlan_flag = 0;
-
-	for (; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
-		if (item->last) {
-			rte_flow_error_set(error, EINVAL,
-					   RTE_FLOW_ERROR_TYPE_ITEM,
-					   item,
-					   "Not support range");
-			return -rte_errno;
-		}
-		item_type = item->type;
-		switch (item_type) {
-		case RTE_FLOW_ITEM_TYPE_ETH:
-			if (item->spec || item->mask) {
-				rte_flow_error_set(error, EINVAL,
-						   RTE_FLOW_ERROR_TYPE_ITEM,
-						   item,
-						   "Invalid ETH item");
-				return -rte_errno;
-			}
-			break;
-		case RTE_FLOW_ITEM_TYPE_VLAN:
-			vlan_spec = item->spec;
-			vlan_mask = item->mask;
-
-			if (!(vlan_spec && vlan_mask) ||
-			    vlan_mask->hdr.eth_proto) {
-				rte_flow_error_set(error, EINVAL,
-					   RTE_FLOW_ERROR_TYPE_ITEM,
-					   item,
-					   "Invalid vlan item");
-				return -rte_errno;
-			}
-
-			if (!vlan_flag) {
-				o_vlan_spec = vlan_spec;
-				o_vlan_mask = vlan_mask;
-				vlan_flag = 1;
-			} else {
-				i_vlan_spec = vlan_spec;
-				i_vlan_mask = vlan_mask;
-				vlan_flag = 0;
-			}
-			break;
-
-		default:
-			break;
-		}
-	}
-
-	/* Get filter specification */
-	if (o_vlan_mask != NULL &&  i_vlan_mask != NULL) {
-		filter->outer_vlan = rte_be_to_cpu_16(o_vlan_spec->hdr.vlan_tci);
-		filter->inner_vlan = rte_be_to_cpu_16(i_vlan_spec->hdr.vlan_tci);
-	} else {
-			rte_flow_error_set(error, EINVAL,
-					   RTE_FLOW_ERROR_TYPE_ITEM,
-					   NULL,
-					   "Invalid filter type");
-			return -rte_errno;
-	}
-
-	filter->tunnel_type = I40E_TUNNEL_TYPE_QINQ;
-	return 0;
-}
-
-static int
-i40e_flow_parse_qinq_filter(struct rte_eth_dev *dev,
-			      const struct rte_flow_item pattern[],
-			      const struct rte_flow_action actions[],
-			      struct rte_flow_error *error,
-			      struct i40e_filter_ctx *filter)
-{
-	struct i40e_tunnel_filter_conf *tunnel_filter = &filter->consistent_tunnel_filter;
-	int ret;
-
-	ret = i40e_flow_parse_qinq_pattern(dev, pattern,
-					     error, tunnel_filter);
-	if (ret)
-		return ret;
-
-	ret = i40e_flow_parse_tunnel_action(dev, actions, error, tunnel_filter);
-	if (ret)
-		return ret;
-
-	filter->type = RTE_ETH_FILTER_TUNNEL;
-
-	return ret;
-}
 
 static int
 i40e_flow_check(struct rte_eth_dev *dev,
