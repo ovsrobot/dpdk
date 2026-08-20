@@ -66,7 +66,7 @@ rte_flow_conv_copy(void *buf, const void *data, const size_t size,
 	if (data == NULL)
 		return 0;
 	if (buf != NULL)
-		rte_memcpy(buf, data, (size > sz ? sz : size));
+		memcpy(buf, data, RTE_MIN(size, sz));
 	if (rte_type && desc[type].desc_fn)
 		sz += desc[type].desc_fn(size > 0 ? buf : NULL, data,
 					 size > sz ? size - sz : 0);
@@ -78,11 +78,8 @@ rte_flow_item_flex_conv(void *buf, const void *data, size_t size)
 {
 	struct rte_flow_item_flex *dst = buf;
 	const struct rte_flow_item_flex *src = data;
-	if (buf && size >= src->length) {
-		dst->pattern = rte_memcpy
-			((void *)((uintptr_t)(dst + 1)), src->pattern,
-			 src->length);
-	}
+	if (buf && size >= src->length)
+		dst->pattern = memcpy((void *)((uintptr_t)(dst + 1)), src->pattern, src->length);
 	return src->length;
 }
 
@@ -662,16 +659,16 @@ rte_flow_conv_item_spec(void *buf, const size_t size,
 		mask.raw = item->mask ? item->mask : &rte_flow_item_raw_mask;
 		src.raw = data;
 		dst.raw = buf;
-		rte_memcpy(dst.raw,
-			   (&(struct rte_flow_item_raw){
-				.relative = src.raw->relative,
-				.search = src.raw->search,
-				.reserved = src.raw->reserved,
-				.offset = src.raw->offset,
-				.limit = src.raw->limit,
-				.length = src.raw->length,
-			   }),
-			   size > sizeof(*dst.raw) ? sizeof(*dst.raw) : size);
+		memcpy(dst.raw,
+		       (&(struct rte_flow_item_raw){
+			       .relative = src.raw->relative,
+			       .search = src.raw->search,
+			       .reserved = src.raw->reserved,
+			       .offset = src.raw->offset,
+			       .limit = src.raw->limit,
+			       .length = src.raw->length,
+		       }),
+		       RTE_MIN(size, sizeof(*dst.raw)));
 		off = sizeof(*dst.raw);
 		if (type == RTE_FLOW_CONV_ITEM_SPEC && spec.raw)
 			tmp = spec.raw->length & mask.raw->length;
@@ -688,9 +685,7 @@ rte_flow_conv_item_spec(void *buf, const size_t size,
 			off = RTE_ALIGN_CEIL(off, sizeof(*dst.raw->pattern));
 			if (size >= off + tmp) {
 				deep_src = (void *)((uintptr_t)dst.raw + off);
-				dst.raw->pattern = rte_memcpy(deep_src,
-							      src.raw->pattern,
-							      tmp);
+				dst.raw->pattern = memcpy(deep_src, src.raw->pattern, tmp);
 			}
 			off += tmp;
 		}
@@ -704,9 +699,7 @@ rte_flow_conv_item_spec(void *buf, const size_t size,
 		tmp = spec.geneve_opt ? (spec.geneve_opt->option_len << 2) : 0;
 		if (size >= off + tmp && tmp > 0 && src.geneve_opt->data) {
 			deep_src = (void *)((uintptr_t)(dst.geneve_opt + 1));
-			dst.geneve_opt->data = rte_memcpy(deep_src,
-							  src.geneve_opt->data,
-							  tmp);
+			dst.geneve_opt->data = memcpy(deep_src, src.geneve_opt->data, tmp);
 		}
 		off += tmp;
 		break;
@@ -756,32 +749,30 @@ rte_flow_conv_action_conf(void *buf, const size_t size,
 	case RTE_FLOW_ACTION_TYPE_RSS:
 		src.rss = action->conf;
 		dst.rss = buf;
-		rte_memcpy(dst.rss,
-			   (&(struct rte_flow_action_rss){
-				.func = src.rss->func,
-				.level = src.rss->level,
-				.types = src.rss->types,
-				.key_len = src.rss->key_len,
-				.queue_num = src.rss->queue_num,
-			   }),
-			   size > sizeof(*dst.rss) ? sizeof(*dst.rss) : size);
+		memcpy(dst.rss,
+		       (&(struct rte_flow_action_rss){
+			       .func = src.rss->func,
+			       .level = src.rss->level,
+			       .types = src.rss->types,
+			       .key_len = src.rss->key_len,
+			       .queue_num = src.rss->queue_num,
+		       }),
+		       RTE_MIN(size, sizeof(*dst.rss)));
 		off = sizeof(*dst.rss);
 		if (src.rss->key_len && src.rss->key) {
 			off = RTE_ALIGN_CEIL(off, sizeof(*dst.rss->key));
 			tmp = sizeof(*src.rss->key) * src.rss->key_len;
 			if (size >= (uint64_t)off + (uint64_t)tmp)
-				dst.rss->key = rte_memcpy
-					((void *)((uintptr_t)dst.rss + off),
-					 src.rss->key, tmp);
+				dst.rss->key = memcpy((void *)((uintptr_t)dst.rss + off),
+						      src.rss->key, tmp);
 			off += tmp;
 		}
 		if (src.rss->queue_num) {
 			off = RTE_ALIGN_CEIL(off, sizeof(*dst.rss->queue));
 			tmp = sizeof(*src.rss->queue) * src.rss->queue_num;
 			if (size >= (uint64_t)off + (uint64_t)tmp)
-				dst.rss->queue = rte_memcpy
-					((void *)((uintptr_t)dst.rss + off),
-					 src.rss->queue, tmp);
+				dst.rss->queue = memcpy((void *)((uintptr_t)dst.rss + off),
+							src.rss->queue, tmp);
 			off += tmp;
 		}
 		break;
@@ -1023,20 +1014,19 @@ rte_flow_conv_rule(struct rte_flow_conv_rule *dst,
 	size_t off;
 	int ret;
 
-	rte_memcpy(dst,
-		   (&(struct rte_flow_conv_rule){
-			.attr = NULL,
-			.pattern = NULL,
-			.actions = NULL,
-		   }),
-		   size > sizeof(*dst) ? sizeof(*dst) : size);
+	memcpy(dst,
+	       (&(struct rte_flow_conv_rule){
+		       .attr = NULL,
+		       .pattern = NULL,
+		       .actions = NULL,
+	       }),
+	       RTE_MIN(size, sizeof(*dst)));
 	off = sizeof(*dst);
 	if (src->attr_ro) {
 		off = RTE_ALIGN_CEIL(off, sizeof(double));
 		if (size && size >= off + sizeof(*dst->attr))
-			dst->attr = rte_memcpy
-				((void *)((uintptr_t)dst + off),
-				 src->attr_ro, sizeof(*dst->attr));
+			dst->attr = memcpy((void *)((uintptr_t)dst + off),
+					   src->attr_ro, sizeof(*dst->attr));
 		off += sizeof(*dst->attr);
 	}
 	if (src->pattern_ro) {
@@ -1138,9 +1128,7 @@ rte_flow_conv(enum rte_flow_conv_op op,
 		break;
 	case RTE_FLOW_CONV_OP_ATTR:
 		attr = src;
-		if (size > sizeof(*attr))
-			size = sizeof(*attr);
-		rte_memcpy(dst, attr, size);
+		memcpy(dst, attr, RTE_MIN(size, sizeof(*attr)));
 		ret = sizeof(*attr);
 		break;
 	case RTE_FLOW_CONV_OP_ITEM:
@@ -1232,14 +1220,14 @@ rte_flow_copy(struct rte_flow_desc *desc, size_t len,
 	if (ret < 0)
 		return 0;
 	ret += sizeof(*desc) - sizeof(*dst);
-	rte_memcpy(desc,
-		   (&(struct rte_flow_desc){
-			.size = ret,
-			.attr = *attr,
-			.items = dst_size ? dst->pattern : NULL,
-			.actions = dst_size ? dst->actions : NULL,
-		   }),
-		   len > sizeof(*desc) ? sizeof(*desc) : len);
+	memcpy(desc,
+	       (&(struct rte_flow_desc){
+		       .size = ret,
+		       .attr = *attr,
+		       .items = dst_size ? dst->pattern : NULL,
+		       .actions = dst_size ? dst->actions : NULL,
+	       }),
+	       RTE_MIN(len, sizeof(*desc)));
 
 	rte_flow_trace_copy(desc, len, attr, items, actions, ret);
 
