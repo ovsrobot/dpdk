@@ -18,7 +18,6 @@
 #include <rte_malloc.h>
 #include <rte_prefetch.h>
 #include <rte_branch_prediction.h>
-#include <rte_memcpy.h>
 #include <rte_ring.h>
 #include <rte_jhash.h>
 #include <rte_hash_crc.h>
@@ -1060,7 +1059,7 @@ efd_compute_update(struct rte_efd_table * const table,
 		rte_prefetch0(new_k);
 		new_idx = (uint32_t) ((uintptr_t) slot_id);
 
-		rte_memcpy(EFD_KEY(new_idx, table), key, table->key_len);
+		memcpy(EFD_KEY(new_idx, table), key, table->key_len);
 		current_group->key_idx[current_group->num_rules] = new_idx;
 		current_group->value[current_group->num_rules] = value;
 		current_group->bin_id[current_group->num_rules] = *bin_id;
