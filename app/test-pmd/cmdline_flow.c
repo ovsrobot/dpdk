@@ -13967,31 +13967,31 @@ cmd_set_raw_parsed_sample(const struct buffer *in)
 		switch (action->type) {
 		case RTE_FLOW_ACTION_TYPE_MARK:
 			size = sizeof(struct rte_flow_action_mark);
-			rte_memcpy(&sample_mark[idx],
+			memcpy(&sample_mark[idx],
 				(const void *)action->conf, size);
 			action->conf = &sample_mark[idx];
 			break;
 		case RTE_FLOW_ACTION_TYPE_COUNT:
 			size = sizeof(struct rte_flow_action_count);
-			rte_memcpy(&sample_count[idx],
+			memcpy(&sample_count[idx],
 				(const void *)action->conf, size);
 			action->conf = &sample_count[idx];
 			break;
 		case RTE_FLOW_ACTION_TYPE_QUEUE:
 			size = sizeof(struct rte_flow_action_queue);
-			rte_memcpy(&sample_queue[idx],
+			memcpy(&sample_queue[idx],
 				(const void *)action->conf, size);
 			action->conf = &sample_queue[idx];
 			break;
 		case RTE_FLOW_ACTION_TYPE_RSS:
 			size = sizeof(struct rte_flow_action_rss);
 			rss = action->conf;
-			rte_memcpy(&sample_rss_data[idx].conf,
+			memcpy(&sample_rss_data[idx].conf,
 				   (const void *)rss, size);
 			if (rss->key_len && rss->key) {
 				sample_rss_data[idx].conf.key =
 						sample_rss_data[idx].key;
-				rte_memcpy((void *)((uintptr_t)
+				memcpy((void *)((uintptr_t)
 					   sample_rss_data[idx].conf.key),
 					   (const void *)rss->key,
 					   sizeof(uint8_t) * rss->key_len);
@@ -13999,7 +13999,7 @@ cmd_set_raw_parsed_sample(const struct buffer *in)
 			if (rss->queue_num && rss->queue) {
 				sample_rss_data[idx].conf.queue =
 						sample_rss_data[idx].queue;
-				rte_memcpy((void *)((uintptr_t)
+				memcpy((void *)((uintptr_t)
 					   sample_rss_data[idx].conf.queue),
 					   (const void *)rss->queue,
 					   sizeof(uint16_t) * rss->queue_num);
@@ -14008,13 +14008,13 @@ cmd_set_raw_parsed_sample(const struct buffer *in)
 			break;
 		case RTE_FLOW_ACTION_TYPE_RAW_ENCAP:
 			size = sizeof(struct rte_flow_action_raw_encap);
-			rte_memcpy(&sample_encap[idx],
+			memcpy(&sample_encap[idx],
 				(const void *)action->conf, size);
 			action->conf = &sample_encap[idx];
 			break;
 		case RTE_FLOW_ACTION_TYPE_PORT_ID:
 			size = sizeof(struct rte_flow_action_port_id);
-			rte_memcpy(&sample_port_id[idx],
+			memcpy(&sample_port_id[idx],
 				(const void *)action->conf, size);
 			action->conf = &sample_port_id[idx];
 			break;
@@ -14022,7 +14022,7 @@ cmd_set_raw_parsed_sample(const struct buffer *in)
 			break;
 		case RTE_FLOW_ACTION_TYPE_VF:
 			size = sizeof(struct rte_flow_action_vf);
-			rte_memcpy(&sample_vf[idx],
+			memcpy(&sample_vf[idx],
 					(const void *)action->conf, size);
 			action->conf = &sample_vf[idx];
 			break;
@@ -14038,13 +14038,13 @@ cmd_set_raw_parsed_sample(const struct buffer *in)
 			break;
 		case RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR:
 			size = sizeof(struct rte_flow_action_ethdev);
-			rte_memcpy(&sample_port_representor[idx],
+			memcpy(&sample_port_representor[idx],
 					(const void *)action->conf, size);
 			action->conf = &sample_port_representor[idx];
 			break;
 		case RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT:
 			size = sizeof(struct rte_flow_action_ethdev);
-			rte_memcpy(&sample_represented_port[idx],
+			memcpy(&sample_represented_port[idx],
 					(const void *)action->conf, size);
 			action->conf = &sample_represented_port[idx];
 			break;
@@ -14177,7 +14177,7 @@ cmd_set_raw_parsed(const struct buffer *in)
 			if (geneve_opt->option_len && geneve_opt->data) {
 				*total_size += geneve_opt->option_len *
 					       sizeof(uint32_t);
-				rte_memcpy(data_tail - (*total_size),
+				memcpy(data_tail - (*total_size),
 					   geneve_opt->data,
 					   geneve_opt->option_len * sizeof(uint32_t));
 			}
@@ -14217,7 +14217,7 @@ cmd_set_raw_parsed(const struct buffer *in)
 
 				/* We have to add GTP header extra word. */
 				*total_size += sizeof(ext_word);
-				rte_memcpy(data_tail - (*total_size),
+				memcpy(data_tail - (*total_size),
 					   &ext_word, sizeof(ext_word));
 			}
 			size = sizeof(struct rte_gtp_hdr);
@@ -14263,19 +14263,19 @@ cmd_set_raw_parsed(const struct buffer *in)
 				if (gre_opt->checksum_rsvd.checksum) {
 					*total_size +=
 						sizeof(gre_opt->checksum_rsvd);
-					rte_memcpy(data_tail - (*total_size),
+					memcpy(data_tail - (*total_size),
 						   &gre_opt->checksum_rsvd,
 						   sizeof(gre_opt->checksum_rsvd));
 				}
 				if (gre_opt->key.key) {
 					*total_size += sizeof(gre_opt->key.key);
-					rte_memcpy(data_tail - (*total_size),
+					memcpy(data_tail - (*total_size),
 						   &gre_opt->key.key,
 						   sizeof(gre_opt->key.key));
 				}
 				if (gre_opt->sequence.sequence) {
 					*total_size += sizeof(gre_opt->sequence.sequence);
-					rte_memcpy(data_tail - (*total_size),
+					memcpy(data_tail - (*total_size),
 						   &gre_opt->sequence.sequence,
 						   sizeof(gre_opt->sequence.sequence));
 				}
@@ -14288,7 +14288,7 @@ cmd_set_raw_parsed(const struct buffer *in)
 		}
 		if (size) {
 			*total_size += size;
-			rte_memcpy(data_tail - (*total_size), src_spec, size);
+			memcpy(data_tail - (*total_size), src_spec, size);
 			/* update some fields which cannot be set by cmdline */
 			update_fields((data_tail - (*total_size)), item,
 				      upper_layer);
