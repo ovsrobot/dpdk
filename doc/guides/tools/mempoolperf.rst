@@ -8,6 +8,7 @@ The ``dpdk-test-mempool-perf`` tool measures the alloc/free throughput of DPDK m
 Worker threads repeatedly allocate and free objects in configurable burst sizes following a randomised pattern,
 exercising the pool under varying levels of occupancy.
 Any mempool driver registered with the DPDK mempool ops table can be tested.
+Pool elements are sized to match ``rte_pktmbuf_pool_create()`` with default data room.
 
 
 Running the Application
@@ -103,6 +104,39 @@ After configuration the tool prints an equivalent non-interactive command::
    Reproduce using parameters: -M ring_mp_mc -n 4096 -c 512 -t 3 -r 8 -b 32 -A
 
 Append this output after the EAL options on subsequent runs to reproduce the exact same configuration without prompting.
+
+
+Test Output
+-----------
+
+Each run lasts a fixed 5 seconds.
+On completion, a results table is printed showing per-worker throughput and an aggregate total:
+
+.. code-block:: console
+
+   lcore    get (Mops/s)  fail/burst  put (Mops/s)
+   ------   ------------  ----------  ------------
+   1              23.871           0       23.871
+   2              24.012           0       24.012
+   Total          47.883           0
+
+lcore
+   Worker lcore ID.
+
+get (Mops/s)
+   Successful allocation throughput in millions of operations per second.
+
+fail/burst
+   Number of allocation calls that failed because the pool had insufficient free objects.
+   A non-zero value indicates ``--nb-bufs`` is too small for the configured workload.
+
+put (Mops/s)
+   Free throughput in millions of operations per second.
+   Under a balanced workload this matches the get rate.
+
+The ``Total`` row shows aggregate get throughput and failure count across all workers;
+it does not include a put rate.
+With ``--summary``, only the ``Total`` row is printed.
 
 
 Examples
