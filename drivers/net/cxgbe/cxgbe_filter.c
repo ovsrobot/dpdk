@@ -851,10 +851,10 @@ static int set_filter_wr(struct rte_eth_dev *dev, unsigned int fidx)
 	fwr->ivlanm = cpu_to_be16(f->fs.mask.ivlan);
 	fwr->ovlan = cpu_to_be16(f->fs.val.ovlan);
 	fwr->ovlanm = cpu_to_be16(f->fs.mask.ovlan);
-	rte_memcpy(fwr->lip, f->fs.val.lip, sizeof(fwr->lip));
-	rte_memcpy(fwr->lipm, f->fs.mask.lip, sizeof(fwr->lipm));
-	rte_memcpy(fwr->fip, f->fs.val.fip, sizeof(fwr->fip));
-	rte_memcpy(fwr->fipm, f->fs.mask.fip, sizeof(fwr->fipm));
+	memcpy(fwr->lip, f->fs.val.lip, sizeof(fwr->lip));
+	memcpy(fwr->lipm, f->fs.mask.lip, sizeof(fwr->lipm));
+	memcpy(fwr->fip, f->fs.val.fip, sizeof(fwr->fip));
+	memcpy(fwr->fipm, f->fs.mask.fip, sizeof(fwr->fipm));
 	fwr->lp = cpu_to_be16(f->fs.val.lport);
 	fwr->lpm = cpu_to_be16(f->fs.mask.lport);
 	fwr->fp = cpu_to_be16(f->fs.val.fport);
