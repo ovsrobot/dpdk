@@ -31,6 +31,7 @@ apps = [
         'test-pipeline',
         'test-pmd',
         'test-regex',
+        'test-mempool-perf',
         'test-sad',
         'test-security-perf',
 ]

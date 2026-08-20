@@ -17,6 +17,7 @@ DPDK Tools User Guides
     telemetrywatcher
     dmaperf
     flow-perf
+    mempoolperf
     securityperf
     testbbdev
     cryptoperf
