@@ -9,7 +9,6 @@
 #include <rte_log.h>
 #include <rte_debug.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 
 #include "zxdh_np.h"
 #include "zxdh_logs.h"

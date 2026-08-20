@@ -248,7 +248,8 @@ zxdh_add_mac_table(struct zxdh_hw *hw, uint16_t vport, struct rte_ether_addr *ad
 	int32_t ret;
 
 	if (rte_is_unicast_ether_addr(addr)) {
-		rte_memcpy(unicast_table.key.dmac_addr, addr, sizeof(struct rte_ether_addr));
+		memcpy(unicast_table.key.dmac_addr, addr,
+		       sizeof(struct rte_ether_addr));
 		unicast_table.key.sriov_vlan_tpid = srv_tpid;
 		unicast_table.key.sriov_vlan_id = srv_vlanid;
 
@@ -286,8 +287,8 @@ zxdh_add_mac_table(struct zxdh_hw *hw, uint16_t vport, struct rte_ether_addr *ad
 	} else {
 		for (group_id = 0; group_id < 4; group_id++) {
 			multicast_table.key.vf_group_id = group_id;
-			rte_memcpy(multicast_table.key.mac_addr,
-					addr, sizeof(struct rte_ether_addr));
+			memcpy(multicast_table.key.mac_addr, addr,
+			       sizeof(struct rte_ether_addr));
 			ZXDH_DTB_HASH_ENTRY_INFO_T dtb_hash_entry = {
 				.p_actu_key = (uint8_t *)&multicast_table.key,
 				.p_rst = (uint8_t *)&multicast_table.entry
@@ -353,7 +354,8 @@ zxdh_del_mac_table(struct zxdh_hw *hw, uint16_t vport, struct rte_ether_addr *ad
 	int32_t ret = 0;
 
 	if (rte_is_unicast_ether_addr(addr)) {
-		rte_memcpy(unicast_table.key.dmac_addr, addr, sizeof(struct rte_ether_addr));
+		memcpy(unicast_table.key.dmac_addr, addr,
+		       sizeof(struct rte_ether_addr));
 		unicast_table.key.sriov_vlan_id = srv_vlanid;
 		unicast_table.key.sriov_vlan_tpid = srv_tpid;
 		unicast_table.entry.hit_flag = 0;
@@ -385,7 +387,8 @@ zxdh_del_mac_table(struct zxdh_hw *hw, uint16_t vport, struct rte_ether_addr *ad
 		}
 	} else {
 		multicast_table.key.vf_group_id = vport_num.vfid / 64;
-		rte_memcpy(multicast_table.key.mac_addr, addr, sizeof(struct rte_ether_addr));
+		memcpy(multicast_table.key.mac_addr, addr,
+		       sizeof(struct rte_ether_addr));
 
 		ZXDH_DTB_HASH_ENTRY_INFO_T dtb_hash_entry = {
 			.p_actu_key = (uint8_t *)&multicast_table.key,
@@ -416,8 +419,8 @@ zxdh_del_mac_table(struct zxdh_hw *hw, uint16_t vport, struct rte_ether_addr *ad
 
 		for (group_id = 0; group_id < ZXDH_MC_GROUP_NUM; group_id++) {
 			multicast_table.key.vf_group_id = group_id;
-			rte_memcpy(multicast_table.key.mac_addr, addr,
-				sizeof(struct rte_ether_addr));
+			memcpy(multicast_table.key.mac_addr, addr,
+			       sizeof(struct rte_ether_addr));
 			ZXDH_DTB_HASH_ENTRY_INFO_T dtb_hash_entry = {
 				.p_actu_key = (uint8_t *)&multicast_table.key,
 				.p_rst = (uint8_t *)&multicast_table.entry
@@ -441,8 +444,8 @@ zxdh_del_mac_table(struct zxdh_hw *hw, uint16_t vport, struct rte_ether_addr *ad
 		if (del_flag) {
 			for (group_id = 0; group_id < ZXDH_MC_GROUP_NUM; group_id++) {
 				multicast_table.key.vf_group_id = group_id;
-				rte_memcpy(multicast_table.key.mac_addr, addr,
-					sizeof(struct rte_ether_addr));
+				memcpy(multicast_table.key.mac_addr, addr,
+				       sizeof(struct rte_ether_addr));
 				ZXDH_DTB_HASH_ENTRY_INFO_T dtb_hash_entry = {
 					.p_actu_key  = (uint8_t *)&multicast_table.key,
 					.p_rst = (uint8_t *)&multicast_table.entry

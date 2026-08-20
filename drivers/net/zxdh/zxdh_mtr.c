@@ -590,9 +590,8 @@ static int zxdh_hw_profile_config(struct rte_eth_dev *dev, uint16_t hw_profile_i
 		zxdh_plcr_profile_cfg->car_type = CAR_A;
 		zxdh_plcr_profile_cfg->packet_mode = mp->profile.packet_mode;
 		zxdh_plcr_profile_cfg->hw_profile_id = hw_profile_id;
-		rte_memcpy(&zxdh_plcr_profile_cfg->plcr_param,
-			&mp->plcr_param,
-			sizeof(zxdh_plcr_profile_cfg->plcr_param));
+		memcpy(&zxdh_plcr_profile_cfg->plcr_param, &mp->plcr_param,
+		       sizeof(zxdh_plcr_profile_cfg->plcr_param));
 
 		zxdh_msg_head_build(hw, ZXDH_PLCR_CAR_PROFILE_CFG_SET, &msg_info);
 		ret = zxdh_vf_send_msg_to_pf(dev,
@@ -685,7 +684,7 @@ zxdh_meter_profile_add(struct rte_eth_dev *dev,
 	mp->meter_profile_id = meter_profile_id;
 	mp->dpdk_port_id = dev->data->port_id;
 	mp->hw_profile_id = UINT16_MAX;
-	rte_memcpy(&mp->profile, profile, sizeof(struct rte_mtr_meter_profile));
+	memcpy(&mp->profile, profile, sizeof(struct rte_mtr_meter_profile));
 
 	ret = zxdh_mtr_profile_offload(dev, mp, profile, error);
 	if (ret) {
@@ -772,7 +771,8 @@ zxdh_meter_policy_add(struct rte_eth_dev *dev,
 	memset(mtr_policy, 0, sizeof(struct zxdh_meter_policy));
 	mtr_policy->policy_id = policy_id;
 	mtr_policy->dpdk_port_id = dev->data->port_id;
-	rte_memcpy(&mtr_policy->policy, policy, sizeof(struct rte_mtr_meter_policy_params));
+	memcpy(&mtr_policy->policy, policy,
+	       sizeof(struct rte_mtr_meter_policy_params));
 	/* Add to list. */
 	TAILQ_INSERT_TAIL(&zxdh_shared_data->mtr_policy_list, mtr_policy, next);
 	mtr_policy->ref_cnt++;

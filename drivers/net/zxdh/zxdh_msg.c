@@ -3,9 +3,9 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 
 #include <rte_common.h>
-#include <rte_memcpy.h>
 #include <rte_spinlock.h>
 #include <rte_cycles.h>
 #include <inttypes.h>
@@ -899,7 +899,7 @@ zxdh_bar_msg_ack_async_msg_proc(struct zxdh_bar_msg_header *msg_header,
 	}
 	uint8_t *reps_buffer = (uint8_t *)reps_info->reps_addr;
 
-	rte_memcpy(reps_buffer + 4, receiver_buff, msg_header->len);
+	memcpy(reps_buffer + 4, receiver_buff, msg_header->len);
 	*(uint16_t *)(reps_buffer + 1) = msg_header->len;
 	*(uint8_t *)(reps_info->reps_addr) = ZXDH_REPS_HEADER_REPLYED;
 
@@ -1406,13 +1406,13 @@ zxdh_vf_port_uninit(struct zxdh_hw *pf_hw, uint16_t vport,
 	}
 
 	*res_len += strlen(str);
-	rte_memcpy(reply_data_addr, str, strlen(str) + 1);
+	memcpy(reply_data_addr, str, strlen(str) + 1);
 	ZXDH_SET(msg_reply_body, res_info, flag, ZXDH_REPS_SUCC);
 	return ret;
 
 proc_end:
 	*res_len += strlen(str);
-	rte_memcpy(reply_data_addr, str, strlen(str) + 1);
+	memcpy(reply_data_addr, str, strlen(str) + 1);
 	ZXDH_SET(msg_reply_body, res_info, flag, ZXDH_REPS_FAIL);
 	return ret;
 }
@@ -1458,7 +1458,7 @@ zxdh_add_vf_mac_table(struct zxdh_hw *hw, uint16_t vport,
 success:
 	sprintf(str, " vport 0x%x set mac ret 0x%x\n", port.vport, ret);
 	*reply_len =  strlen(str) + ZXDH_MSG_REPLYBODY_HEAD;
-	rte_memcpy(reply_data_addr, str, strlen(str) + 1);
+	memcpy(reply_data_addr, str, strlen(str) + 1);
 	ZXDH_SET(msg_reply_body, reply_body, flag, ZXDH_REPS_SUCC);
 	PMD_DRV_LOG(DEBUG, " reply len %d", *reply_len);
 	return ret;
@@ -1499,7 +1499,7 @@ zxdh_del_vf_mac_table(struct zxdh_hw *hw, uint16_t vport,
 
 	sprintf(str, "vport 0x%x del mac ret 0x%x\n", port.vport, ret);
 	*res_len =  strlen(str) + ZXDH_MSG_REPLYBODY_HEAD;
-	rte_memcpy(reply_data_addr, str, strlen(str) + 1);
+	memcpy(reply_data_addr, str, strlen(str) + 1);
 	ZXDH_SET(msg_reply_body, res_info, flag, ZXDH_REPS_SUCC);
 	return ret;
 
@@ -2331,7 +2331,8 @@ zxdh_vf_flow_hw_get(struct zxdh_hw *pf_hw, uint16_t vport,
 	}
 	PMD_DRV_LOG(INFO, " res len :%d", *res_len);
 	dh_flow = flow_rsp_addr;
-	rte_memcpy(&dh_flow->flowentry, &flow_entry->dh_flow.flowentry, sizeof(dh_flow->flowentry));
+	memcpy(&dh_flow->flowentry, &flow_entry->dh_flow.flowentry,
+	       sizeof(dh_flow->flowentry));
 	ZXDH_SET(msg_reply_body, res_info, flag, ZXDH_REPS_SUCC);
 	return 0;
 }
