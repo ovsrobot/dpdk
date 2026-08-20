@@ -1979,8 +1979,6 @@ i40e_dev_configure(struct rte_eth_dev *dev)
 		}
 	}
 
-	TAILQ_INIT(&pf->flow_list);
-
 	return 0;
 
 err_dcb:
@@ -2648,7 +2646,6 @@ i40e_dev_close(struct rte_eth_dev *dev)
 	struct rte_pci_device *pci_dev = RTE_CLASS_TO_BUS_DEVICE(dev, *pci_dev);
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_filter_control_settings settings;
-	struct rte_flow *p_flow;
 	uint32_t reg;
 	int i;
 	int ret;
@@ -2738,14 +2735,6 @@ i40e_dev_close(struct rte_eth_dev *dev)
 	i40e_rm_ethtype_filter_list(pf);
 	i40e_rm_tunnel_filter_list(pf);
 	i40e_rm_fdir_filter_list(pf);
-
-	/* Remove all flows */
-	while ((p_flow = TAILQ_FIRST(&pf->flow_list))) {
-		TAILQ_REMOVE(&pf->flow_list, p_flow, node);
-		/* Do not free FDIR flows since they are static allocated */
-		if (p_flow->filter_type != RTE_ETH_FILTER_FDIR)
-			rte_free(p_flow);
-	}
 
 	ci_flow_engine_conf_reset(&pf->flow_engine_conf);
 

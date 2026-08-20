@@ -281,9 +281,6 @@ enum i40e_flxpld_layer_idx {
  */
 struct rte_flow {
 	struct ci_flow base;
-	TAILQ_ENTRY(rte_flow) node;
-	enum rte_filter_type filter_type;
-	void *rule;
 };
 
 /**
@@ -955,8 +952,6 @@ struct i40e_tunnel_filter_conf {
 	uint16_t vf_id;         /**< VF id, available when is_to_vf is 1. */
 };
 
-TAILQ_HEAD(i40e_flow_list, rte_flow);
-
 /* Struct to store Traffic Manager shaper profile. */
 struct i40e_tm_shaper_profile {
 	TAILQ_ENTRY(i40e_tm_shaper_profile) node;
@@ -1169,7 +1164,6 @@ struct i40e_pf {
 	bool floating_veb; /* The flag to use the floating VEB */
 	/* The floating enable flag for the specific VF */
 	bool floating_veb_list[I40E_MAX_VF];
-	struct i40e_flow_list flow_list;
 	/* flow engine configuration */
 	struct ci_flow_engine_conf flow_engine_conf;
 	bool mpls_replace_flag;  /* 1 - MPLS filter replace is done */
@@ -1307,11 +1301,6 @@ struct i40e_vf_representor {
 };
 
 extern const struct rte_flow_ops i40e_flow_ops;
-
-struct i40e_filter_ctx {
-	struct i40e_rte_flow_rss_conf rss_conf;
-	enum rte_filter_type type;
-};
 
 int i40e_dev_switch_queues(struct i40e_pf *pf, bool on);
 int i40e_vsi_release(struct i40e_vsi *vsi);
