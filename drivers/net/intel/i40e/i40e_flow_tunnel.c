@@ -468,6 +468,204 @@ static const struct rte_flow_graph i40e_tunnel_vxlan_graph = {
 	},
 };
 
+/**
+ * NVGRE tunnel filter graph implementation
+ * Pattern: START -> ETH -> (IPv4 | IPv6) -> NVGRE -> ETH -> [VLAN] -> END
+ */
+enum i40e_tunnel_nvgre_node_id {
+	I40E_TUNNEL_NVGRE_NODE_START  = RTE_FLOW_NODE_FIRST,
+	I40E_TUNNEL_NVGRE_NODE_OUTER_ETH,
+	I40E_TUNNEL_NVGRE_NODE_IPV4,
+	I40E_TUNNEL_NVGRE_NODE_IPV6,
+	I40E_TUNNEL_NVGRE_NODE_NVGRE,
+	I40E_TUNNEL_NVGRE_NODE_INNER_ETH,
+	I40E_TUNNEL_NVGRE_NODE_INNER_VLAN,
+	I40E_TUNNEL_NVGRE_NODE_END,
+	I40E_TUNNEL_NVGRE_NODE_MAX,
+};
+
+static int
+i40e_tunnel_node_nvgre_validate(const void *ctx __rte_unused,
+		const struct rte_flow_item *item,
+		struct rte_flow_error *error)
+{
+	const struct rte_flow_item_nvgre *nvgre_spec = item->spec;
+	const struct rte_flow_item_nvgre *nvgre_mask = item->mask;
+
+	/* spec/mask are optional */
+	if (nvgre_spec == NULL && nvgre_mask == NULL)
+		return 0;
+
+	/* TNI must be fully masked */
+	if (!CI_FIELD_IS_MASKED(&nvgre_mask->tni)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM_MASK, item,
+				"Invalid NVGRE mask");
+	}
+	/* protocol must either be unmasked or fully masked */
+	if (!CI_FIELD_IS_ZERO_OR_MASKED(&nvgre_mask->protocol)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM_MASK, item,
+				"Invalid NVGRE mask");
+	}
+	/* reserved/version field must either be unmasked or fully masked */
+	if (!CI_FIELD_IS_ZERO_OR_MASKED(&nvgre_mask->c_k_s_rsvd0_ver)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM_MASK, item,
+				"Invalid NVGRE mask");
+	}
+	/* if reserved/version field is masked, it must be set to 0x2000 */
+	if (nvgre_mask->c_k_s_rsvd0_ver &&
+			nvgre_spec->c_k_s_rsvd0_ver != rte_cpu_to_be_16(0x2000)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM_MASK, item,
+				"Invalid NVGRE spec");
+	}
+	/* if protocol field is masked, it must be set to 0x6558 */
+	if (nvgre_mask->protocol &&
+			nvgre_spec->protocol != rte_cpu_to_be_16(0x6558)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM_MASK, item,
+				"Invalid NVGRE spec");
+	}
+	return 0;
+}
+
+static int
+i40e_tunnel_node_nvgre_process(void *ctx, const struct rte_flow_item *item,
+		struct rte_flow_error *error __rte_unused)
+{
+	const struct rte_flow_item_nvgre *nvgre_spec = item->spec;
+	const struct rte_flow_item_nvgre *nvgre_mask = item->mask;
+	struct i40e_tunnel_ctx *tunnel_ctx = ctx;
+	struct i40e_tunnel_filter_conf *tunnel_filter = &tunnel_ctx->filter;
+
+	/* spec/mask are optional */
+	if (nvgre_spec == NULL && nvgre_mask == NULL)
+		return 0;
+
+	/* Store the VNI and set filter flag */
+	tunnel_filter->tenant_id = ci_be24_to_cpu(nvgre_spec->tni);
+	tunnel_filter->filter_type |= RTE_ETH_TUNNEL_FILTER_TENID;
+
+	return 0;
+}
+
+static int
+i40e_tunnel_node_nvgre_end_process(void *ctx, const struct rte_flow_item *item __rte_unused,
+		struct rte_flow_error *error __rte_unused)
+{
+	struct i40e_tunnel_ctx *tunnel_ctx = ctx;
+	struct i40e_tunnel_filter_conf *tunnel_filter = &tunnel_ctx->filter;
+
+	tunnel_filter->tunnel_type = I40E_TUNNEL_TYPE_NVGRE;
+
+	return 0;
+}
+
+static const struct rte_flow_graph i40e_tunnel_nvgre_graph = {
+	.nodes = (struct rte_flow_graph_node[]) {
+		[I40E_TUNNEL_NVGRE_NODE_START] = {
+			.name = "START",
+		},
+		[I40E_TUNNEL_NVGRE_NODE_OUTER_ETH] = {
+			.name = "ETH",
+			.type = RTE_FLOW_ITEM_TYPE_ETH,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY |
+			               RTE_FLOW_NODE_EXPECT_SPEC_MASK,
+			.validate = i40e_tunnel_node_eth_validate,
+			.process = i40e_tunnel_node_outer_eth_process,
+		},
+		[I40E_TUNNEL_NVGRE_NODE_IPV4] = {
+			.name = "IPv4",
+			.type = RTE_FLOW_ITEM_TYPE_IPV4,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+			.process = i40e_tunnel_node_ipv4_process,
+		},
+		[I40E_TUNNEL_NVGRE_NODE_IPV6] = {
+			.name = "IPv6",
+			.type = RTE_FLOW_ITEM_TYPE_IPV6,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+			.process = i40e_tunnel_node_ipv6_process,
+		},
+		[I40E_TUNNEL_NVGRE_NODE_NVGRE] = {
+			.name = "NVGRE",
+			.type = RTE_FLOW_ITEM_TYPE_NVGRE,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY |
+			               RTE_FLOW_NODE_EXPECT_SPEC_MASK,
+			.validate = i40e_tunnel_node_nvgre_validate,
+			.process = i40e_tunnel_node_nvgre_process,
+		},
+		[I40E_TUNNEL_NVGRE_NODE_INNER_ETH] = {
+			.name = "INNER_ETH",
+			.type = RTE_FLOW_ITEM_TYPE_ETH,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY |
+			               RTE_FLOW_NODE_EXPECT_SPEC_MASK,
+			.validate = i40e_tunnel_node_eth_validate,
+			.process = i40e_tunnel_node_inner_eth_process,
+		},
+		[I40E_TUNNEL_NVGRE_NODE_INNER_VLAN] = {
+			.name = "INNER_VLAN",
+			.type = RTE_FLOW_ITEM_TYPE_VLAN,
+			.constraints = RTE_FLOW_NODE_EXPECT_SPEC_MASK,
+			.validate = i40e_tunnel_node_vlan_validate,
+			.process = i40e_tunnel_node_inner_vlan_process,
+		},
+		[I40E_TUNNEL_NVGRE_NODE_END] = {
+			.name = "END",
+			.type = RTE_FLOW_ITEM_TYPE_END,
+			.validate = i40e_tunnel_node_end_validate,
+			.process = i40e_tunnel_node_nvgre_end_process
+		},
+	},
+	.edges = (struct rte_flow_graph_edge[]) {
+		[I40E_TUNNEL_NVGRE_NODE_START] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_NVGRE_NODE_OUTER_ETH,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_NVGRE_NODE_OUTER_ETH] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_NVGRE_NODE_IPV4,
+				I40E_TUNNEL_NVGRE_NODE_IPV6,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_NVGRE_NODE_IPV4] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_NVGRE_NODE_NVGRE,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_NVGRE_NODE_IPV6] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_NVGRE_NODE_NVGRE,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_NVGRE_NODE_NVGRE] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_NVGRE_NODE_INNER_ETH,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_NVGRE_NODE_INNER_ETH] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_NVGRE_NODE_INNER_VLAN,
+				I40E_TUNNEL_NVGRE_NODE_END,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_NVGRE_NODE_INNER_VLAN] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_NVGRE_NODE_END,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+	},
+};
+
 static int
 i40e_tunnel_action_check(const struct ci_flow_actions *actions,
 		const struct ci_flow_actions_check_param *param,
@@ -628,6 +826,14 @@ static const struct ci_flow_engine_ops i40e_flow_engine_tunnel_ops = {
 	.ctx_to_flow = i40e_tunnel_ctx_to_flow,
 	.flow_install = i40e_tunnel_flow_install,
 	.flow_uninstall = i40e_tunnel_flow_uninstall,
+};
+
+const struct ci_flow_engine i40e_flow_engine_tunnel_nvgre = {
+	.name = "tunnel_nvgre",
+	.ops = &i40e_flow_engine_tunnel_ops,
+	.ctx_size = sizeof(struct i40e_tunnel_ctx),
+	.flow_size = sizeof(struct i40e_tunnel_flow),
+	.graph = &i40e_tunnel_nvgre_graph,
 };
 
 const struct ci_flow_engine i40e_flow_engine_tunnel_vxlan = {
