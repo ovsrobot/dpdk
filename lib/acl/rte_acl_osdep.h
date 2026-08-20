@@ -33,7 +33,6 @@
 #include <rte_vect.h>
 #include <rte_memory.h>
 #include <rte_log.h>
-#include <rte_memcpy.h>
 #include <rte_prefetch.h>
 #include <rte_byteorder.h>
 #include <rte_branch_prediction.h>
