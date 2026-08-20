@@ -159,7 +159,7 @@ xsc_dev_rss_key_modify(struct xsc_dev *xdev, uint8_t *rss_key, uint8_t rss_key_l
 	in.hdr.opcode = rte_cpu_to_be_16(XSC_CMD_OP_MODIFY_NIC_HCA);
 
 	key_len = RTE_MIN(rss_key_len, XSC_RSS_HASH_KEY_LEN);
-	rte_memcpy(in.rss.hash_key, rss_key, key_len);
+	memcpy(in.rss.hash_key, rss_key, key_len);
 	rss_caps_mask |= RTE_BIT32(XSC_RSS_HASH_KEY_UPDATE);
 
 	in.rss.caps_mask = rss_caps_mask;
