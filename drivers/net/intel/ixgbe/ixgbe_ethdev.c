@@ -6855,25 +6855,6 @@ ixgbe_add_del_ethertype_filter(struct ixgbe_adapter *adapter,
 	int ret;
 	struct ixgbe_ethertype_filter ethertype_filter;
 
-	if (filter->queue >= IXGBE_MAX_RX_QUEUE_NUM)
-		return -EINVAL;
-
-	if (filter->ether_type == RTE_ETHER_TYPE_IPV4 ||
-		filter->ether_type == RTE_ETHER_TYPE_IPV6) {
-		PMD_DRV_LOG(ERR, "unsupported ether_type(0x%04x) in"
-			" ethertype filter.", filter->ether_type);
-		return -EINVAL;
-	}
-
-	if (filter->flags & RTE_ETHTYPE_FLAGS_MAC) {
-		PMD_DRV_LOG(ERR, "mac compare is unsupported.");
-		return -EINVAL;
-	}
-	if (filter->flags & RTE_ETHTYPE_FLAGS_DROP) {
-		PMD_DRV_LOG(ERR, "drop option is unsupported.");
-		return -EINVAL;
-	}
-
 	ret = ixgbe_ethertype_filter_lookup(filter_info, filter->ether_type);
 	if (ret >= 0 && add) {
 		PMD_DRV_LOG(ERR, "ethertype (0x%04x) filter exists.",
