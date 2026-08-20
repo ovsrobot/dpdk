@@ -21,7 +21,7 @@
 #define IPV6_ADDR_TO_MASK(ipaddr, ipv6m) do { \
 	uint8_t ipv6_addr[16]; \
 	uint8_t i; \
-	rte_memcpy(ipv6_addr, (ipaddr), sizeof(ipv6_addr));\
+	memcpy(ipv6_addr, (ipaddr), sizeof(ipv6_addr));\
 	(ipv6m) = 0; \
 	for (i = 0; i < sizeof(ipv6_addr); i++) { \
 		if (ipv6_addr[i] == UINT8_MAX) \
@@ -42,7 +42,7 @@
 		else \
 			ipv6_addr[i] = 0; \
 	} \
-	rte_memcpy((ipaddr), ipv6_addr, sizeof(ipv6_addr));\
+	memcpy((ipaddr), ipv6_addr, sizeof(ipv6_addr));\
 } while (0)
 
 /**
@@ -898,8 +898,8 @@ txgbe_fdir_filter_program(struct rte_eth_dev *dev,
 				   sizeof(struct txgbe_fdir_filter), 0);
 		if (!node)
 			return -ENOMEM;
-		rte_memcpy(&node->input, &rule->input,
-			   sizeof(struct txgbe_atr_input));
+		memcpy(&node->input, &rule->input,
+		       sizeof(struct txgbe_atr_input));
 		node->fdirflags = rule->fdirflags;
 		node->fdirhash = fdirhash;
 		node->queue = queue;
@@ -1051,8 +1051,7 @@ txgbevf_fdir_filter_program(struct rte_eth_dev *dev,
 			   sizeof(struct txgbe_fdir_filter), 0);
 	if (!node)
 		return -ENOMEM;
-	rte_memcpy(&node->input, input,
-		   sizeof(struct txgbe_atr_input));
+	memcpy(&node->input, input, sizeof(struct txgbe_atr_input));
 	node->fdirflags = rule->fdirflags;
 	node->fdirhash = fdirhash;
 	node->queue = rule->queue;
