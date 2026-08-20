@@ -48,7 +48,7 @@ memif_msg_send(int fd, memif_msg_t *msg, int afd)
 		cmsg->cmsg_len = CMSG_LEN(sizeof(int));
 		cmsg->cmsg_level = SOL_SOCKET;
 		cmsg->cmsg_type = SCM_RIGHTS;
-		rte_memcpy(CMSG_DATA(cmsg), &afd, sizeof(int));
+		memcpy(CMSG_DATA(cmsg), &afd, sizeof(int));
 	}
 
 	return sendmsg(fd, &mh, 0);
@@ -675,7 +675,7 @@ memif_msg_receive(struct memif_control_channel *cc)
 			if (cmsg->cmsg_type == SCM_CREDENTIALS)
 				cr = (struct ucred *)CMSG_DATA(cmsg);
 			else if (cmsg->cmsg_type == SCM_RIGHTS)
-				rte_memcpy(&afd, CMSG_DATA(cmsg), sizeof(int));
+				memcpy(&afd, CMSG_DATA(cmsg), sizeof(int));
 		}
 		cmsg = CMSG_NXTHDR(&mh, cmsg);
 	}
