@@ -3044,6 +3044,7 @@ int rte_pmd_i40e_flow_add_del_packet_template(
 			uint8_t add)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port];
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct i40e_fdir_filter_conf filter_conf;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
@@ -3068,7 +3069,7 @@ int rte_pmd_i40e_flow_add_del_packet_template(
 		(enum i40e_fdir_status)conf->action.report_status;
 	filter_conf.action.flex_off = conf->action.flex_off;
 
-	return i40e_flow_add_del_fdir_filter(dev, &filter_conf, add);
+	return i40e_flow_add_del_fdir_filter(pf, &filter_conf, add);
 }
 
 RTE_EXPORT_SYMBOL(rte_pmd_i40e_inset_get)

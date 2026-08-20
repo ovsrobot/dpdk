@@ -1103,10 +1103,6 @@ i40e_init_fdir_filter_list(struct rte_eth_dev *dev)
 	uint32_t alloc = hw->func_caps.fd_filters_guaranteed;
 	uint32_t best = hw->func_caps.fd_filters_best_effort;
 	enum i40e_filter_pctype pctype;
-	struct rte_bitmap *bmp = NULL;
-	uint32_t bmp_size;
-	void *mem = NULL;
-	uint32_t i = 0;
 	int ret;
 
 	struct rte_hash_parameters fdir_hash_params = {
@@ -1163,50 +1159,8 @@ i40e_init_fdir_filter_list(struct rte_eth_dev *dev)
 
 	PMD_DRV_LOG(INFO, "FDIR guarantee space: %u, best_effort space %u.", alloc, best);
 
-	fdir_info->fdir_flow_pool.pool =
-			rte_zmalloc("i40e_fdir_entry",
-				sizeof(struct i40e_fdir_entry) *
-				fdir_info->fdir_space_size,
-				0);
-
-	if (!fdir_info->fdir_flow_pool.pool) {
-		PMD_INIT_LOG(ERR,
-			     "Failed to allocate memory for bitmap flow!");
-		ret = -ENOMEM;
-		goto err_fdir_bitmap_flow_alloc;
-	}
-
-	for (i = 0; i < fdir_info->fdir_space_size; i++)
-		fdir_info->fdir_flow_pool.pool[i].idx = i;
-
-	bmp_size =
-		rte_bitmap_get_memory_footprint(fdir_info->fdir_space_size);
-	mem = rte_zmalloc("fdir_bmap", bmp_size, RTE_CACHE_LINE_SIZE);
-	if (mem == NULL) {
-		PMD_INIT_LOG(ERR,
-			     "Failed to allocate memory for fdir bitmap!");
-		ret = -ENOMEM;
-		goto err_fdir_mem_alloc;
-	}
-	bmp = rte_bitmap_init(fdir_info->fdir_space_size, mem, bmp_size);
-	if (bmp == NULL) {
-		PMD_INIT_LOG(ERR,
-			     "Failed to initialization fdir bitmap!");
-		ret = -ENOMEM;
-		goto err_fdir_bmp_alloc;
-	}
-	for (i = 0; i < fdir_info->fdir_space_size; i++)
-		rte_bitmap_set(bmp, i);
-
-	fdir_info->fdir_flow_pool.bitmap = bmp;
-
 	return 0;
 
-err_fdir_bmp_alloc:
-	rte_free(mem);
-err_fdir_mem_alloc:
-	rte_free(fdir_info->fdir_flow_pool.pool);
-err_fdir_bitmap_flow_alloc:
 	rte_free(fdir_info->fdir_filter_array);
 err_fdir_filter_array_alloc:
 	rte_free(fdir_info->hash_map);
@@ -1940,8 +1894,6 @@ i40e_fdir_memory_cleanup(struct i40e_pf *pf)
 	/* flow director memory cleanup */
 	rte_free(fdir_info->hash_map);
 	rte_hash_free(fdir_info->hash_table);
-	rte_free(fdir_info->fdir_flow_pool.bitmap);
-	rte_free(fdir_info->fdir_flow_pool.pool);
 	rte_free(fdir_info->fdir_filter_array);
 }
 

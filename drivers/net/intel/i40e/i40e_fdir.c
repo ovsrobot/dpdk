@@ -377,12 +377,12 @@ i40e_init_flx_pld(struct i40e_pf *pf)
  * Enable/disable flow director RX processing in vector routines.
  */
 void
-i40e_fdir_rx_proc_enable(struct rte_eth_dev *dev, bool on)
+i40e_fdir_rx_proc_enable(struct rte_eth_dev_data *dev_data, bool on)
 {
 	int32_t i;
 
-	for (i = 0; i < dev->data->nb_rx_queues; i++) {
-		struct ci_rx_queue *rxq = dev->data->rx_queues[i];
+	for (i = 0; i < dev_data->nb_rx_queues; i++) {
+		struct ci_rx_queue *rxq = dev_data->rx_queues[i];
 		if (!rxq)
 			continue;
 		rxq->fdir_enabled = on;
@@ -394,10 +394,9 @@ i40e_fdir_rx_proc_enable(struct rte_eth_dev *dev, bool on)
  * Configure flow director related setting
  */
 int
-i40e_fdir_configure(struct rte_eth_dev *dev)
+i40e_fdir_configure(struct i40e_pf *pf)
 {
-	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
-	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
 	uint32_t val;
 	int ret = 0;
 
@@ -407,7 +406,7 @@ i40e_fdir_configure(struct rte_eth_dev *dev)
 	* If filters exist, flush them.
 	*/
 	if (i40e_fdir_empty(hw) < 0) {
-		ret = i40e_fdir_flush(dev);
+		ret = i40e_fdir_flush(pf);
 		if (ret) {
 			PMD_DRV_LOG(ERR, "failed to flush fdir table.");
 			return ret;
@@ -422,7 +421,7 @@ i40e_fdir_configure(struct rte_eth_dev *dev)
 	i40e_init_flx_pld(pf); /* set flex config to default value */
 
 	/* Enable FDIR processing in RX routines */
-	i40e_fdir_rx_proc_enable(dev, 1);
+	i40e_fdir_rx_proc_enable(pf->dev_data, 1);
 
 	return ret;
 }
@@ -1093,53 +1092,6 @@ i40e_sw_fdir_filter_del(struct i40e_pf *pf, struct i40e_fdir_input *input)
 	return 0;
 }
 
-struct rte_flow *
-i40e_fdir_entry_pool_get(struct i40e_fdir_info *fdir_info)
-{
-	struct rte_flow *flow = NULL;
-	uint64_t slab = 0;
-	uint32_t pos = 0;
-	uint32_t i = 0;
-	int ret;
-
-	if (fdir_info->fdir_actual_cnt >=
-			fdir_info->fdir_space_size) {
-		PMD_DRV_LOG(ERR, "Fdir space full");
-		return NULL;
-	}
-
-	ret = rte_bitmap_scan(fdir_info->fdir_flow_pool.bitmap, &pos,
-			&slab);
-
-	/* normally this won't happen as the fdir_actual_cnt should be
-	 * same with the number of the set bits in fdir_flow_pool,
-	 * but anyway handle this error condition here for safe
-	 */
-	if (ret == 0) {
-		PMD_DRV_LOG(ERR, "fdir_actual_cnt out of sync");
-		return NULL;
-	}
-
-	i = rte_bsf64(slab);
-	pos += i;
-	rte_bitmap_clear(fdir_info->fdir_flow_pool.bitmap, pos);
-	flow = &fdir_info->fdir_flow_pool.pool[pos].flow;
-
-	memset(flow, 0, sizeof(struct rte_flow));
-
-	return flow;
-}
-
-void
-i40e_fdir_entry_pool_put(struct i40e_fdir_info *fdir_info,
-		struct rte_flow *flow)
-{
-	struct i40e_fdir_entry *f;
-
-	f = FLOW_TO_FLOW_BITMAP(flow);
-	rte_bitmap_set(fdir_info->fdir_flow_pool.bitmap, f->idx);
-}
-
 static int
 i40e_flow_store_flex_pit(struct i40e_pf *pf,
 			 struct i40e_fdir_flex_pit *flex_pit,
@@ -1365,9 +1317,8 @@ i40e_flow_set_fdir_inset(struct i40e_pf *pf,
 }
 
 static inline unsigned char *
-i40e_find_available_buffer(struct rte_eth_dev *dev)
+i40e_find_available_buffer(struct i40e_pf *pf)
 {
-	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct i40e_fdir_info *fdir_info = &pf->fdir;
 	struct ci_tx_queue *txq = pf->fdir.txq;
 
@@ -1410,12 +1361,11 @@ i40e_find_available_buffer(struct rte_eth_dev *dev)
  * @add: 0 - delete, 1 - add
  */
 int
-i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
+i40e_flow_add_del_fdir_filter(struct i40e_pf *pf,
 			      const struct i40e_fdir_filter_conf *filter,
 			      bool add)
 {
-	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
 	enum i40e_flxpld_layer_idx layer_idx = I40E_FLXPLD_L2_IDX;
 	struct i40e_fdir_info *fdir_info = &pf->fdir;
 	uint8_t flex_mask[I40E_FDIR_MAX_FLEX_LEN];
@@ -1554,7 +1504,7 @@ i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
 	}
 
 	/* find a buffer to store the pkt */
-	pkt = i40e_find_available_buffer(dev);
+	pkt = i40e_find_available_buffer(pf);
 	if (pkt == NULL)
 		goto error_op;
 
@@ -1765,9 +1715,8 @@ i40e_flow_fdir_filter_programming(struct i40e_pf *pf,
  * @pf: board private structure
  */
 int
-i40e_fdir_flush(struct rte_eth_dev *dev)
+i40e_fdir_flush(struct i40e_pf *pf)
 {
-	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
 	uint32_t reg;
 	uint16_t guarant_cnt, best_cnt;
@@ -1945,7 +1894,6 @@ i40e_fdir_stats_get(struct rte_eth_dev *dev, struct rte_eth_fdir_stats *stat)
 void
 i40e_fdir_filter_restore(struct i40e_pf *pf)
 {
-	struct rte_eth_dev *dev = I40E_VSI_TO_ETH_DEV(pf->main_vsi);
 	struct i40e_fdir_filter_list *fdir_list = &pf->fdir.fdir_list;
 	struct i40e_fdir_filter *f;
 	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
@@ -1954,7 +1902,7 @@ i40e_fdir_filter_restore(struct i40e_pf *pf)
 	uint32_t best_cnt;     /**< Number of filters in best effort spaces. */
 
 	TAILQ_FOREACH(f, fdir_list, rules)
-		i40e_flow_add_del_fdir_filter(dev, &f->fdir, TRUE);
+		i40e_flow_add_del_fdir_filter(pf, &f->fdir, TRUE);
 
 	fdstat = I40E_READ_REG(hw, I40E_PFQF_FDSTAT);
 	guarant_cnt =

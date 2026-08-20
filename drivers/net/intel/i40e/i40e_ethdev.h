@@ -522,6 +522,9 @@ struct i40e_vmdq_info {
 #define I40E_WORD(hi, lo) (uint16_t)((((hi) << 8) & 0xFF00) | ((lo) & 0xFF))
 #define I40E_FLEX_WORD_MASK(off) (0x80 >> (off))
 #define I40E_FDIR_IPv6_TC_OFFSET	20
+#define I40E_IPV6_TC_MASK	(0xFF << I40E_FDIR_IPv6_TC_OFFSET)
+#define I40E_IPV6_FRAG_HEADER	44
+#define I40E_VLAN_TCI_MASK	(RTE_VLAN_PRI_MASK | RTE_VLAN_DEI_MASK | RTE_VLAN_ID_MASK)
 
 /* A structure used to define the input for GTP flow */
 struct i40e_gtp_flow {
@@ -718,28 +721,12 @@ struct i40e_fdir_filter {
 	struct i40e_fdir_filter_conf fdir;
 };
 
-/* fdir memory pool entry */
-struct i40e_fdir_entry {
-	struct rte_flow flow;
-	uint32_t idx;
-};
-
-/* pre-allocated fdir memory pool */
-struct i40e_fdir_flow_pool {
-	/* a bitmap to manage the fdir pool */
-	struct rte_bitmap *bitmap;
-	/* the size the pool is pf->fdir->fdir_space_size */
-	struct i40e_fdir_entry *pool;
-};
-
-#define FLOW_TO_FLOW_BITMAP(f) \
-	container_of((f), struct i40e_fdir_entry, flow)
-
 TAILQ_HEAD(i40e_fdir_filter_list, i40e_fdir_filter);
 /*
  *  A structure used to define fields of a FDIR related info.
  */
 struct i40e_fdir_info {
+	uint64_t num_fdir_flows;
 	struct i40e_vsi *fdir_vsi;     /* pointer to fdir VSI structure */
 	uint16_t match_counter_index;  /* Statistic counter index used for fdir*/
 	struct ci_tx_queue *txq;
@@ -790,8 +777,6 @@ struct i40e_fdir_info {
 	uint32_t fdir_guarantee_free_space;
 	/* the fdir total guaranteed space */
 	uint32_t fdir_guarantee_total_space;
-	/* the pre-allocated pool of the rte_flow */
-	struct i40e_fdir_flow_pool fdir_flow_pool;
 
 	/* Mark if flex pit and mask is set */
 	bool flex_pit_flag[I40E_MAX_FLXPLD_LAYER];
@@ -1325,7 +1310,6 @@ extern const struct rte_flow_ops i40e_flow_ops;
 
 struct i40e_filter_ctx {
 	union {
-		struct i40e_fdir_filter_conf fdir_filter;
 		struct i40e_tunnel_filter_conf consistent_tunnel_filter;
 		struct i40e_rte_flow_rss_conf rss_conf;
 	};
@@ -1374,8 +1358,8 @@ void i40e_vsi_enable_queues_intr(struct i40e_vsi *vsi);
 const struct rte_memzone *i40e_memzone_reserve(const char *name,
 					uint32_t len,
 					int socket_id);
-int i40e_fdir_configure(struct rte_eth_dev *dev);
-void i40e_fdir_rx_proc_enable(struct rte_eth_dev *dev, bool on);
+int i40e_fdir_configure(struct i40e_pf *pf);
+void i40e_fdir_rx_proc_enable(struct rte_eth_dev_data *dev_data, bool on);
 void i40e_fdir_teardown(struct i40e_pf *pf);
 enum i40e_filter_pctype
 	i40e_flowtype_to_pctype(const struct i40e_adapter *adapter,
@@ -1422,11 +1406,7 @@ uint64_t i40e_get_default_input_set(uint16_t pctype);
 int i40e_ethertype_filter_set(struct i40e_pf *pf,
 			      struct rte_eth_ethertype_filter *filter,
 			      bool add);
-struct rte_flow *
-i40e_fdir_entry_pool_get(struct i40e_fdir_info *fdir_info);
-void i40e_fdir_entry_pool_put(struct i40e_fdir_info *fdir_info,
-		struct rte_flow *flow);
-int i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
+int i40e_flow_add_del_fdir_filter(struct i40e_pf *pf,
 			      const struct i40e_fdir_filter_conf *filter,
 			      bool add);
 int i40e_dev_tunnel_filter_set(struct i40e_pf *pf,
@@ -1435,7 +1415,7 @@ int i40e_dev_tunnel_filter_set(struct i40e_pf *pf,
 int i40e_dev_consistent_tunnel_filter_set(struct i40e_pf *pf,
 				  struct i40e_tunnel_filter_conf *tunnel_filter,
 				  uint8_t add);
-int i40e_fdir_flush(struct rte_eth_dev *dev);
+int i40e_fdir_flush(struct i40e_pf *pf);
 int i40e_find_all_vlan_for_mac(struct i40e_vsi *vsi,
 			       struct i40e_macvlan_filter *mv_f,
 			       int num, struct rte_ether_addr *addr);
