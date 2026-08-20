@@ -1585,8 +1585,8 @@ static int qat_sym_do_precomputes_ipsec_mb(enum icp_qat_hw_auth_algo hash_alg,
 
 		uint8_t *input = in;
 		uint8_t *out = p_state_buf;
-		rte_memcpy(input, qat_aes_xcbc_key_seed,
-				ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ);
+		memcpy(input, qat_aes_xcbc_key_seed,
+		       ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ);
 		for (i = 0; i < HASH_XCBC_PRECOMP_KEY_NUM; i++) {
 			if (aes_ipsecmb_job(input, out, m, auth_key, auth_keylen)) {
 				memset(input -
@@ -2101,8 +2101,8 @@ static int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 	cdesc->cd_cur_ptr += sizeof(struct icp_qat_hw_auth_setup);
 	switch (cdesc->qat_hash_alg) {
 	case ICP_QAT_HW_AUTH_ALGO_SM3:
-		rte_memcpy(cdesc->cd_cur_ptr, sm3InitialState,
-				sizeof(sm3InitialState));
+		memcpy(cdesc->cd_cur_ptr, sm3InitialState,
+		       sizeof(sm3InitialState));
 		state1_size = qat_hash_get_state1_size(
 				cdesc->qat_hash_alg);
 		state2_size = ICP_QAT_HW_SM3_STATE2_SZ;
@@ -2113,9 +2113,8 @@ static int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 		hash_2->auth_config.config =
 			ICP_QAT_HW_AUTH_CONFIG_BUILD(ICP_QAT_HW_AUTH_MODE2,
 				cdesc->qat_hash_alg, digestsize);
-		rte_memcpy(cdesc->cd_cur_ptr + state1_size + state2_size +
-			sizeof(*hash_2), sm3InitialState,
-			sizeof(sm3InitialState));
+		memcpy(cdesc->cd_cur_ptr + state1_size + state2_size + sizeof(*hash_2),
+		       sm3InitialState, sizeof(sm3InitialState));
 		hash_cd_ctrl->inner_state1_sz = state1_size;
 		hash_cd_ctrl->inner_state2_sz  = state2_size;
 		hash_cd_ctrl->inner_state2_offset =
@@ -2154,8 +2153,8 @@ static int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 	case ICP_QAT_HW_AUTH_ALGO_SHA1:
 		if (cdesc->auth_mode == ICP_QAT_HW_AUTH_MODE0) {
 			/* Plain SHA-1 */
-			rte_memcpy(cdesc->cd_cur_ptr, sha1InitialState,
-					sizeof(sha1InitialState));
+			memcpy(cdesc->cd_cur_ptr, sha1InitialState,
+			       sizeof(sha1InitialState));
 			state1_size = qat_hash_get_state1_size(
 					cdesc->qat_hash_alg);
 			break;
@@ -2174,8 +2173,8 @@ static int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 	case ICP_QAT_HW_AUTH_ALGO_SHA224:
 		if (cdesc->auth_mode == ICP_QAT_HW_AUTH_MODE0) {
 			/* Plain SHA-224 */
-			rte_memcpy(cdesc->cd_cur_ptr, sha224InitialState,
-					sizeof(sha224InitialState));
+			memcpy(cdesc->cd_cur_ptr, sha224InitialState,
+			       sizeof(sha224InitialState));
 			state1_size = qat_hash_get_state1_size(
 					cdesc->qat_hash_alg);
 			break;
@@ -2193,8 +2192,8 @@ static int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 	case ICP_QAT_HW_AUTH_ALGO_SHA256:
 		if (cdesc->auth_mode == ICP_QAT_HW_AUTH_MODE0) {
 			/* Plain SHA-256 */
-			rte_memcpy(cdesc->cd_cur_ptr, sha256InitialState,
-					sizeof(sha256InitialState));
+			memcpy(cdesc->cd_cur_ptr, sha256InitialState,
+			       sizeof(sha256InitialState));
 			state1_size = qat_hash_get_state1_size(
 					cdesc->qat_hash_alg);
 			break;
@@ -2212,8 +2211,8 @@ static int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 	case ICP_QAT_HW_AUTH_ALGO_SHA384:
 		if (cdesc->auth_mode == ICP_QAT_HW_AUTH_MODE0) {
 			/* Plain SHA-384 */
-			rte_memcpy(cdesc->cd_cur_ptr, sha384InitialState,
-					sizeof(sha384InitialState));
+			memcpy(cdesc->cd_cur_ptr, sha384InitialState,
+			       sizeof(sha384InitialState));
 			state1_size = qat_hash_get_state1_size(
 					cdesc->qat_hash_alg);
 			break;
@@ -2231,8 +2230,8 @@ static int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 	case ICP_QAT_HW_AUTH_ALGO_SHA512:
 		if (cdesc->auth_mode == ICP_QAT_HW_AUTH_MODE0) {
 			/* Plain SHA-512 */
-			rte_memcpy(cdesc->cd_cur_ptr, sha512InitialState,
-					sizeof(sha512InitialState));
+			memcpy(cdesc->cd_cur_ptr, sha512InitialState,
+			       sizeof(sha512InitialState));
 			state1_size = qat_hash_get_state1_size(
 					cdesc->qat_hash_alg);
 			break;
