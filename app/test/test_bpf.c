@@ -12,6 +12,7 @@
 #include <rte_debug.h>
 #include <rte_hexdump.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_random.h>
 #include <rte_byteorder.h>
 #include <rte_errno.h>

@@ -8,7 +8,6 @@
 #include <rte_hexdump.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 
 #ifdef RTE_EXEC_ENV_WINDOWS
 static int

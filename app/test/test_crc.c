@@ -6,7 +6,6 @@
 
 #include <rte_hexdump.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_net_crc.h>
 
 #define CRC_VEC_LEN        32
@@ -116,14 +115,14 @@ crc_autotest(void)
 	if (test_data == NULL)
 		return -7;
 	for (i = 0; i < CRC32_VEC_LEN1; i += 12)
-		rte_memcpy(&test_data[i], crc32_vec1, 12);
+		memcpy(&test_data[i], crc32_vec1, 12);
 	ret |= crc_all_algs("32-bit ethernet CRC: Test 2", RTE_NET_CRC32_ETH, test_data,
 		CRC32_VEC_LEN1, crc32_vec1_res);
 
 	/* 32-bit ethernet CRC: Test 3 */
 	memset(test_data, 0, CRC32_VEC_LEN1);
 	for (i = 0; i < CRC32_VEC_LEN2; i += 12)
-		rte_memcpy(&test_data[i], crc32_vec1, 12);
+		memcpy(&test_data[i], crc32_vec1, 12);
 	ret |= crc_all_algs("32-bit ethernet CRC: Test 3", RTE_NET_CRC32_ETH, test_data,
 		CRC32_VEC_LEN2, crc32_vec2_res);
 
@@ -142,7 +141,7 @@ crc_autotest(void)
 	/* 16-bit CCITT CRC:  Test 7 */
 	memset(test_data, 0, CRC32_VEC_LEN1);
 	for (i = 0; i < CRC16_VEC_LEN3; i += 12)
-		rte_memcpy(&test_data[i], crc16_vec1, 12);
+		memcpy(&test_data[i], crc16_vec1, 12);
 	ret |= crc_all_algs("16-bit CCITT CRC: Test 7", RTE_NET_CRC16_CCITT, test_data,
 		CRC16_VEC_LEN3, crc16_vec3_res);
 	return ret;

@@ -454,7 +454,7 @@ test_op_forward_mode(uint8_t session_less)
 		m_data.request_info.cdev_id = request_info.cdev_id;
 		m_data.request_info.queue_pair_id = request_info.queue_pair_id;
 		m_data.response_info.event = response_info.event;
-		rte_memcpy((uint8_t *)op + len, &m_data, sizeof(m_data));
+		memcpy((uint8_t *)op + len, &m_data, sizeof(m_data));
 	}
 
 	sym_op->m_src = m;
@@ -653,8 +653,8 @@ test_asym_op_forward_mode(uint8_t session_less)
 		m_data.request_info.cdev_id = request_info.cdev_id;
 		m_data.request_info.queue_pair_id = request_info.queue_pair_id;
 		m_data.response_info.event = response_info.event;
-		rte_memcpy((uint8_t *)op + op->private_data_offset,
-				&m_data, sizeof(m_data));
+		memcpy((uint8_t *)op + op->private_data_offset, &m_data,
+		       sizeof(m_data));
 	}
 	/* Fill in event info and update event_ptr with rte_crypto_op */
 	memset(&ev, 0, sizeof(ev));
@@ -820,7 +820,7 @@ test_op_new_mode(uint8_t session_less)
 		op->private_data_offset = len;
 		/* Fill in private data information */
 		m_data.response_info.event = response_info.event;
-		rte_memcpy((uint8_t *)op + len, &m_data, sizeof(m_data));
+		memcpy((uint8_t *)op + len, &m_data, sizeof(m_data));
 	}
 
 	sym_op->m_src = m;
@@ -977,8 +977,8 @@ test_asym_op_new_mode(uint8_t session_less)
 				sizeof(struct rte_crypto_asym_xform));
 		/* Fill in private data information */
 		m_data.response_info.event = response_info.event;
-		rte_memcpy((uint8_t *)op + op->private_data_offset,
-				&m_data, sizeof(m_data));
+		memcpy((uint8_t *)op + op->private_data_offset, &m_data,
+		       sizeof(m_data));
 	}
 
 	ret = send_op_recv_ev(op);

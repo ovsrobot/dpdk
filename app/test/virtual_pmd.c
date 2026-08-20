@@ -2,13 +2,14 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <string.h>
+
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
 #include <ethdev_driver.h>
 #include <rte_pci.h>
 #include <bus_pci_driver.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_memory.h>
 #include <rte_ring.h>
 
@@ -187,7 +188,7 @@ virtual_ethdev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 	struct virtual_ethdev_private *dev_private = dev->data->dev_private;
 
 	if (stats)
-		rte_memcpy(stats, &dev_private->eth_stats, sizeof(*stats));
+		memcpy(stats, &dev_private->eth_stats, sizeof(*stats));
 
 	return 0;
 }

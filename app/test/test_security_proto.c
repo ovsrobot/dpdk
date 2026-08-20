@@ -167,5 +167,5 @@ test_sec_proto_pattern_generate(void)
 void
 test_sec_proto_pattern_set(uint8_t *buf, int len)
 {
-	rte_memcpy(buf, cleartext_pattern, len);
+	memcpy(buf, cleartext_pattern, len);
 }

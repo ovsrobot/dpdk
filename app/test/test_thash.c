@@ -316,14 +316,14 @@ test_toeplitz_hash_gfni_bulk(void)
 		tuple[0].v4.dst_addr = rte_cpu_to_be_32(v4_tbl[i].dst_ip);
 		tuple[0].v4.sport = rte_cpu_to_be_16(v4_tbl[i].dst_port);
 		tuple[0].v4.dport = rte_cpu_to_be_16(v4_tbl[i].src_port);
-		rte_memcpy(tuples[0], &tuple[0], RTE_THASH_V4_L4_LEN * 4);
+		memcpy(tuples[0], &tuple[0], RTE_THASH_V4_L4_LEN * 4);
 
 		/*Load IPv6 headers and copy it into the corresponding tuple*/
 		tuple[1].v6.src_addr = v6_tbl[i].src_ip;
 		tuple[1].v6.dst_addr = v6_tbl[i].dst_ip;
 		tuple[1].v6.sport = rte_cpu_to_be_16(v6_tbl[i].dst_port);
 		tuple[1].v6.dport = rte_cpu_to_be_16(v6_tbl[i].src_port);
-		rte_memcpy(tuples[1], &tuple[1], RTE_THASH_V6_L4_LEN * 4);
+		memcpy(tuples[1], &tuple[1], RTE_THASH_V6_L4_LEN * 4);
 
 		rte_thash_gfni_bulk(rss_key_matrixes, RTE_THASH_V6_L4_LEN * 4,
 			tuples, rss, 2);

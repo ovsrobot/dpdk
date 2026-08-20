@@ -31,20 +31,20 @@ copy_buf_to_pkt_segs(void *buf, unsigned len, struct rte_mbuf *pkt,
 	copy_len = seg->data_len - offset;
 	seg_buf = rte_pktmbuf_mtod_offset(seg, char *, offset);
 	while (len > copy_len) {
-		rte_memcpy(seg_buf, buf, (size_t) copy_len);
+		memcpy(seg_buf, buf, (size_t) copy_len);
 		len -= copy_len;
 		buf = ((char *) buf + copy_len);
 		seg = seg->next;
 		seg_buf = rte_pktmbuf_mtod(seg, void *);
 	}
-	rte_memcpy(seg_buf, buf, (size_t) len);
+	memcpy(seg_buf, buf, (size_t) len);
 }
 
 static inline void
 copy_buf_to_pkt(void *buf, unsigned len, struct rte_mbuf *pkt, unsigned offset)
 {
 	if (offset + len <= pkt->data_len) {
-		rte_memcpy(rte_pktmbuf_mtod_offset(pkt, char *, offset), buf,
+		memcpy(rte_pktmbuf_mtod_offset(pkt, char *, offset), buf,
 			   (size_t) len);
 		return;
 	}
@@ -148,8 +148,8 @@ initialize_ipv6_header(struct rte_ipv6_hdr *ip_hdr, uint8_t *src_addr,
 	ip_hdr->proto = IPPROTO_UDP;
 	ip_hdr->hop_limits = IP_DEFTTL;
 
-	rte_memcpy(&ip_hdr->src_addr, src_addr, sizeof(ip_hdr->src_addr));
-	rte_memcpy(&ip_hdr->dst_addr, dst_addr, sizeof(ip_hdr->dst_addr));
+	memcpy(&ip_hdr->src_addr, src_addr, sizeof(ip_hdr->src_addr));
+	memcpy(&ip_hdr->dst_addr, dst_addr, sizeof(ip_hdr->dst_addr));
 
 	return (uint16_t) (pkt_data_len + sizeof(struct rte_ipv6_hdr));
 }

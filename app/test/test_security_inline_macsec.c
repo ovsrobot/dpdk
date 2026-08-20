@@ -128,7 +128,7 @@ init_packet(struct rte_mempool *mp, const uint8_t *data, unsigned int len)
 	if (pkt == NULL)
 		return NULL;
 
-	rte_memcpy(rte_pktmbuf_append(pkt, len), data, len);
+	memcpy(rte_pktmbuf_append(pkt, len), data, len);
 
 	return pkt;
 }
