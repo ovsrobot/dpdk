@@ -40,6 +40,7 @@ driver_sdk_headers += files(
         'ethdev_pci.h',
         'ethdev_vdev.h',
         'rte_flow_driver.h',
+        'rte_flow_graph.h',
         'rte_mtr_driver.h',
         'rte_tm_driver.h',
 )

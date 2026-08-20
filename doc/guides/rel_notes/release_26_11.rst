@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added internal ethdev flow graph parser helper API.**
+
+  Added ``rte_flow_graph`` helper definitions in ``rte_flow_graph.h``
+  for PMD drivers to build graph-based pattern parsers.
+  This internal driver API validates ``rte_flow_item`` protocol sequences
+  through node and edge traversal, with per-node callbacks and constraints.
+
 
 Removed Items
 -------------
