@@ -112,7 +112,8 @@ cnxk_eswitch_repr_devargs(struct rte_pci_device *pci_dev, struct cnxk_eswitch_de
 			goto fail;
 		}
 
-		rte_memcpy(&eswitch_dev->esw_da[j].da, &eth_da[i], sizeof(struct rte_eth_devargs));
+		memcpy(&eswitch_dev->esw_da[j].da, &eth_da[i],
+		       sizeof(struct rte_eth_devargs));
 		/* No of representor ports to be created */
 		eswitch_dev->repr_cnt.nb_repr_created += eswitch_dev->esw_da[j].nb_repr_ports;
 		j++;
