@@ -171,12 +171,12 @@ scheduler_start(struct rte_cryptodev *dev)
 		sched_ctx->workers[PRIMARY_WORKER_IDX].qp_id = i;
 		sched_ctx->workers[SECONDARY_WORKER_IDX].qp_id = i;
 
-		rte_memcpy(&qp_ctx->primary_worker,
-				&sched_ctx->workers[PRIMARY_WORKER_IDX],
-				sizeof(struct scheduler_worker));
-		rte_memcpy(&qp_ctx->secondary_worker,
-				&sched_ctx->workers[SECONDARY_WORKER_IDX],
-				sizeof(struct scheduler_worker));
+		memcpy(&qp_ctx->primary_worker,
+		       &sched_ctx->workers[PRIMARY_WORKER_IDX],
+		       sizeof(struct scheduler_worker));
+		memcpy(&qp_ctx->secondary_worker,
+		       &sched_ctx->workers[SECONDARY_WORKER_IDX],
+		       sizeof(struct scheduler_worker));
 	}
 
 	return 0;

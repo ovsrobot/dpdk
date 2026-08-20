@@ -1061,9 +1061,9 @@ mlx5_crypto_gcm_ipsec_enqueue_burst(void *queue_pair,
 		 * shrink AAD before payload. First backup the mem,
 		 * then do shrink.
 		 */
-		rte_memcpy(&qp->ipsec_mem[idx],
-			   RTE_PTR_SUB(payload, MLX5_CRYPTO_GCM_IPSEC_IV_SIZE),
-			   MLX5_CRYPTO_GCM_IPSEC_IV_SIZE);
+		memcpy(&qp->ipsec_mem[idx],
+		       RTE_PTR_SUB(payload, MLX5_CRYPTO_GCM_IPSEC_IV_SIZE),
+		       MLX5_CRYPTO_GCM_IPSEC_IV_SIZE);
 		/* If no memory overlap, do copy directly, otherwise memmove. */
 		if (likely(pkt_iv_len >= sess->aad_len))
 			rte_memcpy(gcm_data.src_addr, op->sym->aead.aad.data, sess->aad_len);
@@ -1107,8 +1107,8 @@ mlx5_crypto_gcm_restore_ipsec_mem(struct mlx5_crypto_qp *qp,
 		if (unlikely(sess->aad_len > MLX5_CRYPTO_GCM_IPSEC_IV_SIZE))
 			memmove(op->sym->aead.aad.data,
 				RTE_PTR_SUB(payload, sess->aad_len), sess->aad_len);
-		rte_memcpy(RTE_PTR_SUB(payload, MLX5_CRYPTO_GCM_IPSEC_IV_SIZE),
-			   &qp->ipsec_mem[idx], MLX5_CRYPTO_GCM_IPSEC_IV_SIZE);
+		memcpy(RTE_PTR_SUB(payload, MLX5_CRYPTO_GCM_IPSEC_IV_SIZE),
+		       &qp->ipsec_mem[idx], MLX5_CRYPTO_GCM_IPSEC_IV_SIZE);
 		m_dst = op->sym->m_dst;
 		if (m_dst && m_dst != m_src) {
 			uint32_t bytes_to_copy;
