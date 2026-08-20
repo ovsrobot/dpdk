@@ -909,16 +909,16 @@ fs_stats_get(struct rte_eth_dev *dev,
 	ret = fs_lock(dev, 0);
 	if (ret != 0)
 		return ret;
-	rte_memcpy(stats, &PRIV(dev)->stats_accumulator, sizeof(*stats));
+	memcpy(stats, &PRIV(dev)->stats_accumulator, sizeof(*stats));
 	FOREACH_SUBDEV_STATE(sdev, i, dev, DEV_ACTIVE) {
 		struct rte_eth_stats *snapshot = &sdev->stats_snapshot.stats;
 		uint64_t *timestamp = &sdev->stats_snapshot.timestamp;
 
-		rte_memcpy(&backup, snapshot, sizeof(backup));
+		memcpy(&backup, snapshot, sizeof(backup));
 		ret = rte_eth_stats_get(PORT_ID(sdev), snapshot);
 		if (ret) {
 			if (!fs_err(sdev, ret)) {
-				rte_memcpy(snapshot, &backup, sizeof(backup));
+				memcpy(snapshot, &backup, sizeof(backup));
 				goto inc;
 			}
 			ERROR("Operation rte_eth_stats_get failed for sub_device %d with error %d",
@@ -1523,8 +1523,8 @@ fs_set_mc_addr_list(struct rte_eth_dev *dev,
 		ret = -ENOMEM;
 		goto rollback;
 	}
-	rte_memcpy(mcast_addrs, mc_addr_set,
-		   nb_mc_addr * sizeof(PRIV(dev)->mcast_addrs[0]));
+	memcpy(mcast_addrs, mc_addr_set,
+	       nb_mc_addr * sizeof(PRIV(dev)->mcast_addrs[0]));
 	PRIV(dev)->nb_mcast_addr = nb_mc_addr;
 	PRIV(dev)->mcast_addrs = mcast_addrs;
 
