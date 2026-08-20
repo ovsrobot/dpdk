@@ -1062,13 +1062,17 @@ eth_dev_close(struct rte_eth_dev *dev)
 
 	for (i = 0; i < internals->queue_cnt; i++) {
 		rxq = &internals->rx_queues[i];
+		/* Skip queues whose setup failed (umem left NULL). */
 		if (rxq->umem == NULL)
-			break;
+			continue;
 		xsk_socket__delete(rxq->xsk);
 
 		if (rte_atomic_fetch_sub_explicit(&rxq->umem->refcnt, 1,
-				rte_memory_order_acquire) - 1 == 0)
+				rte_memory_order_release) - 1 == 0) {
+			/* Acquire so the destroy sees all prior users' writes. */
+			rte_atomic_thread_fence(rte_memory_order_acquire);
 			xdp_umem_destroy(rxq->umem);
+		}
 	}
 	/* Free Tx and Rx queue arrays */
 	rte_free(internals->tx_queues);
@@ -1154,6 +1158,9 @@ get_shared_umem(struct pkt_rx_queue *rxq, const char *ifname,
 					ret = -1;
 					goto out;
 				}
+				/* A failed setup leaves mb_pool set with no umem. */
+				if (list_rxq->umem == NULL)
+					continue;
 				if (rte_atomic_load_explicit(&internals->rx_queues[i].umem->refcnt,
 						    rte_memory_order_acquire)) {
 					*umem = internals->rx_queues[i].umem;
@@ -1188,12 +1195,24 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 		if (get_shared_umem(rxq, internals->if_name, &umem) < 0)
 			return NULL;
 
-		if (umem != NULL &&
-			rte_atomic_load_explicit(&umem->refcnt, rte_memory_order_acquire) <
-					umem->max_xsks) {
+		if (umem != NULL) {
+			/* Reject sharing once the UMEM is at capacity. */
+			if (rte_atomic_load_explicit(&umem->refcnt,
+					rte_memory_order_acquire) >= umem->max_xsks) {
+				if (umem->max_xsks == 0)
+					AF_XDP_LOG_LINE(ERR, "%s,qid%i: mempool %s too small to share UMEM",
+							internals->if_name, rxq->xsk_queue_idx,
+							umem->mb_pool->name);
+				else
+					AF_XDP_LOG_LINE(ERR, "%s,qid%i: UMEM %s already at max %u sockets",
+							internals->if_name, rxq->xsk_queue_idx,
+							umem->mb_pool->name, umem->max_xsks);
+				return NULL;
+			}
+
 			AF_XDP_LOG_LINE(INFO, "%s,qid%i sharing UMEM",
 					internals->if_name, rxq->xsk_queue_idx);
-			rte_atomic_fetch_add_explicit(&umem->refcnt, 1, rte_memory_order_acquire);
+			rte_atomic_fetch_add_explicit(&umem->refcnt, 1, rte_memory_order_relaxed);
 		}
 	}
 
@@ -1239,8 +1258,10 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 		umem->buffer = aligned_addr;
 
 		if (internals->shared_umem) {
-			umem->max_xsks = mb_pool->populated_size /
-						ETH_AF_XDP_NUM_BUFFERS;
+			/* refcnt is uint8_t, so the cap cannot exceed UINT8_MAX. */
+			umem->max_xsks = RTE_MIN(mb_pool->populated_size /
+						ETH_AF_XDP_NUM_BUFFERS,
+						(uint32_t)UINT8_MAX);
 			AF_XDP_LOG_LINE(INFO, "Max xsks for UMEM %s: %u",
 						mb_pool->name, umem->max_xsks);
 		}
@@ -1684,10 +1705,13 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 	int reserve_size = ETH_AF_XDP_DFLT_NUM_DESCS;
 	struct rte_mbuf *fq_bufs[reserve_size];
 	bool reserve_before;
+	bool free_fq_bufs = false;
 
 	rxq->umem = xdp_umem_configure(internals, rxq);
-	if (rxq->umem == NULL)
+	if (rxq->umem == NULL) {
+		txq->umem = NULL;
 		return -ENOMEM;
+	}
 	txq->umem = rxq->umem;
 	reserve_before = rte_atomic_load_explicit(&rxq->umem->refcnt,
 			rte_memory_order_acquire) <= 1;
@@ -1698,11 +1722,14 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 		AF_XDP_LOG_LINE(DEBUG, "Failed to get enough buffers for fq.");
 		goto out_umem;
 	}
+	free_fq_bufs = true;
 #endif
 
 	/* reserve fill queue of queues not (yet) sharing UMEM */
 	if (reserve_before) {
 		ret = reserve_fill_queue(rxq->umem, reserve_size, fq_bufs, &rxq->fq);
+		/* reserve_fill_queue() consumes fq_bufs on success and frees them on failure. */
+		free_fq_bufs = false;
 		if (ret) {
 			AF_XDP_LOG_LINE(ERR, "Failed to reserve fill queue.");
 			goto out_umem;
@@ -1759,6 +1786,7 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 	if (!reserve_before) {
 		/* reserve fill queue of queues sharing UMEM */
 		ret = reserve_fill_queue(rxq->umem, reserve_size, fq_bufs, &rxq->fq);
+		free_fq_bufs = false;
 		if (ret) {
 			AF_XDP_LOG_LINE(ERR, "Failed to reserve fill queue.");
 			goto out_xsk;
@@ -1774,6 +1802,7 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 					  &rxq->xsk_queue_idx, &fd, 0);
 		if (err) {
 			AF_XDP_LOG_LINE(ERR, "Failed to insert xsk in map.");
+			ret = -EINVAL;
 			goto out_xsk;
 		}
 	}
@@ -1786,6 +1815,7 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 			map_fd = uds_get_xskmap_fd(internals->if_name, internals->dp_path);
 			if (map_fd < 0) {
 				AF_XDP_LOG_LINE(ERR, "Failed to receive xskmap fd from AF_XDP Device Plugin");
+				ret = -EINVAL;
 				goto out_xsk;
 			}
 		} else {
@@ -1793,6 +1823,7 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 			err = get_pinned_map(internals->dp_path, &map_fd);
 			if (err < 0 || map_fd < 0) {
 				AF_XDP_LOG_LINE(ERR, "Failed to retrieve pinned map fd");
+				ret = -EINVAL;
 				goto out_xsk;
 			}
 		}
@@ -1800,6 +1831,7 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 		err = update_xskmap(rxq->xsk, map_fd, rxq->xsk_queue_idx);
 		if (err) {
 			AF_XDP_LOG_LINE(ERR, "Failed to insert xsk in map.");
+			ret = -EINVAL;
 			goto out_xsk;
 		}
 
@@ -1816,8 +1848,18 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 out_xsk:
 	xsk_socket__delete(rxq->xsk);
 out_umem:
-	if (rte_atomic_fetch_sub_explicit(&rxq->umem->refcnt, 1, rte_memory_order_acquire) - 1 == 0)
+	/* Free fq_bufs that were allocated but never handed to the fill queue. */
+	if (free_fq_bufs)
+		rte_pktmbuf_free_bulk(fq_bufs, reserve_size);
+	if (rte_atomic_fetch_sub_explicit(&rxq->umem->refcnt, 1,
+			rte_memory_order_release) - 1 == 0) {
+		/* Acquire so the destroy sees all prior users' writes. */
+		rte_atomic_thread_fence(rte_memory_order_acquire);
 		xdp_umem_destroy(rxq->umem);
+	}
+	/* Drop dangling pointers so a later shared-UMEM scan skips this queue. */
+	rxq->umem = NULL;
+	txq->umem = NULL;
 
 	return ret;
 }
@@ -1858,9 +1900,9 @@ eth_rx_queue_setup(struct rte_eth_dev *dev,
 
 	rxq->mb_pool = mb_pool;
 
-	if (xsk_configure(internals, rxq, nb_rx_desc)) {
+	ret = xsk_configure(internals, rxq, nb_rx_desc);
+	if (ret) {
 		AF_XDP_LOG_LINE(ERR, "Failed to configure xdp socket");
-		ret = -EINVAL;
 		goto err;
 	}
 
