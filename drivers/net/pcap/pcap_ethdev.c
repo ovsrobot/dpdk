@@ -25,7 +25,6 @@
 #include <ethdev_vdev.h>
 #include <rte_kvargs.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_mbuf.h>
 #include <rte_mbuf_dyn.h>
 #include <bus_vdev_driver.h>
@@ -233,7 +232,7 @@ eth_pcap_rx_jumbo(struct rte_mempool *mb_pool, struct rte_mbuf *mbuf,
 	uint16_t len = rte_pktmbuf_tailroom(mbuf);
 	struct rte_mbuf *m = mbuf;
 
-	rte_memcpy(rte_pktmbuf_append(mbuf, len), data, len);
+	memcpy(rte_pktmbuf_append(mbuf, len), data, len);
 	data_len -= len;
 	data += len;
 
@@ -253,7 +252,7 @@ eth_pcap_rx_jumbo(struct rte_mempool *mb_pool, struct rte_mbuf *mbuf,
 
 		/* Copy next segment. */
 		len = RTE_MIN(rte_pktmbuf_tailroom(m), data_len);
-		rte_memcpy(rte_pktmbuf_append(m, len), data, len);
+		memcpy(rte_pktmbuf_append(m, len), data, len);
 
 		mbuf->nb_segs++;
 		data_len -= len;
@@ -282,7 +281,7 @@ eth_pcap_rx_infinite(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		if (err)
 			return i;
 
-		rte_memcpy(rte_pktmbuf_mtod(bufs[i], void *),
+		memcpy(rte_pktmbuf_mtod(bufs[i], void *),
 				rte_pktmbuf_mtod(pcap_buf, void *),
 				pcap_buf->data_len);
 		bufs[i]->data_len = pcap_buf->data_len;
@@ -389,7 +388,7 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		uint32_t len = header->caplen;
 		if (len <= rte_pktmbuf_tailroom(mbuf)) {
 			/* pcap packet will fit in the mbuf, can copy it */
-			rte_memcpy(rte_pktmbuf_mtod(mbuf, void *), packet, len);
+			memcpy(rte_pktmbuf_mtod(mbuf, void *), packet, len);
 			mbuf->data_len = len;
 		} else if (pcap_q->rx_scatter) {
 			/* Scatter into multi-segment mbufs. */
