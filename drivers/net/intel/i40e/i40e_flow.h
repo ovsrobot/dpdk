@@ -21,5 +21,6 @@ extern const struct ci_flow_engine i40e_flow_engine_fdir;
 extern const struct ci_flow_engine i40e_flow_engine_tunnel_qinq;
 extern const struct ci_flow_engine i40e_flow_engine_tunnel_vxlan;
 extern const struct ci_flow_engine i40e_flow_engine_tunnel_nvgre;
+extern const struct ci_flow_engine i40e_flow_engine_tunnel_mpls;
 
 #endif /* _I40E_FLOW_H_ */

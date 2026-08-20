@@ -666,6 +666,171 @@ static const struct rte_flow_graph i40e_tunnel_nvgre_graph = {
 	},
 };
 
+/**
+ * MPLS tunnel filter graph implementation
+ * Pattern: START -> ETH -> (IPv4 | IPv6) -> (UDP | GRE) -> MPLS -> END
+ */
+enum i40e_tunnel_mpls_node_id {
+	I40E_TUNNEL_MPLS_NODE_START  = RTE_FLOW_NODE_FIRST,
+	I40E_TUNNEL_MPLS_NODE_ETH,
+	I40E_TUNNEL_MPLS_NODE_IPV4,
+	I40E_TUNNEL_MPLS_NODE_IPV6,
+	I40E_TUNNEL_MPLS_NODE_UDP,
+	I40E_TUNNEL_MPLS_NODE_GRE,
+	I40E_TUNNEL_MPLS_NODE_MPLS,
+	I40E_TUNNEL_MPLS_NODE_END,
+	I40E_TUNNEL_MPLS_NODE_MAX,
+};
+
+static int
+i40e_tunnel_mpls_node_udp_process(void *ctx, const struct rte_flow_item *item __rte_unused,
+		struct rte_flow_error *error __rte_unused)
+{
+	struct i40e_tunnel_ctx *tunnel_ctx = ctx;
+	struct i40e_tunnel_filter_conf *tunnel_filter = &tunnel_ctx->filter;
+
+	tunnel_filter->tunnel_type = I40E_TUNNEL_TYPE_MPLSoUDP;
+
+	return 0;
+}
+
+static int
+i40e_tunnel_mpls_node_gre_process(void *ctx, const struct rte_flow_item *item __rte_unused,
+		struct rte_flow_error *error __rte_unused)
+{
+	struct i40e_tunnel_ctx *tunnel_ctx = ctx;
+	struct i40e_tunnel_filter_conf *tunnel_filter = &tunnel_ctx->filter;
+
+	tunnel_filter->tunnel_type = I40E_TUNNEL_TYPE_MPLSoGRE;
+
+	return 0;
+}
+
+static int
+i40e_tunnel_node_mpls_validate(const void *ctx __rte_unused,
+		const struct rte_flow_item *item,
+		struct rte_flow_error *error)
+{
+	const struct rte_flow_item_mpls *mpls_mask = item->mask;
+	const uint8_t label_mask[3] = {0xFF, 0xFF, 0xF0};
+
+	/* MPLS label and TC must be fully masked */
+	if (memcmp(mpls_mask->label_tc_s, label_mask, 3)) {
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Invalid MPLS mask");
+	}
+	return 0;
+}
+
+static int
+i40e_tunnel_node_mpls_process(void *ctx, const struct rte_flow_item *item __rte_unused,
+		struct rte_flow_error *error __rte_unused)
+{
+	const struct rte_flow_item_mpls *mpls_spec = item->spec;
+	struct i40e_tunnel_ctx *tunnel_ctx = ctx;
+	struct i40e_tunnel_filter_conf *tunnel_filter = &tunnel_ctx->filter;
+
+	tunnel_filter->tenant_id = ci_be24_to_cpu(mpls_spec->label_tc_s) >> 4;
+
+	return 0;
+}
+
+static const struct rte_flow_graph i40e_tunnel_mpls_graph = {
+	.nodes = (struct rte_flow_graph_node[]) {
+		[I40E_TUNNEL_MPLS_NODE_START] = {
+			.name = "START",
+		},
+		[I40E_TUNNEL_MPLS_NODE_ETH] = {
+			.name = "ETH",
+			.type = RTE_FLOW_ITEM_TYPE_ETH,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+		},
+		[I40E_TUNNEL_MPLS_NODE_IPV4] = {
+			.name = "IPv4",
+			.type = RTE_FLOW_ITEM_TYPE_IPV4,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+			.process = i40e_tunnel_node_ipv4_process,
+		},
+		[I40E_TUNNEL_MPLS_NODE_IPV6] = {
+			.name = "IPv6",
+			.type = RTE_FLOW_ITEM_TYPE_IPV6,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+			.process = i40e_tunnel_node_ipv6_process,
+		},
+		[I40E_TUNNEL_MPLS_NODE_UDP] = {
+			.name = "UDP",
+			.type = RTE_FLOW_ITEM_TYPE_UDP,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+			.process = i40e_tunnel_mpls_node_udp_process,
+		},
+		[I40E_TUNNEL_MPLS_NODE_GRE] = {
+			.name = "GRE",
+			.type = RTE_FLOW_ITEM_TYPE_GRE,
+			.constraints = RTE_FLOW_NODE_EXPECT_EMPTY,
+			.process = i40e_tunnel_mpls_node_gre_process,
+		},
+		[I40E_TUNNEL_MPLS_NODE_MPLS] = {
+			.name = "MPLS",
+			.type = RTE_FLOW_ITEM_TYPE_MPLS,
+			.constraints = RTE_FLOW_NODE_EXPECT_SPEC_MASK,
+			.validate = i40e_tunnel_node_mpls_validate,
+			.process = i40e_tunnel_node_mpls_process,
+		},
+		[I40E_TUNNEL_MPLS_NODE_END] = {
+			.name = "END",
+			.type = RTE_FLOW_ITEM_TYPE_END,
+		},
+	},
+	.edges = (struct rte_flow_graph_edge[]) {
+		[I40E_TUNNEL_MPLS_NODE_START] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_MPLS_NODE_ETH,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_MPLS_NODE_ETH] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_MPLS_NODE_IPV4,
+				I40E_TUNNEL_MPLS_NODE_IPV6,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_MPLS_NODE_IPV4] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_MPLS_NODE_UDP,
+				I40E_TUNNEL_MPLS_NODE_GRE,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_MPLS_NODE_IPV6] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_MPLS_NODE_UDP,
+				I40E_TUNNEL_MPLS_NODE_GRE,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_MPLS_NODE_UDP] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_MPLS_NODE_MPLS,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_MPLS_NODE_GRE] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_MPLS_NODE_MPLS,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+		[I40E_TUNNEL_MPLS_NODE_MPLS] = {
+			.next = (const size_t[]) {
+				I40E_TUNNEL_MPLS_NODE_END,
+				RTE_FLOW_NODE_EDGE_END
+			}
+		},
+	},
+};
+
 static int
 i40e_tunnel_action_check(const struct ci_flow_actions *actions,
 		const struct ci_flow_actions_check_param *param,
@@ -842,6 +1007,14 @@ const struct ci_flow_engine i40e_flow_engine_tunnel_vxlan = {
 	.ctx_size = sizeof(struct i40e_tunnel_ctx),
 	.flow_size = sizeof(struct i40e_tunnel_flow),
 	.graph = &i40e_tunnel_vxlan_graph,
+};
+
+const struct ci_flow_engine i40e_flow_engine_tunnel_mpls = {
+	.name = "tunnel_mpls",
+	.ops = &i40e_flow_engine_tunnel_ops,
+	.ctx_size = sizeof(struct i40e_tunnel_ctx),
+	.flow_size = sizeof(struct i40e_tunnel_flow),
+	.graph = &i40e_tunnel_mpls_graph,
 };
 
 const struct ci_flow_engine i40e_flow_engine_tunnel_qinq = {
