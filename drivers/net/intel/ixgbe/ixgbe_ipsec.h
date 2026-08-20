@@ -122,7 +122,9 @@ struct ip_spec {
 	} spec;
 };
 int ixgbe_crypto_add_ingress_sa_from_flow(struct rte_security_session *sess,
-		const struct ip_spec *ip_spec);
+		const struct ip_spec *ip_spec, uint32_t *sa_index);
+int ixgbe_crypto_remove_ingress_sa_from_flow(struct rte_security_session *sess,
+		uint32_t sa_index);
 
 
 

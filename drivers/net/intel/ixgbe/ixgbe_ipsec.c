@@ -86,7 +86,7 @@ ixgbe_crypto_clear_ipsec_tables(struct rte_eth_dev *dev)
 }
 
 static int
-ixgbe_crypto_add_sa(struct ixgbe_crypto_session *ic_session)
+ixgbe_crypto_add_sa(struct ixgbe_crypto_session *ic_session, uint32_t *sa_index_out)
 {
 	struct rte_eth_dev_data *dev_data = ic_session->dev_data;
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev_data->dev_private);
@@ -264,6 +264,9 @@ ixgbe_crypto_add_sa(struct ixgbe_crypto_session *ic_session)
 		free(key);
 	}
 
+	if (sa_index_out != NULL)
+		*sa_index_out = sa_index;
+
 	return 0;
 }
 
@@ -366,6 +369,37 @@ ixgbe_crypto_remove_sa(struct rte_eth_dev *dev,
 	return 0;
 }
 
+/* Decryption-only removal by SA index; the IP entry is found via the SA entry. */
+static int
+ixgbe_crypto_remove_rx_sa_by_idx(struct ixgbe_crypto_session *ic_session,
+		uint32_t sa_idx)
+{
+	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(ic_session->dev_data->dev_private);
+	struct ixgbe_ipsec *priv =
+			IXGBE_DEV_PRIVATE_TO_IPSEC(ic_session->dev_data->dev_private);
+	struct ixgbe_crypto_rx_sa_table *rxsa = &priv->rx_sa_tbl[sa_idx];
+	uint32_t ip_index = rxsa->ip_index;
+	struct ixgbe_crypto_rx_ip_table *rxip = &priv->rx_ip_tbl[ip_index];
+	const uint8_t key[16] = {0};
+
+	/* Disable and clear Rx SPI and key table entries*/
+	ixgbe_crypto_write_rx_spi(hw, sa_idx, 0, 0, false);
+	ixgbe_crypto_write_rx_key(hw, sa_idx, key, 0, 0, false);
+
+	/* Clear the SA table entry*/
+	*rxsa = (struct ixgbe_crypto_rx_sa_table){0};
+
+	/* If last used then clear the IP table entry*/
+	rxip->ref_count--;
+	if (rxip->ref_count == 0) {
+		const struct ipaddr ip = {0};
+		ixgbe_crypto_write_rx_ip(hw, ip_index, &ip, false);
+		*rxip = (struct ixgbe_crypto_rx_ip_table){0};
+	}
+
+	return 0;
+}
+
 static int
 ixgbe_crypto_create_session(void *device,
 		struct rte_security_session_conf *conf,
@@ -408,7 +442,7 @@ ixgbe_crypto_create_session(void *device,
 	ic_session->dev_data = eth_dev->data;
 
 	if (ic_session->op == IXGBE_OP_AUTHENTICATED_ENCRYPTION) {
-		if (ixgbe_crypto_add_sa(ic_session)) {
+		if (ixgbe_crypto_add_sa(ic_session, NULL)) {
 			PMD_DRV_LOG(ERR, "Failed to add SA");
 			return -EPERM;
 		}
@@ -665,7 +699,7 @@ ixgbe_crypto_enable_ipsec(struct rte_eth_dev *dev)
 
 int
 ixgbe_crypto_add_ingress_sa_from_flow(struct rte_security_session *sess,
-		const struct ip_spec *spec)
+		const struct ip_spec *spec, uint32_t *sa_index)
 {
 	struct ixgbe_crypto_session *ic_session = SECURITY_GET_SESS_PRIV(sess);
 
@@ -685,8 +719,20 @@ ixgbe_crypto_add_ingress_sa_from_flow(struct rte_security_session *sess,
 			ic_session->src_ip.ipv4 = ipv4->hdr.src_addr;
 			ic_session->dst_ip.ipv4 = ipv4->hdr.dst_addr;
 		}
-		return ixgbe_crypto_add_sa(ic_session);
+		return ixgbe_crypto_add_sa(ic_session, sa_index);
 	}
+
+	return 0;
+}
+
+int
+ixgbe_crypto_remove_ingress_sa_from_flow(struct rte_security_session *sess,
+		uint32_t sa_index)
+{
+	struct ixgbe_crypto_session *ic_session = SECURITY_GET_SESS_PRIV(sess);
+
+	if (ic_session->op == IXGBE_OP_AUTHENTICATED_DECRYPTION)
+		return ixgbe_crypto_remove_rx_sa_by_idx(ic_session, sa_index);
 
 	return 0;
 }
