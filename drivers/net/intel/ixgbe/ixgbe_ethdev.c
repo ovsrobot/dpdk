@@ -1335,9 +1335,6 @@ eth_ixgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	if (ret)
 		goto err_l2_tn_filter_init;
 
-	/* initialize flow filter lists */
-	ixgbe_filterlist_init(eth_dev);
-
 	/* initialize bandwidth configuration info */
 	memset(bw_conf, 0, sizeof(struct ixgbe_bw_conf));
 
@@ -3152,9 +3149,6 @@ ixgbe_dev_close(struct rte_eth_dev *dev)
 
 	/* Remove all ntuple filters of the device */
 	ixgbe_ntuple_filter_uninit(dev);
-
-	/* clear all the filters list */
-	ixgbe_filterlist_flush(dev);
 
 	/* Remove all Traffic Manager configuration */
 	ixgbe_tm_conf_uninit(dev);

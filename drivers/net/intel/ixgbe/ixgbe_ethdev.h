@@ -348,10 +348,9 @@ struct ixgbe_l2_tn_info {
 	uint16_t e_tag_ether_type; /* ether type for e-tag */
 };
 
+/* no driver-specific data needed */
 struct rte_flow {
 	struct ci_flow flow;
-	enum rte_filter_type filter_type;
-	void *rule;
 };
 
 struct ixgbe_macsec_setting {
@@ -459,9 +458,6 @@ struct ixgbe_tm_conf {
 	bool committed;
 };
 
-struct ixgbe_filter_ele_base;
-TAILQ_HEAD(ixgbe_filter_ele_list, ixgbe_filter_ele_base);
-
 /*
  * Structure to store private data for each driver instance (for each port).
  */
@@ -483,7 +479,6 @@ struct ixgbe_adapter {
 	struct ixgbe_bypass_info    bps;
 #endif /* RTE_LIBRTE_IXGBE_BYPASS */
 	struct ixgbe_filter_info    filter;
-	struct ixgbe_filter_ele_list flow_list;
 	struct ixgbe_l2_tn_info     l2_tn;
 	struct ixgbe_bw_conf        bw_conf;
 	struct ixgbe_ipsec          ipsec;
@@ -704,8 +699,6 @@ ixgbe_dev_l2_tunnel_filter_add(struct ixgbe_adapter *adapter,
 int
 ixgbe_dev_l2_tunnel_filter_del(struct ixgbe_adapter *adapter,
 			       struct ixgbe_l2_tunnel_conf *l2_tunnel);
-void ixgbe_filterlist_init(struct rte_eth_dev *dev);
-void ixgbe_filterlist_flush(struct rte_eth_dev *dev);
 /*
  * Flow director function prototypes
  */
