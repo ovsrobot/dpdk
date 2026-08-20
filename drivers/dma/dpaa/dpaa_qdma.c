@@ -11,8 +11,18 @@
 
 static uint32_t s_sg_max_entry_sz = 2000;
 static bool s_hw_err_check;
+static bool s_data_validation;
+static bool s_sg_enable = true;
+#ifdef RTE_DMA_DPAA_ERRATA_ERR050757
+static bool s_pci_read = true;
+#endif
 
-#define DPAA_DMA_ERROR_CHECK "dpaa_dma_err_check"
+#define DPAA_DMA_ERROR_CHECK		"dpaa_dma_err_check"
+#define DPAA_DMA_SG_DISABLE		"dpaa_dma_sg_disable"
+#define DPAA_DMA_DATA_VALID		"dpaa_dma_data_validation"
+#ifdef RTE_DMA_DPAA_ERRATA_ERR050757
+#define DPAA_DMA_PCI_READ_DISABLE	"dpaa_dma_pci_read_disable"
+#endif
 
 static inline void
 qdma_desc_addr_set64(struct fsl_qdma_comp_cmd_desc *ccdf, u64 addr)
@@ -112,7 +122,8 @@ dma_pool_alloc(char *nm, int size, int aligned, dma_addr_t *phy_addr)
 	if (!virt_addr)
 		return NULL;
 
-	*phy_addr = rte_mem_virt2iova(virt_addr);
+	if (phy_addr)
+		*phy_addr = rte_mem_virt2iova(virt_addr);
 
 	return virt_addr;
 }
@@ -392,6 +403,8 @@ fsl_qdma_data_validation(struct fsl_qdma_desc *desc[],
 	char err_msg[512];
 	int offset;
 
+	if (likely(!s_data_validation))
+		return;
 
 	offset = sprintf(err_msg, "Fatal TC%d/queue%d: ",
 		fsl_queue->block_id,
@@ -716,19 +729,21 @@ fsl_qdma_enqueue_desc_single(struct fsl_qdma_queue *fsl_queue,
 	ft = fsl_queue->ft[fsl_queue->ci];
 
 #ifdef RTE_DMA_DPAA_ERRATA_ERR050757
-	sdf = &ft->df.sdf;
-	sdf->srttype = FSL_QDMA_CMD_RWTTYPE;
+	if (s_pci_read) {
+		sdf = &ft->df.sdf;
+		sdf->srttype = FSL_QDMA_CMD_RWTTYPE;
 #ifdef RTE_DMA_DPAA_ERRATA_ERR050265
-	sdf->prefetch = 1;
+		sdf->prefetch = 1;
 #endif
-	if (len > FSL_QDMA_CMD_SS_ERR050757_LEN) {
-		sdf->ssen = 1;
-		sdf->sss = FSL_QDMA_CMD_SS_ERR050757_LEN;
-		sdf->ssd = FSL_QDMA_CMD_SS_ERR050757_LEN;
-	} else {
-		sdf->ssen = 0;
-		sdf->sss = 0;
-		sdf->ssd = 0;
+		if (len > FSL_QDMA_CMD_SS_ERR050757_LEN) {
+			sdf->ssen = 1;
+			sdf->sss = FSL_QDMA_CMD_SS_ERR050757_LEN;
+			sdf->ssd = FSL_QDMA_CMD_SS_ERR050757_LEN;
+		} else {
+			sdf->ssen = 0;
+			sdf->sss = 0;
+			sdf->ssd = 0;
+		}
 	}
 #endif
 	csgf_src = &ft->desc_sbuf;
@@ -837,19 +852,21 @@ eq_sg:
 	csgf_src->length = total_len;
 	csgf_dest->length = total_len;
 #ifdef RTE_DMA_DPAA_ERRATA_ERR050757
-	sdf = &ft->df.sdf;
-	sdf->srttype = FSL_QDMA_CMD_RWTTYPE;
+	if (s_pci_read) {
+		sdf = &ft->df.sdf;
+		sdf->srttype = FSL_QDMA_CMD_RWTTYPE;
 #ifdef RTE_DMA_DPAA_ERRATA_ERR050265
-	sdf->prefetch = 1;
+		sdf->prefetch = 1;
 #endif
-	if (total_len > FSL_QDMA_CMD_SS_ERR050757_LEN) {
-		sdf->ssen = 1;
-		sdf->sss = FSL_QDMA_CMD_SS_ERR050757_LEN;
-		sdf->ssd = FSL_QDMA_CMD_SS_ERR050757_LEN;
-	} else {
-		sdf->ssen = 0;
-		sdf->sss = 0;
-		sdf->ssd = 0;
+		if (total_len > FSL_QDMA_CMD_SS_ERR050757_LEN) {
+			sdf->ssen = 1;
+			sdf->sss = FSL_QDMA_CMD_SS_ERR050757_LEN;
+			sdf->ssd = FSL_QDMA_CMD_SS_ERR050757_LEN;
+		} else {
+			sdf->ssen = 0;
+			sdf->sss = 0;
+			sdf->ssd = 0;
+		}
 	}
 #endif
 	ret = fsl_qdma_enqueue_desc_to_ring(fsl_queue, num);
@@ -888,6 +905,25 @@ fsl_qdma_enqueue_desc(struct fsl_qdma_queue *fsl_queue)
 			fsl_queue->pending_num = 0;
 		}
 		return ret;
+	} else if (!s_sg_enable) {
+		while (fsl_queue->pending_num > 0) {
+			ret = fsl_qdma_enqueue_desc_single(fsl_queue,
+				fsl_queue->pending_desc[start].dst,
+				fsl_queue->pending_desc[start].src,
+				fsl_queue->pending_desc[start].len);
+			if (!ret) {
+				start = (start + 1) &
+					(fsl_queue->pending_max - 1);
+				fsl_queue->pending_start = start;
+				fsl_queue->pending_num--;
+			} else {
+				DPAA_QDMA_ERR("Eq pending desc failed(%d)",
+					ret);
+				return -EIO;
+			}
+		}
+
+		return 0;
 	}
 
 	return fsl_qdma_enqueue_desc_sg(fsl_queue);
@@ -1358,6 +1394,20 @@ dpaa_qdma_init(struct rte_dma_dev *dmadev)
 		s_hw_err_check = true;
 		DPAA_QDMA_INFO("Enable DMA error checks");
 	}
+	if (dpaa_get_devargs(dmadev->device->devargs, DPAA_DMA_SG_DISABLE)) {
+		s_sg_enable = false;
+		DPAA_QDMA_INFO("SG mode disabled via devarg");
+	}
+	if (dpaa_get_devargs(dmadev->device->devargs, DPAA_DMA_DATA_VALID)) {
+		s_data_validation = true;
+		DPAA_QDMA_INFO("Data validation enabled via devarg");
+	}
+#ifdef RTE_DMA_DPAA_ERRATA_ERR050757
+	if (dpaa_get_devargs(dmadev->device->devargs, DPAA_DMA_PCI_READ_DISABLE)) {
+		s_pci_read = false;
+		DPAA_QDMA_INFO("ERR050757 PCI read workaround disabled via devarg");
+	}
+#endif
 
 	fsl_qdma->n_queues = QDMA_QUEUES * QDMA_BLOCKS;
 	fsl_qdma->num_blocks = QDMA_BLOCKS;
@@ -1483,5 +1533,12 @@ static struct rte_dpaa_driver rte_dpaa_qdma_pmd = {
 };
 
 RTE_PMD_REGISTER_DPAA(dpaa_qdma, rte_dpaa_qdma_pmd);
-RTE_PMD_REGISTER_PARAM_STRING(dpaa_qdma, DPAA_DMA_ERROR_CHECK "=<int>");
+RTE_PMD_REGISTER_PARAM_STRING(dpaa_qdma,
+	DPAA_DMA_ERROR_CHECK "=<int> "
+	DPAA_DMA_SG_DISABLE "=<int> "
+	DPAA_DMA_DATA_VALID "=<int> "
+#ifdef RTE_DMA_DPAA_ERRATA_ERR050757
+	DPAA_DMA_PCI_READ_DISABLE "=<int>"
+#endif
+	);
 RTE_LOG_REGISTER_DEFAULT(dpaa_qdma_logtype, INFO);
