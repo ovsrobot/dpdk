@@ -6475,9 +6475,6 @@ ixgbe_syn_filter_set(struct ixgbe_adapter *adapter,
 	uint32_t syn_info;
 	uint32_t synqf;
 
-	if (filter->queue >= IXGBE_MAX_RX_QUEUE_NUM)
-		return -EINVAL;
-
 	syn_info = filter_info->syn_info;
 
 	if (add) {
