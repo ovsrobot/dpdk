@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include <ethdev_driver.h>
-#include <rte_memcpy.h>
 #include <rte_string_fns.h>
 #include <rte_memzone.h>
 #include <rte_malloc.h>
