@@ -244,8 +244,8 @@ zxdh_dev_rx_queue_setup(struct rte_eth_dev *dev,
 		hw->queue_conf->queue_changed = 1;
 	}
 
-	rte_memcpy(&hw->queue_conf->conf[queue_idx].zxdh_rx_conf,
-		rx_conf, sizeof(struct rte_eth_rxconf));
+	memcpy(&hw->queue_conf->conf[queue_idx].zxdh_rx_conf, rx_conf,
+	       sizeof(struct rte_eth_rxconf));
 	hw->queue_conf->conf[queue_idx].rx_nb_desc = valid_nb_desc;
 	hw->queue_conf->conf[queue_idx].queue_mp = mp;
 
@@ -336,8 +336,8 @@ zxdh_dev_tx_queue_setup(struct rte_eth_dev *dev,
 		hw->queue_conf->queue_changed = 1;
 	}
 
-	rte_memcpy(&hw->queue_conf->conf[queue_idx].zxdh_tx_conf,
-		tx_conf, sizeof(struct rte_eth_txconf));
+	memcpy(&hw->queue_conf->conf[queue_idx].zxdh_tx_conf, tx_conf,
+	       sizeof(struct rte_eth_txconf));
 	hw->queue_conf->conf[queue_idx].tx_nb_desc = valid_nb_desc;
 
 	return 0;

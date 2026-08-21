@@ -7,7 +7,6 @@
 
 #include <ethdev_driver.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 
 #include "zxdh_ethdev.h"
 #include "zxdh_logs.h"
@@ -79,7 +78,7 @@ zxdh_fill_common_msg(struct zxdh_hw *hw, struct zxdh_pci_bar_msg *desc,
 	msg_data->pcie_id = hw->pcie_id;
 	msg_data->slen = buff_size;
 	if (buff_size != 0)
-		rte_memcpy(msg_data + 1, buff, buff_size);
+		memcpy(msg_data + 1, buff, buff_size);
 
 	return 0;
 }
@@ -123,7 +122,7 @@ zxdh_common_rsp_check(struct zxdh_msg_recviver_mem *msg_rsp,
 		return -1;
 	}
 	if (len != 0)
-		rte_memcpy(buff, rsp_hdr + 1, len);
+		memcpy(buff, rsp_hdr + 1, len);
 
 	return 0;
 }
@@ -228,7 +227,7 @@ zxdh_get_res_info(struct zxdh_res_para *dev, uint8_t field, uint8_t *res, uint16
 		return ret;
 	}
 	*len = tbl_reps->len;
-	rte_memcpy(res, (recv_buf + ZXDH_REPS_HEADER_OFFSET +
+	memcpy(res, (recv_buf + ZXDH_REPS_HEADER_OFFSET +
 		sizeof(struct zxdh_tbl_msg_reps_header)), *len);
 	return ret;
 }
