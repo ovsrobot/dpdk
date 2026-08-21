@@ -1399,8 +1399,8 @@ test_mode4_ext_ctrl(void)
 
 	for (i = 0; i < MEMBER_COUNT; i++) {
 		lacp_tx_buf[i] = rte_pktmbuf_alloc(test_params.mbuf_pool);
-		rte_memcpy(rte_pktmbuf_mtod(lacp_tx_buf[i], char *),
-			   &lacpdu, sizeof(lacpdu));
+		memcpy(rte_pktmbuf_mtod(lacp_tx_buf[i], char *), &lacpdu,
+		       sizeof(lacpdu));
 		rte_pktmbuf_pkt_len(lacp_tx_buf[i]) = sizeof(lacpdu);
 	}
 
@@ -1453,8 +1453,8 @@ test_mode4_ext_lacp(void)
 
 	for (i = 0; i < MEMBER_COUNT; i++) {
 		lacp_tx_buf[i] = rte_pktmbuf_alloc(test_params.mbuf_pool);
-		rte_memcpy(rte_pktmbuf_mtod(lacp_tx_buf[i], char *),
-			   &lacpdu, sizeof(lacpdu));
+		memcpy(rte_pktmbuf_mtod(lacp_tx_buf[i], char *), &lacpdu,
+		       sizeof(lacpdu));
 		rte_pktmbuf_pkt_len(lacp_tx_buf[i]) = sizeof(lacpdu);
 	}
 

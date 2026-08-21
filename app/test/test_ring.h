@@ -2,8 +2,9 @@
  * Copyright(c) 2019 Arm Limited
  */
 
+#include <string.h>
+
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_ptr_compress.h>
 #include <rte_ring.h>
 #include <rte_ring_elem.h>
@@ -166,11 +167,10 @@ test_ring_enqueue(struct rte_ring *r, void **obj, int esize, unsigned int n,
 					r, esize, n, &zcd, NULL);
 			if (unlikely(ret == 0))
 				return 0;
-			rte_memcpy(zcd.ptr1, (char *)obj, zcd.n1 * esize);
+			memcpy(zcd.ptr1, (char *)obj, zcd.n1 * esize);
 			if (unlikely(zcd.ptr2 != NULL))
-				rte_memcpy(zcd.ptr2,
-						(char *)obj + zcd.n1 * esize,
-						(ret - zcd.n1) * esize);
+				memcpy(zcd.ptr2, (char *)obj + zcd.n1 * esize,
+				       (ret - zcd.n1) * esize);
 			rte_ring_enqueue_zc_finish(r, ret);
 			return ret;
 		case (TEST_RING_ELEM_BURST_ZC_COMPRESS_PTR_16):
@@ -271,11 +271,10 @@ test_ring_dequeue(struct rte_ring *r, void **obj, int esize, unsigned int n,
 					r, esize, n, &zcd, NULL);
 			if (unlikely(ret == 0))
 				return 0;
-			rte_memcpy((char *)obj, zcd.ptr1, zcd.n1 * esize);
+			memcpy(obj, zcd.ptr1, zcd.n1 * esize);
 			if (unlikely(zcd.ptr2 != NULL))
-				rte_memcpy((char *)obj + zcd.n1 * esize,
-						zcd.ptr2,
-						(ret - zcd.n1) * esize);
+				memcpy((char *)obj + zcd.n1 * esize,
+				       zcd.ptr2, (ret - zcd.n1) * esize);
 			rte_ring_dequeue_zc_finish(r, ret);
 			return ret;
 		case (TEST_RING_ELEM_BURST_ZC_COMPRESS_PTR_16):

@@ -7,7 +7,6 @@
 #include <rte_common.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_dev.h>
 
 #ifdef RTE_EXEC_ENV_WINDOWS

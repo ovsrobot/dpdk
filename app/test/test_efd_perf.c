@@ -22,7 +22,6 @@ test_efd_perf(void)
 #include <rte_malloc.h>
 #include <rte_random.h>
 #include <rte_efd.h>
-#include <rte_memcpy.h>
 #include <rte_thash.h>
 
 #define NUM_KEYSIZES 10

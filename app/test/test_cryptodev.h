@@ -5,6 +5,7 @@
 #define TEST_CRYPTODEV_H_
 
 #include <rte_cryptodev.h>
+#include <rte_memcpy.h>
 #include <rte_security.h>
 
 #define MAX_NUM_OPS_INFLIGHT            (4096)
