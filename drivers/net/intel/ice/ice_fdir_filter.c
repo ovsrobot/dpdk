@@ -2873,8 +2873,8 @@ ice_fdir_parse_action(struct ice_adapter *ad,
 			const struct rte_flow_action_count *act_count = act->conf;
 
 			filter->input.cnt_ena = ICE_FXD_FLTR_QW0_STAT_ENA_PKTS;
-			rte_memcpy(&filter->act_count, act_count,
-						sizeof(filter->act_count));
+			memcpy(&filter->act_count, act_count,
+			       sizeof(filter->act_count));
 			break;
 		}
 		default:
