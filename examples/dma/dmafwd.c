@@ -12,6 +12,7 @@
 #include <rte_malloc.h>
 #include <rte_ethdev.h>
 #include <rte_dmadev.h>
+#include <rte_memcpy.h>
 
 /* size of ring used for software copying between rx and tx. */
 #define RTE_LOGTYPE_DMA RTE_LOGTYPE_USER1

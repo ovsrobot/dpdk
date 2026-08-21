@@ -15,6 +15,7 @@
 #include <rte_common.h>
 #include <rte_crypto.h>
 #include <rte_cryptodev.h>
+#include <rte_memcpy.h>
 #include <rte_random.h>
 
 #include "ipsec.h"
