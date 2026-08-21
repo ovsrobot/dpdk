@@ -311,8 +311,8 @@ int32_t __rte_cold sxe2_rx_queue_setup(struct rte_eth_dev *dev,
 
 	if (rx_nseg > 1) {
 		for (i = 0; i < rx_nseg; i++) {
-			rte_memcpy(&rxq->rx_seg[i], &rx_conf->rx_seg[i].split,
-					sizeof(struct rte_eth_rxseg_split));
+			memcpy(&rxq->rx_seg[i], &rx_conf->rx_seg[i].split,
+			       sizeof(struct rte_eth_rxseg_split));
 		}
 		rxq->mb_pool = rxq->rx_seg[0].mp;
 	} else {

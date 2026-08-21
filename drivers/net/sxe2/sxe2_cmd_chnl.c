@@ -961,7 +961,7 @@ int32_t sxe2_drv_rss_key_set(struct sxe2_adapter *adapter, uint8_t *key, uint16_
 
 	req->vsi_id = rte_cpu_to_le_16(adapter->vsi_ctxt.dpdk_vsi_id);
 	req->key_size = rte_cpu_to_le_16(key_size);
-	rte_memcpy(req->key, key, key_size);
+	memcpy(req->key, key, key_size);
 
 	sxe2_drv_cmd_params_fill(adapter, &param, SXE2_DRV_CMD_RSS_KEY_SET,
 				 req, buf_size,
@@ -998,7 +998,7 @@ int32_t sxe2_drv_rss_lut_set(struct sxe2_adapter *adapter, uint8_t *lut, uint16_
 
 	req->vsi_id = rte_cpu_to_le_16(adapter->vsi_ctxt.dpdk_vsi_id);
 	req->lut_size = rte_cpu_to_le_16(lut_size);
-	rte_memcpy(req->lut, lut, lut_size);
+	memcpy(req->lut, lut, lut_size);
 
 	sxe2_drv_cmd_params_fill(adapter, &param, SXE2_DRV_CMD_RSS_LUT_SET,
 				 req, buf_size,
@@ -1890,7 +1890,7 @@ int32_t sxe2_drv_sfp_eeprom_read(struct sxe2_adapter *adapter, struct sxe2_sfp_r
 	}
 
 	ret = 0;
-	rte_memcpy(sfp_info->data, resp->data, sfp_info->len);
+	memcpy(sfp_info->data, resp->data, sfp_info->len);
 
 l_end:
 	if (resp) {

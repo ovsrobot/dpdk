@@ -421,8 +421,8 @@ static int32_t sxe2_tm_shaper_profile_add(struct rte_eth_dev *dev, uint32_t shap
 		goto l_end;
 	}
 
-	rte_memcpy(&shaper_profile->profile, profile,
-					sizeof(struct rte_tm_shaper_params));
+	memcpy(&shaper_profile->profile, profile,
+	       sizeof(struct rte_tm_shaper_params));
 	shaper_profile->id = shaper_profile_id;
 
 	TAILQ_INSERT_TAIL(&adapter->tm_ctxt.profile_list, shaper_profile, node);
