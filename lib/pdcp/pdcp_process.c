@@ -2,13 +2,20 @@
  * Copyright(C) 2023 Marvell.
  */
 
+#include <errno.h>
+#include <stdbool.h>
+#include <string.h>
+
+#include <rte_common.h>
 #include <rte_crypto.h>
 #include <rte_crypto_sym.h>
 #include <rte_cryptodev.h>
-#include <rte_memcpy.h>
+#include <rte_mempool.h>
+#include <rte_mbuf.h>
 #include <rte_mbuf_dyn.h>
 #include <rte_pdcp.h>
 #include <rte_pdcp_hdr.h>
+#include <rte_security.h>
 
 #include "pdcp_cnt.h"
 #include "pdcp_crypto.h"
@@ -60,7 +67,7 @@ pdcp_iv_gen_null_aes_cmac(struct rte_crypto_op *cop, const struct entity_priv *e
 
 	m = en_priv->auth_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
 
-	rte_memcpy(m_ptr, &m, 8);
+	memcpy(m_ptr, &m, 8);
 }
 
 static void
@@ -72,10 +79,10 @@ pdcp_iv_gen_null_zs(struct rte_crypto_op *cop, const struct entity_priv *en_priv
 	iv = rte_crypto_op_ctod_offset(cop, uint8_t *, PDCP_IV_OFFSET);
 
 	iv_u64[0] = en_priv->auth_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
-	rte_memcpy(iv, &iv_u64[0], 8);
+	memcpy(iv, &iv_u64[0], 8);
 
 	iv_u64[1] = iv_u64[0] ^ en_priv->auth_iv_part.u64[1];
-	rte_memcpy(iv + 8, &iv_u64[1], 8);
+	memcpy(iv + 8, &iv_u64[1], 8);
 }
 
 static void
@@ -89,7 +96,7 @@ pdcp_iv_gen_aes_ctr_null(struct rte_crypto_op *cop, const struct entity_priv *en
 
 	iv_u64[0] = en_priv->cipher_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
 	iv_u64[1] = 0;
-	rte_memcpy(iv, iv_u64, 16);
+	memcpy(iv, iv_u64, 16);
 }
 
 static void
@@ -101,8 +108,8 @@ pdcp_iv_gen_zs_null(struct rte_crypto_op *cop, const struct entity_priv *en_priv
 	iv = rte_crypto_op_ctod_offset(cop, uint8_t *, PDCP_IV_OFFSET);
 
 	iv_u64 = en_priv->cipher_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
-	rte_memcpy(iv, &iv_u64, 8);
-	rte_memcpy(iv + 8, &iv_u64, 8);
+	memcpy(iv, &iv_u64, 8);
+	memcpy(iv + 8, &iv_u64, 8);
 }
 
 static void
@@ -115,17 +122,17 @@ pdcp_iv_gen_zs_zs(struct rte_crypto_op *cop, const struct entity_priv *en_priv, 
 
 	/* Generating cipher IV */
 	iv_u64[0] = en_priv->cipher_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
-	rte_memcpy(iv, &iv_u64[0], 8);
-	rte_memcpy(iv + 8, &iv_u64[0], 8);
+	memcpy(iv, &iv_u64[0], 8);
+	memcpy(iv + 8, &iv_u64[0], 8);
 
 	iv += PDCP_IV_LEN;
 
 	/* Generating auth IV */
 	iv_u64[0] = en_priv->auth_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
-	rte_memcpy(iv, &iv_u64[0], 8);
+	memcpy(iv, &iv_u64[0], 8);
 
 	iv_u64[1] = iv_u64[0] ^ en_priv->auth_iv_part.u64[1];
-	rte_memcpy(iv + 8, &iv_u64[1], 8);
+	memcpy(iv + 8, &iv_u64[1], 8);
 }
 
 static void
@@ -140,12 +147,12 @@ pdcp_iv_gen_zs_aes_cmac(struct rte_crypto_op *cop, const struct entity_priv *en_
 
 	iv = rte_crypto_op_ctod_offset(cop, uint8_t *, PDCP_IV_OFFSET);
 	iv_u64[0] = en_priv->cipher_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
-	rte_memcpy(iv, &iv_u64[0], 8);
-	rte_memcpy(iv + 8, &iv_u64[0], 8);
+	memcpy(iv, &iv_u64[0], 8);
+	memcpy(iv + 8, &iv_u64[0], 8);
 
 	m_ptr = (uint8_t *)rte_pktmbuf_prepend(mb, 8);
 	m = en_priv->auth_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
-	rte_memcpy(m_ptr, &m, 8);
+	memcpy(m_ptr, &m, 8);
 }
 
 static void
@@ -162,11 +169,11 @@ pdcp_iv_gen_aes_ctr_aes_cmac(struct rte_crypto_op *cop, const struct entity_priv
 
 	iv_u64[0] = en_priv->cipher_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
 	iv_u64[1] = 0;
-	rte_memcpy(iv, iv_u64, PDCP_IV_LEN);
+	memcpy(iv, iv_u64, PDCP_IV_LEN);
 
 	m_ptr = (uint8_t *)rte_pktmbuf_prepend(mb, 8);
 	m = en_priv->auth_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
-	rte_memcpy(m_ptr, &m, 8);
+	memcpy(m_ptr, &m, 8);
 }
 
 static void
@@ -179,15 +186,15 @@ pdcp_iv_gen_aes_ctr_zs(struct rte_crypto_op *cop, const struct entity_priv *en_p
 
 	iv_u64[0] = en_priv->cipher_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
 	iv_u64[1] = 0;
-	rte_memcpy(iv, iv_u64, PDCP_IV_LEN);
+	memcpy(iv, iv_u64, PDCP_IV_LEN);
 
 	iv += PDCP_IV_LEN;
 
 	iv_u64[0] = en_priv->auth_iv_part.u64[0] | ((uint64_t)(rte_cpu_to_be_32(count)));
-	rte_memcpy(iv, &iv_u64[0], 8);
+	memcpy(iv, &iv_u64[0], 8);
 
 	iv_u64[1] = iv_u64[0] ^ en_priv->auth_iv_part.u64[1];
-	rte_memcpy(iv + 8, &iv_u64[1], 8);
+	memcpy(iv + 8, &iv_u64[1], 8);
 }
 
 static int
@@ -614,7 +621,7 @@ pdcp_post_process_ul(const struct rte_pdcp_entity *entity,
 	}
 
 	if (unlikely(nb_err != 0))
-		rte_memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
+		memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
 
 	*nb_err_ret = nb_err;
 	return nb_success;
@@ -968,7 +975,7 @@ error:
 	}
 
 	if (unlikely(nb_err != 0))
-		rte_memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
+		memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
 
 	*nb_err_ret = nb_err;
 	return nb_success;
@@ -1024,7 +1031,7 @@ error:
 	}
 
 	if (unlikely(nb_err != 0))
-		rte_memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
+		memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
 
 	*nb_err_ret = nb_err;
 	return nb_success;
