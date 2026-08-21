@@ -151,12 +151,12 @@ rte_pmd_dpaa2_mux_flow_create(uint32_t dpdmux_id,
 
 			spec = pattern[loop].spec;
 			mask = pattern[loop].mask;
-			rte_memcpy(&key_va[key_size],
-				&spec->hdr.next_proto_id, sizeof(uint8_t));
+			memcpy(&key_va[key_size], &spec->hdr.next_proto_id,
+			       sizeof(uint8_t));
 			if (mask) {
-				rte_memcpy(&mask_va[key_size],
-					&mask->hdr.next_proto_id,
-					sizeof(uint8_t));
+				memcpy(&mask_va[key_size],
+				       &mask->hdr.next_proto_id,
+				       sizeof(uint8_t));
 			} else {
 				mask_va[key_size] = 0xff;
 			}
@@ -179,11 +179,11 @@ rte_pmd_dpaa2_mux_flow_create(uint32_t dpdmux_id,
 
 			spec = pattern[loop].spec;
 			mask = pattern[loop].mask;
-			rte_memcpy(&key_va[key_size],
-				&spec->tci, sizeof(uint16_t));
+			memcpy(&key_va[key_size], &spec->tci,
+			       sizeof(uint16_t));
 			if (mask) {
-				rte_memcpy(&mask_va[key_size],
-					&mask->tci, sizeof(uint16_t));
+				memcpy(&mask_va[key_size], &mask->tci,
+				       sizeof(uint16_t));
 			} else {
 				memset(&mask_va[key_size], 0xff,
 					sizeof(rte_be16_t));
@@ -206,12 +206,12 @@ rte_pmd_dpaa2_mux_flow_create(uint32_t dpdmux_id,
 
 			spec = pattern[loop].spec;
 			mask = pattern[loop].mask;
-			rte_memcpy(&key_va[key_size],
-				&spec->hdr.dst_port, sizeof(rte_be16_t));
+			memcpy(&key_va[key_size], &spec->hdr.dst_port,
+			       sizeof(rte_be16_t));
 			if (mask) {
-				rte_memcpy(&mask_va[key_size],
-					&mask->hdr.dst_port,
-					sizeof(rte_be16_t));
+				memcpy(&mask_va[key_size],
+				       &mask->hdr.dst_port,
+				       sizeof(rte_be16_t));
 			} else {
 				memset(&mask_va[key_size], 0xff,
 					sizeof(rte_be16_t));
@@ -234,11 +234,11 @@ rte_pmd_dpaa2_mux_flow_create(uint32_t dpdmux_id,
 
 			spec = pattern[loop].spec;
 			mask = pattern[loop].mask;
-			rte_memcpy(&key_va[key_size],
-				&spec->type, sizeof(rte_be16_t));
+			memcpy(&key_va[key_size], &spec->type,
+			       sizeof(rte_be16_t));
 			if (mask) {
-				rte_memcpy(&mask_va[key_size],
-					&mask->type, sizeof(rte_be16_t));
+				memcpy(&mask_va[key_size], &mask->type,
+				       sizeof(rte_be16_t));
 			} else {
 				memset(&mask_va[key_size], 0xff,
 					sizeof(rte_be16_t));
