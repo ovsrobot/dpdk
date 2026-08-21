@@ -364,8 +364,8 @@ rxq_burst_v(struct mlx5_rxq_data *rxq, struct rte_mbuf **pkts,
 			ret = check_cqe_iteration(next,	rxq->cqe_n, rxq->cq_ci);
 			if (MLX5_CQE_FORMAT(next->op_own) == MLX5_COMPRESSED ||
 			    ret != MLX5_CQE_STATUS_SW_OWN)
-				rte_memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
-					   sizeof(struct rte_mbuf));
+				memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
+				       sizeof(struct rte_mbuf));
 		}
 	}
 decompress:
@@ -528,8 +528,8 @@ rxq_burst_mprq_v(struct mlx5_rxq_data *rxq, struct rte_mbuf **pkts,
 			ret = check_cqe_iteration(next,	rxq->cqe_n, rxq->cq_ci);
 			if (MLX5_CQE_FORMAT(next->op_own) == MLX5_COMPRESSED ||
 			    ret != MLX5_CQE_STATUS_SW_OWN)
-				rte_memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
-					   sizeof(struct rte_mbuf));
+				memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
+				       sizeof(struct rte_mbuf));
 		}
 	}
 decompress:
