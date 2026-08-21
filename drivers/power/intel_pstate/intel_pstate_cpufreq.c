@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <inttypes.h>
 
-#include <rte_memcpy.h>
 #include <rte_stdatomic.h>
 
 #include "rte_power_pmd_mgmt.h"
@@ -679,7 +678,7 @@ power_pstate_cpufreq_freqs(unsigned int lcore_id, uint32_t *freqs, uint32_t num)
 		POWER_LOG(ERR, "Buffer size is not enough");
 		return 0;
 	}
-	rte_memcpy(freqs, pi->freqs, pi->nb_freqs * sizeof(uint32_t));
+	memcpy(freqs, pi->freqs, pi->nb_freqs * sizeof(uint32_t));
 
 	return pi->nb_freqs;
 }

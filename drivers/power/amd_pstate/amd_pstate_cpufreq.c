@@ -5,8 +5,8 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
-#include <rte_memcpy.h>
 #include <rte_stdatomic.h>
 
 #include "amd_pstate_cpufreq.h"
@@ -483,7 +483,7 @@ power_amd_pstate_cpufreq_freqs(unsigned int lcore_id, uint32_t *freqs, uint32_t 
 		POWER_LOG(ERR, "Buffer size is not enough");
 		return 0;
 	}
-	rte_memcpy(freqs, pi->freqs, pi->nb_freqs * sizeof(uint32_t));
+	memcpy(freqs, pi->freqs, pi->nb_freqs * sizeof(uint32_t));
 
 	return pi->nb_freqs;
 }

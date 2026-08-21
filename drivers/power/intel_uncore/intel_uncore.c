@@ -5,8 +5,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <fnmatch.h>
-
-#include <rte_memcpy.h>
+#include <string.h>
 
 #include "intel_uncore.h"
 #include "power_common.h"
@@ -394,7 +393,7 @@ power_intel_uncore_freqs(unsigned int pkg, unsigned int die, uint32_t *freqs, ui
 		POWER_LOG(ERR, "Buffer size is not enough");
 		return 0;
 	}
-	rte_memcpy(freqs, ui->freqs, ui->nb_freqs * sizeof(uint32_t));
+	memcpy(freqs, ui->freqs, ui->nb_freqs * sizeof(uint32_t));
 
 	return ui->nb_freqs;
 }
