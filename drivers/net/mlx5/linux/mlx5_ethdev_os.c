@@ -33,6 +33,7 @@
 #include <rte_eal_paging.h>
 #include <rte_interrupts.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_string_fns.h>
 #include <rte_rwlock.h>
 #include <rte_cycles.h>

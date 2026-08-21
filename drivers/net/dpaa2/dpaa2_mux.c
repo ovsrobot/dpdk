@@ -15,6 +15,7 @@
 #include <rte_log.h>
 #include <rte_malloc.h>
 #include <rte_flow_driver.h>
+#include <rte_memcpy.h>
 #include <rte_tailq.h>
 
 #include <bus_fslmc_driver.h>

@@ -19,6 +19,7 @@
 #include <rte_flow_driver.h>
 #include <rte_malloc.h>
 #include <rte_ip.h>
+#include <rte_memcpy.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_devx_cmds.h>

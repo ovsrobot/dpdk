@@ -7,6 +7,7 @@
 
 #include <rte_eal.h>
 #include <rte_dev.h>
+#include <rte_memcpy.h>
 #include <rte_vfio.h>
 #include <rte_ethdev.h>
 #include <rte_bus_pci.h>

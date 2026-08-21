@@ -13,6 +13,7 @@
 #include <ethdev_driver.h>
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 
 struct ndp_tx_queue {
 	struct nfb_device *nfb;     /* nfb dev structure */

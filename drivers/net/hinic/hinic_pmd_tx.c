@@ -3,6 +3,7 @@
  */
 
 #include <rte_mbuf.h>
+#include <rte_memcpy.h>
 #include <rte_tcp.h>
 #include <rte_sctp.h>
 #include <rte_udp.h>

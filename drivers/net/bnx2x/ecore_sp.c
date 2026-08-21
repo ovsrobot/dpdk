@@ -13,6 +13,7 @@
 
 #include "bnx2x.h"
 #include "ecore_init.h"
+#include <rte_memcpy.h>
 
 /**** Exe Queue interfaces ****/
 

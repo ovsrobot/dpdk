@@ -4,6 +4,7 @@
 
 #include <rte_cryptodev.h>
 #include <rte_eventdev.h>
+#include <rte_memcpy.h>
 #include <rte_pmd_cnxk.h>
 #include <rte_security.h>
 #include <rte_security_driver.h>

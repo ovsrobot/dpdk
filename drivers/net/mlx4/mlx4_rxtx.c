@@ -25,6 +25,7 @@
 #include <rte_common.h>
 #include <rte_io.h>
 #include <rte_mbuf.h>
+#include <rte_memcpy.h>
 #include <rte_mempool.h>
 #include <rte_prefetch.h>
 

@@ -10,6 +10,7 @@
 #include "../nfp_net_meta.h"
 #include "nfp_flower_ctrl.h"
 #include "nfp_flower_representor.h"
+#include <rte_memcpy.h>
 
 static char*
 nfp_flower_cmsg_get_data(struct rte_mbuf *m)

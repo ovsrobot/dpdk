@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "ionic_if.h"
+#include <rte_memcpy.h>
 
 struct ionic_rx_qcq;
 struct ionic_tx_qcq;

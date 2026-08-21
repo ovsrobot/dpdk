@@ -11,6 +11,7 @@
 #include <rte_malloc.h>
 #include <rte_cycles.h>
 #include <rte_eal_paging.h>
+#include <rte_memcpy.h>
 
 #include <mlx5_malloc.h>
 #include <mlx5_common_devx.h>

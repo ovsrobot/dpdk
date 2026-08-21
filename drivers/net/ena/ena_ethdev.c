@@ -4,6 +4,7 @@
  */
 
 #include <rte_alarm.h>
+#include <rte_memcpy.h>
 #include <rte_string_fns.h>
 #include <rte_errno.h>
 #include <rte_version.h>

@@ -19,6 +19,7 @@
 #include <rte_interrupts.h>
 #include <rte_log.h>
 #include <rte_debug.h>
+#include <rte_memcpy.h>
 #include <rte_pci.h>
 #include <bus_pci_driver.h>
 #include <rte_branch_prediction.h>

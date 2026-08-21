@@ -12,6 +12,7 @@
 #include <dev_driver.h>
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
+#include <rte_memcpy.h>
 #include <rte_pci.h>
 #include <bus_pci_driver.h>
 #include <rte_errno.h>

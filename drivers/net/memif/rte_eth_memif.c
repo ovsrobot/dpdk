@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <sys/eventfd.h>
 
+#include <rte_memcpy.h>
 #include <rte_version.h>
 #include <rte_mbuf.h>
 #include <rte_ether.h>

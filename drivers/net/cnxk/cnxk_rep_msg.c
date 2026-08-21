@@ -4,6 +4,7 @@
 
 #include <cnxk_rep.h>
 #include <cnxk_rep_msg.h>
+#include <rte_memcpy.h>
 
 #define CTRL_MSG_RCV_TIMEOUT_MS 2000
 #define CTRL_MSG_READY_WAIT_US	2000

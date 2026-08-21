@@ -5,6 +5,7 @@
 #include <eal_export.h>
 #include <rte_flow.h>
 #include <rte_flow_driver.h>
+#include <rte_memcpy.h>
 #include <rte_stdatomic.h>
 
 #include <mlx5_malloc.h>

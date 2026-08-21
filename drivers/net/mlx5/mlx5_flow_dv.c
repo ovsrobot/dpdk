@@ -19,6 +19,7 @@
 #include <bus_pci_driver.h>
 #include <rte_ip.h>
 #include <rte_gre.h>
+#include <rte_memcpy.h>
 #include <rte_vxlan.h>
 #include <rte_gtp.h>
 #include <rte_eal_paging.h>

@@ -5,6 +5,7 @@
 #define __CN10K_RX_H__
 
 #include <rte_ethdev.h>
+#include <rte_memcpy.h>
 #include <rte_security_driver.h>
 #include <rte_vect.h>
 #include "cn10k_rxtx.h"

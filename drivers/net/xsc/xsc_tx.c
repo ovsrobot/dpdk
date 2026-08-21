@@ -3,6 +3,7 @@
  */
 
 #include <rte_io.h>
+#include <rte_memcpy.h>
 
 #include "xsc_log.h"
 #include "xsc_defs.h"

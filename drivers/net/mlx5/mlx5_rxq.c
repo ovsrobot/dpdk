@@ -19,6 +19,7 @@
 #include <rte_debug.h>
 #include <rte_io.h>
 #include <rte_eal_paging.h>
+#include <rte_memcpy.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_malloc.h>

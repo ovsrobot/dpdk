@@ -22,6 +22,7 @@
 #include <ethdev_vdev.h>
 #include <rte_kvargs.h>
 #include <bus_vdev_driver.h>
+#include <rte_memcpy.h>
 #include <rte_string_fns.h>
 #include <rte_branch_prediction.h>
 #include <rte_common.h>

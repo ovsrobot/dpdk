@@ -2,6 +2,7 @@
  * Copyright (c) 2021 NVIDIA Corporation & Affiliates
  */
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <mlx5_devx_cmds.h>
 #include <mlx5_malloc.h>
 #include "mlx5.h"

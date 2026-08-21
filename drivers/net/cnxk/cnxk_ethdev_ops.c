@@ -3,6 +3,7 @@
  */
 
 #include <cnxk_ethdev.h>
+#include <rte_memcpy.h>
 
 int
 cnxk_nix_info_get(struct rte_eth_dev *eth_dev, struct rte_eth_dev_info *devinfo)

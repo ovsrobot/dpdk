@@ -16,6 +16,7 @@
 
 #include <rte_bitops.h>
 #include <rte_byteorder.h>
+#include <rte_memcpy.h>
 
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 #ifndef __LITTLE_ENDIAN

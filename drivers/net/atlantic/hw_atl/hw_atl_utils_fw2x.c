@@ -7,6 +7,7 @@
  */
 
 #include <rte_ether.h>
+#include <rte_memcpy.h>
 #include <pthread.h>
 #include "../atl_hw_regs.h"
 

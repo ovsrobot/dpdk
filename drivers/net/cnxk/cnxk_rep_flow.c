@@ -8,6 +8,7 @@
 #include <cnxk_flow.h>
 #include <cnxk_rep.h>
 #include <cnxk_rep_msg.h>
+#include <rte_memcpy.h>
 
 #define DEFAULT_DUMP_FILE_NAME "/tmp/fdump"
 #define MAX_BUFFER_SIZE	       1500

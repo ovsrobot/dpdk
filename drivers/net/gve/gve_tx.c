@@ -4,6 +4,7 @@
 
 #include "gve_ethdev.h"
 #include "base/gve_adminq.h"
+#include <rte_memcpy.h>
 
 static inline void
 gve_free_bulk_mbuf(struct rte_mbuf **txep, int num)

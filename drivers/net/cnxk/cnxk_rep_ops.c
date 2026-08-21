@@ -4,6 +4,7 @@
 
 #include <cnxk_rep.h>
 #include <cnxk_rep_msg.h>
+#include <rte_memcpy.h>
 
 #define MEMPOOL_CACHE_SIZE 256
 #define TX_DESC_PER_QUEUE  512

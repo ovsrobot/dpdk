@@ -6,6 +6,7 @@
 
 #include "cn20k_rxtx.h"
 #include <rte_ethdev.h>
+#include <rte_memcpy.h>
 #include <rte_security_driver.h>
 #include <rte_vect.h>
 

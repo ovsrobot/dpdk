@@ -7,6 +7,7 @@
 #include "ena_logs.h"
 
 #include <ena_admin_defs.h>
+#include <rte_memcpy.h>
 
 #define TEST_BIT(val, bit_shift) ((val) & (1UL << (bit_shift)))
 

@@ -15,6 +15,7 @@
 #define __BNX2X_H__
 
 #include <rte_byteorder.h>
+#include <rte_memcpy.h>
 #include <rte_spinlock.h>
 #include <bus_pci_driver.h>
 #include <rte_io.h>

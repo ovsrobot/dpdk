@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdalign.h>
 
+#include <rte_memcpy.h>
 #include <rte_net.h>
 
 #include "zxdh_logs.h"

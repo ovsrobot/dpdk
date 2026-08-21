@@ -5,6 +5,7 @@
 
 #include <rte_malloc.h>
 #include <rte_jhash.h>
+#include <rte_memcpy.h>
 
 #include "sfc_tbl_meta_cache.h"
 #include "sfc_debug.h"

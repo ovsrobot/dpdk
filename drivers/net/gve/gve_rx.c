@@ -4,6 +4,7 @@
 
 #include "gve_ethdev.h"
 #include "base/gve_adminq.h"
+#include <rte_memcpy.h>
 
 #define GVE_PKT_CONT_BIT_IS_SET(x) (GVE_RXF_PKT_CONT & (x))
 

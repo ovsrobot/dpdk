@@ -3,6 +3,7 @@
  */
 
 #include <eal_export.h>
+#include <rte_memcpy.h>
 #include <rte_vect.h>
 #include "idpf_common_device.h"
 #include "idpf_common_rxtx.h"

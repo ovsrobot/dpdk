@@ -9,6 +9,7 @@
 #include <rte_hash.h>
 #include <rte_jhash.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 
 #include "nfp_logs.h"
 #include "nfp_net_cmsg.h"

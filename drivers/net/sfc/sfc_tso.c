@@ -8,6 +8,7 @@
  */
 
 #include <rte_ip.h>
+#include <rte_memcpy.h>
 #include <rte_tcp.h>
 
 #include "sfc.h"
