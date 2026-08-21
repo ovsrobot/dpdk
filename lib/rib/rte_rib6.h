@@ -14,7 +14,6 @@
  * Level compressed tree implementation for IPv6 Longest Prefix Match
  */
 
-#include <rte_memcpy.h>
 #include <rte_ip6.h>
 
 #ifdef __cplusplus
