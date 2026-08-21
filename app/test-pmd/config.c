@@ -24,7 +24,6 @@
 #include <rte_debug.h>
 #include <rte_log.h>
 #include <rte_memory.h>
-#include <rte_memcpy.h>
 #include <rte_memzone.h>
 #include <rte_launch.h>
 #include <rte_bus.h>
@@ -2263,9 +2262,9 @@ port_flow_tunnel_offload_cmd_prep(portid_t port_id,
 					pft->num_pmd_actions, &error);
 			return NULL;
 		}
-		rte_memcpy(pft->actions, pft->pmd_actions,
+		memcpy(pft->actions, pft->pmd_actions,
 			   pft->num_pmd_actions * sizeof(actions[0]));
-		rte_memcpy(pft->actions + pft->num_pmd_actions, actions,
+		memcpy(pft->actions + pft->num_pmd_actions, actions,
 			   num_actions * sizeof(actions[0]));
 	}
 	if (tunnel_ops->items) {
@@ -2291,9 +2290,9 @@ port_flow_tunnel_offload_cmd_prep(portid_t port_id,
 					pft->num_pmd_items, &error);
 			return NULL;
 		}
-		rte_memcpy(pft->items, pft->pmd_items,
+		memcpy(pft->items, pft->pmd_items,
 			   pft->num_pmd_items * sizeof(pattern[0]));
-		rte_memcpy(pft->items + pft->num_pmd_items, pattern,
+		memcpy(pft->items + pft->num_pmd_items, pattern,
 			   num_items * sizeof(pattern[0]));
 	}
 
@@ -2731,7 +2730,7 @@ port_flow_template_table_create(portid_t port_id, uint32_t id,
 	}
 	pt->nb_pattern_templates = nb_pattern_templates;
 	pt->nb_actions_templates = nb_actions_templates;
-	rte_memcpy(&pt->attr, table_attr,
+	memcpy(&pt->attr, table_attr,
 		   sizeof(struct rte_flow_template_table_attr));
 	printf("Template table #%u created\n", pt->id);
 	return 0;
@@ -3367,7 +3366,7 @@ port_queue_action_handle_update(portid_t port_id,
 		update = action->conf;
 		break;
 	case RTE_FLOW_ACTION_TYPE_METER_MARK:
-		rte_memcpy(&mtr_update.meter_mark, action->conf,
+		memcpy(&mtr_update.meter_mark, action->conf,
 			sizeof(struct rte_flow_action_meter_mark));
 		if (mtr_update.meter_mark.profile)
 			mtr_update.profile_valid = 1;
