@@ -2890,7 +2890,7 @@ enqueue_ldpc_dec_one_op_cb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 		dec->q_m = 1;
 		dec->cb_params.e = dec->n_cb - dec->n_filler;
 		dec->rv_index = 0;
-		rte_memcpy(in, q->derm_buffer, dec->cb_params.e);
+		memcpy(in, q->derm_buffer, dec->cb_params.e);
 		/* Capture counter when pre-processing is used */
 		q_data->queue_stats.enqueue_warn_count++;
 		#else
@@ -2988,7 +2988,8 @@ enqueue_ldpc_dec_one_op_tb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 		desc = acc_desc(q, total_enqueued_cbs);
 		desc->req.data_ptrs[0].address = q->ring_addr_iova + fcw_offset;
 		desc->req.data_ptrs[0].blen = ACC_FCW_LD_BLEN;
-		rte_memcpy(&desc->req.fcw_ld, &desc_first->req.fcw_ld, ACC_FCW_LD_BLEN);
+		memcpy(&desc->req.fcw_ld, &desc_first->req.fcw_ld,
+		       ACC_FCW_LD_BLEN);
 		ret = acc100_dma_desc_ld_fill(op, &desc->req, &input,
 				h_output, &in_offset, &h_out_offset,
 				&h_out_length,
@@ -4266,7 +4267,7 @@ acc100_configure(const char *dev_name, struct rte_acc_conf *conf)
 	struct acc_device *d = bbdev->data->dev_private;
 
 	/* Store configuration */
-	rte_memcpy(&d->acc_conf, conf, sizeof(d->acc_conf));
+	memcpy(&d->acc_conf, conf, sizeof(d->acc_conf));
 
 	value = acc_reg_read(d, HwPfPcieGpexBridgeControl);
 	bool firstCfg = (value != ACC100_CFG_PCI_BRIDGE);
