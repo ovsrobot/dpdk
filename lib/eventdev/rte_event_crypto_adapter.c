@@ -700,7 +700,7 @@ eca_ops_enqueue_burst(struct event_crypto_adapter *adapter,
 			continue;
 		}
 
-		rte_memcpy(ev, &m_data->response_info, sizeof(*ev));
+		memcpy(ev, &m_data->response_info, sizeof(*ev));
 		ev->event_ptr = ops[i];
 
 		/** Restore "struct rte_event::impl_opaque" from mbuf
