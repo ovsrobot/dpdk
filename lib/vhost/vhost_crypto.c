@@ -8,6 +8,7 @@
 #include <rte_log.h>
 #include <rte_mbuf.h>
 #include <rte_cryptodev.h>
+#include <rte_memcpy.h>
 
 #include "iotlb.h"
 #include "rte_vhost_crypto.h"

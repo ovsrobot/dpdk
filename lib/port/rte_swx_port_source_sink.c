@@ -13,6 +13,7 @@
 #include <rte_common.h>
 #include <rte_mbuf.h>
 #include <rte_hexdump.h>
+#include <rte_memcpy.h>
 
 #include "rte_swx_port_source_sink.h"
 

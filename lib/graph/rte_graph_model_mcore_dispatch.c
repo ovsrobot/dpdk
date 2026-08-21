@@ -5,6 +5,7 @@
 #include "graph_private.h"
 #include <eal_export.h>
 #include "rte_graph_model_mcore_dispatch.h"
+#include <rte_memcpy.h>
 
 int
 graph_sched_wq_create(struct graph *_graph, struct graph *_parent_graph,

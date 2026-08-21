@@ -6,6 +6,7 @@
 
 #include <rte_graph.h>
 #include <rte_graph_worker.h>
+#include <rte_memcpy.h>
 
 #include "pkt_cls_priv.h"
 #include "node_private.h"

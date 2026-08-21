@@ -9,6 +9,7 @@
 #include <rte_graph_feature_arc_worker.h>
 #include <rte_ip.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_vect.h>
 
 #include "rte_node_ip4_api.h"

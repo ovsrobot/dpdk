@@ -6,6 +6,7 @@
 #include <rte_esp.h>
 #include <rte_errno.h>
 #include <rte_cryptodev.h>
+#include <rte_memcpy.h>
 
 #include "sa.h"
 #include "ipsec_sqn.h"

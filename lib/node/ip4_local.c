@@ -15,6 +15,7 @@
 #include <rte_fbk_hash.h>
 #include <rte_jhash.h>
 #include <rte_hash_crc.h>
+#include <rte_memcpy.h>
 
 #include "rte_node_ip4_api.h"
 

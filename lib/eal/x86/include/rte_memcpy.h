@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <rte_memcpy.h>
 #include <rte_vect.h>
 #include <rte_common.h>
 #include <rte_config.h>

@@ -4,6 +4,7 @@
 
 #include <rte_ipsec.h>
 #include <rte_esp.h>
+#include <rte_memcpy.h>
 #include <rte_udp.h>
 #include <rte_errno.h>
 #include <rte_cryptodev.h>

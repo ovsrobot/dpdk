@@ -12,6 +12,7 @@
 #include <rte_graph_worker.h>
 #include <rte_ip.h>
 #include <rte_lpm.h>
+#include <rte_memcpy.h>
 
 #include "rte_node_ip4_api.h"
 
