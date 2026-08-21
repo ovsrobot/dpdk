@@ -599,7 +599,7 @@ axgbe_dev_rss_hash_update(struct rte_eth_dev *dev,
 
 	if (rss_conf->rss_key != NULL &&
 	    rss_conf->rss_key_len == AXGBE_RSS_HASH_KEY_SIZE) {
-		rte_memcpy(pdata->rss_key, rss_conf->rss_key,
+		memcpy(pdata->rss_key, rss_conf->rss_key,
 		       AXGBE_RSS_HASH_KEY_SIZE);
 		/* Program the hash key */
 		ret = axgbe_write_rss_hash_key(pdata);
@@ -642,7 +642,7 @@ axgbe_dev_rss_hash_conf_get(struct rte_eth_dev *dev,
 
 	if (rss_conf->rss_key != NULL &&
 	    rss_conf->rss_key_len >= AXGBE_RSS_HASH_KEY_SIZE) {
-		rte_memcpy(rss_conf->rss_key, pdata->rss_key,
+		memcpy(rss_conf->rss_key, pdata->rss_key,
 		       AXGBE_RSS_HASH_KEY_SIZE);
 	}
 	rss_conf->rss_key_len = AXGBE_RSS_HASH_KEY_SIZE;
