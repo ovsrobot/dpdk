@@ -3,13 +3,13 @@
  */
 
 #include <stdalign.h>
+#include <string.h>
 #include <sys/queue.h>
 
 #include <eal_export.h>
 #include <rte_thash.h>
 #include <rte_tailq.h>
 #include <rte_random.h>
-#include <rte_memcpy.h>
 #include <rte_errno.h>
 #include <rte_eal_memconfig.h>
 #include <rte_log.h>
@@ -263,7 +263,7 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 	ctx->flags = flags;
 
 	if (key)
-		rte_memcpy(ctx->hash_key, key, key_len);
+		memcpy(ctx->hash_key, key, key_len);
 	else {
 		for (i = 0; i < key_len; i++)
 			ctx->hash_key[i] = rte_rand();
