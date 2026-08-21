@@ -29,7 +29,6 @@
 #include <rte_tailq.h>
 #include <rte_version.h>
 #include <rte_devargs.h>
-#include <rte_memcpy.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <rte_telemetry.h>
 #endif
@@ -1446,7 +1445,7 @@ eal_parse_lcores(const char *lcores)
 
 		/* without '@', by default using lcore_set as cpuset */
 		if (*lcores != '@')
-			rte_memcpy(&cpuset, &lcore_set, sizeof(cpuset));
+			cpuset = lcore_set;
 
 		set_count = CPU_COUNT(&lcore_set);
 		/* start to update lcore_set */
@@ -1469,8 +1468,7 @@ eal_parse_lcores(const char *lcores)
 
 			if (check_cpuset(&cpuset) < 0)
 				goto err;
-			rte_memcpy(&lcore_config[idx].cpuset, &cpuset,
-				   sizeof(rte_cpuset_t));
+			lcore_config[idx].cpuset = cpuset;
 		}
 
 		/* some cores from the lcore_set can't be handled by EAL */
