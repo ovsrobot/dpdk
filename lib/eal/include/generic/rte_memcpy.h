@@ -96,6 +96,24 @@ rte_mov256(uint8_t *dst, const uint8_t *src);
 /**
  * Copy bytes from one location to another. The locations must not overlap.
  *
+ * This function exists because on some platforms the libc memcpy()
+ * does not generate optimal code for the copy sizes and alignments
+ * common in packet processing. It is not a general replacement for
+ * memcpy(); prefer the following, in order:
+ *
+ * - Use structure assignment when copying a fixed size object.
+ *   The compiler generates the best possible code, and the types
+ *   are checked.
+ * - Use memcpy() everywhere else, in particular in the control path,
+ *   and whenever the size is a compile time constant. For a constant
+ *   size the compiler inlines the copy, so rte_memcpy() gains nothing,
+ *   and memcpy() is understood by analysis tools such as the address
+ *   sanitizer, valgrind and _FORTIFY_SOURCE which can then detect
+ *   overlapping or out of bounds copies.
+ * - Use rte_memcpy() only in the data path, and only where the size is
+ *   variable at run time. This is the case for which it was written,
+ *   and where it can still be faster than the libc implementation.
+ *
  * @note This is implemented as a macro, so it's address should not be taken
  * and care is needed as parameter expressions may be evaluated multiple times.
  *
