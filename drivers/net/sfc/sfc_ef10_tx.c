@@ -514,7 +514,7 @@ sfc_ef10_xmit_tso_pkt(struct sfc_ef10_txq * const txq, struct rte_mbuf *m_seg,
 						first_m_seg->outer_l2_len);
 
 	th = (const struct rte_tcp_hdr *)(hdr_addr + tcph_off);
-	rte_memcpy(&sent_seq, &th->sent_seq, sizeof(uint32_t));
+	memcpy(&sent_seq, &th->sent_seq, sizeof(uint32_t));
 	sent_seq = rte_be_to_cpu_32(sent_seq);
 
 	sfc_ef10_tx_qdesc_tso2_create(txq, *added, packet_id, outer_packet_id,

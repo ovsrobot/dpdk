@@ -547,7 +547,7 @@ sfc_mae_mac_addr_add(struct sfc_adapter *sa,
 	if (mac_addr == NULL)
 		return ENOMEM;
 
-	rte_memcpy(mac_addr->addr_bytes, addr_bytes, EFX_MAC_ADDR_LEN);
+	memcpy(mac_addr->addr_bytes, addr_bytes, EFX_MAC_ADDR_LEN);
 
 	mac_addr->refcnt = 1;
 	mac_addr->fw_rsrc.mac_id.id = EFX_MAE_RSRC_ID_INVALID;
