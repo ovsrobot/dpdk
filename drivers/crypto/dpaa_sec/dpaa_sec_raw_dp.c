@@ -7,6 +7,7 @@
 #include <cryptodev_pmd.h>
 #include <rte_crypto.h>
 #include <rte_cryptodev.h>
+#include <rte_memcpy.h>
 #include <rte_security_driver.h>
 
 /* RTA header files */

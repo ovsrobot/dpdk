@@ -7,6 +7,7 @@
 #include "virtio_ring.h"
 #include "virtio_cryptodev.h"
 #include "virtio_crypto_algs.h"
+#include <rte_memcpy.h>
 
 static void
 vq_ring_free_chain(struct virtqueue *vq, uint16_t desc_idx)

@@ -12,6 +12,7 @@
 #include "dpaa2_sec_logs.h"
 
 #include <desc/algo.h>
+#include <rte_memcpy.h>
 
 struct dpaa2_sec_raw_dp_ctx {
 	dpaa2_sec_session *session;

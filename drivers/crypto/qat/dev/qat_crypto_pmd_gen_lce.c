@@ -3,6 +3,7 @@
  */
 
 #include <rte_cryptodev.h>
+#include <rte_memcpy.h>
 #include <cryptodev_pmd.h>
 #include "qat_sym_session.h"
 #include "qat_sym.h"

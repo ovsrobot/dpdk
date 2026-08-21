@@ -3,6 +3,7 @@
  */
 
 #include "pmd_snow3g_priv.h"
+#include <rte_memcpy.h>
 
 /** Parse crypto xform chain and set private session parameters. */
 static int

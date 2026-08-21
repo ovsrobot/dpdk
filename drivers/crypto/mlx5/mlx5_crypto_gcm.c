@@ -3,6 +3,7 @@
  */
 
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_mempool.h>
 #include <rte_eal_paging.h>
 #include <rte_errno.h>

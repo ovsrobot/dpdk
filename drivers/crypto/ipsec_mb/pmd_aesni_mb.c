@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "pmd_aesni_mb_priv.h"
+#include <rte_memcpy.h>
 
 RTE_DEFINE_PER_LCORE(pid_t, pid);
 

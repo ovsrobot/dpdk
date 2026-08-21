@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #include <rte_cryptodev.h>
+#include <rte_memcpy.h>
 
 #include "cnxk_cryptodev.h"
 #include "cnxk_cryptodev_ops.h"

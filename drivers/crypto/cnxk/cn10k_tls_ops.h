@@ -6,6 +6,7 @@
 #define __CN10K_TLS_OPS_H__
 
 #include <rte_crypto_sym.h>
+#include <rte_memcpy.h>
 #include <rte_security.h>
 
 #include "roc_ie.h"

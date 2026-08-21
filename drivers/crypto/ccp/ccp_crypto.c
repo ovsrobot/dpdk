@@ -17,6 +17,7 @@
 #include <openssl/evp.h> /*sub key apis*/
 
 #include <rte_hexdump.h>
+#include <rte_memcpy.h>
 #include <rte_memzone.h>
 #include <rte_malloc.h>
 #include <rte_memory.h>

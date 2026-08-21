@@ -2,6 +2,7 @@
  * Copyright(c) 2017 Intel Corporation
  */
 #include <eal_export.h>
+#include <rte_memcpy.h>
 #include <rte_string_fns.h>
 #include <rte_reorder.h>
 #include <rte_cryptodev.h>

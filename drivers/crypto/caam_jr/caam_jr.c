@@ -14,6 +14,7 @@
 #include <rte_cryptodev.h>
 #include <bus_vdev_driver.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_security_driver.h>
 #include <rte_hexdump.h>
 

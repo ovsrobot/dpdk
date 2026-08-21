@@ -8,6 +8,7 @@
 #include <rte_hexdump.h>
 #include <rte_cryptodev.h>
 #include <cryptodev_pmd.h>
+#include <rte_memcpy.h>
 #include <rte_security_driver.h>
 #include <bus_vdev_driver.h>
 #include <rte_malloc.h>

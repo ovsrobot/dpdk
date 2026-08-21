@@ -10,6 +10,7 @@
 #include <bus_vdev_driver.h>
 #include <rte_malloc.h>
 #include <rte_cpuflags.h>
+#include <rte_memcpy.h>
 
 #include <openssl/cmac.h>
 #include <openssl/hmac.h>

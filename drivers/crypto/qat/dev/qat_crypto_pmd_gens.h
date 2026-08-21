@@ -8,6 +8,7 @@
 #include <rte_cryptodev.h>
 #include <rte_common.h>
 #include <rte_branch_prediction.h>
+#include <rte_memcpy.h>
 #include "qat_crypto.h"
 #include "qat_sym_session.h"
 #include "qat_sym.h"

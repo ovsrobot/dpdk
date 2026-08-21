@@ -14,6 +14,7 @@
 #include "icp_qat_fw.h"
 #include "qat_pke.h"
 #include "qat_ec.h"
+#include <rte_memcpy.h>
 
 #define ASYM_ENQ_THRESHOLD_NAME "qat_asym_enq_threshold"
 #define RSA_MODULUS_2048_BITS 2048
