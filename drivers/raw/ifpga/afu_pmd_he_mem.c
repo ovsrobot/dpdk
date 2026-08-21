@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -14,7 +15,6 @@
 
 #include <rte_eal.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_io.h>
 #include <bus_pci_driver.h>
 #include <bus_ifpga_driver.h>
@@ -125,7 +125,7 @@ static int he_mem_tg_config(struct afu_rawdev *dev, void *config,
 	if (config_size != sizeof(struct rte_pmd_afu_he_mem_tg_cfg))
 		return -EINVAL;
 
-	rte_memcpy(&priv->he_mem_tg_cfg, config, sizeof(priv->he_mem_tg_cfg));
+	memcpy(&priv->he_mem_tg_cfg, config, sizeof(priv->he_mem_tg_cfg));
 
 	return 0;
 }
