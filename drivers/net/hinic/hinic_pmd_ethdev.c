@@ -8,7 +8,6 @@
 #include <ethdev_driver.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_mempool.h>
 #include <rte_errno.h>
 #include <rte_ether.h>
