@@ -16,7 +16,9 @@
 #include <bus_pci_driver.h>
 #include <rte_errno.h>
 #include <rte_string_fns.h>
+#include <rte_stdatomic.h>
 #include <rte_bitops.h>
+#include <rte_ethdev.h>
 #include <rte_ether.h>
 
 #include "efx.h"
@@ -3163,7 +3165,32 @@ sfc_eth_dev_clear_ops(struct rte_eth_dev *dev)
 	sa->priv.dp_rx = NULL;
 }
 
+static int
+sfc_dev_infos_get_secondary(struct rte_eth_dev *dev,
+			    struct rte_eth_dev_info *dev_info)
+{
+	const struct sfc_adapter_shared *sas =
+		sfc_adapter_shared_by_eth_dev(dev);
+	bool valid = rte_atomic_load_explicit(&sas->dev_info_cache_is_valid,
+					      rte_memory_order_acquire);
+
+	if (!valid)
+		return -EAGAIN;
+
+	*dev_info = sas->dev_info_cache;
+
+	/*
+	 * The cache holds stale primary-process pointers; restore
+	 * the process-local values from the caller-supplied 'dev'.
+	 */
+	if (dev_info->switch_info.name != NULL)
+		dev_info->switch_info.name = dev->device->driver->name;
+	dev_info->device = dev->device;
+	return 0;
+}
+
 static const struct eth_dev_ops sfc_eth_dev_secondary_ops = {
+	.dev_infos_get			= sfc_dev_infos_get_secondary,
 	.dev_supported_ptypes_get	= sfc_dev_supported_ptypes_get,
 	.reta_query			= sfc_dev_rss_reta_query,
 	.rss_hash_conf_get		= sfc_dev_rss_hash_conf_get,
@@ -3749,6 +3776,7 @@ static int sfc_eth_dev_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	struct rte_pci_device *pci_dev)
 {
 	struct sfc_ethdev_init_data init_data;
+	struct sfc_adapter_shared *sas;
 	struct rte_eth_devargs eth_da;
 	struct rte_eth_dev *dev;
 	bool dev_created;
@@ -3786,6 +3814,27 @@ static int sfc_eth_dev_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 					&dev_created);
 	if (rc != 0)
 		return rc;
+
+	sas = sfc_adapter_shared_by_eth_dev(dev);
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		struct sfc_adapter *sa = sfc_adapter_by_eth_dev(dev);
+
+		/*
+		 * Pre-fill the dev info cache for the secondary
+		 * process. The port has been registered at this
+		 * point, allowing use of the public API.
+		 */
+		rc = rte_eth_dev_info_get(dev->data->port_id,
+					  &sas->dev_info_cache);
+		if (rc == 0) {
+			sas->dev_info_cache.device = NULL;
+			rte_atomic_store_explicit(&sas->dev_info_cache_is_valid,
+				true, rte_memory_order_release);
+		} else {
+			sfc_warn(sa, "failed to cache dev info for the secondary process");
+		}
+	}
 
 	rc = sfc_eth_dev_create_representors(dev, &eth_da);
 	if (rc != 0) {
