@@ -99,6 +99,10 @@ configured like so:
     --vdev net_af_xdp0,iface=ens786f1,shared_umem=1 \
     --vdev net_af_xdp1,iface=ens786f2,shared_umem=1
 
+The shared mempool must be large enough for every AF_XDP socket sharing the UMEM.
+Each socket needs 4096 mbufs, so ``N`` sockets need at least ``4096 * N`` mbufs.
+Rx queue setup fails if the mempool is too small to add another socket to the UMEM.
+
 xdp_prog
 ~~~~~~~~
 
