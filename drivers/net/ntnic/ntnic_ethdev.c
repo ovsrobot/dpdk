@@ -1769,7 +1769,7 @@ static int eth_dev_rss_hash_update(struct rte_eth_dev *eth_dev, struct rte_eth_r
 			return -1;
 		}
 
-		rte_memcpy(&tmp_rss_conf.rss_key, rss_conf->rss_key, rss_conf->rss_key_len);
+		memcpy(&tmp_rss_conf.rss_key, rss_conf->rss_key, rss_conf->rss_key_len);
 	}
 
 	tmp_rss_conf.algorithm = rss_conf->algorithm;
@@ -1779,7 +1779,8 @@ static int eth_dev_rss_hash_update(struct rte_eth_dev *eth_dev, struct rte_eth_r
 
 	if (res == 0) {
 		flow_filter_ops->nthw_mod_hsh_rcp_flush(&ndev->be, hsh_idx, 1);
-		rte_memcpy(&ndev->rss_conf, &tmp_rss_conf, sizeof(struct nt_eth_rss_conf));
+		memcpy(&ndev->rss_conf, &tmp_rss_conf,
+		       sizeof(struct nt_eth_rss_conf));
 
 	} else {
 		NT_LOG(ERR, NTNIC, "ERROR: - RSS hash update failed with error %i", res);
@@ -1804,7 +1805,7 @@ static int rss_hash_conf_get(struct rte_eth_dev *eth_dev, struct rte_eth_rss_con
 	if (rss_conf->rss_key != NULL) {
 		int key_len = RTE_MIN(rss_conf->rss_key_len, MAX_RSS_KEY_LEN);
 		memset(rss_conf->rss_key, 0, rss_conf->rss_key_len);
-		rte_memcpy(rss_conf->rss_key, &ndev->rss_conf.rss_key, key_len);
+		memcpy(rss_conf->rss_key, &ndev->rss_conf.rss_key, key_len);
 		rss_conf->rss_key_len = key_len;
 	}
 
@@ -2556,8 +2557,8 @@ nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 		eth_dev->data->dev_private = internals;
 		eth_dev->data->mac_addrs = rte_malloc(NULL,
 					NUM_MAC_ADDRS_PER_PORT * sizeof(struct rte_ether_addr), 0);
-		rte_memcpy(&eth_dev->data->mac_addrs[0],
-					&internals->eth_addrs[0], RTE_ETHER_ADDR_LEN);
+		memcpy(&eth_dev->data->mac_addrs[0], &internals->eth_addrs[0],
+		       RTE_ETHER_ADDR_LEN);
 
 		NT_LOG_DBGX(DBG, NTNIC, "Setting up RX functions for SCG");
 		eth_dev->rx_pkt_burst = eth_dev_rx_scg;
