@@ -16,7 +16,6 @@
 #include <rte_debug.h>
 #include <dev_driver.h>
 #include <rte_memory.h>
-#include <rte_memcpy.h>
 #include <rte_memzone.h>
 #include <rte_eal.h>
 #include <rte_common.h>
@@ -2566,8 +2565,7 @@ rte_cryptodev_sym_session_set_user_data(void *_sess, void *data,
 	if (sess->user_data_sz < size)
 		return -ENOMEM;
 
-	rte_memcpy(sess->driver_priv_data + sess->sess_data_sz, data, size);
-
+	memcpy(sess->driver_priv_data + sess->sess_data_sz, data, size);
 	rte_cryptodev_trace_sym_session_set_user_data(sess, data, size);
 
 	return 0;
@@ -2601,9 +2599,7 @@ rte_cryptodev_asym_session_set_user_data(void *session, void *data, uint16_t siz
 	if (sess->user_data_sz < size)
 		return -ENOMEM;
 
-	rte_memcpy(sess->sess_private_data +
-			sess->max_priv_data_sz,
-			data, size);
+	memcpy(sess->sess_private_data + sess->max_priv_data_sz, data, size);
 
 	rte_cryptodev_trace_asym_session_set_user_data(sess, data, size);
 
@@ -2750,7 +2746,7 @@ skip_pmd_op:
 			if (s->event_mdata == NULL)
 				return -ENOMEM;
 		}
-		rte_memcpy(s->event_mdata, ev_mdata, size);
+		memcpy(s->event_mdata, ev_mdata, size);
 
 		return 0;
 	} else
@@ -3098,7 +3094,7 @@ crypto_caps_array(struct rte_tel_data *d,
 	while ((dev_caps = &capabilities[i++])->op !=
 			RTE_CRYPTO_OP_TYPE_UNDEFINED) {
 		memset(&caps_val, 0, CRYPTO_CAPS_SZ * sizeof(caps_val[0]));
-		rte_memcpy(caps_val, dev_caps, sizeof(capabilities[0]));
+		memcpy(caps_val, dev_caps, sizeof(capabilities[0]));
 		for (j = 0; j < CRYPTO_CAPS_SZ; j++)
 			rte_tel_data_add_array_uint(d, caps_val[j]);
 	}

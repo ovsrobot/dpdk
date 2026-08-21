@@ -178,7 +178,7 @@ u32_to_u8(uint32_t *u_int32_t_data, uint8_t *u8_data)
 {
 	uint32_t be_data = rte_cpu_to_be_32(*u_int32_t_data);
 
-	rte_memcpy(u8_data, &be_data, sizeof(be_data));
+	memcpy(u8_data, &be_data, sizeof(be_data));
 }
 
 static void
@@ -283,8 +283,8 @@ zsda_decry_key_set(uint8_t key[64], const uint8_t *key1_ptr, uint8_t skey_len,
 				    : ZSDA_AES512_ROUND_NUM;
 		zsda_aes_key_expansion(aes_round_key, round_num, key1_ptr,
 				       skey_len);
-		rte_memcpy(dec_key1,
-			   ((uint8_t *)aes_round_key + (16 * round_num)), 16);
+		memcpy(dec_key1,
+		       ((uint8_t *)aes_round_key + (16 * round_num)), 16);
 
 		if (skey_len == ZSDA_SYM_XTS_512_SKEY_LEN &&
 			(16 * round_num) <= ZSDA_AES_MAX_EXP_BYTE_SIZE) {
