@@ -5,6 +5,7 @@
 #include <rte_log.h>
 #include <rte_errno.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_regexdev.h>
 #include <rte_regexdev_core.h>
 #include <rte_regexdev_driver.h>

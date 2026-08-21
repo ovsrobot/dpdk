@@ -10,6 +10,7 @@
 
 #include <mc/fsl_dpdmai.h>
 
+#include <rte_memcpy.h>
 #include <rte_pmd_dpaax_qdma.h>
 #include "dpaa2_hw_dpio.h"
 #include "dpaa2_qdma.h"

@@ -16,6 +16,7 @@
 
 #include <rte_common.h>
 #include <rte_cycles.h>
+#include <rte_memcpy.h>
 #include <rte_mldev.h>
 #include <rte_mldev_pmd.h>
 

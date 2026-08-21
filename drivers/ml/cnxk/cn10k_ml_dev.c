@@ -6,6 +6,7 @@
 #include <rte_dev.h>
 #include <rte_devargs.h>
 #include <rte_kvargs.h>
+#include <rte_memcpy.h>
 #include <rte_mldev.h>
 #include <rte_mldev_pmd.h>
 #include <rte_pci.h>

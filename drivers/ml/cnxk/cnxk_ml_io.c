@@ -2,6 +2,7 @@
  * Copyright (c) 2023 Marvell.
  */
 
+#include <rte_memcpy.h>
 #include <rte_mldev.h>
 
 #include <mldev_utils.h>
