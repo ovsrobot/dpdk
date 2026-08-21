@@ -848,7 +848,7 @@ tvmrt_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *mo
 	if (model->subtype == ML_CNXK_MODEL_SUBTYPE_TVM_MRVL)
 		goto tvm_mrvl_model;
 
-	rte_memcpy(info->name, model->name, RTE_ML_STR_MAX);
+	memcpy(info->name, model->name, RTE_ML_STR_MAX);
 	snprintf(info->version, RTE_ML_STR_MAX, "%u.%u.%u.%u", 0, 0, 0, 0);
 	info->model_id = model->model_id;
 	info->device_id = cnxk_mldev->mldev->data->dev_id;
@@ -863,7 +863,8 @@ tvmrt_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *mo
 
 	/* Set input info */
 	for (i = 0; i < info->nb_inputs; i++) {
-		rte_memcpy(input[i].name, model->tvmrt.info.input[i].name, MRVL_ML_INPUT_NAME_LEN);
+		memcpy(input[i].name, model->tvmrt.info.input[i].name,
+		       MRVL_ML_INPUT_NAME_LEN);
 		input[i].nb_dims = model->tvmrt.info.input[i].nb_dims;
 		input[i].shape = &model->tvmrt.info.input[i].shape[0];
 		input[i].type = model->tvmrt.info.input[i].qtype;
@@ -876,8 +877,8 @@ tvmrt_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *mo
 
 	/* Set output info */
 	for (i = 0; i < info->nb_outputs; i++) {
-		rte_memcpy(output[i].name, model->tvmrt.info.output[i].name,
-			   MRVL_ML_OUTPUT_NAME_LEN);
+		memcpy(output[i].name, model->tvmrt.info.output[i].name,
+		       MRVL_ML_OUTPUT_NAME_LEN);
 		output[i].nb_dims = model->tvmrt.info.output[i].nb_dims;
 		output[i].shape = &model->tvmrt.info.output[i].shape[0];
 		output[i].type = model->tvmrt.info.output[i].qtype;

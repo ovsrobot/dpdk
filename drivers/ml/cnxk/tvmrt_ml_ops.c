@@ -230,7 +230,7 @@ tvmrt_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 	/* Copy mod.so */
 	model->tvmrt.so.buffer = mz->addr;
 	model->tvmrt.so.size = object[0].size;
-	rte_memcpy(model->tvmrt.so.name, object[0].name, RTE_ML_STR_MAX);
+	memcpy(model->tvmrt.so.name, object[0].name, RTE_ML_STR_MAX);
 	rte_memcpy(model->tvmrt.so.buffer, object[0].buffer, object[0].size);
 	rte_free(object[0].buffer);
 
@@ -239,7 +239,7 @@ tvmrt_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 		RTE_PTR_ADD(model->tvmrt.so.buffer,
 			    RTE_ALIGN_CEIL(model->tvmrt.so.size, RTE_CACHE_LINE_MIN_SIZE));
 	model->tvmrt.json.size = object[1].size;
-	rte_memcpy(model->tvmrt.json.name, object[1].name, RTE_ML_STR_MAX);
+	memcpy(model->tvmrt.json.name, object[1].name, RTE_ML_STR_MAX);
 	rte_memcpy(model->tvmrt.json.buffer, object[1].buffer, object[1].size);
 	rte_free(object[1].buffer);
 
@@ -248,7 +248,7 @@ tvmrt_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 		RTE_PTR_ADD(model->tvmrt.json.buffer,
 			    RTE_ALIGN_CEIL(model->tvmrt.json.size, RTE_CACHE_LINE_MIN_SIZE));
 	model->tvmrt.params.size = object[2].size;
-	rte_memcpy(model->tvmrt.params.name, object[2].name, RTE_ML_STR_MAX);
+	memcpy(model->tvmrt.params.name, object[2].name, RTE_ML_STR_MAX);
 	rte_memcpy(model->tvmrt.params.buffer, object[2].buffer, object[2].size);
 	rte_free(object[2].buffer);
 
