@@ -15,6 +15,7 @@
 #include <rte_cycles.h>
 #include <rte_lcore.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_random.h>
 #include <rte_hexdump.h>
 #include <rte_interrupts.h>

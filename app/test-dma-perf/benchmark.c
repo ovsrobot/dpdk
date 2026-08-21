@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <rte_memcpy.h>
 #include <rte_time.h>
 #include <rte_mbuf.h>
 #include <rte_dmadev.h>

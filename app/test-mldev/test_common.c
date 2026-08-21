@@ -6,6 +6,7 @@
 
 #include <rte_common.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_memory.h>
 #include <rte_mldev.h>
 

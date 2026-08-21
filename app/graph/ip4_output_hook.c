@@ -5,6 +5,7 @@
 #include <rte_graph.h>
 #include <rte_graph_worker.h>
 #include <rte_graph_feature_arc_worker.h>
+#include <rte_memcpy.h>
 
 #include "rte_node_ip4_api.h"
 

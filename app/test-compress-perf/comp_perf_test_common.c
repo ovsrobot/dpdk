@@ -6,6 +6,7 @@
 #include <rte_eal.h>
 #include <rte_log.h>
 #include <rte_compressdev.h>
+#include <rte_memcpy.h>
 
 #include "comp_perf.h"
 #include "comp_perf_options.h"

@@ -3,6 +3,7 @@
  */
 #include <rte_cryptodev.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 
 #include "test.h"
 #include "test_cryptodev.h"

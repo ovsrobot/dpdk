@@ -8,6 +8,7 @@
 #include <rte_eal.h>
 #include <rte_log.h>
 #include <rte_compressdev.h>
+#include <rte_memcpy.h>
 
 #include "comp_perf_test_verify.h"
 #include "comp_perf_test_common.h"
