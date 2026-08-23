@@ -42,6 +42,9 @@ enum ntb_topo {
 	NTB_TOPO_NONE = 0,
 	NTB_TOPO_B2B_USD,
 	NTB_TOPO_B2B_DSD,
+	/* Primary/secondary topology (e.g. AMD NTB). */
+	NTB_TOPO_PRI,
+	NTB_TOPO_SEC,
 };
 
 enum ntb_link {
@@ -100,6 +103,8 @@ enum ntb_spad_idx {
  * for those db bits.
  * @peer_db_set: Set doorbell bit to generate peer interrupt for that bit.
  * @vector_bind: Bind vector source [intr] to msix vector [msix].
+ * @interrupt_handler: Vendor-specific interrupt handler. If NULL, the
+ * built-in handler is used.
  */
 struct ntb_dev_ops {
 	int (*ntb_dev_init)(const struct rte_rawdev *dev);
@@ -119,6 +124,16 @@ struct ntb_dev_ops {
 	int (*peer_db_set)(const struct rte_rawdev *dev, uint8_t db_bit);
 	int (*vector_bind)(const struct rte_rawdev *dev, uint8_t intr,
 			   uint8_t msix);
+	void (*interrupt_handler)(void *param);
+	/* Optional vendor-specific handshake. If NULL, the built-in
+	 * scratchpad handshake is used. Used by hardware (e.g. AMD) whose
+	 * scratchpad layout differs from the built-in protocol.
+	 */
+	int (*dev_handshake)(const struct rte_rawdev *dev);
+	/* Optional vendor-specific peer-config read at device start. If NULL,
+	 * the built-in scratchpad reads are used.
+	 */
+	int (*read_peer_config)(const struct rte_rawdev *dev);
 };
 
 struct ntb_desc {
@@ -207,6 +222,9 @@ struct ntb_hw {
 	enum ntb_width link_width;
 
 	const struct ntb_dev_ops *ntb_ops;
+
+	/* Vendor-specific hardware private data. */
+	void *pmd_private;
 
 	struct rte_pci_device *pci_dev;
 	char *hw_addr;

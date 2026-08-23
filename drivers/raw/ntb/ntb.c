@@ -746,6 +746,11 @@ ntb_dequeue_bufs(struct rte_rawdev *dev,
 	for (nb_rx = 0; nb_rx < count; nb_rx++) {
 		i = 0;
 		while (true) {
+			if (unlikely(nb_mbufs >= rxq->nb_rx_desc)) {
+				NTB_LOG(ERR, "Malformed rx stream (no EOP); "
+					"aborting to avoid desc overflow.");
+				goto end_of_rx;
+			}
 			rx_item = rxq->rx_used_ring + rxq->last_used;
 			rxm_t = sw_ring[rxq->last_used].mbuf;
 			rxm_t->data_len = rx_item->len;
@@ -882,8 +887,13 @@ ntb_dev_configure(const struct rte_rawdev *dev, rte_rawdev_obj_t config,
 	hw->ntb_xstats_off = rte_zmalloc("ntb_xstats_off", xstats_num *
 					 sizeof(uint64_t), 0);
 
-	/* Start handshake with the peer. */
-	ret = ntb_handshake_work(dev);
+	/* Start handshake with the peer. Use the vendor-specific handshake
+	 * if provided, otherwise the built-in scratchpad protocol.
+	 */
+	if (hw->ntb_ops->dev_handshake != NULL)
+		ret = (*hw->ntb_ops->dev_handshake)(dev);
+	else
+		ret = ntb_handshake_work(dev);
 	if (ret < 0) {
 		rte_free(hw->rx_queues);
 		rte_free(hw->tx_queues);
@@ -929,35 +939,44 @@ ntb_dev_start(struct rte_rawdev *dev)
 		goto err_q_init;
 	}
 
-	if (hw->ntb_ops->spad_read == NULL) {
-		ret = -ENOTSUP;
-		goto err_up;
-	}
+	/* Read/validate peer config. Use the vendor-specific reader if
+	 * provided, otherwise the built-in scratchpad reads.
+	 */
+	if (hw->ntb_ops->read_peer_config != NULL) {
+		ret = (*hw->ntb_ops->read_peer_config)(dev);
+		if (ret < 0)
+			goto err_up;
+	} else {
+		if (hw->ntb_ops->spad_read == NULL) {
+			ret = -ENOTSUP;
+			goto err_up;
+		}
 
-	peer_val = (*hw->ntb_ops->spad_read)(dev, SPAD_Q_SZ, 0);
-	if (peer_val != hw->queue_size) {
-		NTB_LOG(ERR, "Inconsistent queue size! (local: %u peer: %u)",
-			hw->queue_size, peer_val);
-		ret = -EINVAL;
-		goto err_up;
-	}
+		peer_val = (*hw->ntb_ops->spad_read)(dev, SPAD_Q_SZ, 0);
+		if (peer_val != hw->queue_size) {
+			NTB_LOG(ERR, "Inconsistent queue size! (local: %u peer: %u)",
+				hw->queue_size, peer_val);
+			ret = -EINVAL;
+			goto err_up;
+		}
 
-	peer_val = (*hw->ntb_ops->spad_read)(dev, SPAD_NUM_QPS, 0);
-	if (peer_val != hw->queue_pairs) {
-		NTB_LOG(ERR, "Inconsistent number of queues! (local: %u peer:"
-			" %u)", hw->queue_pairs, peer_val);
-		ret = -EINVAL;
-		goto err_up;
-	}
+		peer_val = (*hw->ntb_ops->spad_read)(dev, SPAD_NUM_QPS, 0);
+		if (peer_val != hw->queue_pairs) {
+			NTB_LOG(ERR, "Inconsistent number of queues! (local: %u peer:"
+				" %u)", hw->queue_pairs, peer_val);
+			ret = -EINVAL;
+			goto err_up;
+		}
 
-	hw->peer_used_mws = (*hw->ntb_ops->spad_read)(dev, SPAD_USED_MWS, 0);
+		hw->peer_used_mws = (*hw->ntb_ops->spad_read)(dev, SPAD_USED_MWS, 0);
 
-	for (i = 0; i < hw->peer_used_mws; i++) {
-		peer_base_h = (*hw->ntb_ops->spad_read)(dev,
-				SPAD_MW0_BA_H + 2 * i, 0);
-		peer_base_l = (*hw->ntb_ops->spad_read)(dev,
-				SPAD_MW0_BA_L + 2 * i, 0);
-		hw->peer_mw_base[i] = (peer_base_h << 32) + peer_base_l;
+		for (i = 0; i < hw->peer_used_mws; i++) {
+			peer_base_h = (*hw->ntb_ops->spad_read)(dev,
+					SPAD_MW0_BA_H + 2 * i, 0);
+			peer_base_l = (*hw->ntb_ops->spad_read)(dev,
+					SPAD_MW0_BA_L + 2 * i, 0);
+			hw->peer_mw_base[i] = (peer_base_h << 32) + peer_base_l;
+		}
 	}
 
 	dev->started = 1;
@@ -1057,8 +1076,13 @@ ntb_dev_close(struct rte_rawdev *dev)
 	rte_intr_disable(intr_handle);
 
 	/* Unregister callback func to eal lib */
-	rte_intr_callback_unregister(intr_handle,
-				     ntb_dev_intr_handler, dev);
+	if (hw->ntb_ops->interrupt_handler != NULL)
+		rte_intr_callback_unregister(intr_handle,
+					     hw->ntb_ops->interrupt_handler,
+					     dev);
+	else
+		rte_intr_callback_unregister(intr_handle,
+					     ntb_dev_intr_handler, dev);
 
 	return 0;
 }
@@ -1409,9 +1433,15 @@ ntb_init_hw(struct rte_rawdev *dev, struct rte_pci_device *pci_dev)
 	(*hw->ntb_ops->db_clear)(dev, hw->db_valid_mask);
 
 	intr_handle = pci_dev->intr_handle;
-	/* Register callback func to eal lib */
-	rte_intr_callback_register(intr_handle,
-				   ntb_dev_intr_handler, dev);
+	/* Register callback func to eal lib. Use the vendor-specific handler
+	 * if provided, otherwise fall back to the built-in handler.
+	 */
+	if (hw->ntb_ops->interrupt_handler != NULL)
+		rte_intr_callback_register(intr_handle,
+					   hw->ntb_ops->interrupt_handler, dev);
+	else
+		rte_intr_callback_register(intr_handle,
+					   ntb_dev_intr_handler, dev);
 
 	ret = rte_intr_efd_enable(intr_handle, hw->db_cnt);
 	if (ret)
