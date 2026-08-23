@@ -121,6 +121,26 @@ struct __rte_cache_aligned rte_node {
 	rte_graph_off_t xstat_off; /**< Offset to xstat counters. */
 
 	/** Fast path area cache line 2. */
+#ifdef RTE_GRAPH_PROFILE
+	/** Usage when this node processed 0 or 1 objects. */
+	struct __rte_cache_aligned {
+		uint64_t calls;     /**< Calls done. */
+		uint64_t cycles;    /**< Cycles spent. */
+	} usage_stats_01[2];
+	/**
+	 * Usage when this node processed N objects:
+	 * index 0 (micro): 2 <= N < RTE_GRAPH_PROFILE_BURST_SMALL
+	 * index 1 (small): RTE_GRAPH_PROFILE_BURST_SMALL <= N < RTE_GRAPH_PROFILE_BURST_MEDIUM
+	 * index 2 (medium): RTE_GRAPH_PROFILE_BURST_MEDIUM <= N < RTE_GRAPH_PROFILE_BURST_LARGE
+	 * index 3 (large): RTE_GRAPH_PROFILE_BURST_LARGE <= N
+	 */
+	struct __rte_cache_aligned {
+		uint64_t calls;     /**< Calls done. */
+		uint64_t cycles;    /**< Cycles spent. */
+		uint64_t objs;      /**< Objects processed. */
+	} usage_stats[4];
+	/** Fast path area cache line 4. */
+#endif
 	__extension__ struct __rte_cache_aligned {
 #define RTE_NODE_CTX_SZ 16
 		union {
@@ -148,8 +168,10 @@ struct __rte_cache_aligned rte_node {
 	};
 };
 
+#ifndef RTE_GRAPH_PROFILE
 static_assert(offsetof(struct rte_node, nodes) - offsetof(struct rte_node, ctx)
 	== RTE_CACHE_LINE_MIN_SIZE, "rte_node fast path area must fit in 64 bytes");
+#endif
 
 /**
  * @internal
@@ -197,7 +219,7 @@ void __rte_node_stream_alloc_size(struct rte_graph *graph,
 static __rte_always_inline void
 __rte_node_process(struct rte_graph *graph, struct rte_node *node)
 {
-	uint64_t start;
+	uint64_t cycles;
 	uint16_t rc;
 	void **objs;
 
@@ -206,11 +228,34 @@ __rte_node_process(struct rte_graph *graph, struct rte_node *node)
 	rte_prefetch0(objs);
 
 	if (rte_graph_has_stats_feature()) {
-		start = rte_rdtsc();
+		cycles = -rte_rdtsc();
 		rc = node->process(graph, node, objs, node->idx);
-		node->total_cycles += rte_rdtsc() - start;
+		cycles += rte_rdtsc();
+		node->total_cycles += cycles;
 		node->total_calls++;
 		node->total_objs += rc;
+#ifdef RTE_GRAPH_PROFILE
+		if (rc < 2) {
+			node->usage_stats_01[rc].calls++;
+			node->usage_stats_01[rc].cycles += cycles;
+		} else if (rc >= RTE_GRAPH_PROFILE_BURST_LARGE) {
+			node->usage_stats[3].calls++;
+			node->usage_stats[3].cycles += cycles;
+			node->usage_stats[3].objs += rc;
+		} else if (rc >= RTE_GRAPH_PROFILE_BURST_MEDIUM) {
+			node->usage_stats[2].calls++;
+			node->usage_stats[2].cycles += cycles;
+			node->usage_stats[2].objs += rc;
+		} else if (rc >= RTE_GRAPH_PROFILE_BURST_SMALL) {
+			node->usage_stats[1].calls++;
+			node->usage_stats[1].cycles += cycles;
+			node->usage_stats[1].objs += rc;
+		} else {
+			node->usage_stats[0].calls++;
+			node->usage_stats[0].cycles += cycles;
+			node->usage_stats[0].objs += rc;
+		}
+#endif
 	} else {
 		node->process(graph, node, objs, node->idx);
 	}
