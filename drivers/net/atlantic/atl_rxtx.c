@@ -1162,6 +1162,12 @@ atl_xmit_cleanup(struct atl_tx_queue *txq)
 				break;
 		}
 
+		/*
+		 * Same dd/DMA race as the Rx path; barrier before
+		 * acting on what was just read.
+		 */
+		rte_rmb();
+
 		if (to_clean == 0)
 			return;
 
