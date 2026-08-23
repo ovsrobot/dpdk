@@ -55,6 +55,15 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added optional graph profiling statistics.**
+
+  Added build-time configurable graph node profiling statistics via
+  ``RTE_GRAPH_PROFILE`` in ``rte_config.h`` (disabled by default). When enabled,
+  tracks cycles spent processing various burst size intervals per node.
+  The interval edges are build-time configurable via
+  ``RTE_GRAPH_PROFILE_BURST_SMALL``, ``RTE_GRAPH_PROFILE_BURST_MEDIUM``, and
+  ``RTE_GRAPH_PROFILE_BURST_LARGE`` in ``rte_config.h``.
+
 
 Removed Items
 -------------
