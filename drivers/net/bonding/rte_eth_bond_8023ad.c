@@ -1428,6 +1428,16 @@ rte_eth_bond_8023ad_conf_get(uint16_t port_id,
 	return 0;
 }
 
+static int
+bond_8023ad_check_primary(const char *op)
+{
+	if (bond_process_is_primary())
+		return 0;
+
+	RTE_BOND_LOG(ERR, "%s not supported in non-primary process", op);
+	return -ENOTSUP;
+}
+
 RTE_EXPORT_SYMBOL(rte_eth_bond_8023ad_agg_selection_set)
 int
 rte_eth_bond_8023ad_agg_selection_set(uint16_t port_id,
@@ -1436,6 +1446,11 @@ rte_eth_bond_8023ad_agg_selection_set(uint16_t port_id,
 	struct rte_eth_dev *bond_dev;
 	struct bond_dev_private *internals;
 	struct mode8023ad_private *mode4;
+	int ret;
+
+	ret = bond_8023ad_check_primary(__func__);
+	if (ret != 0)
+		return ret;
 
 	if (valid_bonding_port_id(port_id) != 0)
 		return -EINVAL;
@@ -1508,6 +1523,11 @@ rte_eth_bond_8023ad_setup(uint16_t port_id,
 {
 	struct rte_eth_dev *bond_dev;
 	int err;
+	int ret;
+
+	ret = bond_8023ad_check_primary(__func__);
+	if (ret != 0)
+		return ret;
 
 	err = bond_8023ad_setup_validate(port_id, conf);
 	if (err != 0)
@@ -1592,6 +1612,11 @@ rte_eth_bond_8023ad_ext_collect(uint16_t port_id, uint16_t member_id,
 {
 	struct port *port;
 	int res;
+	int ret;
+
+	ret = bond_8023ad_check_primary(__func__);
+	if (ret != 0)
+		return ret;
 
 	res = bond_8023ad_ext_validate(port_id, member_id);
 	if (res != 0)
@@ -1614,6 +1639,11 @@ rte_eth_bond_8023ad_ext_distrib(uint16_t port_id, uint16_t member_id,
 {
 	struct port *port;
 	int res;
+	int ret;
+
+	ret = bond_8023ad_check_primary(__func__);
+	if (ret != 0)
+		return ret;
 
 	res = bond_8023ad_ext_validate(port_id, member_id);
 	if (res != 0)
@@ -1666,6 +1696,11 @@ rte_eth_bond_8023ad_ext_slowtx(uint16_t port_id, uint16_t member_id,
 {
 	struct port *port;
 	int res;
+	int ret;
+
+	ret = bond_8023ad_check_primary(__func__);
+	if (ret != 0)
+		return ret;
 
 	res = bond_8023ad_ext_validate(port_id, member_id);
 	if (res != 0)
@@ -1727,6 +1762,11 @@ rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port)
 {
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
+	int ret;
+
+	ret = bond_8023ad_check_primary(__func__);
+	if (ret != 0)
+		return ret;
 
 	if (valid_bonding_port_id(port) != 0)
 		return -EINVAL;
@@ -1756,6 +1796,11 @@ rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port)
 {
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
+	int ret;
+
+	ret = bond_8023ad_check_primary(__func__);
+	if (ret != 0)
+		return ret;
 
 	if (valid_bonding_port_id(port) != 0)
 		return -EINVAL;

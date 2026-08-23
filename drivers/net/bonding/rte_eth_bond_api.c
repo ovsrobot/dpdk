@@ -150,6 +150,17 @@ deactivate_member(struct rte_eth_dev *eth_dev, uint16_t port_id)
 	}
 }
 
+static int
+bond_api_check_primary(const char *op)
+{
+	if (bond_process_is_primary())
+		return 0;
+
+	RTE_BOND_LOG(ERR, "%s not supported in non-primary process", op);
+	return -1;
+}
+
+
 RTE_EXPORT_SYMBOL(rte_eth_bond_create)
 int
 rte_eth_bond_create(const char *name, uint8_t mode, uint8_t socket_id)
@@ -158,6 +169,9 @@ rte_eth_bond_create(const char *name, uint8_t mode, uint8_t socket_id)
 	struct rte_eth_dev *bond_dev;
 	char devargs[52];
 	int ret;
+
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
 
 	if (name == NULL) {
 		RTE_BOND_LOG(ERR, "Invalid name specified");
@@ -643,6 +657,9 @@ rte_eth_bond_member_add(uint16_t bonding_port_id, uint16_t member_port_id)
 
 	int retval;
 
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
+
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
 
@@ -781,6 +798,9 @@ rte_eth_bond_member_remove(uint16_t bonding_port_id, uint16_t member_port_id)
 	struct bond_dev_private *internals;
 	int retval;
 
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
+
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
 
@@ -801,6 +821,9 @@ int
 rte_eth_bond_mode_set(uint16_t bonding_port_id, uint8_t mode)
 {
 	struct rte_eth_dev *bonding_eth_dev;
+
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
 
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
@@ -833,6 +856,9 @@ int
 rte_eth_bond_primary_set(uint16_t bonding_port_id, uint16_t member_port_id)
 {
 	struct bond_dev_private *internals;
+
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
 
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
@@ -924,6 +950,9 @@ rte_eth_bond_mac_address_set(uint16_t bonding_port_id,
 	struct rte_eth_dev *bonding_eth_dev;
 	struct bond_dev_private *internals;
 
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
+
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
 
@@ -949,6 +978,9 @@ rte_eth_bond_mac_address_reset(uint16_t bonding_port_id)
 {
 	struct rte_eth_dev *bonding_eth_dev;
 	struct bond_dev_private *internals;
+
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
 
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
@@ -990,6 +1022,9 @@ int
 rte_eth_bond_xmit_policy_set(uint16_t bonding_port_id, uint8_t policy)
 {
 	struct bond_dev_private *internals;
+
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
 
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
@@ -1036,6 +1071,9 @@ rte_eth_bond_link_monitoring_set(uint16_t bonding_port_id, uint32_t internal_ms)
 {
 	struct bond_dev_private *internals;
 
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
+
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
 
@@ -1065,6 +1103,9 @@ rte_eth_bond_link_down_prop_delay_set(uint16_t bonding_port_id,
 {
 	struct bond_dev_private *internals;
 
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
+
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;
 
@@ -1092,6 +1133,9 @@ rte_eth_bond_link_up_prop_delay_set(uint16_t bonding_port_id, uint32_t delay_ms)
 
 {
 	struct bond_dev_private *internals;
+
+	if (bond_api_check_primary(__func__) != 0)
+		return -1;
 
 	if (valid_bonding_port_id(bonding_port_id) != 0)
 		return -1;

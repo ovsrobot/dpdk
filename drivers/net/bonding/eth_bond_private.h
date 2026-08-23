@@ -7,12 +7,14 @@
 
 #include <stdint.h>
 #include <sys/queue.h>
+#include <stdbool.h>
 
 #include <ethdev_driver.h>
 #include <rte_flow.h>
 #include <rte_spinlock.h>
 #include <rte_bitmap.h>
 #include <rte_flow_driver.h>
+#include <rte_eal.h>
 
 #include "rte_eth_bond.h"
 #include "eth_bond_8023ad_private.h"
@@ -210,6 +212,12 @@ find_member_by_id(uint16_t *members, uint16_t members_count, uint16_t member_id)
 	}
 
 	return pos;
+}
+
+static inline bool
+bond_process_is_primary(void)
+{
+	return rte_eal_process_type() == RTE_PROC_PRIMARY;
 }
 
 int

@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated bonding PMD secondary process handling.**
+
+  Bonding devices now use a secondary-process device operations table to
+  keep query and detach paths available while rejecting unsupported control
+  operations before shared ethdev state can be modified. Bonding-specific
+  control APIs are also restricted to the primary process.
 
 Removed Items
 -------------
