@@ -941,6 +941,12 @@ atl_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 			break;
 		}
 
+		/*
+		 * Barrier before reading the rest of the write-back
+		 * descriptor, so it can't be torn against the NIC's DMA.
+		 */
+		rte_rmb();
+
 		PMD_RX_LOG(DEBUG, "port_id=%u queue_id=%u tail=%u "
 			   "eop=0x%x pkt_len=%u hash=0x%x hash_type=0x%x",
 			   (unsigned int)rxq->port_id,
@@ -1068,6 +1074,22 @@ atl_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 				break;
 			rxd = (struct hw_atl_rxd_s *)&rxq->hw_ring[tail];
 			rxd_wb = *(struct hw_atl_rxd_wb_s *)rxd;
+
+			/*
+			 * dd was only checked on the eop descriptor found
+			 * by the search above, not on this one - stop rather
+			 * than trust an unfinished descriptor's stale data.
+			 */
+			if (!rxd_wb.dd) {
+				PMD_RX_LOG(DEBUG,
+				   "port_id=%u queue_id=%u tail=%u: "
+				   "continuation desc not dd yet",
+				   (unsigned int)rxq->port_id,
+				   (unsigned int)rxq->queue_id,
+				   (unsigned int)tail);
+				goto err_stop;
+			}
+			rte_rmb();
 		};
 
 		/*
