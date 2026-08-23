@@ -1146,8 +1146,10 @@ ntb_mbuf_pool_create(uint16_t mbuf_seg_size, uint32_t nb_mbuf,
 		if (!left_sz)
 			break;
 		snprintf(mz_name, sizeof(mz_name), "ntb_mw_%d", mz_id);
-		align = ntb_info.mw_size_align ? ntb_info.mw_size[mz_id] :
-			RTE_CACHE_LINE_SIZE;
+		if (ntb_info.mw_size_align)
+			align = ntb_info.mw_size[mz_id];
+		else
+			align = RTE_CACHE_LINE_SIZE;
 		/* Reserve ntb header space on memzone 0. */
 		max_mz_len = mz_id ? ntb_info.mw_size[mz_id] :
 			     ntb_info.mw_size[mz_id] - ntb_info.ntb_hdr_size;
@@ -1155,6 +1157,22 @@ ntb_mbuf_pool_create(uint16_t mbuf_seg_size, uint32_t nb_mbuf,
 			(max_mz_len / total_elt_sz * total_elt_sz);
 		if (!mz_len)
 			continue;
+		/*
+		 * Some NTB hardware (e.g. AMD) uses an outbound translation
+		 * window that forms the target as (xlat_base | offset) rather
+		 * than (xlat_base + offset). For that to be correct the memzone
+		 * base must be aligned to a power of two >= its length, so that
+		 * no offset bit collides with a set bit in the base address.
+		 * Honour that requirement when the driver reports mw_addr_align.
+		 */
+		if (ntb_info.mw_addr_align) {
+			uint64_t pow2_align = rte_align64pow2(mz_len);
+
+			if (pow2_align > align)
+				align = pow2_align;
+			if (ntb_info.mw_addr_align > align)
+				align = ntb_info.mw_addr_align;
+		}
 		mz = rte_memzone_reserve_aligned(mz_name, mz_len, socket_id,
 					RTE_MEMZONE_IOVA_CONTIG, align);
 		if (mz == NULL) {

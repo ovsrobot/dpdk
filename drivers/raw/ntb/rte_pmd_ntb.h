@@ -27,6 +27,16 @@ struct ntb_dev_info {
 	uint8_t mw_size_align;
 	uint8_t mw_cnt;
 	uint64_t *mw_size;
+	/**< Minimum alignment (bytes) required for the mw translation base
+	 * address, and a flag that the base must additionally be aligned to a
+	 * power of two >= the mw length. 0 means no extra alignment beyond
+	 * cache line. AMD NTB uses an outbound translation window that forms
+	 * the target as (xlat_base | offset) instead of (xlat_base + offset),
+	 * so the base must be size-aligned to avoid offset bits colliding with
+	 * base bits; it also requires at least 4K alignment for the XLAT
+	 * register.
+	 */
+	uint64_t mw_addr_align;
 };
 
 struct ntb_dev_config {

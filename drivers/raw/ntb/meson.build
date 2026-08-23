@@ -3,5 +3,6 @@
 
 deps += ['rawdev', 'mbuf', 'mempool', 'pci', 'bus_pci']
 sources = files('ntb.c',
-                'ntb_hw_intel.c')
+                'ntb_hw_intel.c',
+                'ntb_hw_amd.c')
 headers = files('rte_pmd_ntb.h')
