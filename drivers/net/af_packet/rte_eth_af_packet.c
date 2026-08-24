@@ -222,11 +222,17 @@ eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 		/* check for vlan info */
 		if (ppd->tp_status & TP_STATUS_VLAN_VALID) {
+			uint16_t tpid;
+
 			mbuf->vlan_tci = ppd->tp_vlan_tci;
 			mbuf->ol_flags |= (RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED);
 
-			if (!pkt_q->vlan_strip && rte_vlan_insert(&mbuf))
-				PMD_LOG(ERR, "Failed to reinsert VLAN tag");
+			if (!pkt_q->vlan_strip) {
+				tpid = (ppd->tp_status & TP_STATUS_VLAN_TPID_VALID) ?
+					ppd->tp_vlan_tpid : RTE_ETHER_TYPE_VLAN;
+				if (rte_vlan_insert_tpid(&mbuf, tpid))
+					PMD_LOG(ERR, "Failed to reinsert VLAN tag");
+			}
 		}
 
 		/* add kernel provided timestamp when offloading is enabled */
