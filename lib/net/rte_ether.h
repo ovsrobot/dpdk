@@ -379,19 +379,21 @@ static inline int rte_vlan_strip(struct rte_mbuf *m)
 }
 
 /**
- * Insert VLAN tag into mbuf.
+ * Insert VLAN tag with the given TPID into mbuf.
  *
- * Software version of VLAN unstripping
+ * Software version of VLAN unstripping.
  *
  * @param m
  *   The packet mbuf.
+ * @param tpid
+ *   Tag Protocol Identifier to insert (host order).
  * @return
  *   - 0: On success
  *   -EINVAL: overwriting would be unsafe because mbuf is shared or
  *            indirect, or mbuf's first segment is too short
  *   -ENOSPC: not enough headroom in mbuf
  */
-static inline int rte_vlan_insert(struct rte_mbuf **m)
+static inline int rte_vlan_insert_tpid(struct rte_mbuf **m, uint16_t tpid)
 {
 	struct rte_ether_hdr *oh, *nh;
 	struct rte_vlan_hdr *vh;
@@ -411,7 +413,7 @@ static inline int rte_vlan_insert(struct rte_mbuf **m)
 		return -ENOSPC;
 
 	memmove(nh, oh, 2 * RTE_ETHER_ADDR_LEN);
-	nh->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_VLAN);
+	nh->ether_type = rte_cpu_to_be_16(tpid);
 
 	vh = (struct rte_vlan_hdr *) (nh + 1);
 	vh->vlan_tci = rte_cpu_to_be_16((*m)->vlan_tci);
@@ -424,6 +426,26 @@ static inline int rte_vlan_insert(struct rte_mbuf **m)
 		(*m)->l2_len += sizeof(struct rte_vlan_hdr);
 
 	return 0;
+}
+
+/**
+ * Insert VLAN tag into mbuf.
+ *
+ * Software version of VLAN unstripping. Always inserts an 802.1Q tag
+ * (TPID 0x8100). Use rte_vlan_insert_tpid() when the original TPID may
+ * differ (e.g. 802.1ad QinQ outer tags).
+ *
+ * @param m
+ *   The packet mbuf.
+ * @return
+ *   - 0: On success
+ *   -EINVAL: overwriting would be unsafe because mbuf is shared or
+ *            indirect, or mbuf's first segment is too short
+ *   -ENOSPC: not enough headroom in mbuf
+ */
+static inline int rte_vlan_insert(struct rte_mbuf **m)
+{
+	return rte_vlan_insert_tpid(m, RTE_ETHER_TYPE_VLAN);
 }
 
 #ifdef __cplusplus
