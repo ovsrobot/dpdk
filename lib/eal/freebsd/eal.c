@@ -844,6 +844,12 @@ int rte_vfio_enable(__rte_unused const char *modname)
 	return -1;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_init_mem)
+int rte_vfio_init_mem(void)
+{
+	return 0;
+}
+
 RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_is_enabled)
 int rte_vfio_is_enabled(__rte_unused const char *modname)
 {
@@ -930,4 +936,14 @@ enum rte_vfio_mode
 rte_vfio_get_mode(void)
 {
 	return RTE_VFIO_MODE_NONE;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_device_num)
+int
+rte_vfio_get_device_num(__rte_unused const char *sysfs_base,
+		__rte_unused const char *dev_addr,
+		__rte_unused int *vfio_device_num)
+{
+	rte_errno = ENOTSUP;
+	return -1;
 }
