@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated NXP dpaa2 driver.**
+
+  * Added the inner IP header to the RSS hash so tunnelled traffic is
+    distributed across the Rx queues.
+
 
 Removed Items
 -------------
