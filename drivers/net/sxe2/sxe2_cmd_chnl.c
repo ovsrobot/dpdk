@@ -197,97 +197,79 @@ int32_t sxe2_drv_vsi_del(struct sxe2_adapter *adapter, struct sxe2_vsi *vsi)
 static int32_t sxe2_rxq_buf_split_fill(struct sxe2_rx_queue *rxq,
 				   struct sxe2_drv_rxq_ctxt *ctxt)
 {
-	int32_t ret = 0;
 	uint32_t proto_hdr;
 
-	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
-		proto_hdr = rxq->rx_seg[0].proto_hdr;
-		if (proto_hdr == RTE_PTYPE_UNKNOWN) {
-			PMD_LOG_ERR(RX, "Buffer split protocol must be configured");
-			ret = -1;
-			goto l_end;
-		}
-
-		switch (proto_hdr & RTE_PTYPE_L4_MASK) {
-		case RTE_PTYPE_L4_TCP:
-			ctxt->split_type_mask = SXE2_PTYPE_L4_TCP;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		case RTE_PTYPE_L4_UDP:
-			ctxt->split_type_mask = SXE2_PTYPE_L4_UDP;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		case RTE_PTYPE_L4_SCTP:
-			ctxt->split_type_mask = SXE2_PTYPE_L4_SCTP;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		}
-
-		switch (proto_hdr & RTE_PTYPE_L3_MASK) {
-		case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN:
-			ctxt->split_type_mask = SXE2_PTYPE_L3_IPV4;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		case RTE_PTYPE_L3_IPV6_EXT_UNKNOWN:
-			ctxt->split_type_mask = SXE2_PTYPE_L3_IPV6;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		}
-
-		switch (proto_hdr & RTE_PTYPE_L2_MASK) {
-		case RTE_PTYPE_L2_ETHER:
-			ctxt->split_type_mask = SXE2_PTYPE_L2_ETHER;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		}
-
-		switch (proto_hdr & RTE_PTYPE_INNER_L4_MASK) {
-		case RTE_PTYPE_INNER_L4_TCP:
-			ctxt->split_type_mask = SXE2_PTYPE_INNER_L4_TCP;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		case RTE_PTYPE_INNER_L4_UDP:
-			ctxt->split_type_mask = SXE2_PTYPE_INNER_L4_UDP;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		case RTE_PTYPE_INNER_L4_SCTP:
-			ctxt->split_type_mask = SXE2_PTYPE_INNER_L4_SCTP;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		}
-
-		switch (proto_hdr & RTE_PTYPE_INNER_L3_MASK) {
-		case RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN:
-			ctxt->split_type_mask = SXE2_PTYPE_INNER_L3_IPV4;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		case RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN:
-			ctxt->split_type_mask = SXE2_PTYPE_INNER_L3_IPV6;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		}
-
-		switch (proto_hdr & RTE_PTYPE_INNER_L2_MASK) {
-		case RTE_PTYPE_INNER_L2_ETHER:
-			ctxt->split_type_mask = SXE2_PTYPE_INNER_L2_ETHER;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		}
-
-		switch (proto_hdr & RTE_PTYPE_TUNNEL_MASK) {
-		case RTE_PTYPE_TUNNEL_GRENAT:
-			ctxt->split_type_mask = SXE2_PTYPE_TUNNEL_GRENAT;
-			ctxt->hdr_len = SXE2_RX_HDR_SIZE;
-			goto l_end;
-		}
-		PMD_LOG_ERR(RX, "Buffer split protocol is not supported");
-		ret = -1;
-	} else {
-		ctxt->hdr_len = 0;
-		ctxt->split_type_mask = 0;
+	proto_hdr = rxq->rx_seg[0].proto_hdr;
+	if (proto_hdr == RTE_PTYPE_UNKNOWN) {
+		PMD_LOG_ERR(RX, "Buffer split protocol must be configured");
+		return -EINVAL;
 	}
+
+	switch (proto_hdr & RTE_PTYPE_L4_MASK) {
+	case RTE_PTYPE_L4_TCP:
+		ctxt->split_type_mask = SXE2_PTYPE_L4_TCP;
+		goto l_end;
+	case RTE_PTYPE_L4_UDP:
+		ctxt->split_type_mask = SXE2_PTYPE_L4_UDP;
+		goto l_end;
+	case RTE_PTYPE_L4_SCTP:
+		ctxt->split_type_mask = SXE2_PTYPE_L4_SCTP;
+		goto l_end;
+	}
+
+	switch (proto_hdr & RTE_PTYPE_L3_MASK) {
+	case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN:
+		ctxt->split_type_mask = SXE2_PTYPE_L3_IPV4;
+		goto l_end;
+	case RTE_PTYPE_L3_IPV6_EXT_UNKNOWN:
+		ctxt->split_type_mask = SXE2_PTYPE_L3_IPV6;
+		goto l_end;
+	}
+
+	switch (proto_hdr & RTE_PTYPE_L2_MASK) {
+	case RTE_PTYPE_L2_ETHER:
+		ctxt->split_type_mask = SXE2_PTYPE_L2_ETHER;
+		goto l_end;
+	}
+
+	switch (proto_hdr & RTE_PTYPE_INNER_L4_MASK) {
+	case RTE_PTYPE_INNER_L4_TCP:
+		ctxt->split_type_mask = SXE2_PTYPE_INNER_L4_TCP;
+		goto l_end;
+	case RTE_PTYPE_INNER_L4_UDP:
+		ctxt->split_type_mask = SXE2_PTYPE_INNER_L4_UDP;
+		goto l_end;
+	case RTE_PTYPE_INNER_L4_SCTP:
+		ctxt->split_type_mask = SXE2_PTYPE_INNER_L4_SCTP;
+		goto l_end;
+	}
+
+	switch (proto_hdr & RTE_PTYPE_INNER_L3_MASK) {
+	case RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN:
+		ctxt->split_type_mask = SXE2_PTYPE_INNER_L3_IPV4;
+		goto l_end;
+	case RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN:
+		ctxt->split_type_mask = SXE2_PTYPE_INNER_L3_IPV6;
+		goto l_end;
+	}
+
+	switch (proto_hdr & RTE_PTYPE_INNER_L2_MASK) {
+	case RTE_PTYPE_INNER_L2_ETHER:
+		ctxt->split_type_mask = SXE2_PTYPE_INNER_L2_ETHER;
+		goto l_end;
+	}
+
+	switch (proto_hdr & RTE_PTYPE_TUNNEL_MASK) {
+	case RTE_PTYPE_TUNNEL_GRENAT:
+		ctxt->split_type_mask = SXE2_PTYPE_TUNNEL_GRENAT;
+		goto l_end;
+	}
+
+	PMD_LOG_ERR(RX, "Buffer split protocol is not supported");
+	return -ENOTSUP;
 l_end:
-	return ret;
+	ctxt->hdr_len = SXE2_RX_HDR_SIZE;
+	return 0;
 }
 
 static int32_t sxe2_rxq_ctxt_cfg_fill(struct sxe2_rx_queue *rxq,
