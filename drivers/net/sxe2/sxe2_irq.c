@@ -881,12 +881,11 @@ static void sxe2_rxq_intr_unregister(struct rte_eth_dev *dev)
 			(void)sxe2_drv_dev_rxq_irq_set(adapter->cdev, i, &efd, 1);
 			sxe2_rxq_intr_efd_free(irq_ctxt->rxq_event_fd[i]);
 		}
+		rte_free(irq_ctxt->rxq_event_fd);
+		irq_ctxt->rxq_event_fd = NULL;
 	}
-	rte_free(irq_ctxt->rxq_event_fd);
-	irq_ctxt->rxq_event_fd = NULL;
 
 	rte_intr_vec_list_free(intr_handle);
-
 	rte_intr_nb_efd_set(intr_handle, 0);
 	rte_intr_max_intr_set(intr_handle, 0);
 }
