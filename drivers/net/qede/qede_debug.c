@@ -812,13 +812,6 @@ static struct split_type_defs s_split_type_defs[] = {
 	{"vf"}
 };
 
-/******************************** Variables *********************************/
-
-/**
- * The version of the calling app
- */
-static u32 s_app_ver;
-
 /**************************** Private Functions ******************************/
 
 /* Reads and returns a single dword from the specified unaligned buffer */
@@ -4868,8 +4861,6 @@ enum dbg_status qed_dbg_set_app_ver(u32 ver)
 {
 	if (ver < TOOLS_VERSION)
 		return DBG_STATUS_UNSUPPORTED_APP_VERSION;
-
-	s_app_ver = ver;
 
 	return DBG_STATUS_OK;
 }
