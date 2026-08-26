@@ -986,7 +986,7 @@ sxe2_buffer_split_supported_hdr_ptypes_get(struct rte_eth_dev *dev __rte_unused,
 
 		RTE_PTYPE_UNKNOWN
 	};
-	*no_of_elements = RTE_DIM(ptypes);
+	*no_of_elements = RTE_DIM(ptypes) - 1;
 
 	return ptypes;
 }
@@ -2028,8 +2028,8 @@ init_sched_err:
 init_fc_state_err:
 	(void)sxe2_flow_uninit(dev);
 init_flow_err:
-	sxe2_security_uinit(dev);
 init_rss_err:
+	sxe2_security_uinit(dev);
 init_security_err:
 	sxe2_intr_uninit(dev);
 init_irq_err:
@@ -2198,12 +2198,14 @@ static bool sxe2_switchdev_repr_match(struct sxe2_adapter *adapter,
 	}
 
 	for (port_idx = 0; port_idx < req_eth_da->nb_ports; ++port_idx) {
-		if (adapter->switchdev_info.pf_num != req_eth_da->ports[port_idx]) {
-			PMD_DEV_LOG_DEBUG(adapter, DRV, "switchdev pf %u not match req pf %u",
-				adapter->switchdev_info.pf_num, req_eth_da->ports[port_idx]);
-			rte_errno = EBUSY;
-			return false;
-		}
+		if (adapter->switchdev_info.pf_num == req_eth_da->ports[port_idx])
+			break;
+	}
+	if (port_idx == req_eth_da->nb_ports) {
+		PMD_DEV_LOG_DEBUG(adapter, DRV, "switchdev pf %u not match req pf",
+			adapter->switchdev_info.pf_num);
+		rte_errno = EBUSY;
+		return false;
 	}
 
 	for (repr_idx = 0; repr_idx < req_eth_da->nb_representor_ports; ++repr_idx) {
