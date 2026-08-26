@@ -285,14 +285,16 @@ static int32_t sxe2_flow_meta_proc(struct rte_eth_dev *dev,
 					attr, "Only support priority 0.");
 			ret = -rte_errno;
 			goto l_end;
-		} else if (!adapter->switchdev_info.is_switchdev) {
-			PMD_LOG_ERR(DRV, "Legacy mode only support priority 0.");
-			rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ATTR_PRIORITY,
-					attr, "Legacy mode only priority 0.");
-			ret = -rte_errno;
-			goto l_end;
 		} else {
-			flow->meta.flow_prio = attr->priority;
+			if (!adapter->switchdev_info.is_switchdev) {
+				PMD_LOG_ERR(DRV, "Legacy mode only support priority 0.");
+				rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ATTR_PRIORITY,
+						attr, "Legacy mode only priority 0.");
+				ret = -rte_errno;
+				goto l_end;
+			} else {
+				flow->meta.flow_prio = attr->priority;
+			}
 		}
 	}
 
