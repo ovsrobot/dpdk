@@ -79,7 +79,7 @@ static void sxe2_event_irq_common_handler(struct sxe2_adapter *adapter, uint64_t
 	struct rte_eth_dev *dev = &rte_eth_devices[adapter->dev_info.dev_data->port_id];
 	struct rte_eth_dev *repr_eth_dev;
 	struct sxe2_adapter *repr_adapter;
-	uint8_t vf_id;
+	uint16_t vf_id;
 
 	if (oicr & RTE_BIT32(SXE2_COM_EC_LINK_CHG)) {
 		PMD_DEV_LOG_INFO(adapter, DRV, "OICR=0x%" PRIx64, oicr);
