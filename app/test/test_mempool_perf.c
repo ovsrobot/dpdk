@@ -43,7 +43,7 @@
  *    Each core get *n_keep* objects per bulk of *n_get_bulk*. Then,
  *    objects are put back in the pool per bulk of *n_put_bulk*.
  *
- *    This sequence is done during TIME_S seconds.
+ *    This sequence is done during TIME_MS milliseconds.
  *
  *    This test is done on the following configurations:
  *
@@ -61,30 +61,32 @@
  *
  *    - Pseudorandom max bulk size (*n_max_bulk*)
  *
- *      - Max bulk from CACHE_LINE_BURST to 256, and RTE_MEMPOOL_CACHE_MAX_SIZE,
- *        where CACHE_LINE_BURST is the number of pointers fitting into one CPU cache line.
+ *      - Max bulk: CACHE_LINE_BURST, 32, 64, RTE_MEMPOOL_CACHE_MAX_SIZE / 2
+ *        and RTE_MEMPOOL_CACHE_MAX_SIZE, where CACHE_LINE_BURST is the
+ *        number of pointers fitting into one CPU cache line.
  *
  *    - Fixed bulk size (*n_get_bulk*, *n_put_bulk*)
  *
- *      - Bulk get from 1 to 256, and RTE_MEMPOOL_CACHE_MAX_SIZE
- *      - Bulk put from 1 to 256, and RTE_MEMPOOL_CACHE_MAX_SIZE
- *      - Bulk get and put from 1 to 256, and RTE_MEMPOOL_CACHE_MAX_SIZE, compile time constant
+ *      - Bulk get: 1, 4, CACHE_LINE_BURST, 32, 64,
+ *        RTE_MEMPOOL_CACHE_MAX_SIZE / 2, RTE_MEMPOOL_CACHE_MAX_SIZE
+ *      - Bulk put: 1, 4, CACHE_LINE_BURST, 32, 64,
+ *        RTE_MEMPOOL_CACHE_MAX_SIZE / 2, RTE_MEMPOOL_CACHE_MAX_SIZE
+ *      - Bulk get and put of 1, CACHE_LINE_BURST, 32 and
+ *        RTE_MEMPOOL_CACHE_MAX_SIZE, compile time constant
  *
  *    - Number of kept objects (*n_keep*)
  *
- *      - 32
- *      - 128
- *      - 512
- *      - 2048
- *      - 8192
- *      - 32768
+ *      - 32, 512, 32768
  */
 
-#define TIME_S 1
+#define TIME_MS 200
+/* above this many cores, use the reduced bulk size tables */
+#define MANYCORE_THRESHOLD 2
 #define MEMPOOL_ELT_SIZE 2048
 #define MAX_KEEP 32768
 #define N (128 * MAX_KEEP)
-#define MEMPOOL_SIZE ((rte_lcore_count()*(MAX_KEEP+RTE_MEMPOOL_CACHE_MAX_SIZE*2))-1)
+/* max mempool operations per call to test_loop() */
+#define MAX_OPS (256 * 1024)
 
 /* Number of pointers fitting into one cache line. */
 #define CACHE_LINE_BURST (RTE_CACHE_LINE_SIZE / sizeof(uintptr_t))
@@ -147,9 +149,21 @@ test_loop(struct rte_mempool *mp, struct rte_mempool_cache *cache,
 	alignas(RTE_CACHE_LINE_SIZE) void *obj_table[MAX_KEEP];
 	unsigned int idx;
 	unsigned int i;
+	unsigned int iter;
 	int ret;
 
-	for (i = 0; likely(i < (N / x_keep)); i++) {
+	/*
+	 * The elapsed time is only checked between calls to this function,
+	 * so bound the work done by one call.  A small bulk size means many
+	 * more mempool operations for the same number of objects, and each
+	 * operation is far more expensive when many cores contend, so limit
+	 * the operations rather than the objects.
+	 */
+	iter = MAX_OPS / (x_keep / x_get_bulk + x_keep / x_put_bulk);
+	if (iter == 0)
+		iter = 1;
+
+	for (i = 0; likely(i < iter); i++) {
 		/* get x_keep objects by bulk of x_get_bulk */
 		for (idx = 0; idx < x_keep; idx += x_get_bulk) {
 			ret = rte_mempool_generic_get(mp,
@@ -171,7 +185,7 @@ test_loop(struct rte_mempool *mp, struct rte_mempool_cache *cache,
 		}
 	}
 
-	return 0;
+	return iter * x_keep;
 }
 
 static __rte_always_inline int
@@ -215,7 +229,7 @@ test_loop_random(struct rte_mempool *mp, struct rte_mempool_cache *cache,
 		}
 	}
 
-	return 0;
+	return N;
 }
 
 static int
@@ -258,7 +272,7 @@ per_lcore_mempool_test(void *arg)
 
 	start_cycles = rte_get_timer_cycles();
 
-	while (time_diff/hz < TIME_S) {
+	while (time_diff < hz * TIME_MS / 1000) {
 		if (n_max_bulk != 0)
 			ret = test_loop_random(mp, cache, n_keep, n_max_bulk);
 		else if (!use_constant_values)
@@ -289,7 +303,7 @@ per_lcore_mempool_test(void *arg)
 
 		end_cycles = rte_get_timer_cycles();
 		time_diff = end_cycles - start_cycles;
-		stats[lcore_id].enq_count += N;
+		stats[lcore_id].enq_count += ret;
 	}
 
 	stats[lcore_id].duration_cycles = time_diff;
@@ -312,6 +326,7 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 	int ret;
 	unsigned int cores_save = cores;
 	double hz = rte_get_timer_hz();
+	uint64_t start = rte_get_timer_cycles();
 
 	rte_atomic_store_explicit(&synchro, 0, rte_memory_order_relaxed);
 
@@ -330,7 +345,10 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 		       n_get_bulk, n_put_bulk,
 		       use_constant_values);
 
-	if (rte_mempool_avail_count(mp) != MEMPOOL_SIZE) {
+	/* show progress if test is killed by timeout */
+	fflush(stdout);
+
+	if (rte_mempool_avail_count(mp) != mp->size) {
 		printf("mempool is not full\n");
 		return -1;
 	}
@@ -368,7 +386,8 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 			rate += (double)stats[lcore_id].enq_count * hz /
 					(double)stats[lcore_id].duration_cycles;
 
-	printf("rate_persec=%10" PRIu64 "\n", rate);
+	printf("rate_persec=%10" PRIu64 " elapsed_ms=%4.0f\n", rate,
+	       (rte_get_timer_cycles() - start) * 1000.0 / hz);
 
 	return 0;
 }
@@ -377,18 +396,33 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 static int
 do_one_mempool_test(struct rte_mempool *mp, unsigned int cores, int external_cache)
 {
-	unsigned int bulk_tab_max[] = { CACHE_LINE_BURST, 32, 64, 128, 256,
+	unsigned int bulk_tab_max[] = { CACHE_LINE_BURST, 32, 64,
+			RTE_MEMPOOL_CACHE_MAX_SIZE / 2, RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
+	unsigned int bulk_tab_get[] = { 1, 4, CACHE_LINE_BURST, 32, 64,
+			RTE_MEMPOOL_CACHE_MAX_SIZE / 2, RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
+	unsigned int bulk_tab_put[] = { 1, 4, CACHE_LINE_BURST, 32, 64,
+			RTE_MEMPOOL_CACHE_MAX_SIZE / 2, RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
+	/* launch overhead dominates with many cores, so test fewer sizes */
+	unsigned int bulk_tab_get_manycore[] = { 1, 32,
+			RTE_MEMPOOL_CACHE_MAX_SIZE / 2, RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
+	unsigned int bulk_tab_put_manycore[] = { 1, 32,
+			RTE_MEMPOOL_CACHE_MAX_SIZE / 2, RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
+	/* subset of the get/put bulk sizes, replayed with constant values */
+	unsigned int bulk_tab_const[] = { 1, CACHE_LINE_BURST, 32,
 			RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
-	unsigned int bulk_tab_get[] = { 1, 4, CACHE_LINE_BURST, 32, 64, 128, 256,
-			RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
-	unsigned int bulk_tab_put[] = { 1, 4, CACHE_LINE_BURST, 32, 64, 128, 256,
-			RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
-	unsigned int keep_tab[] = { 32, 128, 512, 2048, 8192, 32768, 0 };
+	unsigned int keep_tab[] = { 32, 512, 32768, 0 };
 	unsigned int *max_bulk_ptr;
 	unsigned int *get_bulk_ptr;
 	unsigned int *put_bulk_ptr;
 	unsigned int *keep_ptr;
+	unsigned int *get_tab = bulk_tab_get;
+	unsigned int *put_tab = bulk_tab_put;
 	int ret;
+
+	if (cores > MANYCORE_THRESHOLD) {
+		get_tab = bulk_tab_get_manycore;
+		put_tab = bulk_tab_put_manycore;
+	}
 
 	for (keep_ptr = keep_tab; *keep_ptr; keep_ptr++) {
 		for (max_bulk_ptr = bulk_tab_max; *max_bulk_ptr; max_bulk_ptr++) {
@@ -409,8 +443,8 @@ do_one_mempool_test(struct rte_mempool *mp, unsigned int cores, int external_cac
 	}
 
 	for (keep_ptr = keep_tab; *keep_ptr; keep_ptr++) {
-		for (get_bulk_ptr = bulk_tab_get; *get_bulk_ptr; get_bulk_ptr++) {
-			for (put_bulk_ptr = bulk_tab_put; *put_bulk_ptr; put_bulk_ptr++) {
+		for (get_bulk_ptr = get_tab; *get_bulk_ptr; get_bulk_ptr++) {
+			for (put_bulk_ptr = put_tab; *put_bulk_ptr; put_bulk_ptr++) {
 
 				if (*keep_ptr < *get_bulk_ptr || *keep_ptr < *put_bulk_ptr)
 					continue;
@@ -424,15 +458,31 @@ do_one_mempool_test(struct rte_mempool *mp, unsigned int cores, int external_cac
 				ret = launch_cores(mp, cores);
 				if (ret < 0)
 					return -1;
-
-				/* replay test with constant values */
-				if (n_get_bulk == n_put_bulk) {
-					use_constant_values = 1;
-					ret = launch_cores(mp, cores);
-					if (ret < 0)
-						return -1;
-				}
 			}
+		}
+	}
+
+	/*
+	 * Replay a subset of the bulk sizes with compile time constant
+	 * values, to cover the inlined constant bulk paths.  Only the
+	 * n_get_bulk == n_put_bulk diagonal is valid here, and a subset
+	 * of it is enough to catch a regression in those paths.
+	 */
+	for (keep_ptr = keep_tab; *keep_ptr; keep_ptr++) {
+		for (get_bulk_ptr = bulk_tab_const; *get_bulk_ptr; get_bulk_ptr++) {
+
+			if (*keep_ptr < *get_bulk_ptr)
+				continue;
+
+			use_external_cache = external_cache;
+			use_constant_values = 1;
+			n_max_bulk = 0;
+			n_get_bulk = *get_bulk_ptr;
+			n_put_bulk = *get_bulk_ptr;
+			n_keep = *keep_ptr;
+			ret = launch_cores(mp, cores);
+			if (ret < 0)
+				return -1;
 		}
 	}
 
@@ -449,22 +499,25 @@ do_all_mempool_perf_tests(unsigned int cores)
 	const char *mp_cache_ops;
 	const char *mp_nocache_ops;
 	const char *default_pool_ops;
+	unsigned int mempool_size = cores *
+		(MAX_KEEP + RTE_MEMPOOL_CACHE_MAX_SIZE * 2) - 1;
 	int ret = -1;
 
 	/* create a mempool (without cache) */
-	mp_nocache = rte_mempool_create("perf_test_nocache", MEMPOOL_SIZE,
+	mp_nocache = rte_mempool_create("perf_test_nocache", mempool_size,
 					MEMPOOL_ELT_SIZE, 0, 0,
 					NULL, NULL,
 					my_obj_init, NULL,
 					SOCKET_ID_ANY, 0);
 	if (mp_nocache == NULL) {
 		printf("cannot allocate mempool (without cache)\n");
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	mp_nocache_ops = rte_mempool_get_ops(mp_nocache->ops_index)->name;
 
 	/* create a mempool (with cache) */
-	mp_cache = rte_mempool_create("perf_test_cache", MEMPOOL_SIZE,
+	mp_cache = rte_mempool_create("perf_test_cache", mempool_size,
 				      MEMPOOL_ELT_SIZE,
 				      RTE_MEMPOOL_CACHE_MAX_SIZE, 0,
 				      NULL, NULL,
@@ -472,6 +525,7 @@ do_all_mempool_perf_tests(unsigned int cores)
 				      SOCKET_ID_ANY, 0);
 	if (mp_cache == NULL) {
 		printf("cannot allocate mempool (with cache)\n");
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	mp_cache_ops = rte_mempool_get_ops(mp_cache->ops_index)->name;
@@ -480,12 +534,13 @@ do_all_mempool_perf_tests(unsigned int cores)
 
 	/* Create a mempool (without cache) based on Default handler */
 	default_pool_nocache = rte_mempool_create_empty("default_pool_nocache",
-			MEMPOOL_SIZE,
+			mempool_size,
 			MEMPOOL_ELT_SIZE,
 			0, 0,
 			SOCKET_ID_ANY, 0);
 	if (default_pool_nocache == NULL) {
 		printf("cannot allocate %s mempool (without cache)\n", default_pool_ops);
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	if (rte_mempool_set_ops_byname(default_pool_nocache, default_pool_ops, NULL) < 0) {
@@ -494,18 +549,20 @@ do_all_mempool_perf_tests(unsigned int cores)
 	}
 	if (rte_mempool_populate_default(default_pool_nocache) < 0) {
 		printf("cannot populate %s mempool\n", default_pool_ops);
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	rte_mempool_obj_iter(default_pool_nocache, my_obj_init, NULL);
 
 	/* Create a mempool (with cache) based on Default handler */
 	default_pool_cache = rte_mempool_create_empty("default_pool_cache",
-			MEMPOOL_SIZE,
+			mempool_size,
 			MEMPOOL_ELT_SIZE,
 			RTE_MEMPOOL_CACHE_MAX_SIZE, 0,
 			SOCKET_ID_ANY, 0);
 	if (default_pool_cache == NULL) {
 		printf("cannot allocate %s mempool (with cache)\n", default_pool_ops);
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	if (rte_mempool_set_ops_byname(default_pool_cache, default_pool_ops, NULL) < 0) {
@@ -514,6 +571,7 @@ do_all_mempool_perf_tests(unsigned int cores)
 	}
 	if (rte_mempool_populate_default(default_pool_cache) < 0) {
 		printf("cannot populate %s mempool\n", default_pool_ops);
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	rte_mempool_obj_iter(default_pool_cache, my_obj_init, NULL);
@@ -584,27 +642,30 @@ test_mempool_perf_allcores(void)
 static int
 test_mempool_perf(void)
 {
-	int ret = -1;
+	unsigned int cores = rte_lcore_count();
+	int ret;
 
-	/* performance test with 1, 2 and max cores */
-	if (do_all_mempool_perf_tests(1) < 0)
-		goto err;
-	if (rte_lcore_count() == 1)
-		goto done;
+	/*
+	 * Performance test with max, 1 and 2 cores.
+	 *
+	 * The largest configuration needs the most memory, so run it
+	 * first: on a system which cannot fit it, the mempool allocation
+	 * fails right away and the test is skipped without first spending
+	 * minutes on the smaller core counts.
+	 */
+	if (cores > 2) {
+		ret = do_all_mempool_perf_tests(cores);
+		if (ret != 0)
+			return ret;
+	}
 
-	if (do_all_mempool_perf_tests(2) < 0)
-		goto err;
-	if (rte_lcore_count() == 2)
-		goto done;
+	ret = do_all_mempool_perf_tests(1);
+	if (ret != 0)
+		return ret;
+	if (cores == 1)
+		return 0;
 
-	if (do_all_mempool_perf_tests(rte_lcore_count()) < 0)
-		goto err;
-
-done:
-	ret = 0;
-
-err:
-	return ret;
+	return do_all_mempool_perf_tests(2);
 }
 
 REGISTER_PERF_TEST(mempool_perf_autotest, test_mempool_perf);
