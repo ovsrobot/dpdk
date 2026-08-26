@@ -3644,6 +3644,15 @@ bond_ethdev_priv_dump(struct rte_eth_dev *dev, FILE *f)
 	return 0;
 }
 
+static const struct eth_dev_ops secondary_dev_ops = {
+	.dev_close         = bond_ethdev_close,
+	.dev_infos_get     = bond_ethdev_info,
+	.link_update       = bond_ethdev_link_update,
+	.stats_get         = bond_ethdev_stats_get,
+	.reta_query        = bond_ethdev_rss_reta_query,
+	.rss_hash_conf_get = bond_ethdev_rss_hash_conf_get,
+};
+
 const struct eth_dev_ops default_dev_ops = {
 	.dev_start            = bond_ethdev_start,
 	.dev_stop             = bond_ethdev_stop,
@@ -3828,7 +3837,7 @@ bond_probe(struct rte_vdev_device *dev)
 			return -1;
 		}
 
-		eth_dev->dev_ops = &default_dev_ops;
+		eth_dev->dev_ops = &secondary_dev_ops;
 		eth_dev->device = &dev->device;
 
 		/*

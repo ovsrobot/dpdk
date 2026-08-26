@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Restricted bonding device control to the primary process.**
+
+  Supported query and detach paths remain available to secondary processes,
+  while bonding device configuration changes are rejected.
 
 Removed Items
 -------------

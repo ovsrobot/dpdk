@@ -254,6 +254,19 @@ Like all other PMD, all functions exported by a PMD are lock-free functions
 that are assumed not to be invoked in parallel on different logical cores to
 work on the same target object.
 
+Bonding device configuration and LACP runtime state are owned by the primary
+process. Secondary processes may attach to an existing bonding device for
+supported query and detach operations, but control operations are restricted
+to the primary process.
+
+In a secondary process, bonding control operations such as configuring,
+starting or stopping the device, setting up queues, changing members,
+changing the bonding mode, updating RSS, changing MAC addresses, changing
+MTU, or configuring ``rte_flow`` rules are not supported.
+
+Rx and Tx are not supported on a bonding device in a secondary process;
+receive returns no packets and transmit drops packets.
+
 It should also be noted that the PMD receive function should not be invoked
 directly on a member devices after they have been to a bonding device since
 packets read directly from the member device will no longer be available to the
