@@ -183,15 +183,19 @@ static void sxe2_tx_queue_mbufs_release_vec(struct sxe2_tx_queue *txq)
 
 	if (txq->next_use < i) {
 		for ( ; i < txq->ring_depth; ++i) {
-			rte_pktmbuf_free_seg(buffer_vec[i].mbuf);
-			buffer_vec[i].mbuf = NULL;
+			if (buffer_vec[i].mbuf != NULL) {
+				rte_pktmbuf_free_seg(buffer_vec[i].mbuf);
+				buffer_vec[i].mbuf = NULL;
+			}
 		}
 		i = 0;
 	}
 
 	for ( ; i < txq->next_use; ++i) {
-		rte_pktmbuf_free_seg(buffer_vec[i].mbuf);
-		buffer_vec[i].mbuf = NULL;
+		if (buffer_vec[i].mbuf != NULL) {
+			rte_pktmbuf_free_seg(buffer_vec[i].mbuf);
+			buffer_vec[i].mbuf = NULL;
+		}
 	}
 }
 
