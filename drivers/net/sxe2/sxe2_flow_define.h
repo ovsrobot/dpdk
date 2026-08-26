@@ -100,7 +100,7 @@ TAILQ_HEAD(rte_flow_list_t, rte_flow);
 
 struct sxe2_flow_cid_mgr {
 	TAILQ_ENTRY(sxe2_flow_cid_mgr) next;
-	uint16_t stat_index;
+	uint32_t stat_index;
 	uint32_t user_id;
 	uint32_t driver_id;
 	uint32_t count_type;

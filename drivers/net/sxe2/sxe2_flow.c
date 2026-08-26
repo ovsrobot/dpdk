@@ -1288,6 +1288,12 @@ int32_t sxe2_flow_free_mgr(struct sxe2_adapter *adapter,
 			cid_mgr_list = &adapter->flow_ctxt.fnav_hw_res.flow_cid_mgr_list;
 			TAILQ_REMOVE(cid_mgr_list, mgr, next);
 			ret = sxe2_drv_flow_fnav_free_stat(adapter, mgr->stat_index);
+		} else {
+			PMD_LOG_ERR(DRV,
+				"Failed to free flow count, unknown engine type: %d.",
+				flow->engine_type);
+			ret = -ENOTSUP;
+			return ret;
 		}
 		if (ret) {
 			rte_flow_error_set(error, EIO,
