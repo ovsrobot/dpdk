@@ -691,7 +691,7 @@ test_pmd_perf(void)
 	if (nb_ports < NB_ETHPORTS_USED) {
 		printf("At least %u port(s) used for perf. test\n",
 		       NB_ETHPORTS_USED);
-		return -1;
+		return TEST_SKIPPED;
 	}
 
 	nb_lcores = rte_lcore_count();
