@@ -230,7 +230,7 @@ int32_t sxe2_vsi_init(struct rte_eth_dev *dev)
 	uint16_t srcvsi_cnt;
 
 	PMD_INIT_FUNC_TRACE();
-
+	TAILQ_INIT(&adapter->vsi_ctxt.other_vsi_list);
 	ret = sxe2_main_vsi_create(adapter);
 	if (ret) {
 		PMD_LOG_ERR(DRV, "Failed to create main VSI, ret=%d", ret);
@@ -283,13 +283,14 @@ void sxe2_vsi_uninit(struct rte_eth_dev *dev)
 
 l_free:
 	ret = sxe2_vsi_destroy(adapter, adapter->vsi_ctxt.main_vsi);
-	if (ret) {
+	if (ret && ret != -EPERM) {
 		PMD_LOG_ERR(DRV, "Failed to del vsi from fw, ret=%d", ret);
 		goto l_end;
 	}
+	adapter->vsi_ctxt.main_vsi = NULL;
 	RTE_TAILQ_FOREACH_SAFE(var, &adapter->vsi_ctxt.other_vsi_list, next, tvar) {
 		ret = sxe2_vsi_destroy(adapter, var);
-		if (ret) {
+		if (ret && ret != -EPERM) {
 			PMD_LOG_ERR(DRV, "Failed to del vsi from fw, ret=%d", ret);
 			break;
 		}
@@ -357,4 +358,5 @@ void sxe2_vsi_repr_main_vsi_destroy(struct rte_eth_dev *dev)
 	struct sxe2_adapter *adapter = SXE2_DEV_PRIVATE_TO_ADAPTER(dev);
 
 	sxe2_vsi_node_free(adapter->vsi_ctxt.main_vsi);
+	adapter->vsi_ctxt.main_vsi = NULL;
 }
