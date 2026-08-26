@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added TPID support to VLAN tag insertion.**
+
+  Added ``rte_vlan_insert_tpid()`` to the net library, allowing the Tag
+  Protocol Identifier (TPID) of an inserted VLAN tag to be specified
+  explicitly, so that 802.1ad (QinQ) outer tags can be reinserted with
+  the correct EtherType.
+
 
 Removed Items
 -------------
