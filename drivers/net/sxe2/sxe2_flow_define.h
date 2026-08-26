@@ -118,7 +118,8 @@ struct sxe2_flow_count_resource {
 struct sxe2_flow_context {
 	struct rte_flow_list_t rte_flow_list;
 	rte_spinlock_t flow_list_lock;
-	struct sxe2_flow_count_resource hw_res;
+	struct sxe2_flow_count_resource fnav_hw_res;
+	struct sxe2_flow_count_resource acl_hw_res;
 	uint16_t tunnel_port_list[SXE2_FLOW_UDP_TUNNEL_MAX];
 	uint32_t fnav_inited;
 };
