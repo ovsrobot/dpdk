@@ -2325,6 +2325,7 @@ static int32_t sxe2_eth_pmd_probe(struct sxe2_common_device *cdev,
 {
 	struct rte_eth_devargs eth_da = { .nb_ports = 0 };
 	int32_t ret = 0;
+	uint16_t port;
 
 	ret = sxe2_parse_eth_devargs(cdev->dev, &eth_da);
 	if (ret != 0) {
@@ -2332,7 +2333,18 @@ static int32_t sxe2_eth_pmd_probe(struct sxe2_common_device *cdev,
 		goto l_end;
 	}
 
-	ret = sxe2_eth_pmd_probe_pf(cdev, &eth_da, 0, kvargs);
+	if (eth_da.nb_ports > 0) {
+		for (port = 0; port < eth_da.nb_ports; port++) {
+			ret = sxe2_eth_pmd_probe_pf(cdev, &eth_da, port, kvargs);
+			if (ret != 0) {
+				PMD_LOG_ERR(INIT, "sxe2 eth pmd probe failed, ret=%d", ret);
+				(void)sxe2_eth_pmd_remove(cdev);
+				goto l_end;
+			}
+		}
+	} else {
+		ret = sxe2_eth_pmd_probe_pf(cdev, &eth_da, 0, kvargs);
+	}
 
 l_end:
 	return ret;
