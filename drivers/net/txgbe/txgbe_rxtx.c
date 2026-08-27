@@ -419,6 +419,7 @@ txgbe_set_xmit_ctx(struct txgbe_tx_queue *txq,
 			break;
 		case RTE_MBUF_F_TX_TUNNEL_VXLAN:
 		case RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE:
+		case RTE_MBUF_F_TX_TUNNEL_UDP:
 		case RTE_MBUF_F_TX_TUNNEL_GENEVE:
 			tunnel_seed |= TXGBE_TXD_ETYPE_UDP;
 			break;
@@ -593,6 +594,7 @@ tx_desc_ol_flags_to_ptype(uint64_t oflags)
 	switch (oflags & RTE_MBUF_F_TX_TUNNEL_MASK) {
 	case RTE_MBUF_F_TX_TUNNEL_VXLAN:
 	case RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE:
+	case RTE_MBUF_F_TX_TUNNEL_UDP:
 		ptype |= RTE_PTYPE_TUNNEL_GRENAT;
 		break;
 	case RTE_MBUF_F_TX_TUNNEL_GRE:
@@ -713,7 +715,20 @@ txgbe_get_tun_len(struct rte_mbuf *mbuf)
 	const struct txgbe_genevehdr *gh;
 	const struct txgbe_grehdr *grh;
 	struct txgbe_grehdr grehdr;
+	struct txgbe_udphdr udphdr;
+	const struct txgbe_udphdr *uh;
 	uint8_t tun_len;
+
+	/* Check for UDP tunneling */
+	if ((mbuf->ol_flags & RTE_MBUF_F_TX_TUNNEL_MASK) == RTE_MBUF_F_TX_TUNNEL_UDP) {
+		mbuf->ol_flags &= ~RTE_MBUF_F_TX_TUNNEL_UDP;
+		uh = rte_pktmbuf_read(mbuf, mbuf->outer_l2_len + mbuf->outer_l3_len,
+				      sizeof(udphdr), &udphdr);
+		if (uh->dest == rte_cpu_to_be_16(6081))
+			mbuf->ol_flags |= RTE_MBUF_F_TX_TUNNEL_GENEVE;
+		else
+			mbuf->ol_flags |= RTE_MBUF_F_TX_TUNNEL_VXLAN;
+	}
 
 	switch (mbuf->ol_flags & RTE_MBUF_F_TX_TUNNEL_MASK) {
 	case RTE_MBUF_F_TX_TUNNEL_IPIP:
