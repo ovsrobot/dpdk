@@ -673,10 +673,8 @@ static int rte_dpaa_setup_intr(struct rte_intr_handle *intr_handle)
 static int
 rte_dpaa_bus_scan(void)
 {
-	struct rte_dpaa_device *dev;
 	FILE *svr_file = NULL;
 	uint32_t svr_ver;
-	static int process_once;
 	char *penv;
 	int ret;
 
@@ -735,9 +733,29 @@ rte_dpaa_bus_scan(void)
 			dpaa_bus.max_push_rxq_num = DPAA_MAX_PUSH_MODE_QUEUE;
 	}
 
+	return 0;
+}
+
+/* Bus initialization needs the DPDK heap and a memzone, which EAL only sets
+ * up after the bus scan, so it is done here.
+ */
+static int
+rte_dpaa_bus_probe(struct rte_bus *bus)
+{
+	static int process_once;
+	struct rte_dpaa_device *dev;
+	int ret;
+
+	if (!dpaa_bus.detected)
+		return 0;
+
 	/* Device list creation is only done once */
 	if (!process_once) {
-		rte_dpaa_bus_dev_build();
+		ret = rte_dpaa_bus_dev_build();
+		if (ret) {
+			DPAA_BUS_ERR("Unable to build device list. (%d)", ret);
+			return ret;
+		}
 		/* One time load of Qman/Bman drivers */
 		ret = qman_global_init();
 		if (ret) {
@@ -751,8 +769,8 @@ rte_dpaa_bus_scan(void)
 				     ret);
 			return ret;
 		}
+		process_once = 1;
 	}
-	process_once = 1;
 
 	/* If no device present on DPAA bus nothing needs to be done */
 	if (TAILQ_EMPTY(&rte_dpaa_bus.device_list))
@@ -775,7 +793,8 @@ rte_dpaa_bus_scan(void)
 	dpaax_iova_table_populate();
 
 	dpaa_bus_global_init = 1;
-	return 0;
+
+	return rte_bus_generic_probe(bus);
 }
 
 /*
@@ -856,7 +875,7 @@ RTE_FINI_PRIO(dpaa_cleanup, 102)
 
 static struct rte_bus rte_dpaa_bus = {
 	.scan = rte_dpaa_bus_scan,
-	.probe = rte_bus_generic_probe,
+	.probe = rte_dpaa_bus_probe,
 	.parse = rte_dpaa_bus_parse,
 	.dev_compare = dpaa_bus_dev_compare,
 	.find_device = rte_bus_generic_find_device,
