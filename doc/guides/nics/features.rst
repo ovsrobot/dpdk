@@ -692,14 +692,22 @@ Timesync
 
 Supports IEEE1588/802.1AS timestamping.
 
-* **[implements] eth_dev_ops**: ``timesync_enable``, ``timesync_disable``
+* **[implements] eth_dev_ops**: ``timesync_enable``, ``timesync_disable``,
   ``timesync_read_rx_timestamp``, ``timesync_read_tx_timestamp``,
+  ``timesync_tx_ts_get_capabilities``, ``timesync_tx_timestamp_slot_alloc``,
+  ``timesync_read_tx_timestamp_slot``, ``timesync_tx_timestamp_slot_release``,
   ``timesync_adjust_time``, ``timesync_adjust_freq``,
   ``timesync_read_time``, ``timesync_write_time``.
 * **[related]    API**: ``rte_eth_timesync_enable()``, ``rte_eth_timesync_disable()``,
-  ``rte_eth_timesync_read_rx_timestamp()``,
-  ``rte_eth_timesync_read_tx_timestamp``, ``rte_eth_timesync_adjust_time()``,
-  ``rte_eth_timesync_adjust_freq()``,
+  ``rte_eth_timesync_read_rx_timestamp()``, ``rte_eth_timesync_read_tx_timestamp()``,
+  ``rte_eth_timesync_tx_timestamp_slot_get_capabilities()``,
+  ``rte_eth_timesync_tx_timestamp_slot_alloc()``,
+  ``rte_eth_timesync_read_tx_timestamp_slot()``,
+  ``rte_eth_timesync_tx_timestamp_slot_release()``,
+  ``rte_eth_timesync_tx_slot_dynfield_register()``,
+  ``rte_eth_timesync_tx_slot_dynfield_unregister()``,
+  ``rte_eth_timesync_tx_slot_set_mbuf()``,
+  ``rte_eth_timesync_adjust_time()``, ``rte_eth_timesync_adjust_freq()``,
   ``rte_eth_timesync_read_time()``, ``rte_eth_timesync_write_time()``.
 
 
