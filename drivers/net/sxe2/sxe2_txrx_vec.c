@@ -8,6 +8,19 @@
 #include "sxe2_ethdev.h"
 #include "sxe2_common_log.h"
 
+static void sxe2_tx_queue_mbufs_release_vec(struct sxe2_tx_queue *txq);
+
+struct sxe2_txq_ops sxe2_tx_vec_ops_get(void)
+{
+	static const struct sxe2_txq_ops ops = {
+		.queue_reset      = sxe2_tx_queue_reset_vec,
+		.mbufs_release    = sxe2_tx_queue_mbufs_release_vec,
+		.buffer_ring_free = sxe2_tx_buffer_ring_free,
+	};
+
+	return ops;
+}
+
 int32_t __rte_cold sxe2_rx_vec_support_check(struct rte_eth_dev *dev, uint32_t *vec_flags)
 {
 	struct sxe2_rx_queue *rxq;
@@ -233,7 +246,8 @@ int32_t __rte_cold sxe2_tx_queues_vec_prepare(struct rte_eth_dev *dev)
 			PMD_LOG_INFO(TX, "Failed to prepare tx queue, txq[%d] is NULL", i);
 			continue;
 		}
-		txq->ops.mbufs_release = sxe2_tx_queue_mbufs_release_vec;
+		txq->ops = sxe2_tx_vec_ops_get();
+		txq->ops.queue_reset(txq);
 	}
 	return ret;
 }
