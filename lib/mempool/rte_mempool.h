@@ -979,6 +979,8 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
  *   - >=0: Success; return the index of the ops struct in the table.
  *   - -EINVAL - some missing callbacks while registering ops struct.
  *   - -ENOSPC - the maximum number of ops structs has been reached.
+ *   - -ENAMETOOLONG - the name of the ops is too long.
+ *   - -EEXIST - the name of the ops is already registered.
  */
 int rte_mempool_register_ops(const struct rte_mempool_ops *ops);
 
