@@ -46,7 +46,7 @@ struct user_mem_maps {
 };
 
 struct vfio_config {
-	int vfio_enabled;
+	bool enabled;
 	int vfio_container_fd;
 	int vfio_active_groups;
 	const struct vfio_iommu_type *vfio_iommu_type;
@@ -57,6 +57,9 @@ struct vfio_config {
 /* per-process VFIO config */
 static struct vfio_config vfio_cfgs[RTE_MAX_VFIO_CONTAINERS];
 static struct vfio_config *default_vfio_cfg = &vfio_cfgs[0];
+
+/* whether VFIO is enabled (usable) in this process */
+static bool vfio_enabled;
 
 static int vfio_type1_dma_map(int);
 static int vfio_type1_dma_mem_map(int, uint64_t, uint64_t, uint64_t, int);
@@ -686,7 +689,7 @@ vfio_sync_default_container(void)
 		return -1;
 
 	/* default container fd should have been opened in rte_vfio_enable() */
-	if (!default_vfio_cfg->vfio_enabled ||
+	if (!vfio_enabled ||
 			default_vfio_cfg->vfio_container_fd < 0) {
 		EAL_LOG(ERR, "VFIO support is not initialized");
 		return -1;
@@ -1112,6 +1115,7 @@ rte_vfio_enable(const char *modname)
 	rte_spinlock_recursive_t lock = RTE_SPINLOCK_RECURSIVE_INITIALIZER;
 
 	for (i = 0; i < RTE_DIM(vfio_cfgs); i++) {
+		vfio_cfgs[i].enabled = false;
 		vfio_cfgs[i].vfio_container_fd = -1;
 		vfio_cfgs[i].vfio_active_groups = 0;
 		vfio_cfgs[i].vfio_iommu_type = NULL;
@@ -1167,7 +1171,8 @@ rte_vfio_enable(const char *modname)
 	/* check if we have VFIO driver enabled */
 	if (default_vfio_cfg->vfio_container_fd != -1) {
 		EAL_LOG(INFO, "VFIO support initialized");
-		default_vfio_cfg->vfio_enabled = 1;
+		default_vfio_cfg->enabled = true;
+		vfio_enabled = true;
 	} else {
 		EAL_LOG(NOTICE, "VFIO support could not be initialized");
 	}
@@ -1180,7 +1185,7 @@ int
 rte_vfio_is_enabled(const char *modname)
 {
 	const int mod_available = rte_eal_check_module(modname) > 0;
-	return default_vfio_cfg->vfio_enabled && mod_available;
+	return vfio_enabled && mod_available;
 }
 
 int
@@ -1357,7 +1362,7 @@ rte_vfio_get_container_fd(void)
 	 * The default container is set up during rte_vfio_enable().
 	 * This function does not create a new container.
 	 */
-	if (!default_vfio_cfg->vfio_enabled)
+	if (!vfio_enabled)
 		return -1;
 
 	return default_vfio_cfg->vfio_container_fd;
@@ -2090,6 +2095,7 @@ rte_vfio_container_create(void)
 		EAL_LOG(NOTICE, "Fail to create a new VFIO container");
 		return -1;
 	}
+	vfio_cfgs[i].enabled = true;
 
 	return vfio_cfgs[i].vfio_container_fd;
 }
@@ -2113,6 +2119,7 @@ rte_vfio_container_destroy(int container_fd)
 				vfio_cfg->vfio_groups[i].group_num);
 
 	close(container_fd);
+	vfio_cfg->enabled = false;
 	vfio_cfg->vfio_container_fd = -1;
 	vfio_cfg->vfio_active_groups = 0;
 	vfio_cfg->vfio_iommu_type = NULL;
@@ -2218,9 +2225,69 @@ rte_vfio_container_dma_unmap(int container_fd, uint64_t vaddr, uint64_t iova,
 	return container_dma_unmap(vfio_cfg, vaddr, iova, len);
 }
 
+static void
+vfio_cleanup_config(struct vfio_config *vfio_cfg)
+{
+	unsigned int i;
+
+	for (i = 0; i < RTE_DIM(vfio_cfg->vfio_groups); i++) {
+		struct vfio_group *group = &vfio_cfg->vfio_groups[i];
+
+		if (group->group_num == -1)
+			continue;
+		if (group->devices != 0) {
+			EAL_LOG(ERR, "Cannot cleanup VFIO group %d with %d devices",
+				group->group_num, group->devices);
+			return;
+		}
+		if (group->fd >= 0 && close(group->fd) < 0) {
+			EAL_LOG(ERR, "Cannot close VFIO group %d: %s",
+				group->group_num, strerror(errno));
+			return;
+		}
+
+		group->group_num = -1;
+		group->fd = -1;
+		group->devices = 0;
+		vfio_cfg->vfio_active_groups--;
+	}
+
+	/* if there are still active groups, we cannot cleanup the container */
+	if (vfio_cfg->vfio_active_groups != 0) {
+		EAL_LOG(ERR, "Cannot cleanup VFIO container with %d active groups",
+			vfio_cfg->vfio_active_groups);
+		return;
+	}
+
+	if (vfio_cfg->vfio_container_fd >= 0 &&
+			close(vfio_cfg->vfio_container_fd) < 0) {
+		EAL_LOG(ERR, "Cannot close VFIO container: %s", strerror(errno));
+		return;
+	}
+
+	vfio_cfg->vfio_container_fd = -1;
+	vfio_cfg->enabled = false;
+	vfio_cfg->vfio_iommu_type = NULL;
+
+	vfio_cfg->mem_maps.n_maps = 0;
+	memset(vfio_cfg->mem_maps.maps, 0, sizeof(vfio_cfg->mem_maps.maps));
+}
+
 RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_cleanup)
 void
 rte_vfio_cleanup(void)
 {
+	unsigned int i;
+
 	vfio_mp_sync_cleanup();
+
+	/* mem events can only be unregistered from the primary process */
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		rte_mem_event_callback_unregister(VFIO_MEM_EVENT_CLB_NAME, NULL);
+
+	/* cleanup all enabled configs, ignore failures */
+	for (i = 0; i < RTE_DIM(vfio_cfgs); i++) {
+		if (vfio_cfgs[i].enabled)
+			vfio_cleanup_config(&vfio_cfgs[i]);
+	}
 }
