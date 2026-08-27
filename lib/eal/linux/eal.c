@@ -41,7 +41,7 @@
 #include <rte_bus.h>
 #include <rte_version.h>
 #include <malloc_heap.h>
-#include <rte_vfio.h>
+#include <dev_vfio.h>
 
 #include <telemetry_internal.h>
 #include <eal_export.h>
@@ -771,7 +771,7 @@ rte_eal_init(int argc, char **argv)
 #endif
 	}
 
-	if (rte_vfio_enable("vfio")) {
+	if (dev_vfio_enable("vfio")) {
 		rte_eal_init_alert("Cannot init VFIO");
 		rte_errno = EAGAIN;
 		goto err_out;
@@ -985,7 +985,7 @@ rte_eal_cleanup(void)
 
 	rte_service_finalize();
 	eal_bus_cleanup();
-	rte_vfio_cleanup();
+	dev_vfio_cleanup();
 	rte_mp_channel_cleanup();
 	rte_eal_alarm_cleanup();
 	rte_trace_save();

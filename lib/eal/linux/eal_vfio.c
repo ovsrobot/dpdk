@@ -15,7 +15,7 @@
 #include <rte_log.h>
 #include <rte_memory.h>
 #include <rte_eal_memconfig.h>
-#include <rte_vfio.h>
+#include <dev_vfio.h>
 
 #include <eal_export.h>
 #include "eal_filesystem.h"
@@ -366,7 +366,7 @@ vfio_open_group_fd(int iommu_group_num, bool mp_request)
 	/* if not requesting via mp, open the group locally */
 	if (!mp_request) {
 		/* try regular group format */
-		snprintf(filename, sizeof(filename), RTE_VFIO_GROUP_FMT, iommu_group_num);
+		snprintf(filename, sizeof(filename), DEV_VFIO_GROUP_FMT, iommu_group_num);
 		vfio_group_fd = open(filename, O_RDWR);
 		if (vfio_group_fd < 0) {
 			/* if file not found, it's not an error */
@@ -377,7 +377,7 @@ vfio_open_group_fd(int iommu_group_num, bool mp_request)
 			}
 
 			/* special case: try no-IOMMU path as well */
-			snprintf(filename, sizeof(filename), RTE_VFIO_NOIOMMU_GROUP_FMT,
+			snprintf(filename, sizeof(filename), DEV_VFIO_NOIOMMU_GROUP_FMT,
 				iommu_group_num);
 			vfio_group_fd = open(filename, O_RDWR);
 			if (vfio_group_fd < 0) {
@@ -524,7 +524,7 @@ get_vfio_cfg_by_container_fd(int container_fd)
 {
 	unsigned int i;
 
-	if (container_fd == RTE_VFIO_DEFAULT_CONTAINER_FD)
+	if (container_fd == DEV_VFIO_DEFAULT_CONTAINER_FD)
 		return default_vfio_cfg;
 
 	for (i = 0; i < RTE_DIM(vfio_cfgs); i++) {
@@ -535,9 +535,9 @@ get_vfio_cfg_by_container_fd(int container_fd)
 	return NULL;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_group_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_group_fd)
 int
-rte_vfio_get_group_fd(int iommu_group_num)
+dev_vfio_get_group_fd(int iommu_group_num)
 {
 	struct vfio_config *vfio_cfg;
 
@@ -688,7 +688,7 @@ vfio_sync_default_container(void)
 	if (rte_eal_process_type() != RTE_PROC_SECONDARY)
 		return -1;
 
-	/* default container fd should have been opened in rte_vfio_enable() */
+	/* default container fd should have been opened in dev_vfio_enable() */
 	if (!vfio_enabled ||
 			default_vfio_cfg->vfio_container_fd < 0) {
 		EAL_LOG(ERR, "VFIO support is not initialized");
@@ -734,9 +734,9 @@ vfio_sync_default_container(void)
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_clear_group)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_clear_group)
 int
-rte_vfio_clear_group(int vfio_group_fd)
+dev_vfio_clear_group(int vfio_group_fd)
 {
 	int i;
 	struct vfio_config *vfio_cfg;
@@ -758,9 +758,9 @@ rte_vfio_clear_group(int vfio_group_fd)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_setup_device)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_setup_device)
 int
-rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
+dev_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		int *vfio_dev_fd, struct vfio_device_info *device_info)
 {
 	struct vfio_group_status group_status = {
@@ -777,7 +777,7 @@ rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		eal_get_internal_configuration();
 
 	/* get group number */
-	ret = rte_vfio_get_group_num(sysfs_base, dev_addr, &iommu_group_num);
+	ret = dev_vfio_get_group_num(sysfs_base, dev_addr, &iommu_group_num);
 	if (ret == 0) {
 		EAL_LOG(NOTICE,
 				"%s not managed by VFIO driver, skipping",
@@ -790,7 +790,7 @@ rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		return -1;
 
 	/* get the actual group fd */
-	vfio_group_fd = rte_vfio_get_group_fd(iommu_group_num);
+	vfio_group_fd = dev_vfio_get_group_fd(iommu_group_num);
 	if (vfio_group_fd < 0 && vfio_group_fd != -ENOENT)
 		return -1;
 
@@ -816,14 +816,14 @@ rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		EAL_LOG(ERR, "%s cannot get VFIO group status, "
 			"error %i (%s)", dev_addr, errno, strerror(errno));
 		close(vfio_group_fd);
-		rte_vfio_clear_group(vfio_group_fd);
+		dev_vfio_clear_group(vfio_group_fd);
 		return -1;
 	} else if (!(group_status.flags & VFIO_GROUP_FLAGS_VIABLE)) {
 		EAL_LOG(ERR, "%s VFIO group is not viable! "
 			"Not all devices in IOMMU group bound to VFIO or unbound",
 			dev_addr);
 		close(vfio_group_fd);
-		rte_vfio_clear_group(vfio_group_fd);
+		dev_vfio_clear_group(vfio_group_fd);
 		return -1;
 	}
 
@@ -844,7 +844,7 @@ rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 				"%s cannot add VFIO group to container, error "
 				"%i (%s)", dev_addr, errno, strerror(errno));
 			close(vfio_group_fd);
-			rte_vfio_clear_group(vfio_group_fd);
+			dev_vfio_clear_group(vfio_group_fd);
 			return -1;
 		}
 
@@ -868,7 +868,7 @@ rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 					"%s failed to select IOMMU type",
 					dev_addr);
 				close(vfio_group_fd);
-				rte_vfio_clear_group(vfio_group_fd);
+				dev_vfio_clear_group(vfio_group_fd);
 				return -1;
 			}
 			/* lock memory hotplug before mapping and release it
@@ -885,7 +885,7 @@ rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 					"%i (%s)",
 					dev_addr, errno, strerror(errno));
 				close(vfio_group_fd);
-				rte_vfio_clear_group(vfio_group_fd);
+				dev_vfio_clear_group(vfio_group_fd);
 				rte_mcfg_mem_read_unlock();
 				return -1;
 			}
@@ -954,7 +954,7 @@ rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		if (ret < 0) {
 			EAL_LOG(ERR, "Could not sync default VFIO container");
 			close(vfio_group_fd);
-			rte_vfio_clear_group(vfio_group_fd);
+			dev_vfio_clear_group(vfio_group_fd);
 			return -1;
 		}
 		/* we have successfully initialized VFIO, notify user */
@@ -991,7 +991,7 @@ rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		EAL_LOG(WARNING, "Getting a vfio_dev_fd for %s failed",
 				dev_addr);
 		close(vfio_group_fd);
-		rte_vfio_clear_group(vfio_group_fd);
+		dev_vfio_clear_group(vfio_group_fd);
 		return -1;
 	}
 
@@ -1004,7 +1004,7 @@ dev_get_info:
 				strerror(errno));
 		close(*vfio_dev_fd);
 		close(vfio_group_fd);
-		rte_vfio_clear_group(vfio_group_fd);
+		dev_vfio_clear_group(vfio_group_fd);
 		return -1;
 	}
 	vfio_group_device_get(vfio_group_fd);
@@ -1012,9 +1012,9 @@ dev_get_info:
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_release_device)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_release_device)
 int
-rte_vfio_release_device(const char *sysfs_base, const char *dev_addr,
+dev_vfio_release_device(const char *sysfs_base, const char *dev_addr,
 		    int vfio_dev_fd)
 {
 	struct vfio_config *vfio_cfg;
@@ -1029,7 +1029,7 @@ rte_vfio_release_device(const char *sysfs_base, const char *dev_addr,
 	rte_mcfg_mem_read_lock();
 
 	/* get group number */
-	ret = rte_vfio_get_group_num(sysfs_base, dev_addr, &iommu_group_num);
+	ret = dev_vfio_get_group_num(sysfs_base, dev_addr, &iommu_group_num);
 	if (ret <= 0) {
 		EAL_LOG(WARNING, "%s not managed by VFIO driver",
 			dev_addr);
@@ -1039,9 +1039,9 @@ rte_vfio_release_device(const char *sysfs_base, const char *dev_addr,
 	}
 
 	/* get the actual group fd */
-	vfio_group_fd = rte_vfio_get_group_fd(iommu_group_num);
+	vfio_group_fd = dev_vfio_get_group_fd(iommu_group_num);
 	if (vfio_group_fd < 0) {
-		EAL_LOG(INFO, "rte_vfio_get_group_fd failed for %s",
+		EAL_LOG(INFO, "dev_vfio_get_group_fd failed for %s",
 				   dev_addr);
 		ret = vfio_group_fd;
 		goto out;
@@ -1077,7 +1077,7 @@ rte_vfio_release_device(const char *sysfs_base, const char *dev_addr,
 			goto out;
 		}
 
-		if (rte_vfio_clear_group(vfio_group_fd) < 0) {
+		if (dev_vfio_clear_group(vfio_group_fd) < 0) {
 			EAL_LOG(INFO, "Error when clearing group for %s",
 					   dev_addr);
 			ret = -1;
@@ -1101,9 +1101,9 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_enable)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_enable)
 int
-rte_vfio_enable(const char *modname)
+dev_vfio_enable(const char *modname)
 {
 	/* initialize group list */
 	unsigned int i, j;
@@ -1147,7 +1147,7 @@ rte_vfio_enable(const char *modname)
 	}
 
 	/* VFIO directory might not exist (e.g., unprivileged containers) */
-	dir = opendir(RTE_VFIO_DIR);
+	dir = opendir(DEV_VFIO_DIR);
 	if (dir == NULL) {
 		EAL_LOG(DEBUG,
 			"VFIO directory does not exist, skipping VFIO support...");
@@ -1180,9 +1180,9 @@ rte_vfio_enable(const char *modname)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_is_enabled)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_is_enabled)
 int
-rte_vfio_is_enabled(const char *modname)
+dev_vfio_is_enabled(const char *modname)
 {
 	const int mod_available = rte_eal_check_module(modname) > 0;
 	return vfio_enabled && mod_available;
@@ -1220,9 +1220,9 @@ vfio_set_iommu_type(int vfio_container_fd)
 	return NULL;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_device_info)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_device_info)
 int
-rte_vfio_get_device_info(const char *sysfs_base, const char *dev_addr,
+dev_vfio_get_device_info(const char *sysfs_base, const char *dev_addr,
 		int *vfio_dev_fd, struct vfio_device_info *device_info)
 {
 	int ret;
@@ -1231,7 +1231,7 @@ rte_vfio_get_device_info(const char *sysfs_base, const char *dev_addr,
 		return -1;
 
 	if (*vfio_dev_fd == 0) {
-		ret = rte_vfio_setup_device(sysfs_base, dev_addr,
+		ret = dev_vfio_setup_device(sysfs_base, dev_addr,
 				vfio_dev_fd, device_info);
 		if (ret)
 			return -1;
@@ -1299,10 +1299,10 @@ vfio_open_container_fd(bool mp_request)
 
 	/* if not requesting via mp, open a new container locally */
 	if (!mp_request) {
-		vfio_container_fd = open(RTE_VFIO_CONTAINER_PATH, O_RDWR);
+		vfio_container_fd = open(DEV_VFIO_CONTAINER_PATH, O_RDWR);
 		if (vfio_container_fd < 0) {
 			EAL_LOG(ERR, "Cannot open VFIO container %s, error %i (%s)",
-				RTE_VFIO_CONTAINER_PATH, errno, strerror(errno));
+				DEV_VFIO_CONTAINER_PATH, errno, strerror(errno));
 			return -1;
 		}
 
@@ -1354,12 +1354,12 @@ vfio_open_container_fd(bool mp_request)
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_container_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_container_fd)
 int
-rte_vfio_get_container_fd(void)
+dev_vfio_get_container_fd(void)
 {
 	/* Return the default container fd if VFIO is enabled.
-	 * The default container is set up during rte_vfio_enable().
+	 * The default container is set up during dev_vfio_enable().
 	 * This function does not create a new container.
 	 */
 	if (!vfio_enabled)
@@ -1368,9 +1368,9 @@ rte_vfio_get_container_fd(void)
 	return default_vfio_cfg->vfio_container_fd;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_group_num)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_group_num)
 int
-rte_vfio_get_group_num(const char *sysfs_base,
+dev_vfio_get_group_num(const char *sysfs_base,
 		const char *dev_addr, int *iommu_group_num)
 {
 	char linkname[PATH_MAX];
@@ -2039,15 +2039,15 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_noiommu_is_enabled)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_noiommu_is_enabled)
 int
-rte_vfio_noiommu_is_enabled(void)
+dev_vfio_noiommu_is_enabled(void)
 {
 	int fd;
 	ssize_t cnt;
 	char c;
 
-	fd = open(RTE_VFIO_NOIOMMU_MODE, O_RDONLY);
+	fd = open(DEV_VFIO_NOIOMMU_MODE, O_RDONLY);
 	if (fd < 0) {
 		if (errno != ENOENT) {
 			EAL_LOG(ERR, "Cannot open VFIO noiommu file "
@@ -2072,9 +2072,9 @@ rte_vfio_noiommu_is_enabled(void)
 	return c == 'Y';
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_create)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_create)
 int
-rte_vfio_container_create(void)
+dev_vfio_container_create(void)
 {
 	unsigned int i;
 
@@ -2100,9 +2100,9 @@ rte_vfio_container_create(void)
 	return vfio_cfgs[i].vfio_container_fd;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_destroy)
 int
-rte_vfio_container_destroy(int container_fd)
+dev_vfio_container_destroy(int container_fd)
 {
 	struct vfio_config *vfio_cfg;
 	unsigned int i;
@@ -2115,7 +2115,7 @@ rte_vfio_container_destroy(int container_fd)
 
 	for (i = 0; i < RTE_DIM(vfio_cfg->vfio_groups); i++)
 		if (vfio_cfg->vfio_groups[i].group_num != -1)
-			rte_vfio_container_group_unbind(container_fd,
+			dev_vfio_container_group_unbind(container_fd,
 				vfio_cfg->vfio_groups[i].group_num);
 
 	close(container_fd);
@@ -2127,9 +2127,9 @@ rte_vfio_container_destroy(int container_fd)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_group_bind)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_group_bind)
 int
-rte_vfio_container_group_bind(int container_fd, int iommu_group_num)
+dev_vfio_container_group_bind(int container_fd, int iommu_group_num)
 {
 	struct vfio_config *vfio_cfg;
 
@@ -2142,9 +2142,9 @@ rte_vfio_container_group_bind(int container_fd, int iommu_group_num)
 	return vfio_get_group_fd(vfio_cfg, iommu_group_num);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_group_unbind)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_group_unbind)
 int
-rte_vfio_container_group_unbind(int container_fd, int iommu_group_num)
+dev_vfio_container_group_unbind(int container_fd, int iommu_group_num)
 {
 	struct vfio_group *cur_grp = NULL;
 	struct vfio_config *vfio_cfg;
@@ -2183,9 +2183,9 @@ rte_vfio_container_group_unbind(int container_fd, int iommu_group_num)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_dma_map)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_dma_map)
 int
-rte_vfio_container_dma_map(int container_fd, uint64_t vaddr, uint64_t iova,
+dev_vfio_container_dma_map(int container_fd, uint64_t vaddr, uint64_t iova,
 		uint64_t len)
 {
 	struct vfio_config *vfio_cfg;
@@ -2204,9 +2204,9 @@ rte_vfio_container_dma_map(int container_fd, uint64_t vaddr, uint64_t iova,
 	return container_dma_map(vfio_cfg, vaddr, iova, len);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_dma_unmap)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_dma_unmap)
 int
-rte_vfio_container_dma_unmap(int container_fd, uint64_t vaddr, uint64_t iova,
+dev_vfio_container_dma_unmap(int container_fd, uint64_t vaddr, uint64_t iova,
 		uint64_t len)
 {
 	struct vfio_config *vfio_cfg;
@@ -2273,9 +2273,9 @@ vfio_cleanup_config(struct vfio_config *vfio_cfg)
 	memset(vfio_cfg->mem_maps.maps, 0, sizeof(vfio_cfg->mem_maps.maps));
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_cleanup)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_cleanup)
 void
-rte_vfio_cleanup(void)
+dev_vfio_cleanup(void)
 {
 	unsigned int i;
 

@@ -41,7 +41,7 @@
 #include <rte_dev.h>
 #include <rte_devargs.h>
 #include <rte_version.h>
-#include <rte_vfio.h>
+#include <dev_vfio.h>
 #include <malloc_heap.h>
 #include <telemetry_internal.h>
 
@@ -819,8 +819,8 @@ rte_eal_vfio_get_vf_token(__rte_unused rte_uuid_t vf_token)
 {
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_setup_device)
-int rte_vfio_setup_device(__rte_unused const char *sysfs_base,
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_setup_device)
+int dev_vfio_setup_device(__rte_unused const char *sysfs_base,
 		      __rte_unused const char *dev_addr,
 		      __rte_unused int *vfio_dev_fd,
 		      __rte_unused struct vfio_device_info *device_info)
@@ -829,8 +829,8 @@ int rte_vfio_setup_device(__rte_unused const char *sysfs_base,
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_release_device)
-int rte_vfio_release_device(__rte_unused const char *sysfs_base,
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_release_device)
+int dev_vfio_release_device(__rte_unused const char *sysfs_base,
 			__rte_unused const char *dev_addr,
 			__rte_unused int fd)
 {
@@ -838,41 +838,41 @@ int rte_vfio_release_device(__rte_unused const char *sysfs_base,
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_enable)
-int rte_vfio_enable(__rte_unused const char *modname)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_enable)
+int dev_vfio_enable(__rte_unused const char *modname)
 {
 	rte_errno = ENOTSUP;
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_cleanup)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_cleanup)
 void
-rte_vfio_cleanup(void)
+dev_vfio_cleanup(void)
 {
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_is_enabled)
-int rte_vfio_is_enabled(__rte_unused const char *modname)
-{
-	return 0;
-}
-
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_noiommu_is_enabled)
-int rte_vfio_noiommu_is_enabled(void)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_is_enabled)
+int dev_vfio_is_enabled(__rte_unused const char *modname)
 {
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_clear_group)
-int rte_vfio_clear_group(__rte_unused int vfio_group_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_noiommu_is_enabled)
+int dev_vfio_noiommu_is_enabled(void)
+{
+	return 0;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_clear_group)
+int dev_vfio_clear_group(__rte_unused int vfio_group_fd)
 {
 	rte_errno = ENOTSUP;
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_group_num)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_group_num)
 int
-rte_vfio_get_group_num(__rte_unused const char *sysfs_base,
+dev_vfio_get_group_num(__rte_unused const char *sysfs_base,
 		       __rte_unused const char *dev_addr,
 		       __rte_unused int *iommu_group_num)
 {
@@ -880,59 +880,59 @@ rte_vfio_get_group_num(__rte_unused const char *sysfs_base,
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_container_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_container_fd)
 int
-rte_vfio_get_container_fd(void)
+dev_vfio_get_container_fd(void)
 {
 	rte_errno = ENOTSUP;
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_group_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_group_fd)
 int
-rte_vfio_get_group_fd(__rte_unused int iommu_group_num)
+dev_vfio_get_group_fd(__rte_unused int iommu_group_num)
 {
 	rte_errno = ENOTSUP;
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_create)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_create)
 int
-rte_vfio_container_create(void)
+dev_vfio_container_create(void)
 {
 	rte_errno = ENOTSUP;
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_destroy)
 int
-rte_vfio_container_destroy(__rte_unused int container_fd)
+dev_vfio_container_destroy(__rte_unused int container_fd)
 {
 	rte_errno = ENOTSUP;
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_group_bind)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_group_bind)
 int
-rte_vfio_container_group_bind(__rte_unused int container_fd,
+dev_vfio_container_group_bind(__rte_unused int container_fd,
 		__rte_unused int iommu_group_num)
 {
 	rte_errno = ENOTSUP;
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_group_unbind)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_group_unbind)
 int
-rte_vfio_container_group_unbind(__rte_unused int container_fd,
+dev_vfio_container_group_unbind(__rte_unused int container_fd,
 		__rte_unused int iommu_group_num)
 {
 	rte_errno = ENOTSUP;
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_dma_map)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_dma_map)
 int
-rte_vfio_container_dma_map(__rte_unused int container_fd,
+dev_vfio_container_dma_map(__rte_unused int container_fd,
 			__rte_unused uint64_t vaddr,
 			__rte_unused uint64_t iova,
 			__rte_unused uint64_t len)
@@ -941,9 +941,9 @@ rte_vfio_container_dma_map(__rte_unused int container_fd,
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_dma_unmap)
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_container_dma_unmap)
 int
-rte_vfio_container_dma_unmap(__rte_unused int container_fd,
+dev_vfio_container_dma_unmap(__rte_unused int container_fd,
 			__rte_unused uint64_t vaddr,
 			__rte_unused uint64_t iova,
 			__rte_unused uint64_t len)
