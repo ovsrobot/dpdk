@@ -792,6 +792,7 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 	dev_info->max_lro_pkt_size = SXE2_FRAME_SIZE_MAX * SXE2_RX_LRO_DESC_MAX_NUM;
 	dev_info->max_mtu = dev_info->max_rx_pktlen - SXE2_ETH_OVERHEAD;
 	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
+	dev_info->max_mac_addrs = SXE2_NUM_MACADDR_MAX;
 
 	dev_info->rx_offload_capa =
 		RTE_ETH_RX_OFFLOAD_VLAN_STRIP |
@@ -912,6 +913,8 @@ static int32_t sxe2_dev_infos_get(struct rte_eth_dev *dev,
 
 	dev_info->speed_capa = RTE_ETH_LINK_SPEED_10G | RTE_ETH_LINK_SPEED_25G |
 				RTE_ETH_LINK_SPEED_50G | RTE_ETH_LINK_SPEED_100G;
+	dev_info->nb_rx_queues = dev->data->nb_rx_queues;
+	dev_info->nb_tx_queues = dev->data->nb_tx_queues;
 
 	dev_info->default_rxportconf.burst_size = SXE2_RX_MAX_BURST;
 	dev_info->default_txportconf.burst_size = SXE2_TX_MAX_BURST;
