@@ -197,6 +197,8 @@ s32 txgbe_setup_phy_link_aml40(struct txgbe_hw *hw,
 	ret_status = txgbe_set_link_to_amlite(hw, speed);
 	if (ret_status == TXGBE_ERR_TIMEOUT)
 		hw->link_valid = false;
+	else
+		hw->link_valid = true;
 	rte_spinlock_unlock(&hw->phy_lock);
 
 	for (i = 0; i < 4; i++) {
