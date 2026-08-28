@@ -941,3 +941,10 @@ dev_vfio_container_assign_device(__rte_unused int vfio_container_fd,
 	rte_errno = ENOTSUP;
 	return -1;
 }
+
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_mode)
+enum dev_vfio_mode
+dev_vfio_get_mode(void)
+{
+	return DEV_VFIO_MODE_NONE;
+}
