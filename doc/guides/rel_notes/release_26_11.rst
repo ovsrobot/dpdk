@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added VFIO cdev (IOMMUFD) mode.**
+
+  Added support for the VFIO character device (cdev) API, also known as IOMMUFD.
+  DPDK now supports both the group mode and the new cdev mode.
+
 
 Removed Items
 -------------

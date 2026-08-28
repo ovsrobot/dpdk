@@ -48,6 +48,7 @@ struct vfio_group {
 enum vfio_device_type {
 	VFIO_DEVICE_TYPE_NONE = 0,
 	VFIO_DEVICE_TYPE_GROUP,
+	VFIO_DEVICE_TYPE_CDEV,
 };
 
 /* device tracking (common for group and cdev modes) */
@@ -55,9 +56,16 @@ struct vfio_device {
 	bool active;
 	enum vfio_device_type type;
 	int fd;
-	int group; /**< back-reference to group list */
-	char *sysfs_base; /**< sysfs path prefix */
-	char *dev_addr;   /**< device address */
+	union {
+		struct {
+			int dev_num;   /**< device number, e.g., X in /dev/vfio/devices/vfioX */
+		};
+		struct {
+			int group; /**< back-reference to group list */
+			char *sysfs_base; /**< sysfs path prefix */
+			char *dev_addr;   /**< device address */
+		};
+	};
 };
 
 /* group mode specific configuration */
@@ -68,13 +76,21 @@ struct vfio_group_config {
 	struct vfio_group groups[RTE_MAX_VFIO_GROUPS];
 };
 
+/* cdev mode specific configuration */
+struct vfio_cdev_config {
+	uint32_t ioas_id;
+};
+
 /* per-container configuration */
 struct vfio_container {
 	bool active;
 	bool dma_setup_done;
 	int container_fd;
 	struct vfio_user_mem_maps mem_maps;
-	struct vfio_group_config group_cfg;
+	union {
+		struct vfio_group_config group_cfg;
+		struct vfio_cdev_config cdev_cfg;
+	};
 	int n_devices;
 	struct vfio_device devices[RTE_MAX_VFIO_DEVICES];
 };
@@ -169,6 +185,17 @@ int vfio_group_setup_iommu(struct vfio_container *cfg);
 int vfio_group_setup_device_fd(const char *dev_addr,
 		struct vfio_group *grp, struct vfio_device *dev);
 
+/* cdev mode functions */
+int vfio_cdev_enable(struct vfio_container *cfg);
+void vfio_cdev_setup_ops(void);
+int vfio_cdev_setup_ioas(struct vfio_container *cfg);
+int vfio_cdev_sync_ioas(struct vfio_container *cfg);
+int vfio_cdev_get_iommufd(void);
+int vfio_cdev_get_device_num(const char *sysfs_base, const char *dev_addr,
+		int *cdev_dev_num);
+struct vfio_device *vfio_cdev_get_dev_by_num(struct vfio_container *cfg, int cdev_dev_num);
+int vfio_cdev_setup_device(struct vfio_container *cfg, struct vfio_device *dev);
+
 #define VFIO_MEM_EVENT_CLB_NAME "vfio_mem_event_clb"
 #define VFIO_MODNAME "vfio"
 #define EAL_VFIO_MP "eal_vfio_mp_sync"
@@ -176,6 +203,8 @@ int vfio_group_setup_device_fd(const char *dev_addr,
 #define VFIO_SOCKET_REQ_CONTAINER 0x100
 #define VFIO_SOCKET_REQ_GROUP 0x200
 #define VFIO_SOCKET_REQ_IOMMU_TYPE 0x400
+#define VFIO_SOCKET_REQ_CDEV 0x800
+#define VFIO_SOCKET_REQ_IOAS_ID 0x1000
 #define VFIO_SOCKET_OK 0x0
 #define VFIO_SOCKET_NO_FD 0x1
 #define VFIO_SOCKET_ERR 0xFF
@@ -186,6 +215,8 @@ struct vfio_mp_param {
 	union {
 		int group_num;
 		int iommu_type_id;
+		int cdev_dev_num;
+		int ioas_id;
 		enum dev_vfio_mode mode;
 	};
 };
