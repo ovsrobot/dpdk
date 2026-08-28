@@ -25,7 +25,7 @@
 #include <rte_string_fns.h>
 #include <rte_common.h>
 #include <rte_devargs.h>
-#include <rte_vfio.h>
+#include <dev_vfio.h>
 #include <rte_tailq.h>
 
 #include "private.h"
@@ -487,8 +487,8 @@ pci_dma_map(struct rte_device *dev, void *addr, uint64_t iova, size_t len)
 	 *  try fallback to VFIO.
 	 */
 	if (pdev->kdrv == RTE_PCI_KDRV_VFIO)
-		return rte_vfio_container_dma_map
-				(RTE_VFIO_DEFAULT_CONTAINER_FD, (uintptr_t)addr,
+		return dev_vfio_container_dma_map
+				(DEV_VFIO_DEFAULT_CONTAINER_FD, (uintptr_t)addr,
 				 iova, len);
 	rte_errno = ENOTSUP;
 	return -1;
@@ -507,8 +507,8 @@ pci_dma_unmap(struct rte_device *dev, void *addr, uint64_t iova, size_t len)
 	 *  try fallback to VFIO.
 	 */
 	if (pdev->kdrv == RTE_PCI_KDRV_VFIO)
-		return rte_vfio_container_dma_unmap
-				(RTE_VFIO_DEFAULT_CONTAINER_FD, (uintptr_t)addr,
+		return dev_vfio_container_dma_unmap
+				(DEV_VFIO_DEFAULT_CONTAINER_FD, (uintptr_t)addr,
 				 iova, len);
 	rte_errno = ENOTSUP;
 	return -1;
