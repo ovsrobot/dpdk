@@ -16,6 +16,12 @@
 #define HS_REGEX_MAX_RULES 1000000
 #define HS_REGEX_DEFAULT_NB_DESC 1024
 #define HS_REGEX_MAX_NB_DESC 32768
+/* PMD-specific rule flags using bits 32+ to avoid overlap with DPDK flags. */
+#define HS_REGEX_RULE_SINGLEMATCH_F  (1ULL << 32)
+#define HS_REGEX_RULE_PREFILTER_F    (1ULL << 33)
+#define HS_REGEX_RULE_SOM_LEFTMOST_F (1ULL << 34)
+#define HS_REGEX_RULE_COMBINATION_F  (1ULL << 35)
+#define HS_REGEX_RULE_QUIET_F        (1ULL << 36)
 
 /* Ext params encoded in rule_flags bits 37-63 */
 #define HS_REGEX_EXT_MAX_OFFSET_SHIFT 37
@@ -25,10 +31,10 @@
 
 /* Device lifecycle state machine. */
 enum hs_regex_dev_state {
-	HS_REGEX_DEV_CREATED = 0,
-	HS_REGEX_DEV_CONFIGURED,
-	HS_REGEX_DEV_STARTED,
-	HS_REGEX_DEV_STOPPED,
+	HS_REGEX_DEV_CREATED = 0,   /* after dev_create, before configure */
+	HS_REGEX_DEV_CONFIGURED,    /* after configure */
+	HS_REGEX_DEV_STARTED,       /* after start */
+	HS_REGEX_DEV_STOPPED,       /* after stop (can restart) */
 };
 
 /* Per-rule entry stored before compilation */
@@ -50,6 +56,7 @@ struct hs_regex_qp {
 	uint16_t tail;
 	uint16_t count;
 	hs_scratch_t *scratch;
+	/* Per-QP counters exported via xstats. */
 	uint64_t qp_enqueued;
 	uint64_t qp_dequeued;
 	uint64_t qp_matches;
@@ -71,9 +78,11 @@ struct hs_regex_priv {
 	uint16_t max_matches;
 	uint16_t nb_groups;
 
+	/* Lifecycle state used to validate configure/start/stop. */
 	enum hs_regex_dev_state dev_state;
 };
 
+/* Device lifecycle */
 int hs_regex_dev_create(const char *name, struct rte_device *device);
 void hs_regex_dev_destroy(const char *name);
 

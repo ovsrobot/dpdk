@@ -101,9 +101,11 @@ hs_regex_info_get(struct rte_regexdev *dev, struct rte_regexdev_info *info)
 	info->max_rules_per_group = HS_REGEX_MAX_RULES;
 	info->max_groups = HS_REGEX_MAX_GROUPS;
 	info->regexdev_capa = RTE_REGEXDEV_CAPA_RUNTIME_COMPILATION_F;
-	info->rule_flags = RTE_REGEX_PCRE_RULE_CASELESS_F |
+	info->rule_flags = RTE_REGEX_PCRE_RULE_ALLOW_EMPTY_F |
+			   RTE_REGEX_PCRE_RULE_CASELESS_F |
 			   RTE_REGEX_PCRE_RULE_DOTALL_F |
 			   RTE_REGEX_PCRE_RULE_MULTILINE_F |
+			   RTE_REGEX_PCRE_RULE_UCP_F |
 			   RTE_REGEX_PCRE_RULE_UTF_F;
 
 	return 0;
@@ -296,6 +298,18 @@ hs_regex_rule_db_update(struct rte_regexdev *dev,
 			uint16_t nb_rules)
 {
 	struct hs_regex_priv *priv;
+	const uint64_t known_flags = RTE_REGEX_PCRE_RULE_ALLOW_EMPTY_F |
+		RTE_REGEX_PCRE_RULE_CASELESS_F |
+		RTE_REGEX_PCRE_RULE_DOTALL_F |
+		RTE_REGEX_PCRE_RULE_MULTILINE_F |
+		RTE_REGEX_PCRE_RULE_UCP_F |
+		RTE_REGEX_PCRE_RULE_UTF_F |
+		HS_REGEX_RULE_SINGLEMATCH_F |
+		HS_REGEX_RULE_PREFILTER_F |
+		HS_REGEX_RULE_SOM_LEFTMOST_F |
+		HS_REGEX_RULE_COMBINATION_F |
+		HS_REGEX_RULE_QUIET_F;
+	uint64_t flag_bits;
 	uint64_t rf;
 	uint16_t i;
 
@@ -325,6 +339,17 @@ hs_regex_rule_db_update(struct rte_regexdev *dev,
 	}
 
 	for (i = 0; i < nb_rules; i++) {
+		flag_bits = rules[i].rule_flags &
+			((1ULL << HS_REGEX_EXT_MAX_OFFSET_SHIFT) - 1);
+
+		if (flag_bits & ~known_flags) {
+			HS_LOG(ERR, "Rule %u: unsupported flags 0x%" PRIx64,
+			       rules[i].rule_id,
+			       (uint64_t)(flag_bits & ~known_flags));
+			rte_errno = ENOTSUP;
+			return i;
+		}
+
 		if (rules[i].op == RTE_REGEX_RULE_OP_ADD) {
 			uint32_t idx;
 
@@ -493,8 +518,22 @@ hs_regex_rule_db_compile_activate(struct rte_regexdev *dev)
 			flags[i] |= HS_FLAG_DOTALL;
 		if (priv->rules[i].rule_flags & RTE_REGEX_PCRE_RULE_MULTILINE_F)
 			flags[i] |= HS_FLAG_MULTILINE;
+		if (priv->rules[i].rule_flags & HS_REGEX_RULE_SINGLEMATCH_F)
+			flags[i] |= HS_FLAG_SINGLEMATCH;
 		if (priv->rules[i].rule_flags & RTE_REGEX_PCRE_RULE_UTF_F)
 			flags[i] |= HS_FLAG_UTF8;
+		if (priv->rules[i].rule_flags & RTE_REGEX_PCRE_RULE_UCP_F)
+			flags[i] |= HS_FLAG_UCP;
+		if (priv->rules[i].rule_flags & HS_REGEX_RULE_PREFILTER_F)
+			flags[i] |= HS_FLAG_PREFILTER;
+		if (priv->rules[i].rule_flags & HS_REGEX_RULE_SOM_LEFTMOST_F)
+			flags[i] |= HS_FLAG_SOM_LEFTMOST;
+		if (priv->rules[i].rule_flags & HS_REGEX_RULE_COMBINATION_F)
+			flags[i] |= HS_FLAG_COMBINATION;
+		if (priv->rules[i].rule_flags & HS_REGEX_RULE_QUIET_F)
+			flags[i] |= HS_FLAG_QUIET;
+		if (priv->rules[i].rule_flags & RTE_REGEX_PCRE_RULE_ALLOW_EMPTY_F)
+			flags[i] |= HS_FLAG_ALLOWEMPTY;
 
 		/* Extended parameters */
 		ext[i].flags = 0;
@@ -886,8 +925,14 @@ hs_regex_enqueue_burst(struct rte_regexdev *dev, uint16_t qp_id,
 	}
 
 	if (unlikely(priv->dev_state != HS_REGEX_DEV_STARTED)) {
-		HS_LOG(ERR, "enqueue: device not started");
-		return 0;
+		/* Auto-start if DB is ready (supports apps that skip start). */
+		if (priv->db_compiled) {
+			priv->dev_state = HS_REGEX_DEV_STARTED;
+			HS_LOG(NOTICE, "enqueue: auto-started device");
+		} else {
+			HS_LOG(ERR, "enqueue: device not started and no DB");
+			return 0;
+		}
 	}
 
 	if (unlikely(priv->db == NULL)) {
