@@ -685,6 +685,174 @@ hs_regex_rule_db_export(struct rte_regexdev *dev, char *rule_db)
 	return 0;
 }
 
+/* Start */
+static int
+hs_regex_start(struct rte_regexdev *dev)
+{
+	struct hs_regex_priv *priv;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	/* Start requires configure and a compiled/imported database. */
+	if (priv->dev_state == HS_REGEX_DEV_CREATED) {
+		HS_LOG(ERR, "Cannot start: device not configured");
+		return -EINVAL;
+	}
+	if (priv->dev_state == HS_REGEX_DEV_STARTED) {
+		HS_LOG(ERR, "Device already started");
+		return -EBUSY;
+	}
+
+	if (!priv->db_compiled) {
+		HS_LOG(ERR, "Cannot start: database not compiled/imported");
+		return -EINVAL;
+	}
+
+	priv->dev_state = HS_REGEX_DEV_STARTED;
+	HS_LOG(INFO, "Device started (%u rules, %u queue pairs)",
+	       priv->nb_rules, priv->nb_queue_pairs);
+	return 0;
+}
+
+/* Stop */
+static int
+hs_regex_stop(struct rte_regexdev *dev)
+{
+	struct hs_regex_priv *priv;
+	uint16_t i;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	/* Stop is valid only from STARTED state. */
+	if (priv->dev_state != HS_REGEX_DEV_STARTED) {
+		HS_LOG(ERR, "Device not started, cannot stop");
+		return -EINVAL;
+	}
+
+	if (priv->qps == NULL)
+		goto stopped;
+
+	for (i = 0; i < priv->nb_queue_pairs; i++) {
+		struct hs_regex_qp *qp = &priv->qps[i];
+
+		qp->head = 0;
+		qp->tail = 0;
+		qp->count = 0;
+	}
+
+stopped:
+	priv->dev_state = HS_REGEX_DEV_STOPPED;
+	HS_LOG(INFO, "Device stopped");
+	return 0;
+}
+
+/* Close */
+static int
+hs_regex_close(struct rte_regexdev *dev)
+{
+	struct hs_regex_priv *priv;
+	uint32_t i;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	/* Close may be called without an explicit stop. */
+	if (priv->dev_state == HS_REGEX_DEV_STARTED) {
+		HS_LOG(WARNING, "Device still started, stopping before close");
+		hs_regex_stop(dev);
+	}
+
+	if (priv->qps) {
+		for (i = 0; i < priv->nb_queue_pairs; i++) {
+			if (priv->qps[i].scratch)
+				hs_free_scratch(priv->qps[i].scratch);
+			rte_free(priv->qps[i].ops);
+		}
+		rte_free(priv->qps);
+		priv->qps = NULL;
+	}
+
+	if (priv->db) {
+		hs_free_database(priv->db);
+		priv->db = NULL;
+	}
+
+	for (i = 0; i < priv->nb_rules; i++)
+		rte_free(priv->rules[i].pattern);
+	rte_free(priv->rules);
+	priv->rules = NULL;
+	priv->nb_rules = 0;
+	priv->rules_cap = 0;
+	priv->db_compiled = 0;
+
+	if (priv->rule_id_hash) {
+		rte_hash_free(priv->rule_id_hash);
+		priv->rule_id_hash = NULL;
+	}
+
+	/* Return to initial state. */
+	priv->dev_state = HS_REGEX_DEV_CREATED;
+
+	HS_LOG(INFO, "Device closed");
+	return 0;
+}
+
+/* Dump */
+static int
+hs_regex_dump(struct rte_regexdev *dev, FILE *f)
+{
+	struct hs_regex_priv *priv;
+	uint64_t total_enq = 0, total_deq = 0, total_match = 0;
+	uint32_t i;
+
+	if (dev == NULL || f == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	if (priv->qps != NULL) {
+		for (i = 0; i < priv->nb_queue_pairs; i++) {
+			total_enq += priv->qps[i].qp_enqueued;
+			total_deq += priv->qps[i].qp_dequeued;
+			total_match += priv->qps[i].qp_matches;
+		}
+	}
+
+	fprintf(f, "=== Hyperscan RegEx PMD ===\n");
+	fprintf(f, "  Driver:      %s\n", HS_REGEX_DRIVER_NAME);
+	fprintf(f, "  HS Version:  %s\n", hs_version());
+	fprintf(f, "  Rules:       %u\n", priv->nb_rules);
+	fprintf(f, "  Compiled:    %s\n", priv->db_compiled ? "yes" : "no");
+	fprintf(f, "  Queue Pairs: %u\n", priv->nb_queue_pairs);
+	fprintf(f, "  Max Matches: %u\n", priv->max_matches);
+	fprintf(f, "  Enqueued:    %" PRIu64 "\n", total_enq);
+	fprintf(f, "  Dequeued:    %" PRIu64 "\n", total_deq);
+	fprintf(f, "  Matches:     %" PRIu64 "\n", total_match);
+
+	for (i = 0; i < priv->nb_rules; i++)
+		fprintf(f, "  Rule[%u]: id=%u group=%u pattern=%s\n", i,
+			priv->rules[i].rule_id, priv->rules[i].group_id,
+			priv->rules[i].pattern);
+
+	return 0;
+}
+
 /*
  * Fast Path
  *
@@ -1009,6 +1177,11 @@ static const struct rte_regexdev_ops hs_regexdev_ops = {
 	.dev_info_get = hs_regex_info_get,
 	.dev_configure = hs_regex_configure,
 	.dev_qp_setup = hs_regex_qp_setup,
+	.dev_start = hs_regex_start,
+	.dev_stop = hs_regex_stop,
+	.dev_close = hs_regex_close,
+	.dev_attr_get = NULL,
+	.dev_attr_set = NULL,
 	.dev_rule_db_update = hs_regex_rule_db_update,
 	.dev_rule_db_compile_activate = hs_regex_rule_db_compile_activate,
 	.dev_db_import = hs_regex_rule_db_import,
@@ -1017,6 +1190,8 @@ static const struct rte_regexdev_ops hs_regexdev_ops = {
 	.dev_xstats_get = hs_regex_xstats_get,
 	.dev_xstats_by_name_get = NULL,
 	.dev_xstats_reset = hs_regex_xstats_reset,
+	.dev_selftest = NULL,
+	.dev_dump = hs_regex_dump,
 };
 
 /* Device Lifecycle */
@@ -1072,6 +1247,7 @@ hs_regex_dev_destroy(const char *name)
 
 	priv = dev->data->dev_private;
 	if (priv) {
+		hs_regex_close(dev);
 		rte_free(priv);
 		dev->data->dev_private = NULL;
 	}
