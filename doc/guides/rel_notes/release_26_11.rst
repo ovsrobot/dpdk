@@ -56,6 +56,13 @@ New Features
      =======================================================
 
 
+* **Added Hyperscan regex PMD.**
+
+  Added a software regex PMD (``regex_hs``) based on Intel Hyperscan
+  library. This virtual device PMD implements the regexdev API using
+  Hyperscan block mode scanning and supports runtime pattern compilation.
+
+
 Removed Items
 -------------
 
