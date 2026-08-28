@@ -60,6 +60,157 @@ hs_regex_info_get(struct rte_regexdev *dev __rte_unused,
 	return 0;
 }
 
+/* Configure */
+static int
+hs_regex_configure(struct rte_regexdev *dev,
+		   const struct rte_regexdev_config *cfg)
+{
+	struct hs_regex_priv *priv;
+
+	if (dev == NULL || cfg == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	if (priv->dev_state == HS_REGEX_DEV_STARTED) {
+		HS_LOG(ERR, "Cannot configure while device is started");
+		return -EBUSY;
+	}
+
+	if (cfg->nb_queue_pairs > HS_REGEX_MAX_QUEUE_PAIRS) {
+		HS_LOG(ERR, "Requested %u queue pairs exceeds max %u",
+		       cfg->nb_queue_pairs, HS_REGEX_MAX_QUEUE_PAIRS);
+		return -EINVAL;
+	}
+
+	priv->nb_queue_pairs = cfg->nb_queue_pairs;
+	priv->max_matches = cfg->nb_max_matches ? cfg->nb_max_matches :
+						  UINT16_MAX;
+	priv->nb_groups = cfg->nb_groups ? cfg->nb_groups : 1;
+
+	if (priv->rules) {
+		uint32_t i;
+
+		for (i = 0; i < priv->nb_rules; i++)
+			rte_free(priv->rules[i].pattern);
+		rte_free(priv->rules);
+		priv->rules = NULL;
+		priv->nb_rules = 0;
+		priv->rules_cap = 0;
+	}
+	if (priv->db) {
+		hs_free_database(priv->db);
+		priv->db = NULL;
+		priv->db_compiled = 0;
+	}
+
+	if (priv->qps) {
+		rte_free(priv->qps);
+		priv->qps = NULL;
+	}
+
+	priv->qps = rte_zmalloc("hs_regex_qps",
+				sizeof(struct hs_regex_qp) *
+				cfg->nb_queue_pairs,
+				RTE_CACHE_LINE_SIZE);
+	if (!priv->qps) {
+		HS_LOG(ERR, "Failed to allocate queue pairs");
+		/* Keep nb_queue_pairs in sync with the NULL qps array. */
+		priv->nb_queue_pairs = 0;
+		return -ENOMEM;
+	}
+
+	HS_LOG(INFO, "Configured: %u queue pairs, max_matches=%u",
+	       priv->nb_queue_pairs, priv->max_matches);
+
+	priv->dev_state = HS_REGEX_DEV_CONFIGURED;
+	return 0;
+}
+
+/* Queue Pair Setup */
+static int
+hs_regex_qp_setup(struct rte_regexdev *dev, uint16_t qp_id,
+		  const struct rte_regexdev_qp_conf *qp_conf)
+{
+	struct hs_regex_priv *priv;
+	struct hs_regex_qp *qp;
+	uint16_t nb_desc;
+	hs_error_t err;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	if (qp_id >= priv->nb_queue_pairs) {
+		HS_LOG(ERR, "Invalid qp_id %u (max %u)", qp_id,
+		       priv->nb_queue_pairs);
+		return -EINVAL;
+	}
+
+	/* nb_queue_pairs must stay in sync with a live qps array. */
+	if (priv->qps == NULL) {
+		HS_LOG(ERR, "qp %u: queue pairs not allocated", qp_id);
+		return -EINVAL;
+	}
+
+	qp = &priv->qps[qp_id];
+	nb_desc = (qp_conf && qp_conf->nb_desc) ? qp_conf->nb_desc :
+						   HS_REGEX_DEFAULT_NB_DESC;
+
+	if (nb_desc == 0 || (nb_desc & (nb_desc - 1)) != 0) {
+		uint16_t orig = nb_desc;
+		uint32_t aligned = rte_align32pow2(nb_desc ? nb_desc : 1);
+
+		if (aligned > HS_REGEX_MAX_NB_DESC)
+			aligned = HS_REGEX_MAX_NB_DESC;
+		nb_desc = aligned;
+		HS_LOG(WARNING, "QP %u: nb_desc %u rounded up to %u (power of 2)",
+		       qp_id, orig, nb_desc);
+	}
+
+	if (qp->ops) {
+		rte_free(qp->ops);
+		qp->ops = NULL;
+	}
+
+	if (qp->scratch) {
+		hs_free_scratch(qp->scratch);
+		qp->scratch = NULL;
+	}
+
+	qp->ops = rte_zmalloc("hs_regex_qp_ops",
+			      sizeof(struct rte_regex_ops *) * nb_desc,
+			      RTE_CACHE_LINE_SIZE);
+	if (!qp->ops) {
+		HS_LOG(ERR, "Failed to allocate ops ring for qp %u", qp_id);
+		return -ENOMEM;
+	}
+
+	qp->nb_desc = nb_desc;
+	qp->head = 0;
+	qp->tail = 0;
+	qp->count = 0;
+
+	if (priv->db) {
+		err = hs_alloc_scratch(priv->db, &qp->scratch);
+		if (err != HS_SUCCESS) {
+			HS_LOG(ERR, "Failed to alloc scratch for qp %u",
+			       qp_id);
+			rte_free(qp->ops);
+			qp->ops = NULL;
+			return -ENOMEM;
+		}
+	}
+
+	HS_LOG(INFO, "QP %u setup: nb_desc=%u", qp_id, nb_desc);
+	return 0;
+}
+
 /* Fast path stubs replaced by real implementations in later patches. */
 
 static uint16_t
@@ -82,6 +233,8 @@ hs_regex_dequeue_burst(struct rte_regexdev *dev __rte_unused,
 
 static const struct rte_regexdev_ops hs_regexdev_ops = {
 	.dev_info_get = hs_regex_info_get,
+	.dev_configure = hs_regex_configure,
+	.dev_qp_setup = hs_regex_qp_setup,
 };
 
 /* Device Lifecycle */
