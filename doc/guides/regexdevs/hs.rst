@@ -20,7 +20,16 @@ Features
 - Up to 64 queue pairs, each with up to 32768 descriptors
 - Up to 1,000,000 rules per device, with O(1) duplicate rule_id
   detection backed by ``rte_hash``
+- Up to 65,535 matches per scan operation (API field width limit);
+  cumulative totals are tracked via per-queue-pair xstats
 - Per-rule extended match parameters (minimum/maximum start offset)
+- Hyperscan block-mode engine supports scan buffers up to 4 GB
+  (library capability)
+- Through the current ``rte_regexdev`` API, this PMD advertises
+  ``max_payload_size = 65,535`` bytes (``uint16_t`` field width), so
+  ``dpdk-test-regex`` validation is limited to about 64 KB per op
+- Hyperscan uses x86 vectorized instructions (SSSE3/AVX2/AVX-512)
+  for high throughput
 - Per-queue-pair statistics via xstats
 
 In the RegEx driver feature matrix, this PMD reports:
