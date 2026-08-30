@@ -83,6 +83,12 @@ Removed Items
 API Changes
 -----------
 
+* **Restricted bonding device control to the primary process.**
+
+  Bonding device configuration and LACP runtime state operations are now
+  rejected in secondary processes. Secondary processes may detach and use
+  supported query operations only.
+
 .. This section should contain API changes. Sample format:
 
    * sample: Add a short 1-2 sentence description of the API change

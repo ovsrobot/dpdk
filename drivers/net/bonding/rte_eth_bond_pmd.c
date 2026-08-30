@@ -2558,22 +2558,24 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 
 	struct bond_dev_private *bond_ctx;
 	struct rte_eth_link member_link;
+	struct rte_eth_link bond_link;
 
 	bool one_link_update_succeeded;
 	uint32_t idx;
 	int ret;
 
-	bond_ctx = ethdev->data->dev_private;
+	rte_eth_linkstatus_get(ethdev, &bond_link);
+	bond_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
 
-	ethdev->data->dev_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
+	bond_ctx = ethdev->data->dev_private;
 
 	if (ethdev->data->dev_started == 0 ||
 			bond_ctx->active_member_count == 0) {
-		ethdev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
-		return 0;
+		bond_link.link_status = RTE_ETH_LINK_DOWN;
+		goto out;
 	}
 
-	ethdev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+	bond_link.link_status = RTE_ETH_LINK_UP;
 
 	if (wait_to_complete)
 		link_update = rte_eth_link_get;
@@ -2586,7 +2588,7 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 		 * Setting link speed to UINT32_MAX to ensure we pick up the
 		 * value of the first active member
 		 */
-		ethdev->data->dev_link.link_speed = UINT32_MAX;
+		bond_link.link_speed = UINT32_MAX;
 
 		/**
 		 * link speed is minimum value of all the members link speed as
@@ -2597,19 +2599,16 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 			ret = link_update(bond_ctx->active_members[idx],
 					  &member_link);
 			if (ret < 0) {
-				ethdev->data->dev_link.link_speed =
-					RTE_ETH_SPEED_NUM_NONE;
+				bond_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
 				RTE_BOND_LOG(ERR,
 					"Member (port %u) link get failed: %s",
 					bond_ctx->active_members[idx],
 					rte_strerror(-ret));
-				return 0;
+				goto out;
 			}
 
-			if (member_link.link_speed <
-					ethdev->data->dev_link.link_speed)
-				ethdev->data->dev_link.link_speed =
-						member_link.link_speed;
+			if (member_link.link_speed < bond_link.link_speed)
+				bond_link.link_speed = member_link.link_speed;
 		}
 		break;
 	case BONDING_MODE_ACTIVE_BACKUP:
@@ -2619,15 +2618,15 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 			RTE_BOND_LOG(ERR, "Member (port %u) link get failed: %s",
 				bond_ctx->current_primary_port,
 				rte_strerror(-ret));
-			return 0;
+			goto out;
 		}
 
-		ethdev->data->dev_link.link_speed = member_link.link_speed;
+		bond_link.link_speed = member_link.link_speed;
 		break;
 	case BONDING_MODE_8023AD:
-		ethdev->data->dev_link.link_autoneg =
+		bond_link.link_autoneg =
 				bond_ctx->mode4.member_link.link_autoneg;
-		ethdev->data->dev_link.link_duplex =
+		bond_link.link_duplex =
 				bond_ctx->mode4.member_link.link_duplex;
 		/* fall through */
 		/* to update link speed */
@@ -2640,7 +2639,7 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 		 * In theses mode the maximum theoretical link speed is the sum
 		 * of all the members
 		 */
-		ethdev->data->dev_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
+		bond_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
 		one_link_update_succeeded = false;
 
 		for (idx = 0; idx < bond_ctx->active_member_count; idx++) {
@@ -2655,17 +2654,17 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 			}
 
 			one_link_update_succeeded = true;
-			ethdev->data->dev_link.link_speed +=
-					member_link.link_speed;
+			bond_link.link_speed += member_link.link_speed;
 		}
 
 		if (!one_link_update_succeeded) {
 			RTE_BOND_LOG(ERR, "All members link get failed");
-			return 0;
+			goto out;
 		}
 	}
 
-
+out:
+	rte_eth_linkstatus_set(ethdev, &bond_link);
 	return 0;
 }
 
@@ -3641,11 +3640,22 @@ bond_ethdev_priv_dump(struct rte_eth_dev *dev, FILE *f)
 	const struct bond_dev_private *internals = dev->data->dev_private;
 
 	dump_basic(dev, f);
-	if (internals->mode == BONDING_MODE_8023AD)
+	if (internals->mode == BONDING_MODE_8023AD &&
+			rte_eal_process_type() == RTE_PROC_PRIMARY)
 		dump_lacp(dev->data->port_id, f);
 
 	return 0;
 }
+
+static const struct eth_dev_ops secondary_dev_ops = {
+	.dev_close         = bond_ethdev_close,
+	.dev_infos_get     = bond_ethdev_info,
+	.link_update       = bond_ethdev_link_update,
+	.stats_get         = bond_ethdev_stats_get,
+	.reta_query        = bond_ethdev_rss_reta_query,
+	.rss_hash_conf_get = bond_ethdev_rss_hash_conf_get,
+	.eth_dev_priv_dump = bond_ethdev_priv_dump,
+};
 
 const struct eth_dev_ops default_dev_ops = {
 	.dev_start            = bond_ethdev_start,
@@ -3831,7 +3841,7 @@ bond_probe(struct rte_vdev_device *dev)
 			return -1;
 		}
 
-		eth_dev->dev_ops = &default_dev_ops;
+		eth_dev->dev_ops = &secondary_dev_ops;
 		eth_dev->device = &dev->device;
 
 		/*

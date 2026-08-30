@@ -1436,6 +1436,11 @@ rte_eth_bond_8023ad_agg_selection_set(uint16_t port_id,
 	struct rte_eth_dev *bond_dev;
 	struct bond_dev_private *internals;
 	struct mode8023ad_private *mode4;
+	int ret;
+
+	ret = bond_check_primary(__func__, -ENOTSUP);
+	if (ret != 0)
+		return ret;
 
 	if (valid_bonding_port_id(port_id) != 0)
 		return -EINVAL;
@@ -1508,6 +1513,11 @@ rte_eth_bond_8023ad_setup(uint16_t port_id,
 {
 	struct rte_eth_dev *bond_dev;
 	int err;
+	int ret;
+
+	ret = bond_check_primary(__func__, -ENOTSUP);
+	if (ret != 0)
+		return ret;
 
 	err = bond_8023ad_setup_validate(port_id, conf);
 	if (err != 0)
@@ -1531,6 +1541,11 @@ rte_eth_bond_8023ad_member_info(uint16_t port_id, uint16_t member_id,
 	struct rte_eth_dev *bond_dev;
 	struct bond_dev_private *internals;
 	struct port *port;
+	int ret;
+
+	ret = bond_check_primary(__func__, -ENOTSUP);
+	if (ret != 0)
+		return ret;
 
 	if (info == NULL || valid_bonding_port_id(port_id) != 0 ||
 			rte_eth_bond_mode_get(port_id) != BONDING_MODE_8023AD)
@@ -1592,6 +1607,11 @@ rte_eth_bond_8023ad_ext_collect(uint16_t port_id, uint16_t member_id,
 {
 	struct port *port;
 	int res;
+	int ret;
+
+	ret = bond_check_primary(__func__, -ENOTSUP);
+	if (ret != 0)
+		return ret;
 
 	res = bond_8023ad_ext_validate(port_id, member_id);
 	if (res != 0)
@@ -1614,6 +1634,11 @@ rte_eth_bond_8023ad_ext_distrib(uint16_t port_id, uint16_t member_id,
 {
 	struct port *port;
 	int res;
+	int ret;
+
+	ret = bond_check_primary(__func__, -ENOTSUP);
+	if (ret != 0)
+		return ret;
 
 	res = bond_8023ad_ext_validate(port_id, member_id);
 	if (res != 0)
@@ -1636,6 +1661,10 @@ rte_eth_bond_8023ad_ext_distrib_get(uint16_t port_id, uint16_t member_id)
 	struct port *port;
 	int err;
 
+	err = bond_check_primary(__func__, -ENOTSUP);
+	if (err != 0)
+		return err;
+
 	err = bond_8023ad_ext_validate(port_id, member_id);
 	if (err != 0)
 		return err;
@@ -1650,6 +1679,10 @@ rte_eth_bond_8023ad_ext_collect_get(uint16_t port_id, uint16_t member_id)
 {
 	struct port *port;
 	int err;
+
+	err = bond_check_primary(__func__, -ENOTSUP);
+	if (err != 0)
+		return err;
 
 	err = bond_8023ad_ext_validate(port_id, member_id);
 	if (err != 0)
@@ -1666,6 +1699,11 @@ rte_eth_bond_8023ad_ext_slowtx(uint16_t port_id, uint16_t member_id,
 {
 	struct port *port;
 	int res;
+	int ret;
+
+	ret = bond_check_primary(__func__, -ENOTSUP);
+	if (ret != 0)
+		return ret;
 
 	res = bond_8023ad_ext_validate(port_id, member_id);
 	if (res != 0)
@@ -1727,6 +1765,11 @@ rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port)
 {
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
+	int ret;
+
+	ret = bond_check_primary(__func__, -ENOTSUP);
+	if (ret != 0)
+		return ret;
 
 	if (valid_bonding_port_id(port) != 0)
 		return -EINVAL;
@@ -1756,6 +1799,11 @@ rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port)
 {
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
+	int ret;
+
+	ret = bond_check_primary(__func__, -ENOTSUP);
+	if (ret != 0)
+		return ret;
 
 	if (valid_bonding_port_id(port) != 0)
 		return -EINVAL;
