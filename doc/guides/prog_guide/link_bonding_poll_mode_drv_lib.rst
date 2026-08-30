@@ -254,6 +254,36 @@ Like all other PMD, all functions exported by a PMD are lock-free functions
 that are assumed not to be invoked in parallel on different logical cores to
 work on the same target object.
 
+Bonding device configuration and LACP runtime state are owned by the primary
+process. Secondary processes may attach to an existing bonding device for
+detach and supported query operations only.
+
+Supported secondary-process queries include device information, statistics,
+link status, RETA query, RSS hash configuration, bonding mode, member list,
+primary member, transmit policy, link monitoring configuration, and LACP
+configuration. Private dump is limited to shared bonding information and skips
+LACP runtime state in a secondary process.
+
+Control operations are restricted to the primary process. This includes
+configuring, starting or stopping the device, setting up queues, changing
+members, changing the bonding mode, selecting the primary member, changing the
+transmit policy, changing link monitoring or propagation delays, updating RSS,
+changing MAC addresses, changing MTU, configuring VLAN filters, changing
+promiscuous or all-multicast mode, resetting statistics, configuring
+``rte_flow`` rules, and changing 802.3ad settings, including aggregation
+selection, external collect/distribute/slow-Tx controls, and dedicated queue
+enable or disable.
+
+LACP runtime state queries, including ``rte_eth_bond_8023ad_member_info()``,
+``rte_eth_bond_8023ad_ext_collect_get()``, and
+``rte_eth_bond_8023ad_ext_distrib_get()``, are also restricted to the primary
+process.
+
+Rx and Tx are not supported on a bonding device in a secondary process;
+receive returns no packets and transmit drops packets. In a secondary process,
+``rte_eth_dev_stop()`` returns ``-ENOTSUP`` and ``rte_eth_dev_close()`` is the
+detach operation.
+
 It should also be noted that the PMD receive function should not be invoked
 directly on a member devices after they have been to a bonding device since
 packets read directly from the member device will no longer be available to the

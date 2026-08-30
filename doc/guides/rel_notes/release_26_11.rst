@@ -24,6 +24,11 @@ DPDK Release 26.11
 New Features
 ------------
 
+* **Added bonding PMD secondary-process support.**
+
+  Added support for querying and detaching bonding devices from secondary
+  processes.
+
 .. This section should contain new features added in this release.
    Sample format:
 
