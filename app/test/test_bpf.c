@@ -27,6 +27,8 @@ test_bpf(void)
 	return TEST_SKIPPED;
 }
 
+REGISTER_FAST_TEST(bpf_autotest, NOHUGE_OK, ASAN_OK, test_bpf);
+
 #else
 
 #include <rte_bpf.h>
@@ -91,7 +93,6 @@ test_no_instructions(void)
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
 }
 
-REGISTER_FAST_TEST(bpf_no_instructions_autotest, NOHUGE_OK, ASAN_OK, test_no_instructions);
 
 /*
  * Try and load a BPF program comprising single EXIT instruction.
@@ -108,7 +109,6 @@ test_exit_only(void)
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
 }
 
-REGISTER_FAST_TEST(bpf_exit_only_autotest, NOHUGE_OK, ASAN_OK, test_exit_only);
 
 /*
  * Try and load a BPF program with no EXIT instruction.
@@ -128,7 +128,6 @@ test_no_exit(void)
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
 }
 
-REGISTER_FAST_TEST(bpf_no_exit_autotest, NOHUGE_OK, ASAN_OK, test_no_exit);
 
 /*
  * Try and load smallest possible valid BPF program.
@@ -150,7 +149,6 @@ test_minimal_working(void)
 	return bpf_load_test(RTE_DIM(ins), ins, 0);
 }
 
-REGISTER_FAST_TEST(bpf_minimal_working_autotest, NOHUGE_OK, ASAN_OK, test_minimal_working);
 
 /*
  * Try and load valid BPF program adding one to the argument.
@@ -178,7 +176,6 @@ test_add_one(void)
 	return bpf_load_test(RTE_DIM(ins), ins, 0);
 }
 
-REGISTER_FAST_TEST(bpf_add_one_autotest, NOHUGE_OK, ASAN_OK, test_add_one);
 
 /*
  * Try and load valid BPF program subtracting one from the argument.
@@ -206,7 +203,6 @@ test_subtract_one(void)
 	return bpf_load_test(RTE_DIM(ins), ins, 0);
 }
 
-REGISTER_FAST_TEST(bpf_subtract_one_autotest, NOHUGE_OK, ASAN_OK, test_subtract_one);
 
 /*
  * Conditionally jump over invalid operation as first instruction.
@@ -242,8 +238,6 @@ test_jump_over_invalid_first(void)
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
 }
 
-REGISTER_FAST_TEST(bpf_jump_over_invalid_first_autotest, NOHUGE_OK, ASAN_OK,
-	test_jump_over_invalid_first);
 
 /*
  * Conditionally jump over invalid operation as non-first instruction.
@@ -285,8 +279,6 @@ test_jump_over_invalid_non_first(void)
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
 }
 
-REGISTER_FAST_TEST(bpf_jump_over_invalid_non_first_autotest, NOHUGE_OK, ASAN_OK,
-	test_jump_over_invalid_non_first);
 
 /*
  * Basic functional tests for librte_bpf.
@@ -3646,7 +3638,6 @@ test_bpf_load_null(void)
 
 	return 0;
 }
-REGISTER_FAST_TEST(bpf_load_null_autotest, NOHUGE_OK, ASAN_OK, test_bpf_load_null);
 
 /* Test calling wrong API for execution of a multi-argument eBPF program. */
 static int
@@ -3687,8 +3678,6 @@ test_bpf_exec_wrong_nb_prog_arg(void)
 
 	return 0;
 }
-REGISTER_FAST_TEST(bpf_exec_wrong_nb_prog_arg_autotest, NOHUGE_OK, ASAN_OK,
-		test_bpf_exec_wrong_nb_prog_arg);
 
 /* Test passing unsupported flags when executing an eBPF program. */
 static int
@@ -3726,10 +3715,9 @@ test_bpf_exec_wrong_flags(void)
 
 	return 0;
 }
-REGISTER_FAST_TEST(bpf_exec_wrong_flags_autotest, NOHUGE_OK, ASAN_OK, test_bpf_exec_wrong_flags);
 
 static int
-test_bpf(void)
+test_bpf_progs(void)
 {
 	int32_t rc, rv;
 	uint32_t i;
@@ -3743,10 +3731,6 @@ test_bpf(void)
 
 	return rc;
 }
-
-#endif /* !RTE_LIB_BPF */
-
-REGISTER_FAST_TEST(bpf_autotest, NOHUGE_OK, ASAN_OK, test_bpf);
 
 /* Tests of BPF JIT stack alignment when calling external functions (xfuncs). */
 
@@ -3860,7 +3844,6 @@ test_stack_alignment(void)
 	return TEST_SUCCESS;
 }
 
-REGISTER_FAST_TEST(bpf_stack_alignment_autotest, NOHUGE_OK, ASAN_OK, test_stack_alignment);
 
 /*
  * Test copying `__uint128_t`.
@@ -3916,7 +3899,6 @@ test_stack_copy_uint128(void)
 
 #endif
 
-REGISTER_FAST_TEST(bpf_stack_copy_uint128_autotest, NOHUGE_OK, ASAN_OK, test_stack_copy_uint128);
 
 /*
  * Test SSE2 load and store intrinsics.
@@ -4002,7 +3984,6 @@ test_stack_sse2(void)
 
 #endif
 
-REGISTER_FAST_TEST(bpf_stack_sse2_autotest, NOHUGE_OK, ASAN_OK, test_stack_sse2);
 
 /*
  * Run memcpy and rte_memcpy with various data sizes and offsets (unaligned and aligned).
@@ -4135,7 +4116,6 @@ test_stack_memcpy(void)
 	return TEST_SUCCESS;
 }
 
-REGISTER_FAST_TEST(bpf_stack_memcpy_autotest, NOHUGE_OK, ASAN_OK, test_stack_memcpy);
 
 /*
  * The BPF elf load test needs the BPF programs to be successfully
@@ -4651,7 +4631,6 @@ test_bpf_elf(void)
 
 #endif /* !(TEST_BPF_ELF_LOAD && RTE_NULL) */
 
-REGISTER_FAST_TEST(bpf_elf_autotest, NOHUGE_OK, ASAN_OK, test_bpf_elf);
 
 #ifndef RTE_HAS_LIBPCAP
 
@@ -4909,7 +4888,6 @@ test_bpf_convert(void)
 
 #endif /* RTE_HAS_LIBPCAP */
 
-REGISTER_FAST_TEST(bpf_convert_autotest, NOHUGE_OK, ASAN_OK, test_bpf_convert);
 
 /*
  * Tests of BPF atomic instructions.
@@ -5066,7 +5044,6 @@ test_xadd32(void)
 	return run_xchg_test(RTE_DIM(ins), ins, expected);
 }
 
-REGISTER_FAST_TEST(bpf_xadd32_autotest, NOHUGE_OK, ASAN_OK, test_xadd32);
 
 /*
  * Test 64-bit XADD.
@@ -5135,7 +5112,6 @@ test_xadd64(void)
 	return run_xchg_test(RTE_DIM(ins), ins, expected);
 }
 
-REGISTER_FAST_TEST(bpf_xadd64_autotest, NOHUGE_OK, ASAN_OK, test_xadd64);
 
 /*
  * Test 32-bit XCHG.
@@ -5230,7 +5206,6 @@ test_xchg32(void)
 	return run_xchg_test(RTE_DIM(ins), ins, expected);
 }
 
-REGISTER_FAST_TEST(bpf_xchg32_autotest, NOHUGE_OK, ASAN_OK, test_xchg32);
 
 /*
  * Test 64-bit XCHG.
@@ -5295,7 +5270,6 @@ test_xchg64(void)
 	return run_xchg_test(RTE_DIM(ins), ins, expected);
 }
 
-REGISTER_FAST_TEST(bpf_xchg64_autotest, NOHUGE_OK, ASAN_OK, test_xchg64);
 
 /*
  * Test invalid and unsupported atomic imm values (also valid ones for control).
@@ -5368,4 +5342,56 @@ test_atomic_imms(void)
 	return TEST_SUCCESS;
 }
 
-REGISTER_FAST_TEST(bpf_atomic_imms_autotest, NOHUGE_OK, ASAN_OK, test_atomic_imms);
+static struct unit_test_suite test_bpf_suite = {
+	.suite_name = "BPF Unit Test Suite",
+	.unit_test_cases = {
+		/* Loading of the most simple programs. */
+		TEST_CASE(test_no_instructions),
+		TEST_CASE(test_exit_only),
+		TEST_CASE(test_no_exit),
+		TEST_CASE(test_minimal_working),
+		TEST_CASE(test_add_one),
+		TEST_CASE(test_subtract_one),
+		TEST_CASE(test_jump_over_invalid_first),
+		TEST_CASE(test_jump_over_invalid_non_first),
+
+		/* API misuse. */
+		TEST_CASE(test_bpf_load_null),
+		TEST_CASE(test_bpf_exec_wrong_nb_prog_arg),
+		TEST_CASE(test_bpf_exec_wrong_flags),
+
+		/* Execution of the programs in the tests[] table. */
+		TEST_CASE(test_bpf_progs),
+
+		/* JIT stack alignment when calling external functions. */
+		TEST_CASE(test_stack_alignment),
+		TEST_CASE(test_stack_copy_uint128),
+		TEST_CASE(test_stack_sse2),
+		TEST_CASE(test_stack_memcpy),
+
+		/* Loading of programs from ELF objects. */
+		TEST_CASE(test_bpf_elf),
+
+		/* Conversion of cBPF programs. */
+		TEST_CASE(test_bpf_convert),
+
+		/* Atomic instructions. */
+		TEST_CASE(test_xadd32),
+		TEST_CASE(test_xadd64),
+		TEST_CASE(test_xchg32),
+		TEST_CASE(test_xchg64),
+		TEST_CASE(test_atomic_imms),
+
+		TEST_CASES_END()
+	}
+};
+
+static int
+test_bpf(void)
+{
+	return unit_test_suite_runner(&test_bpf_suite);
+}
+
+REGISTER_FAST_TEST(bpf_autotest, NOHUGE_OK, ASAN_OK, test_bpf);
+
+#endif /* !RTE_LIB_BPF */
