@@ -2677,9 +2677,12 @@ bond_ethdev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 	struct bond_dev_private *internals = dev->data->dev_private;
 	struct rte_eth_stats member_stats;
 	int i;
+	int ret;
 
 	for (i = 0; i < internals->member_count; i++) {
-		rte_eth_stats_get(internals->members[i].port_id, &member_stats);
+		ret = rte_eth_stats_get(internals->members[i].port_id, &member_stats);
+		if (ret != 0)
+			continue;
 
 		stats->ipackets += member_stats.ipackets;
 		stats->opackets += member_stats.opackets;
