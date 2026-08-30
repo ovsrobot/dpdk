@@ -33,6 +33,7 @@
 
 /* Table for statistics in mode 5 TLB */
 static uint64_t tlb_last_obytets[RTE_MAX_ETHPORTS];
+static bool tlb_unusable[RTE_MAX_ETHPORTS];
 
 static inline size_t
 get_vlan_offset(struct rte_ether_hdr *eth_hdr, uint16_t *proto)
@@ -865,8 +866,10 @@ void
 bond_tlb_activate_member(struct bond_dev_private *internals) {
 	int i;
 
-	for (i = 0; i < internals->active_member_count; i++)
+	for (i = 0; i < internals->active_member_count; i++) {
 		tlb_last_obytets[internals->active_members[i]] = 0;
+		tlb_unusable[internals->active_members[i]] = false;
+	}
 }
 
 static int
@@ -890,22 +893,10 @@ bandwidth_cmp(const void *a, const void *b)
 }
 
 static void
-bandwidth_left(uint16_t port_id, uint64_t load, uint8_t update_idx,
-		struct bwg_member *bwg_member)
+bandwidth_left(uint64_t load, uint64_t link_bwg, uint8_t update_idx,
+	       struct bwg_member *bwg_member)
 {
-	struct rte_eth_link link_status;
-	int ret;
-
-	ret = rte_eth_link_get_nowait(port_id, &link_status);
-	if (ret < 0) {
-		RTE_BOND_LOG(ERR, "Member (port %u) link get failed: %s",
-			     port_id, rte_strerror(-ret));
-		return;
-	}
-	uint64_t link_bwg = link_status.link_speed * 1000000ULL / 8;
-	if (link_bwg == 0)
-		return;
-	link_bwg = link_bwg * (update_idx+1) * REORDER_PERIOD_MS;
+	link_bwg = link_bwg * (update_idx + 1) * REORDER_PERIOD_MS;
 	bwg_member->bwg_left_int = (link_bwg - 1000 * load) / link_bwg;
 	bwg_member->bwg_left_remainder = (link_bwg - 1000 * load) % link_bwg;
 }
@@ -914,44 +905,78 @@ static void
 bond_ethdev_update_tlb_member_cb(void *arg)
 {
 	struct bond_dev_private *internals = arg;
-	struct rte_eth_stats member_stats;
 	struct bwg_member bwg_array[RTE_MAX_ETHPORTS];
-	uint16_t member_count;
-	uint64_t tx_bytes;
-
-	uint8_t update_stats = 0;
-	uint16_t member_id;
+	uint16_t active_count = internals->active_member_count;
+	uint16_t member_count = 0;
+	bool update_stats;
 	uint16_t i;
 
 	internals->member_update_idx++;
+	update_stats = internals->member_update_idx >= REORDER_PERIOD_MS;
 
+	for (i = 0; i < active_count; i++) {
+		uint16_t member_id = internals->active_members[i];
+		struct rte_eth_link link;
+		struct rte_eth_stats stats;
+		const char *reason = NULL;
+		int ret;
 
-	if (internals->member_update_idx >= REORDER_PERIOD_MS)
-		update_stats = 1;
+		ret = rte_eth_link_get_nowait(member_id, &link);
+		if (ret == 0)
+			ret = rte_eth_stats_get(member_id, &stats);
 
-	for (i = 0; i < internals->active_member_count; i++) {
-		member_id = internals->active_members[i];
-		rte_eth_stats_get(member_id, &member_stats);
-		tx_bytes = member_stats.obytes - tlb_last_obytets[member_id];
-		bandwidth_left(member_id, tx_bytes,
-				internals->member_update_idx, &bwg_array[i]);
-		bwg_array[i].member = member_id;
+		if (ret < 0)
+			reason = rte_strerror(-ret);
+		else if (link.link_status == RTE_ETH_LINK_DOWN)
+			reason = "link down";
+		else if (link.link_speed == RTE_ETH_SPEED_NUM_NONE ||
+			 link.link_speed == RTE_ETH_SPEED_NUM_UNKNOWN)
+			reason = "link speed unknown";
 
-		if (update_stats) {
-			tlb_last_obytets[member_id] = member_stats.obytes;
+		/*
+		 * Skip the member rather than treat it as idle, which would
+		 * sort it first and attract traffic. Deactivating it is the
+		 * link status callback's job. Log only on state change,
+		 * this runs every millisecond.
+		 */
+		if (reason != NULL) {
+			if (!tlb_unusable[member_id]) {
+				tlb_unusable[member_id] = true;
+				RTE_BOND_LOG(ERR, "Member (port %u) excluded from TLB ordering: %s",
+					     member_id, reason);
+			}
+			continue;
 		}
+		if (tlb_unusable[member_id]) {
+			tlb_unusable[member_id] = false;
+			RTE_BOND_LOG(INFO, "Member (port %u) usable for TLB ordering",
+				     member_id);
+		}
+
+		bandwidth_left(stats.obytes - tlb_last_obytets[member_id],
+			       link.link_speed * 1000000ULL / 8,
+			       internals->member_update_idx,
+			       &bwg_array[member_count]);
+		bwg_array[member_count++].member = member_id;
+
+		if (update_stats)
+			tlb_last_obytets[member_id] = stats.obytes;
 	}
 
-	if (update_stats == 1)
+	if (update_stats)
 		internals->member_update_idx = 0;
 
-	member_count = i;
 	qsort(bwg_array, member_count, sizeof(bwg_array[0]), bandwidth_cmp);
 	for (i = 0; i < member_count; i++)
 		internals->tlb_members_order[i] = bwg_array[i].member;
 
+	/* Transmit reads active_member_count entries, don't leave stale ones. */
+	for (i = member_count; i < active_count; i++)
+		internals->tlb_members_order[i] = member_count > 0 ?
+			bwg_array[0].member : internals->active_members[i];
+
 	rte_eal_alarm_set(REORDER_PERIOD_MS * 1000, bond_ethdev_update_tlb_member_cb,
-			(struct bond_dev_private *)internals);
+			internals);
 }
 
 static uint16_t
