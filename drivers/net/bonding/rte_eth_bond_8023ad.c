@@ -1440,6 +1440,9 @@ rte_eth_bond_8023ad_agg_selection_set(uint16_t port_id,
 	if (valid_bonding_port_id(port_id) != 0)
 		return -EINVAL;
 
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return -ENOTSUP;
+
 	bond_dev = &rte_eth_devices[port_id];
 	internals = bond_dev->data->dev_private;
 
@@ -1509,6 +1512,9 @@ rte_eth_bond_8023ad_setup(uint16_t port_id,
 	struct rte_eth_dev *bond_dev;
 	int err;
 
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return -ENOTSUP;
+
 	err = bond_8023ad_setup_validate(port_id, conf);
 	if (err != 0)
 		return err;
@@ -1531,6 +1537,9 @@ rte_eth_bond_8023ad_member_info(uint16_t port_id, uint16_t member_id,
 	struct rte_eth_dev *bond_dev;
 	struct bond_dev_private *internals;
 	struct port *port;
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return -ENOTSUP;
 
 	if (info == NULL || valid_bonding_port_id(port_id) != 0 ||
 			rte_eth_bond_mode_get(port_id) != BONDING_MODE_8023AD)
@@ -1563,6 +1572,9 @@ bond_8023ad_ext_validate(uint16_t port_id, uint16_t member_id)
 	struct rte_eth_dev *bond_dev;
 	struct bond_dev_private *internals;
 	struct mode8023ad_private *mode4;
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return -ENOTSUP;
 
 	if (rte_eth_bond_mode_get(port_id) != BONDING_MODE_8023AD)
 		return -EINVAL;
@@ -1728,6 +1740,9 @@ rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port)
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
 
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return -ENOTSUP;
+
 	if (valid_bonding_port_id(port) != 0)
 		return -EINVAL;
 
@@ -1756,6 +1771,9 @@ rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port)
 {
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return -ENOTSUP;
 
 	if (valid_bonding_port_id(port) != 0)
 		return -EINVAL;
