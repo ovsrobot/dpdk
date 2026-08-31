@@ -121,12 +121,13 @@ static struct rte_cryptodev_capabilities qat_asym_crypto_caps_gen4[] = {
 		0, 1, 512, 1),
 	QAT_ASYM_CAP(MODINV,
 		0, 1, 512, 1),
-	QAT_ASYM_CAP(RSA,
+	QAT_ASYM_RSA_CAP(
 			((1 << RTE_CRYPTO_ASYM_OP_SIGN) |
 			(1 << RTE_CRYPTO_ASYM_OP_VERIFY) |
 			(1 << RTE_CRYPTO_ASYM_OP_ENCRYPT) |
 			(1 << RTE_CRYPTO_ASYM_OP_DECRYPT)),
-			64, 512, 64),
+			64, 512, 64,
+			(1 << RTE_CRYPTO_RSA_PADDING_NONE)),
 	{	/* SM2 */
 		.op = RTE_CRYPTO_OP_TYPE_ASYMMETRIC,
 		{.asym = {

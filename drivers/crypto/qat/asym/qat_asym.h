@@ -56,6 +56,26 @@ typedef uint64_t large_int_ptr;
 		}							\
 	}
 
+#define QAT_ASYM_RSA_CAP(o, l, r, i, p)					\
+	{								\
+		.op = RTE_CRYPTO_OP_TYPE_ASYMMETRIC,			\
+		{.asym = {						\
+			.xform_capa = {					\
+				.xform_type = RTE_CRYPTO_ASYM_XFORM_RSA, \
+				.op_types = o,				\
+				.rsa_capa = {				\
+				.modlen = {				\
+				.min = l,				\
+				.max = r,				\
+				.increment = i				\
+				},					\
+				.pad_types = p,				\
+				},					\
+			}						\
+		},							\
+		}							\
+	}
+
 struct __rte_aligned(8) qat_asym_op_cookie {
 	uint64_t error;
 	uint32_t alg_bytesize; /* Bytesize of algorithm */
