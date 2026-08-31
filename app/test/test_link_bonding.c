@@ -1663,6 +1663,153 @@ test_roundrobin_rx_burst_on_single_member(void)
 	return remove_members_and_stop_bonding_device();
 }
 
+/* The bonding PMD reports rx and tx packets, bytes and errors per member.
+ * ethdev prepends its own basic statistics to the driver's, so the member
+ * entries start at an offset that has to be discovered at runtime.
+ */
+#define TEST_XSTATS_PER_MEMBER 6
+
+#define TEST_XSTATS_MEMBER_COUNT 4
+
+#define TEST_XSTATS_DRIVER_COUNT \
+	(TEST_XSTATS_MEMBER_COUNT * TEST_XSTATS_PER_MEMBER)
+
+/* Enough room for the driver entries plus any basic statistics. */
+#define TEST_XSTATS_MAX 64
+
+static int
+test_xstats(void)
+{
+	struct rte_mbuf *gen_pkt_burst[MAX_PKT_BURST];
+	struct rte_mbuf *rx_pkt_burst[MAX_PKT_BURST] = { NULL };
+	struct rte_eth_xstat_name names[TEST_XSTATS_MAX];
+	struct rte_eth_xstat xstats[TEST_XSTATS_MAX];
+	uint16_t bonding_port_id = test_params->bonding_port_id;
+	unsigned int count;
+	int burst_size = 17;
+	int basic, total;
+	int i, j;
+	char name[RTE_ETH_XSTATS_NAME_SIZE];
+
+	TEST_ASSERT_SUCCESS(initialize_bonding_device_with_members(
+			BONDING_MODE_ROUND_ROBIN, 0,
+			TEST_XSTATS_MEMBER_COUNT, 1),
+			"Failed to initialize bonding device with members");
+
+	/* A NULL table is a query for the number of xstats. The bonding
+	 * driver contributes six per member on top of the basic statistics.
+	 */
+	total = rte_eth_xstats_get_names(bonding_port_id, NULL, 0);
+	TEST_ASSERT(total > TEST_XSTATS_DRIVER_COUNT,
+			"Expected more than %d xstats names, got %d",
+			TEST_XSTATS_DRIVER_COUNT, total);
+	TEST_ASSERT(total <= TEST_XSTATS_MAX,
+			"xstats count %d exceeds test table size %d",
+			total, TEST_XSTATS_MAX);
+
+	basic = total - TEST_XSTATS_DRIVER_COUNT;
+
+	count = rte_eth_xstats_get(bonding_port_id, NULL, 0);
+	TEST_ASSERT_EQUAL(count, (unsigned int)total,
+			"xstats count %u differs from names count %d",
+			count, total);
+
+	/* A table smaller than the xstats count must be rejected, and the
+	 * required size returned instead.
+	 */
+	count = rte_eth_xstats_get_names(bonding_port_id, names, total - 1);
+	TEST_ASSERT_EQUAL(count, (unsigned int)total,
+			"Undersized names query returned %u, expected %d",
+			count, total);
+
+	count = rte_eth_xstats_get_names(bonding_port_id, names, total);
+	TEST_ASSERT_EQUAL(count, (unsigned int)total,
+			"Failed to get %d xstats names, got %u", total, count);
+
+	/* Driver names follow the basic ones, per member port id in member
+	 * order, rx before tx.
+	 */
+	for (i = 0; i < TEST_XSTATS_MEMBER_COUNT; i++) {
+		uint16_t member_id = test_params->member_port_ids[i];
+		static const char * const dir[] = { "rx", "tx" };
+		static const char * const stat[] = {
+			"packets", "bytes", "errors"
+		};
+		unsigned int base = basic + i * TEST_XSTATS_PER_MEMBER;
+		unsigned int d, s, idx = 0;
+
+		for (d = 0; d < RTE_DIM(dir); d++) {
+			for (s = 0; s < RTE_DIM(stat); s++) {
+				snprintf(name, sizeof(name), "%s_member%u_%s",
+					 dir[d], member_id, stat[s]);
+				TEST_ASSERT_SUCCESS(strcmp(
+						names[base + idx].name, name),
+						"xstats name %u is \"%s\", expected \"%s\"",
+						base + idx,
+						names[base + idx].name, name);
+				idx++;
+			}
+		}
+	}
+
+	/* Receive a burst on a single member, so that the per-member
+	 * counters can be told apart.
+	 */
+	TEST_ASSERT_EQUAL(generate_test_burst(gen_pkt_burst, burst_size,
+			0, 1, 0, 0, 0), burst_size, "burst generation failed");
+
+	virtual_ethdev_add_mbufs_to_rx_queue(test_params->member_port_ids[0],
+			gen_pkt_burst, burst_size);
+
+	TEST_ASSERT_EQUAL(rte_eth_rx_burst(bonding_port_id, 0,
+			rx_pkt_burst, MAX_PKT_BURST), burst_size,
+			"rx burst failed");
+
+	count = rte_eth_xstats_get(bonding_port_id, xstats, total);
+	TEST_ASSERT_EQUAL(count, (unsigned int)total,
+			"Failed to get %d xstats, got %u", total, count);
+
+	/* Only the member that received the burst has a non-zero rx packet
+	 * count. Ids are the index into the table.
+	 */
+	for (i = 0; i < TEST_XSTATS_MEMBER_COUNT; i++) {
+		unsigned int base = basic + i * TEST_XSTATS_PER_MEMBER;
+		uint64_t rx_packets = xstats[base].value;
+
+		TEST_ASSERT_EQUAL(xstats[base].id, (uint64_t)base,
+				"xstat %u has id %"PRIu64, base, xstats[base].id);
+
+		if (i == 0)
+			TEST_ASSERT_EQUAL(rx_packets, (uint64_t)burst_size,
+					"Member %u rx packets is %"PRIu64", expected %d",
+					test_params->member_port_ids[i],
+					rx_packets, burst_size);
+		else
+			TEST_ASSERT_EQUAL(rx_packets, 0,
+					"Member %u rx packets is %"PRIu64", expected 0",
+					test_params->member_port_ids[i], rx_packets);
+	}
+
+	/* Reset clears the underlying member statistics. */
+	TEST_ASSERT_SUCCESS(rte_eth_xstats_reset(bonding_port_id),
+			"Failed to reset xstats");
+
+	count = rte_eth_xstats_get(bonding_port_id, xstats, total);
+	TEST_ASSERT_EQUAL(count, (unsigned int)total,
+			"Failed to get %d xstats after reset, got %u",
+			total, count);
+
+	for (i = basic; i < total; i++)
+		TEST_ASSERT_EQUAL(xstats[i].value, 0,
+				"xstat \"%s\" is %"PRIu64" after reset, expected 0",
+				names[i].name, xstats[i].value);
+
+	for (j = 0; j < burst_size; j++)
+		rte_pktmbuf_free(rx_pkt_burst[j]);
+
+	return remove_members_and_stop_bonding_device();
+}
+
 #define TEST_ROUNDROBIN_TX_BURST_MEMBER_COUNT (3)
 
 static int
@@ -5160,6 +5307,7 @@ static struct unit_test_suite link_bonding_test_suite  = {
 		TEST_CASE(test_set_bonding_port_initialization_mac_assignment),
 		TEST_CASE(test_status_interrupt),
 		TEST_CASE(test_adding_member_after_bonding_device_started),
+		TEST_CASE(test_xstats),
 		TEST_CASE(test_roundrobin_tx_burst),
 		TEST_CASE(test_roundrobin_tx_burst_member_tx_fail),
 		TEST_CASE(test_roundrobin_rx_burst_on_single_member),
