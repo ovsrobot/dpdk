@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added extended statistics to bonding PMD.**
+
+  Extended statistics now report the packets, bytes and errors
+  of each member as ``rx_memberN_*`` and ``tx_memberN_*``.
+  The per-queue entries, which were always zero, are no longer reported.
+
 
 Removed Items
 -------------

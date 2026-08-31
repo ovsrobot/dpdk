@@ -2764,6 +2764,111 @@ bond_ethdev_stats_reset(struct rte_eth_dev *dev)
 	return err;
 }
 
+#define BOND_MEMBER_STAT_PREFIX_LEN (sizeof("rx_member") - 1 + 5 + 1)
+
+struct bond_member_stats_name_off {
+	char name[RTE_ETH_XSTATS_NAME_SIZE - BOND_MEMBER_STAT_PREFIX_LEN];
+	size_t offset;
+};
+
+static const struct bond_member_stats_name_off bond_member_rxq_stats_strings[] = {
+	{ "packets", offsetof(struct rte_eth_stats, ipackets) },
+	{ "bytes", offsetof(struct rte_eth_stats, ibytes) },
+	{ "errors", offsetof(struct rte_eth_stats, ierrors) },
+};
+
+#define BOND_NB_MEMBER_RX_STATS RTE_DIM(bond_member_rxq_stats_strings)
+
+static const struct bond_member_stats_name_off bond_member_txq_stats_strings[] = {
+	{ "packets", offsetof(struct rte_eth_stats, opackets) },
+	{ "bytes", offsetof(struct rte_eth_stats, obytes) },
+	{ "errors", offsetof(struct rte_eth_stats, oerrors) },
+};
+
+#define BOND_NB_MEMBER_TX_STATS RTE_DIM(bond_member_txq_stats_strings)
+
+#define BOND_NB_MEMBER_STATS (BOND_NB_MEMBER_RX_STATS + BOND_NB_MEMBER_TX_STATS)
+
+static int
+bond_ethdev_xstats_get_names(struct rte_eth_dev *dev,
+			     struct rte_eth_xstat_name *xstats_names,
+			     unsigned int limit)
+{
+	struct bond_dev_private *internals = dev->data->dev_private;
+	unsigned int count = internals->member_count * BOND_NB_MEMBER_STATS;
+	unsigned int i, j;
+
+	if (xstats_names == NULL || limit < count)
+		return count;
+
+	count = 0;
+	for (i = 0; i < internals->member_count; i++) {
+		uint16_t member_id = internals->members[i].port_id;
+
+		for (j = 0; j < BOND_NB_MEMBER_RX_STATS; j++)
+			snprintf(xstats_names[count++].name,
+				 RTE_ETH_XSTATS_NAME_SIZE, "rx_member%u_%s",
+				 member_id, bond_member_rxq_stats_strings[j].name);
+
+		for (j = 0; j < BOND_NB_MEMBER_TX_STATS; j++)
+			snprintf(xstats_names[count++].name,
+				 RTE_ETH_XSTATS_NAME_SIZE, "tx_member%u_%s",
+				 member_id, bond_member_txq_stats_strings[j].name);
+	}
+
+	return count;
+}
+
+static int
+bond_ethdev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
+		       unsigned int n)
+{
+	const struct bond_dev_private *internals = dev->data->dev_private;
+	unsigned int count = internals->member_count * BOND_NB_MEMBER_STATS;
+	unsigned int i, j;
+
+	if (xstats == NULL || n < count)
+		return count;
+
+	count = 0;
+	for (i = 0; i < internals->member_count; i++) {
+		struct rte_eth_stats member_stats;
+		uint16_t member_id = internals->members[i].port_id;
+
+		/* If member query fails just report zero. */
+		if (rte_eth_stats_get(member_id, &member_stats) < 0)
+			memset(&member_stats, 0, sizeof(member_stats));
+
+		for (j = 0; j < BOND_NB_MEMBER_RX_STATS; j++) {
+			xstats[count].id = count;
+			xstats[count].value = *(const uint64_t *)((const char *)&member_stats +
+					bond_member_rxq_stats_strings[j].offset);
+			count++;
+		}
+
+		for (j = 0; j < BOND_NB_MEMBER_TX_STATS; j++) {
+			xstats[count].id = count;
+			xstats[count].value = *(const uint64_t *)((const char *)&member_stats +
+					bond_member_txq_stats_strings[j].offset);
+			count++;
+		}
+	}
+
+	return count;
+}
+
+static int
+bond_ethdev_xstats_reset(struct rte_eth_dev *dev)
+{
+	const struct bond_dev_private *internals = dev->data->dev_private;
+	uint16_t i;
+
+	for (i = 0; i < internals->member_count; i++)
+		rte_eth_stats_reset(internals->members[i].port_id);
+
+	return 0;
+}
+
 static int
 bond_ethdev_promiscuous_enable(struct rte_eth_dev *eth_dev)
 {
@@ -3710,6 +3815,8 @@ static const struct eth_dev_ops secondary_dev_ops = {
 	.dev_infos_get        = bond_ethdev_info,
 	.link_update          = bond_ethdev_link_update,
 	.stats_get            = bond_ethdev_stats_get,
+	.xstats_get           = bond_ethdev_xstats_get,
+	.xstats_get_names     = bond_ethdev_xstats_get_names,
 	.reta_query           = bond_ethdev_rss_reta_query,
 	.rss_hash_conf_get    = bond_ethdev_rss_hash_conf_get,
 	.eth_dev_priv_dump    = bond_ethdev_priv_dump,
@@ -3729,6 +3836,9 @@ const struct eth_dev_ops default_dev_ops = {
 	.link_update          = bond_ethdev_link_update,
 	.stats_get            = bond_ethdev_stats_get,
 	.stats_reset          = bond_ethdev_stats_reset,
+	.xstats_get           = bond_ethdev_xstats_get,
+	.xstats_get_names     = bond_ethdev_xstats_get_names,
+	.xstats_reset         = bond_ethdev_xstats_reset,
 	.promiscuous_enable   = bond_ethdev_promiscuous_enable,
 	.promiscuous_disable  = bond_ethdev_promiscuous_disable,
 	.allmulticast_enable  = bond_ethdev_allmulticast_enable,
@@ -3780,8 +3890,7 @@ bond_alloc(struct rte_vdev_device *dev, uint8_t mode)
 	}
 
 	eth_dev->dev_ops = &default_dev_ops;
-	eth_dev->data->dev_flags = RTE_ETH_DEV_INTR_LSC |
-					RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
+	eth_dev->data->dev_flags = RTE_ETH_DEV_INTR_LSC;
 
 	rte_spinlock_init(&internals->lock);
 	rte_spinlock_init(&internals->lsc_lock);
