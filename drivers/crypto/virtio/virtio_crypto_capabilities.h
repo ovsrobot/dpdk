@@ -58,11 +58,20 @@
 					(1 << RTE_CRYPTO_ASYM_OP_VERIFY) |  \
 					(1 << RTE_CRYPTO_ASYM_OP_ENCRYPT) | \
 					(1 << RTE_CRYPTO_ASYM_OP_DECRYPT)), \
-			{.modlen = {					\
-				.min = 1,				\
-				.max = 1024,				\
-				.increment = 1				\
-			}, }						\
+			.rsa_capa = {					\
+				.modlen = {					\
+					.min = 1,				\
+					.max = 1024,				\
+					.increment = 1				\
+				},						\
+				.pad_types = ((1 << RTE_CRYPTO_RSA_PADDING_NONE) | \
+					(1 << RTE_CRYPTO_RSA_PADDING_PKCS1_5)), \
+			},						\
+			.hash_algos = (RTE_BIT64(RTE_CRYPTO_AUTH_MD5) |	\
+				RTE_BIT64(RTE_CRYPTO_AUTH_SHA1) |		\
+				RTE_BIT64(RTE_CRYPTO_AUTH_SHA224) |		\
+				RTE_BIT64(RTE_CRYPTO_AUTH_SHA256) |		\
+				RTE_BIT64(RTE_CRYPTO_AUTH_SHA512)),		\
 		}							\
 		 }, }							\
 	}
