@@ -7155,17 +7155,41 @@ rte_eth_representor_info_get(uint16_t port_id,
 			     struct rte_eth_representor_info *info)
 {
 	struct rte_eth_dev *dev;
-	int ret;
+	int ret = 0;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 
-	if (dev->dev_ops->representor_info_get == NULL)
-		return -ENOTSUP;
+	if (info == NULL)
+		return -EINVAL;
+
+	if (dev->dev_ops->representor_info_get == NULL) {
+		if (!rte_eth_dev_is_repr(dev)) {
+			info->type = RTE_ETH_REPRESENTOR_NONE;
+		} else {
+			struct rte_eth_dev_info dev_info = {};
+
+			ret = rte_eth_dev_info_get(port_id, &dev_info);
+			if (ret != 0) {
+				RTE_ETHDEV_LOG_LINE(ERR, "rte_eth_dev_info_get() failed for port %u",
+						port_id);
+				goto finish;
+			}
+
+			info->type = RTE_ETH_REPRESENTOR_VF;
+			info->vf = dev_info.switch_info.port_id;
+		}
+
+		info->controller_valid = false;
+		info->pf_valid = false;
+
+		goto finish;
+	}
+
 	ret = eth_err(port_id, dev->dev_ops->representor_info_get(dev, info));
 
+finish:
 	rte_eth_trace_representor_info_get(port_id, info, ret);
-
 	return ret;
 }
 

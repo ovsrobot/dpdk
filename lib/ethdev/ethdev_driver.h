@@ -2045,6 +2045,10 @@ struct rte_eth_devargs {
 	enum rte_eth_representor_type type; /* type of representor */
 };
 
+__rte_internal
+bool
+rte_eth_representor_info_match(const struct rte_eth_dev *dev, const struct rte_eth_representor_info *other);
+
 /**
  * PMD helper function to get representor ID from location detail.
  *

@@ -5785,58 +5785,33 @@ int rte_eth_dev_hairpin_capability_get(uint16_t port_id,
  * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice.
  *
- * Ethernet device representor ID range entry
- */
-struct rte_eth_representor_range {
-	enum rte_eth_representor_type type; /**< Representor type */
-	int controller; /**< Controller index */
-	int pf; /**< Physical function index */
-	__extension__
-	union {
-		int vf; /**< VF start index */
-		int sf; /**< SF start index */
-	};
-	uint32_t id_base; /**< Representor ID start index */
-	uint32_t id_end;  /**< Representor ID end index */
-	char name[RTE_DEV_NAME_MAX_LEN]; /**< Representor name */
-};
-
-/**
- * @warning
- * @b EXPERIMENTAL: this structure may change without prior notice.
- *
  * Ethernet device representor information
  */
 struct rte_eth_representor_info {
-	uint16_t controller; /**< Controller ID of caller device. */
-	uint16_t pf; /**< Physical function ID of caller device. */
-	uint32_t nb_ranges_alloc; /**< Size of the ranges array. */
-	uint32_t nb_ranges; /**< Number of initialized ranges. */
-	struct rte_eth_representor_range ranges[];/**< Representor ID range. */
+	enum rte_eth_representor_type type;
+	uint32_t controller;
+	bool controller_valid;
+	uint32_t pf;
+	bool pf_valid;
+	__extension__
+	union {
+		uint32_t vf;
+		uint32_t sf;
+	};
 };
 
 /**
  * Retrieve the representor info of the device.
  *
- * Get device representor info to be able to calculate a unique
- * representor ID. @see rte_eth_representor_id_get helper.
- *
  * @param port_id
  *   The port identifier of the device.
  * @param info
  *   A pointer to a representor info structure.
- *   NULL to return number of range entries and allocate memory
- *   for next call to store detail.
- *   The number of ranges that were written into this structure
- *   will be placed into its nb_ranges field. This number cannot be
- *   larger than the nb_ranges_alloc that by the user before calling
- *   this function. It can be smaller than the value returned by the
- *   function, however.
  * @return
- *   - (-ENOTSUP) if operation is not supported.
+ *   - (-EINVAL) if @p info is NULL.
  *   - (-ENODEV) if *port_id* invalid.
  *   - (-EIO) if device is removed.
- *   - (>=0) number of available representor range entries.
+ *   - (0) @p info was filled.
  */
 __rte_experimental
 int rte_eth_representor_info_get(uint16_t port_id,

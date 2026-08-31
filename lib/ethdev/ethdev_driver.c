@@ -902,6 +902,95 @@ rte_eth_recycle_rx_descriptors_refill_dummy(void *queue __rte_unused,
 	/* No action. */
 }
 
+static bool controller_match(const struct rte_eth_representor_info *rep_info,
+			     const struct rte_eth_representor_info *backer_info,
+			     const struct rte_eth_representor_info *other)
+{
+	/* If device has controller, but devargs do not have one, then use backer's controller as default. */
+	if (rep_info->controller_valid && !other->controller_valid) {
+		if (rep_info->controller != backer_info->controller)
+			return false;
+	}
+
+	/* If devargs have controller, but device does not have one, then no way to compare. */
+	if (!rep_info->controller_valid && other->controller_valid)
+		return false;
+
+	/* If both device and devargs have controller, then they must match. */
+	if (rep_info->controller_valid && other->controller_valid && rep_info->controller != other->controller)
+		return false;
+
+	/* If both device and devargs do not have controller, then no need to compare. */
+
+	return true;
+}
+
+static bool pf_match(const struct rte_eth_representor_info *rep_info,
+			     const struct rte_eth_representor_info *backer_info,
+			     const struct rte_eth_representor_info *other)
+{
+	/* If device has pf, but devargs do not have one, then use backer's pf as default. */
+	if (rep_info->pf_valid && !other->pf_valid) {
+		if (rep_info->pf != backer_info->pf)
+			return false;
+	}
+
+	/* If devargs have pf, but device does not have one, then no way to compare. */
+	if (!rep_info->pf_valid && other->pf_valid)
+		return false;
+
+	/* If both device and devargs have pf, then they must match. */
+	if (rep_info->pf_valid && other->pf_valid && rep_info->pf != other->pf)
+		return false;
+
+	/* If both device and devargs do not have pf, then no need to compare. */
+
+	return true;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_representor_id_get)
+bool
+rte_eth_representor_info_match(const struct rte_eth_dev *dev, const struct rte_eth_representor_info *other)
+{
+	struct rte_eth_representor_info info;
+	struct rte_eth_representor_info backer_info;
+	int ret;
+
+	memset(&info, 0, sizeof(info));
+	memset(&backer_info, 0, sizeof(backer_info));
+
+	ret = rte_eth_representor_info_get(dev->data->port_id, &info);
+	if (ret < 0)
+		return false;
+	ret = rte_eth_representor_info_get(dev->data->backer_port_id, &backer_info);
+	if (ret < 0)
+		return false;
+
+	if (!controller_match(&info, &backer_info, other))
+		return false;
+
+	if (!pf_match(&info, &backer_info, other))
+		return false;
+
+	if (info.type != other->type)
+		return false;
+
+	switch (info.type) {
+	case RTE_ETH_REPRESENTOR_VF:
+		if (info.vf != other->vf)
+			return false;
+		break;
+	case RTE_ETH_REPRESENTOR_SF:
+		if (info.sf != other->sf)
+			return false;
+		break;
+	default:
+		break;
+	}
+
+	return true;
+}
+
 RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_representor_id_get)
 int
 rte_eth_representor_id_get(uint16_t port_id,

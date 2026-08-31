@@ -93,19 +93,34 @@ eth_representor_cmp(const char *key __rte_unused,
 
 	/* Return 0 if representor ID is matching one of the values. */
 	for (i = 0; i < nc * np * nf; ++i) {
+		struct rte_eth_representor_info info;
+
 		c = i / (np * nf);
 		p = (i / nf) % np;
 		f = i % nf;
-		if (rte_eth_representor_id_get(edev->data->backer_port_id,
-			eth_da.type,
-			eth_da.nb_mh_controllers == 0 ? -1 :
-					eth_da.mh_controllers[c],
-			eth_da.nb_ports == 0 ? -1 : eth_da.ports[p],
-			eth_da.nb_representor_ports == 0 ? -1 :
-					eth_da.representor_ports[f],
-			&id) < 0)
-			continue;
-		if (data->representor_id == id)
+
+		memset(&info, 0, sizeof(info));
+		info.type = eth_da.type;
+		if (eth_da.nb_mh_controllers > 0) {
+			info.controller = eth_da.mh_controllers[c];
+			info.controller_valid = true;
+		}
+		if (eth_da.nb_ports > 0) {
+			info.pf = eth_da.ports[p];
+			info.pf = true;
+		}
+		switch (info.type) {
+		case RTE_ETH_REPRESENTOR_VF:
+			info.vf = eth_da.representor_ports[f];
+			break;
+		case RTE_ETH_REPRESENTOR_SF:
+			info.sf = eth_da.representor_ports[f];
+			break;
+		default:
+			break;
+		}
+
+		if (rte_eth_representor_info_match(edev, &info))
 			return 0;
 	}
 	return -1; /* no match */
