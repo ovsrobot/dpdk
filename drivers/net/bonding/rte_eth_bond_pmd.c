@@ -2360,27 +2360,39 @@ bond_ethdev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	/* Max number of tx/rx queues that the bonding device can support is the
 	 * minimum values of the bonding members, as all members must be capable
 	 * of supporting the same number of tx/rx queues.
+	 *
+	 * A member may be unqueryable here: it can be removed concurrently, or
+	 * simply not be probed in this process. Skip those, but do not report
+	 * the UINT16_MAX default if no member could be queried at all, since
+	 * that would let any queue count pass rte_eth_dev_configure().
 	 */
 	if (internals->member_count > 0) {
 		struct rte_eth_dev_info member_info;
+		uint16_t queried = 0;
 		uint16_t idx;
 
 		for (idx = 0; idx < internals->member_count; idx++) {
 			member = internals->members[idx];
 			ret = rte_eth_dev_info_get(member.port_id, &member_info);
 			if (ret != 0) {
-				RTE_BOND_LOG(ERR,
-					"Error getting device (port %u) info: %s",
+				RTE_BOND_LOG(WARNING,
+					"Skipping device (port %u) info: %s",
 					member.port_id, strerror(-ret));
-
-				return ret;
+				continue;
 			}
+
+			queried++;
 
 			if (member_info.max_rx_queues < max_nb_rx_queues)
 				max_nb_rx_queues = member_info.max_rx_queues;
 
 			if (member_info.max_tx_queues < max_nb_tx_queues)
 				max_nb_tx_queues = member_info.max_tx_queues;
+		}
+
+		if (queried == 0) {
+			RTE_BOND_LOG(ERR, "No member device info available");
+			return -ENODEV;
 		}
 	}
 
