@@ -1461,8 +1461,12 @@ link_properties_set(struct rte_eth_dev *ethdev, struct rte_eth_link *member_link
 		 * In any other mode the link properties are set to default
 		 * values of AUTONEG/DUPLEX
 		 */
-		ethdev->data->dev_link.link_autoneg = RTE_ETH_LINK_AUTONEG;
-		ethdev->data->dev_link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+		struct rte_eth_link link;
+
+		rte_eth_linkstatus_get(ethdev, &link);
+		link.link_autoneg = RTE_ETH_LINK_AUTONEG;
+		link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+		rte_eth_linkstatus_set(ethdev, &link);
 	}
 }
 
@@ -2077,6 +2081,16 @@ bond_ethdev_primary_set(struct bond_dev_private *internals,
 static int
 bond_ethdev_promiscuous_enable(struct rte_eth_dev *eth_dev);
 
+static void
+bond_ethdev_link_down(struct rte_eth_dev *eth_dev)
+{
+	struct rte_eth_link link;
+
+	rte_eth_linkstatus_get(eth_dev, &link);
+	link.link_status = RTE_ETH_LINK_DOWN;
+	rte_eth_linkstatus_set(eth_dev, &link);
+}
+
 static int
 bond_ethdev_start(struct rte_eth_dev *eth_dev)
 {
@@ -2090,7 +2104,7 @@ bond_ethdev_start(struct rte_eth_dev *eth_dev)
 		return -1;
 	}
 
-	eth_dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+	bond_ethdev_link_down(eth_dev);
 	eth_dev->data->dev_started = 1;
 
 	internals = eth_dev->data->dev_private;
@@ -2242,7 +2256,7 @@ bond_ethdev_stop(struct rte_eth_dev *eth_dev)
 			tlb_last_obytets[internals->active_members[i]] = 0;
 	}
 
-	eth_dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+	bond_ethdev_link_down(eth_dev);
 	eth_dev->data->dev_started = 0;
 
 	if (internals->link_status_polling_enabled) {
@@ -2537,6 +2551,7 @@ bond_ethdev_member_link_status_change_monitor(void *cb_arg)
 {
 	struct rte_eth_dev *bonding_ethdev, *member_ethdev;
 	struct bond_dev_private *internals;
+	struct rte_eth_link member_link;
 
 	/* Default value for polling member found is true as we don't want to
 	 * disable the polling thread if we cannot get the lock */
@@ -2569,9 +2584,11 @@ bond_ethdev_member_link_status_change_monitor(void *cb_arg)
 			member_ethdev->dev_ops->link_update(member_ethdev,
 					      internals->members[i].link_status_wait_to_complete);
 
+			rte_eth_linkstatus_get(member_ethdev, &member_link);
+
 			/* if link status has changed since last checked then call lsc
 			 * event callback */
-			if (member_ethdev->data->dev_link.link_status !=
+			if (member_link.link_status !=
 					internals->members[i].last_link_status) {
 				bond_ethdev_lsc_event_callback(internals->members[i].port_id,
 						RTE_ETH_EVENT_INTR_LSC,
@@ -2595,6 +2612,7 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 
 	struct bond_dev_private *bond_ctx;
 	struct rte_eth_link member_link;
+	struct rte_eth_link link;
 
 	bool one_link_update_succeeded;
 	uint32_t idx;
@@ -2602,15 +2620,17 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 
 	bond_ctx = ethdev->data->dev_private;
 
-	ethdev->data->dev_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
+	rte_eth_linkstatus_get(ethdev, &link);
+	link.link_speed = RTE_ETH_SPEED_NUM_NONE;
 
 	if (ethdev->data->dev_started == 0 ||
 			bond_ctx->active_member_count == 0) {
-		ethdev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+		link.link_status = RTE_ETH_LINK_DOWN;
+		rte_eth_linkstatus_set(ethdev, &link);
 		return 0;
 	}
 
-	ethdev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+	link.link_status = RTE_ETH_LINK_UP;
 
 	if (wait_to_complete)
 		link_update = rte_eth_link_get;
@@ -2623,7 +2643,7 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 		 * Setting link speed to UINT32_MAX to ensure we pick up the
 		 * value of the first active member
 		 */
-		ethdev->data->dev_link.link_speed = UINT32_MAX;
+		link.link_speed = UINT32_MAX;
 
 		/**
 		 * link speed is minimum value of all the members link speed as
@@ -2634,19 +2654,16 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 			ret = link_update(bond_ctx->active_members[idx],
 					  &member_link);
 			if (ret < 0) {
-				ethdev->data->dev_link.link_speed =
-					RTE_ETH_SPEED_NUM_NONE;
+				link.link_speed = RTE_ETH_SPEED_NUM_NONE;
 				RTE_BOND_LOG(ERR,
 					"Member (port %u) link get failed: %s",
 					bond_ctx->active_members[idx],
 					rte_strerror(-ret));
-				return 0;
+				goto done;
 			}
 
-			if (member_link.link_speed <
-					ethdev->data->dev_link.link_speed)
-				ethdev->data->dev_link.link_speed =
-						member_link.link_speed;
+			if (member_link.link_speed < link.link_speed)
+				link.link_speed = member_link.link_speed;
 		}
 		break;
 	case BONDING_MODE_ACTIVE_BACKUP:
@@ -2656,16 +2673,14 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 			RTE_BOND_LOG(ERR, "Member (port %u) link get failed: %s",
 				bond_ctx->current_primary_port,
 				rte_strerror(-ret));
-			return 0;
+			goto done;
 		}
 
-		ethdev->data->dev_link.link_speed = member_link.link_speed;
+		link.link_speed = member_link.link_speed;
 		break;
 	case BONDING_MODE_8023AD:
-		ethdev->data->dev_link.link_autoneg =
-				bond_ctx->mode4.member_link.link_autoneg;
-		ethdev->data->dev_link.link_duplex =
-				bond_ctx->mode4.member_link.link_duplex;
+		link.link_autoneg = bond_ctx->mode4.member_link.link_autoneg;
+		link.link_duplex = bond_ctx->mode4.member_link.link_duplex;
 		/* fall through */
 		/* to update link speed */
 	case BONDING_MODE_ROUND_ROBIN:
@@ -2677,7 +2692,7 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 		 * In theses mode the maximum theoretical link speed is the sum
 		 * of all the members
 		 */
-		ethdev->data->dev_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
+		link.link_speed = RTE_ETH_SPEED_NUM_NONE;
 		one_link_update_succeeded = false;
 
 		for (idx = 0; idx < bond_ctx->active_member_count; idx++) {
@@ -2692,16 +2707,15 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 			}
 
 			one_link_update_succeeded = true;
-			ethdev->data->dev_link.link_speed +=
-					member_link.link_speed;
+			link.link_speed += member_link.link_speed;
 		}
 
-		if (!one_link_update_succeeded) {
+		if (!one_link_update_succeeded)
 			RTE_BOND_LOG(ERR, "All members link get failed");
-			return 0;
-		}
 	}
 
+done:
+	rte_eth_linkstatus_set(ethdev, &link);
 
 	return 0;
 }
@@ -3069,7 +3083,7 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 {
 	struct rte_eth_dev *bonding_eth_dev;
 	struct bond_dev_private *internals;
-	struct rte_eth_link link;
+	struct rte_eth_link link, bond_link;
 	int rc = -1;
 	int ret;
 
@@ -3122,7 +3136,8 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 			goto link_update;
 
 		/* check link state properties if bonding link is up*/
-		if (bonding_eth_dev->data->dev_link.link_status == RTE_ETH_LINK_UP) {
+		rte_eth_linkstatus_get(bonding_eth_dev, &bond_link);
+		if (bond_link.link_status == RTE_ETH_LINK_UP) {
 			if (link_properties_valid(bonding_eth_dev, &link) != 0)
 				RTE_BOND_LOG(ERR, "Invalid link properties "
 					     "for member %d in bonding mode %d",
@@ -3137,8 +3152,10 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 		 */
 		if (internals->active_member_count < 1) {
 			/* If first active member, then change link status */
-			bonding_eth_dev->data->dev_link.link_status =
-								RTE_ETH_LINK_UP;
+			rte_eth_linkstatus_get(bonding_eth_dev, &bond_link);
+			bond_link.link_status = RTE_ETH_LINK_UP;
+			rte_eth_linkstatus_set(bonding_eth_dev, &bond_link);
+
 			internals->current_primary_port = port_id;
 			lsc_flag = 1;
 
@@ -3194,7 +3211,8 @@ link_update:
 			rte_eal_alarm_cancel(bond_ethdev_delayed_lsc_propagation,
 					bonding_eth_dev);
 
-		if (bonding_eth_dev->data->dev_link.link_status) {
+		rte_eth_linkstatus_get(bonding_eth_dev, &bond_link);
+		if (bond_link.link_status) {
 			if (internals->link_up_delay_ms > 0)
 				rte_eal_alarm_set(internals->link_up_delay_ms * 1000,
 						bond_ethdev_delayed_lsc_propagation,
