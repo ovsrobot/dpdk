@@ -99,6 +99,7 @@ API Changes
 
   * meter (MTR) and policing: ``rte_mtr_*``
   * SFF: ``rte_eth_dev_get_module_info`` and ``rte_eth_dev_get_module_eeprom``
+  * flow conversion: ``rte_flow_conv``
 
 
 ABI Changes
