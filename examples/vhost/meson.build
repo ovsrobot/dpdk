@@ -13,6 +13,7 @@ endif
 
 deps += 'vhost'
 deps += 'dmadev'
+deps += 'pci'
 allow_experimental_apis = true
 sources = files(
         'main.c',
