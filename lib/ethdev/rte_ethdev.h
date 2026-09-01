@@ -6040,9 +6040,6 @@ enum rte_eth_cman_obj {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this structure may change, or be removed, without prior notice
- *
  * A structure used to retrieve information of ethdev congestion management.
  */
 struct rte_eth_cman_info {
@@ -6064,9 +6061,6 @@ struct rte_eth_cman_info {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this structure may change, or be removed, without prior notice
- *
  * A structure used to configure the ethdev congestion management.
  */
 struct rte_eth_cman_config {
@@ -6108,9 +6102,6 @@ struct rte_eth_cman_config {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Retrieve the information for ethdev congestion management
  *
  * @param port_id
@@ -6124,13 +6115,9 @@ struct rte_eth_cman_config {
  *   - (-ENODEV) if *port_id* invalid.
  *   - (-EINVAL) if bad parameter.
  */
-__rte_experimental
 int rte_eth_cman_info_get(uint16_t port_id, struct rte_eth_cman_info *info);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Initialize the ethdev congestion management configuration structure with default values.
  *
  * @param port_id
@@ -6144,13 +6131,9 @@ int rte_eth_cman_info_get(uint16_t port_id, struct rte_eth_cman_info *info);
  *   - (-ENODEV) if *port_id* invalid.
  *   - (-EINVAL) if bad parameter.
  */
-__rte_experimental
 int rte_eth_cman_config_init(uint16_t port_id, struct rte_eth_cman_config *config);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Configure ethdev congestion management
  *
  * @param port_id
@@ -6163,13 +6146,9 @@ int rte_eth_cman_config_init(uint16_t port_id, struct rte_eth_cman_config *confi
  *   - (-ENODEV) if *port_id* invalid.
  *   - (-EINVAL) if bad parameter.
  */
-__rte_experimental
 int rte_eth_cman_config_set(uint16_t port_id, const struct rte_eth_cman_config *config);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Retrieve the applied ethdev congestion management parameters for the given port.
  *
  * @param port_id
@@ -6186,7 +6165,6 @@ int rte_eth_cman_config_set(uint16_t port_id, const struct rte_eth_cman_config *
  *   - (-ENODEV) if *port_id* invalid.
  *   - (-EINVAL) if bad parameter.
  */
-__rte_experimental
 int rte_eth_cman_config_get(uint16_t port_id, struct rte_eth_cman_config *config);
 
 #ifdef __cplusplus
