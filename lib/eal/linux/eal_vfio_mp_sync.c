@@ -31,49 +31,78 @@ vfio_mp_primary(const struct rte_mp_msg *msg, const void *peer)
 	memset(&reply, 0, sizeof(reply));
 
 	switch (m->req) {
-	case SOCKET_REQ_GROUP:
-		r->req = SOCKET_REQ_GROUP;
+	case VFIO_SOCKET_REQ_GROUP:
+	{
+		struct vfio_container *cfg = vfio_global_cfg.default_cfg;
+		struct vfio_group *grp;
+
+		if (vfio_global_cfg.mode != DEV_VFIO_MODE_GROUP) {
+			EAL_LOG(ERR, "VFIO not initialized in group mode");
+			r->result = VFIO_SOCKET_ERR;
+			break;
+		}
+
+		r->req = VFIO_SOCKET_REQ_GROUP;
 		r->group_num = m->group_num;
-		fd = vfio_get_group_fd_by_num(m->group_num);
-		if (fd < 0 && fd != -ENOENT)
-			r->result = SOCKET_ERR;
-		else if (fd == -ENOENT)
-			/* if VFIO group exists but isn't bound to VFIO driver */
-			r->result = SOCKET_NO_FD;
-		else {
-			/* if group exists and is bound to VFIO driver */
-			r->result = SOCKET_OK;
+		grp = vfio_group_get_by_num(cfg, m->group_num);
+		if (grp == NULL) {
+			/* group doesn't exist in primary */
+			r->result = VFIO_SOCKET_NO_FD;
+		} else {
+			/* group exists and is bound to VFIO driver */
+			fd = grp->fd;
+			r->result = VFIO_SOCKET_OK;
 			reply.num_fds = 1;
 			reply.fds[0] = fd;
 		}
 		break;
-	case SOCKET_REQ_CONTAINER:
-		r->req = SOCKET_REQ_CONTAINER;
+	}
+	case VFIO_SOCKET_REQ_CONTAINER:
+		r->req = VFIO_SOCKET_REQ_CONTAINER;
 		fd = dev_vfio_get_container_fd();
 		if (fd < 0)
-			r->result = SOCKET_ERR;
+			r->result = VFIO_SOCKET_ERR;
 		else {
-			r->result = SOCKET_OK;
+			r->result = VFIO_SOCKET_OK;
+			r->mode = vfio_global_cfg.mode;
 			reply.num_fds = 1;
 			reply.fds[0] = fd;
 		}
 		break;
-	case SOCKET_REQ_IOMMU_TYPE:
+	case VFIO_SOCKET_REQ_IOMMU_TYPE:
 	{
 		int iommu_type_id;
 
-		r->req = SOCKET_REQ_IOMMU_TYPE;
+		if (vfio_global_cfg.mode != DEV_VFIO_MODE_GROUP) {
+			EAL_LOG(ERR, "VFIO not initialized in group mode");
+			r->result = VFIO_SOCKET_ERR;
+			break;
+		}
+
+		r->req = VFIO_SOCKET_REQ_IOMMU_TYPE;
 
 		iommu_type_id = vfio_get_iommu_type();
 
 		if (iommu_type_id < 0)
-			r->result = SOCKET_ERR;
+			r->result = VFIO_SOCKET_ERR;
 		else {
 			r->iommu_type_id = iommu_type_id;
-			r->result = SOCKET_OK;
+			r->result = VFIO_SOCKET_OK;
 		}
 		break;
 	}
+	case VFIO_SOCKET_REQ_IOMMU_MODE:
+		if (vfio_global_cfg.mode == DEV_VFIO_MODE_NONE ||
+				vfio_global_cfg.iommu_mode == DEV_VFIO_IOMMU_MODE_UNKNOWN) {
+			EAL_LOG(ERR, "VFIO IOMMU mode is not initialized");
+			r->result = VFIO_SOCKET_ERR;
+			break;
+		}
+
+		r->req = VFIO_SOCKET_REQ_IOMMU_MODE;
+		r->iommu_mode = vfio_global_cfg.iommu_mode;
+		r->result = VFIO_SOCKET_OK;
+		break;
 	default:
 		EAL_LOG(ERR, "vfio received invalid message!");
 		return -1;
@@ -90,8 +119,11 @@ vfio_mp_sync_setup(void)
 {
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		int ret = rte_mp_action_register(EAL_VFIO_MP, vfio_mp_primary);
-		if (ret && rte_errno != ENOTSUP)
+		if (ret && rte_errno != ENOTSUP) {
+			EAL_LOG(ERR, "Multiprocess sync setup failed: %d (%s)",
+					rte_errno, rte_strerror(rte_errno));
 			return -1;
+		}
 	}
 
 	return 0;
