@@ -846,8 +846,7 @@ int rte_vfio_enable(__rte_unused const char *modname)
 }
 
 RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_cleanup)
-void
-rte_vfio_cleanup(void)
+void rte_vfio_cleanup(void)
 {
 }
 
