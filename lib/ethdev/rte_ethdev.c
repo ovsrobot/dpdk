@@ -7205,7 +7205,7 @@ rte_eth_rx_metadata_negotiate(uint16_t port_id, uint64_t *features)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_ip_reassembly_capability_get, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_ip_reassembly_capability_get)
 int
 rte_eth_ip_reassembly_capability_get(uint16_t port_id,
 		struct rte_eth_ip_reassembly_params *reassembly_capa)
@@ -7241,7 +7241,7 @@ rte_eth_ip_reassembly_capability_get(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_ip_reassembly_conf_get, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_ip_reassembly_conf_get)
 int
 rte_eth_ip_reassembly_conf_get(uint16_t port_id,
 		struct rte_eth_ip_reassembly_params *conf)
@@ -7275,7 +7275,7 @@ rte_eth_ip_reassembly_conf_get(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_ip_reassembly_conf_set, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_ip_reassembly_conf_set)
 int
 rte_eth_ip_reassembly_conf_set(uint16_t port_id,
 		const struct rte_eth_ip_reassembly_params *conf)
