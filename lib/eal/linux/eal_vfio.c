@@ -589,20 +589,22 @@ vfio_group_assign_device(struct vfio_container *cfg, const char *sysfs_base,
 		return VFIO_EXISTS;
 	}
 
+	/* allocate new device in config */
+	dev = vfio_device_create(cfg, vfio_global_cfg.mode);
+	if (dev == NULL) {
+		EAL_LOG(ERR, "No space to track new VFIO device");
+		return VFIO_NO_SPACE;
+	}
+
+	/* allocate strings for sysfs path and device address */
 	sysfs_dup = strdup(sysfs_base);
 	dev_dup = strdup(dev_addr);
 	if (sysfs_dup == NULL || dev_dup == NULL) {
 		EAL_LOG(ERR, "Cannot allocate memory for device %s", dev_addr);
 		free(sysfs_dup);
 		free(dev_dup);
-		return VFIO_NO_MEM;
-	}
-
-	/* allocate new device in config */
-	dev = vfio_device_create(cfg, vfio_global_cfg.mode);
-	if (dev == NULL) {
-		EAL_LOG(ERR, "No space to track new VFIO device");
-		return VFIO_NO_SPACE;
+		ret = VFIO_NO_MEM;
+		goto device_erase;
 	}
 
 	/* store sysfs path and device address */
