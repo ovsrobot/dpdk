@@ -5588,9 +5588,6 @@ int rte_eth_timesync_read_time(uint16_t port_id, struct timespec *time);
 int rte_eth_timesync_write_time(uint16_t port_id, const struct timespec *time);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Read the current clock counter of an Ethernet device
  *
  * This returns the current raw clock value of an Ethernet device. It is
@@ -5632,7 +5629,6 @@ int rte_eth_timesync_write_time(uint16_t port_id, const struct timespec *time);
  *   - -ENOTSUP: The function is not supported by the Ethernet driver.
  *   - -EINVAL: if bad parameter.
  */
-__rte_experimental
 int
 rte_eth_read_clock(uint16_t port_id, uint64_t *clock);
 
