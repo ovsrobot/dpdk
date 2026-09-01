@@ -823,8 +823,7 @@ RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_setup_device)
 int
 dev_vfio_setup_device(__rte_unused const char *sysfs_base,
 		      __rte_unused const char *dev_addr,
-		      __rte_unused int *vfio_dev_fd,
-		      __rte_unused struct vfio_device_info *device_info)
+		      __rte_unused int *vfio_dev_fd)
 {
 	rte_errno = ENOTSUP;
 	return -1;
@@ -953,6 +952,15 @@ dev_vfio_container_dma_unmap(__rte_unused int container_fd,
 			__rte_unused uint64_t vaddr,
 			__rte_unused uint64_t iova,
 			__rte_unused uint64_t len)
+{
+	rte_errno = ENOTSUP;
+	return -1;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(dev_vfio_get_device_info)
+int
+dev_vfio_get_device_info(__rte_unused int vfio_dev_fd,
+		__rte_unused struct vfio_device_info *device_info)
 {
 	rte_errno = ENOTSUP;
 	return -1;
