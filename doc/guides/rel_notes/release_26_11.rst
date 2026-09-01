@@ -95,6 +95,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: Promoted the following API from experimental to stable:
+
+  * meter (MTR) and policing: ``rte_mtr_*``
+
 
 ABI Changes
 -----------
