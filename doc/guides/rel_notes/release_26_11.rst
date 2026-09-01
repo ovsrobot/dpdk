@@ -96,8 +96,8 @@ API Changes
    =======================================================
 
 * vfio: The entire VFIO API (``rte_vfio_*``) was made internal.
-  These functions are now available only to EAL and drivers,
-  and are no longer part of the public API.
+  These functions were renamed to ``dev_vfio_*``, are now available
+  only to EAL and drivers, and are no longer part of public API.
 
 
 ABI Changes
