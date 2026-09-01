@@ -123,6 +123,7 @@ API Changes
     ``rte_flow_template_*``,
     ``rte_flow_async_*``,
     ``rte_flow_push``, ``rte_flow_pull``
+  * flow flex: ``rte_flow_flex_item_create`` and ``rte_flow_flex_item_release``
 
 
 ABI Changes
