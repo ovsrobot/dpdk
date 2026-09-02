@@ -14213,6 +14213,84 @@ static cmdline_parse_inst_t cmd_set_dev_led = {
 	},
 };
 
+/* *** show port tx_timestamp capabilities *** */
+struct cmd_show_port_tx_ts_caps_result {
+	cmdline_fixed_string_t show;
+	cmdline_fixed_string_t port;
+	portid_t port_id;
+	cmdline_fixed_string_t tx_timestamp_caps;
+};
+
+static void cmd_show_port_tx_ts_caps_parsed(void *parsed_result,
+					    __rte_unused struct cmdline *cl,
+					    __rte_unused void *data)
+{
+	struct cmd_show_port_tx_ts_caps_result *res = parsed_result;
+	struct rte_eth_timesync_tx_ts_caps caps;
+	uint32_t slot_id;
+	int ret;
+
+	ret = rte_eth_timesync_tx_timestamp_slot_get_capabilities(
+			res->port_id, &caps);
+	if (ret == -ENOTSUP) {
+		printf("Port %u: TX timestamp slot API not supported\n",
+		       res->port_id);
+		return;
+	}
+	if (ret < 0) {
+		printf("Port %u: get capabilities failed (%d)\n",
+		       res->port_id, ret);
+		return;
+	}
+
+	printf("Port %u TX timestamp capabilities:\n", res->port_id);
+	printf("  Type      : %s\n",
+	       caps.type == RTE_ETH_TIMESYNC_TX_TS_PER_PACKET ? "per-packet" :
+	       caps.type == RTE_ETH_TIMESYNC_TX_TS_SINGLE_REG ? "single-reg" :
+	       "none");
+	printf("  Max slots : %u\n", caps.max_slots);
+
+	if (caps.type != RTE_ETH_TIMESYNC_TX_TS_PER_PACKET)
+		return;
+
+	/* Quick alloc/release round-trip to prove the API works */
+	ret = rte_eth_timesync_tx_timestamp_slot_alloc(res->port_id, &slot_id);
+	if (ret == 0) {
+		printf("  Alloc test: slot_id=%u OK\n", slot_id);
+		ret = rte_eth_timesync_tx_timestamp_slot_release(
+				res->port_id, slot_id);
+		printf("  Release   : %s\n", ret == 0 ? "OK" : "FAILED");
+	} else {
+		printf("  Alloc test: failed (%d)\n", ret);
+	}
+}
+
+static cmdline_parse_token_string_t cmd_show_port_tx_ts_caps_show =
+	TOKEN_STRING_INITIALIZER(struct cmd_show_port_tx_ts_caps_result,
+				 show, "show");
+static cmdline_parse_token_string_t cmd_show_port_tx_ts_caps_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_show_port_tx_ts_caps_result,
+				 port, "port");
+static cmdline_parse_token_num_t cmd_show_port_tx_ts_caps_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_show_port_tx_ts_caps_result,
+			      port_id, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_show_port_tx_ts_caps_keyword =
+	TOKEN_STRING_INITIALIZER(struct cmd_show_port_tx_ts_caps_result,
+				 tx_timestamp_caps, "tx_timestamp_caps");
+
+static cmdline_parse_inst_t cmd_show_port_tx_ts_caps = {
+	.f = cmd_show_port_tx_ts_caps_parsed,
+	.data = NULL,
+	.help_str = "show port <port_id> tx_timestamp_caps",
+	.tokens = {
+		(void *)&cmd_show_port_tx_ts_caps_show,
+		(void *)&cmd_show_port_tx_ts_caps_port,
+		(void *)&cmd_show_port_tx_ts_caps_port_id,
+		(void *)&cmd_show_port_tx_ts_caps_keyword,
+		NULL,
+	},
+};
+
 /* ******************************************************************************** */
 
 /* list of instructions */
@@ -14469,6 +14547,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_set_port_cman_config,
 	&cmd_config_tx_affinity_map,
 	&cmd_set_dev_led,
+	&cmd_show_port_tx_ts_caps,
 	NULL,
 };
 
