@@ -95,6 +95,12 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* telemetry: Promoted the following functions to stable:
+
+  * ``rte_tel_data_add_array_uint_hex``
+  * ``rte_tel_data_add_dict_uint_hex``
+  * ``rte_telemetry_register_cmd_arg``
+
 
 ABI Changes
 -----------
