@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **ethdev: Added experimental per-packet Tx timestamp slot APIs.**
+
+  Added slot-based TX timestamp allocation, mbuf stamping, and per-packet
+  timestamp reads for timesync-capable Ethernet devices. The new APIs support
+  both shared-register and slot-bank usage models through the
+  ``rte_eth_timesync_tx_timestamp_slot_*`` interface family.
+
 
 Removed Items
 -------------

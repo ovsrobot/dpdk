@@ -13,3 +13,4 @@ Ethernet Device Library
     traffic_metering_and_policing
     traffic_management
     qos_framework
+    timesync
