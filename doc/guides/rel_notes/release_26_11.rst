@@ -95,6 +95,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* reorder: Promoted the following experimental API to stable:
+  ``rte_reorder_seqn``, ``rte_reorder_drain_up_to_seqn``,
+  ``rte_reorder_min_seqn_set`` and ``rte_reorder_memory_footprint_get``.
+
 
 ABI Changes
 -----------
