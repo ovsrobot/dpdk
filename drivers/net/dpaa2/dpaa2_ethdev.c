@@ -2815,11 +2815,12 @@ int dpaa2_eth_eventq_attach(const struct rte_eth_dev *dev,
 	struct dpaa2_dev_priv *eth_priv = dev->data->dev_private;
 	struct fsl_mc_io *dpni = (struct fsl_mc_io *)dev->process_private;
 	struct dpaa2_queue *dpaa2_ethq = eth_priv->rx_vq[eth_rx_queue_id];
-	uint8_t flow_id = dpaa2_ethq->flow_id;
+	uint8_t flow_id;
 	struct dpni_queue *cfg;
 	uint8_t options, priority;
 	int ret;
 
+	flow_id = dpaa2_ethq->flow_id;
 	cfg = dpaa2_ethq->cfg;
 
 	if (queue_conf->ev.sched_type == RTE_SCHED_TYPE_PARALLEL)
