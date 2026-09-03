@@ -484,7 +484,7 @@ dpaa2_attach_bp_list(struct dpaa2_dev_priv *priv,
 	 */
 
 	/* ... rx buffer layout ... */
-	if (priv->flags & DPAA2_TX_DYNAMIC_CONF_ENABLE) {
+	if (priv->flags & DPAA2_TX_PREFETCH_DYNAMIC_CONF) {
 		int out_min_hdr_room, in_min_hdr_room;
 		/** Additional headroom layout for IPSec with TX configure
 		 * dynamic enabled.

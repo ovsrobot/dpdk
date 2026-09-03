@@ -34,6 +34,8 @@
 #define DRIVER_LOOPBACK_MODE "drv_loopback"
 #define DRIVER_NO_PREFETCH_MODE "drv_no_prefetch"
 #define DRIVER_TX_CONF "drv_tx_conf"
+#define DRIVER_TX_DYNAMIC_CONF "drv_tx_dyn_conf"
+#define DRIVER_TX_DYNAMIC_CONF_PREFETCH "drv_tx_dyn_conf_pre"
 #define DRIVER_RX_PARSE_ERR_DROP "drv_rx_parse_drop"
 #define DRIVER_ERROR_QUEUE  "drv_err_queue"
 #define DRIVER_NO_TAILDROP  "drv_no_taildrop"
@@ -522,7 +524,7 @@ dpaa2_alloc_rx_tx_queues(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
-	if (priv->flags & DPAA2_TX_CONF_ENABLE)
+	if (priv->tx_conf_type != DPAA2_TX_NO_CONF)
 		tot_queues = priv->nb_rx_queues + 2 * priv->nb_tx_queues;
 	else
 		tot_queues = priv->nb_rx_queues + priv->nb_tx_queues;
@@ -578,7 +580,7 @@ dpaa2_alloc_rx_tx_queues(struct rte_eth_dev *dev)
 		}
 	}
 
-	if (priv->flags & DPAA2_TX_CONF_ENABLE) {
+	if (priv->tx_conf_type != DPAA2_TX_NO_CONF) {
 		/*Setup tx confirmation queues*/
 		for (i = 0; i < priv->nb_tx_queues; i++) {
 			mc_q->eth_data = dev->data;
@@ -693,7 +695,7 @@ dpaa2_free_rx_tx_queues(struct rte_eth_dev *dev)
 			rte_free(dpaa2_q->cscn);
 			priv->tx_vq[i] = NULL;
 		}
-		if (priv->flags & DPAA2_TX_CONF_ENABLE) {
+		if (priv->tx_conf_type != DPAA2_TX_NO_CONF) {
 			/* cleanup tx conf queue storage */
 			for (i = 0; i < priv->nb_tx_queues; i++) {
 				dpaa2_q = priv->tx_conf_vq[i];
@@ -1143,6 +1145,13 @@ dpaa2_dev_tx_queue_setup(struct rte_eth_dev *dev,
 
 	PMD_INIT_FUNC_TRACE();
 
+	/* Tx deferred start is not supported */
+	if (tx_conf->tx_deferred_start) {
+		DPAA2_PMD_ERR("%s:Tx deferred start not supported",
+			dev->data->name);
+		return -EINVAL;
+	}
+
 	dpaa2_q->nb_desc = UINT16_MAX;
 	dpaa2_q->offloads = tx_conf->offloads;
 
@@ -1222,7 +1231,7 @@ dpaa2_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	dpaa2_q->cb_eqresp_free = dpaa2_dev_free_eqresp_buf;
 	dev->data->tx_queues[tx_queue_id] = dpaa2_q;
 
-	if (priv->flags & DPAA2_TX_CONF_ENABLE) {
+	if (priv->tx_conf_type != DPAA2_TX_NO_CONF) {
 		tc_id = dpaa2_tx_conf_q->tc_index;
 		flow_id = dpaa2_tx_conf_q->flow_id;
 		dpaa2_q->tx_conf_queue = dpaa2_tx_conf_q;
@@ -3585,10 +3594,22 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	DPAA2_PMD_INFO("DPDK IEEE1588 is enabled");
 	priv->flags |= DPAA2_TX_CONF_ENABLE;
 #endif
+	priv->tx_conf_type = DPAA2_TX_NO_CONF;
+
 	/* Used with ``fslmc:dpni.1,drv_tx_conf=1`` */
 	if (dpaa2_get_devargs(dev->devargs, DRIVER_TX_CONF)) {
-		priv->flags |= DPAA2_TX_CONF_ENABLE;
-		DPAA2_PMD_INFO("TX_CONF Enabled");
+		priv->tx_conf_type = DPAA2_TX_ABSOLUTE_CONF;
+		DPAA2_PMD_INFO("TX_ABSOLUTE_CONF Enabled");
+	} else if (dpaa2_get_devargs(dev->devargs, DRIVER_TX_DYNAMIC_CONF)) {
+		priv->tx_conf_type = DPAA2_TX_DYNAMIC_CONF;
+		DPAA2_PMD_INFO("TX_DYNAMIC_CONF Enabled");
+		priv->flags |= DPAA2_TX_PREFETCH_DYNAMIC_CONF;
+		if (dpaa2_get_devargs(dev->devargs, DRIVER_TX_DYNAMIC_CONF_PREFETCH))
+			priv->flags &= ~DPAA2_TX_PREFETCH_DYNAMIC_CONF;
+
+		DPAA2_PMD_INFO("Tx dynamic prefetch confirm %s",
+			(priv->flags & DPAA2_TX_PREFETCH_DYNAMIC_CONF) ?
+			"enabled" : "disabled");
 	}
 
 	if (dpaa2_get_devargs(dev->devargs, DRIVER_ERROR_QUEUE)) {
@@ -3603,7 +3624,7 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	}
 
 	if (getenv("DPAA2_PRINT_RX_PARSER_RESULT"))
-		dpaa2_print_parser_result = 1;
+		priv->flags |= DPAA2_RX_PRINT_PSR_RESULT_FLAG;
 
 	/* Allocate memory for hardware structure for queues */
 	ret = dpaa2_alloc_rx_tx_queues(eth_dev);
@@ -3614,7 +3635,7 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 
 	for (i = 0; i < priv->num_channels; i++) {
 		/*Set tx-conf and error configuration*/
-		if (priv->flags & DPAA2_TX_CONF_ENABLE) {
+		if (priv->tx_conf_type == DPAA2_TX_ABSOLUTE_CONF) {
 			ret = dpni_set_tx_confirmation_mode(dpni_dev,
 				CMD_PRI_LOW, priv->token, i, DPNI_CONF_AFFINE);
 		} else {
@@ -3651,34 +3672,22 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 
 	/* ... tx buffer layout ... */
 	memset(&layout, 0, sizeof(struct dpni_buffer_layout));
-	if (priv->flags & DPAA2_TX_CONF_ENABLE) {
-		layout.options = DPNI_BUF_LAYOUT_OPT_FRAME_STATUS |
-				 DPNI_BUF_LAYOUT_OPT_TIMESTAMP;
-		layout.pass_timestamp = true;
-	} else {
-		layout.options = DPNI_BUF_LAYOUT_OPT_FRAME_STATUS;
-	}
-	layout.pass_frame_status = 1;
-	ret = dpni_set_buffer_layout(dpni_dev, CMD_PRI_LOW, priv->token,
-				     DPNI_QUEUE_TX, &layout);
-	if (ret) {
-		DPAA2_PMD_ERR("Error (%d) in setting tx buffer layout", ret);
-		goto init_err;
-	}
-
-	/* ... tx-conf and error buffer layout ... */
-	memset(&layout, 0, sizeof(struct dpni_buffer_layout));
-	if (priv->flags & DPAA2_TX_CONF_ENABLE) {
+	if (priv->tx_conf_type != DPAA2_TX_NO_CONF) {
 		layout.options = DPNI_BUF_LAYOUT_OPT_TIMESTAMP;
 		layout.pass_timestamp = true;
 	}
 	layout.options |= DPNI_BUF_LAYOUT_OPT_FRAME_STATUS;
 	layout.pass_frame_status = 1;
 	ret = dpni_set_buffer_layout(dpni_dev, CMD_PRI_LOW, priv->token,
-				     DPNI_QUEUE_TX_CONFIRM, &layout);
+			DPNI_QUEUE_TX, &layout);
 	if (ret) {
-		DPAA2_PMD_ERR("Error (%d) in setting tx-conf buffer layout",
-			     ret);
+		DPAA2_PMD_ERR("Error (%d) in setting tx buffer layout", ret);
+		goto init_err;
+	}
+	ret = dpni_set_buffer_layout(dpni_dev, CMD_PRI_LOW, priv->token,
+			DPNI_QUEUE_TX_CONFIRM, &layout);
+	if (ret) {
+		DPAA2_PMD_ERR("Error (%d) in setting tx conf buffer layout", ret);
 		goto init_err;
 	}
 
@@ -3979,6 +3988,8 @@ RTE_PMD_REGISTER_PARAM_STRING(NET_DPAA2_PMD_DRIVER_NAME,
 		DRIVER_LOOPBACK_MODE "=<int> "
 		DRIVER_NO_PREFETCH_MODE "=<int>"
 		DRIVER_TX_CONF "=<int>"
+		DRIVER_TX_DYNAMIC_CONF "=<int>"
+		DRIVER_TX_DYNAMIC_CONF_PREFETCH "=<int>"
 		DRIVER_RX_PARSE_ERR_DROP "=<int>"
 		DRIVER_ERROR_QUEUE "=<int>"
 		DRIVER_NO_TAILDROP "=<int>"

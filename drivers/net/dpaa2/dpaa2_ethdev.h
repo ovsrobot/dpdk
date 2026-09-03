@@ -91,18 +91,14 @@
 
 #define DPAA2_TX_DPNI_LOOPBACK_MODE	RTE_BIT32(7)
 
-/* Tx confirmation enabled */
-#define DPAA2_TX_CONF_ENABLE	RTE_BIT32(8)
+#define DPAA2_TX_PREFETCH_DYNAMIC_CONF	RTE_BIT32(8)
 
-/* Tx dynamic confirmation enabled,
- * only valid with Tx confirmation enabled.
- */
-#define DPAA2_TX_DYNAMIC_CONF_ENABLE	RTE_BIT32(9)
+#define DPAA2_RX_ERROR_QUEUE_FLAG	RTE_BIT32(9)
 
-/* Disable data stashing (prefetch of packet data into CPU cache) */
-#define DPAA2_RX_DATA_STASHING_OFF_FLAG		RTE_BIT32(10)
+#define DPAA2_RX_DATA_STASHING_OFF_FLAG	RTE_BIT32(10)
 
-#define DPAA2_RX_ERROR_QUEUE_FLAG	RTE_BIT32(11)
+#define DPAA2_RX_SCHED_STRICT_ORDER_FLAG RTE_BIT32(11)
+
 #define DPAA2_RX_PRINT_PSR_RESULT_FLAG RTE_BIT32(12)
 
 /* DPDMUX index for DPMAC */
@@ -451,6 +447,12 @@ struct dpaa2_dev_meter {
 	uint32_t policy_id;
 };
 
+enum dpaa2_tx_conf_type {
+	DPAA2_TX_NO_CONF,
+	DPAA2_TX_ABSOLUTE_CONF,
+	DPAA2_TX_DYNAMIC_CONF
+};
+
 struct dpaa2_dev_priv {
 	void *hw;
 	int32_t hw_id;
@@ -466,6 +468,7 @@ struct dpaa2_dev_priv {
 	void *tx_conf_vq[MAX_TX_QUEUES];
 	void *rx_err_vq;
 	uint32_t flags; /*dpaa2 config flags */
+	enum dpaa2_tx_conf_type tx_conf_type;
 	int psr_dynfield_offset;
 	uint8_t max_mac_filters;
 	uint8_t max_vlan_filters;
@@ -510,10 +513,10 @@ struct dpaa2_dev_priv {
 
 	int rx_ts_offset;
 	uint64_t rx_ts_flag;
-	/* stores pointer to next tx_conf queue that should be processed,
+	/* stores next tx queue to be confirmed that should be processed,
 	 * it corresponds to last packet transmitted
 	 */
-	struct dpaa2_queue *next_tx_conf_queue;
+	struct dpaa2_queue *next_txq_to_cnf;
 
 	struct rte_eth_dev *eth_dev; /**< Pointer back to holding ethdev */
 	rte_spinlock_t lpbk_qp_lock;
@@ -530,6 +533,8 @@ struct dpaa2_dev_priv {
 	uint64_t *cnt_values_dma_mem;
 	uint64_t cnt_idx_iova, cnt_values_iova;
 	uint64_t mc_rev;
+
+	struct rte_mempool *tx_sg_pool;
 
 	struct dpaa2_dev_flow *curr;
 	LIST_HEAD(, dpaa2_dev_flow) flows;
@@ -646,7 +651,7 @@ uint16_t dpaa2_dev_tx_multi_txq_ordered(void **queue,
 
 void dpaa2_dev_free_eqresp_buf(uint16_t eqresp_ci, struct dpaa2_queue *dpaa2_q);
 void dpaa2_flow_clean(struct rte_eth_dev *dev);
-uint16_t dpaa2_dev_tx_conf(void *queue)  __rte_unused;
+uint16_t dpaa2_dev_tx_conf(void *txq, int drain);
 
 int dpaa2_timesync_enable(struct rte_eth_dev *dev);
 int dpaa2_timesync_disable(struct rte_eth_dev *dev);
@@ -663,6 +668,14 @@ int dpaa2_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 
 int dpaa2_dev_recycle_config(struct rte_eth_dev *eth_dev);
 int dpaa2_dev_recycle_deconfig(struct rte_eth_dev *eth_dev);
+
+__rte_internal
+struct rte_mbuf *__rte_hot
+dpaa2_eth_fd_to_mbuf(struct dpaa2_dev_priv *priv, const struct qbman_fd *fd);
+__rte_internal
+struct rte_mbuf *__rte_hot
+dpaa2_eth_sg_fd_to_mbuf(struct dpaa2_dev_priv *priv, const struct qbman_fd *fd);
+
 int dpaa2_mtr_ops_get(struct rte_eth_dev *dev, void *ops);
 int dpaa2_soft_parser_loaded(void);
 
