@@ -384,6 +384,19 @@ dpdk_conf.set('RTE_LIBEAL_USE_HPET', get_option('use_hpet'))
 dpdk_conf.set('RTE_ENABLE_STDATOMIC', get_option('enable_stdatomic'))
 dpdk_conf.set('RTE_ENABLE_TRACE_FP', get_option('enable_trace_fp'))
 dpdk_conf.set('RTE_PKTMBUF_HEADROOM', get_option('pkt_mbuf_headroom'))
+mbuf_dynfield3_size = get_option('mbuf_dynfield3_size')
+if mbuf_dynfield3_size < 0
+    error('mbuf_dynfield3_size must be greater than or equal to 0')
+endif
+if mbuf_dynfield3_size % cc.sizeof('uint64_t', prefix: '#include <stdint.h>') != 0
+    error('mbuf_dynfield3_size must be a multiple of sizeof(uint64_t)')
+endif
+mbuf_dynfield3_copy = get_option('mbuf_dynfield3_copy')
+if mbuf_dynfield3_copy and mbuf_dynfield3_size == 0
+    error('mbuf_dynfield3_copy requires mbuf_dynfield3_size greater than 0')
+endif
+dpdk_conf.set('RTE_MBUF_DYNFIELD3_SIZE', mbuf_dynfield3_size)
+dpdk_conf.set10('RTE_MBUF_DYNFIELD3_COPY', mbuf_dynfield3_copy)
 # values which have defaults which may be overridden
 dpdk_conf.set('RTE_MAX_VFIO_GROUPS', 64)
 dpdk_conf.set('RTE_DRIVER_MEMPOOL_BUCKET_SIZE_KB', 64)
@@ -395,6 +408,9 @@ dpdk_conf.set10('RTE_IOVA_IN_MBUF', get_option('enable_iova_as_pa'))
 
 compile_time_cpuflags = []
 subdir(arch_subdir)
+if mbuf_dynfield3_size % dpdk_conf.get('RTE_CACHE_LINE_SIZE') != 0
+    error('mbuf_dynfield3_size must be a multiple of RTE_CACHE_LINE_SIZE')
+endif
 dpdk_conf.set('RTE_COMPILE_TIME_CPUFLAGS', ','.join(compile_time_cpuflags))
 
 # apply cross-specific options

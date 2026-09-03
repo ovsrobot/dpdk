@@ -44,6 +44,10 @@ option('max_numa_nodes', type: 'string', value: 'default', description:
        'Set the highest NUMA node supported by EAL; "default" is different per-arch, "detect" detects the highest NUMA node on the build machine.')
 option('enable_iova_as_pa', type: 'boolean', value: true, description:
        'Support the use of physical addresses for IO addresses, such as used by UIO or VFIO in no-IOMMU mode. When disabled, DPDK can only run with IOMMU support for address mappings, but will have more space available in the mbuf structure.')
+option('mbuf_dynfield3_size', type: 'integer', value: 0, description:
+       'Size of optional extra mbuf dynamic field area, in bytes.')
+option('mbuf_dynfield3_copy', type: 'boolean', value: false, description:
+       'Copy optional extra mbuf dynamic field area during mbuf copy/clone.')
 option('mbuf_refcnt_atomic', type: 'boolean', value: true, description:
        'Atomically access the mbuf refcnt.')
 option('platform', type: 'string', value: 'native', description:
