@@ -73,8 +73,6 @@ static uint64_t dev_tx_offloads_sup =
 static uint64_t dev_tx_offloads_nodis =
 		RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
 
-bool dpaa2_print_parser_result;
-
 /* Rx descriptor limit when DPNI loads PFDRs in PEB */
 #define MAX_NB_RX_DESC_IN_PEB	11264
 static int total_nb_rx_desc;
@@ -85,27 +83,6 @@ static int total_nb_rx_desc;
  * patterns are inspected by dpaa2_dev_rss_reta_update().
  */
 #define DPAA2_RETA_SIZE		64
-
-/* Values of dist_size accepted by the DPNI 'dpni_set_rx_hash_dist' MC command.
- * Source: fsl_dpni.h, "struct dpni_rx_dist_cfg::dist_size" documentation.
- * Used by dpaa2_dev_rss_reta_update() to validate user-requested patterns.
- */
-static const uint16_t dpaa2_dist_size_allowed[] = {
-	1, 2, 3, 4, 6, 7, 8, 12, 14, 16, 24, 28, 32, 48, 56, 64,
-	96, 112, 128, 192, 224, 256, 384, 448, 512, 768, 896, 1024,
-};
-
-static bool
-dpaa2_dist_size_is_supported(uint16_t n)
-{
-	size_t i;
-	for (i = 0; i < RTE_DIM(dpaa2_dist_size_allowed); i++) {
-		if (dpaa2_dist_size_allowed[i] == n)
-			return true;
-	}
-	return false;
-}
-
 int dpaa2_valid_dev;
 struct rte_mempool *dpaa2_tx_sg_pool;
 
@@ -396,6 +373,197 @@ static int dpaa2_dev_link_update(struct rte_eth_dev *dev,
 static int dpaa2_dev_set_link_up(struct rte_eth_dev *dev);
 static int dpaa2_dev_set_link_down(struct rte_eth_dev *dev);
 static int dpaa2_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
+static int
+dpaa2_setup_table_miss_action(struct rte_eth_dev *eth_dev,
+	uint8_t tc_index)
+{
+	struct dpaa2_dev_priv *priv = eth_dev->data->dev_private;
+	struct rte_flow_group_attr attr;
+	struct rte_flow_action actions[2];
+	struct dpaa2_flow_tbl_profile *tbl_profile;
+
+	memset(&attr, 0, sizeof(attr));
+	attr.ingress = 1;
+	if (tc_index < priv->num_rx_tc) {
+		tbl_profile = &priv->flow_profile.tc_profile[tc_index];
+		if (tbl_profile->default_drop) {
+			actions[0].type = RTE_FLOW_ACTION_TYPE_DROP;
+		} else if (tbl_profile->default_queue.index >= eth_dev->data->nb_rx_queues) {
+			DPAA2_PMD_DEBUG("%s-tc%d-default-rxq(%d) >= max rxq(%d), Force to drop.",
+				eth_dev->data->name, tc_index, tbl_profile->default_queue.index,
+				eth_dev->data->nb_rx_queues);
+			tbl_profile->default_drop = true;
+			actions[0].type = RTE_FLOW_ACTION_TYPE_DROP;
+		} else {
+			actions[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
+			actions[0].conf = &tbl_profile->default_queue;
+		}
+	} else {
+		tbl_profile = &priv->flow_profile.qos_profile;
+		if (tbl_profile->default_drop) {
+			actions[0].type = RTE_FLOW_ACTION_TYPE_DROP;
+		} else if (tbl_profile->default_jump.group >= priv->num_rx_tc) {
+			DPAA2_PMD_DEBUG("%s-default-tc(%d) >= max tc(%d), Force to drop.",
+				eth_dev->data->name, tbl_profile->default_jump.group,
+				priv->num_rx_tc);
+			tbl_profile->default_drop = true;
+			actions[0].type = RTE_FLOW_ACTION_TYPE_DROP;
+		} else {
+			actions[0].type = RTE_FLOW_ACTION_TYPE_JUMP;
+			actions[0].conf = &tbl_profile->default_jump;
+		}
+	}
+	actions[1].type = RTE_FLOW_ACTION_TYPE_END;
+
+	return rte_flow_group_set_miss_actions(eth_dev->data->port_id,
+			tc_index, &attr, actions, NULL);
+}
+
+static int
+dpaa2_setup_flow_rss_dist(struct rte_eth_dev *eth_dev,
+	uint64_t req_dist_set, int tc_index)
+{
+	struct dpaa2_dev_priv *priv = eth_dev->data->dev_private;
+	int tc_dist_queues;
+	struct rte_flow_attr attr;
+	struct rte_flow_action_rss action_rss;
+	struct rte_flow_action actions[2];
+	struct rte_flow *rss_flow;
+
+	/*TC distribution size is set with dist_queues or
+	 * nb_rx_queues % dist_queues in order of TC priority index.
+	 * Calculating dist size for this tc_index:-
+	 */
+	tc_dist_queues = eth_dev->data->nb_rx_queues -
+		tc_index * priv->dist_queues;
+	if (tc_dist_queues <= 0) {
+		DPAA2_PMD_DEBUG("No distribution on TC%d", tc_index);
+		return 0;
+	}
+
+	if (tc_dist_queues > priv->dist_queues)
+		tc_dist_queues = priv->dist_queues;
+
+	memset(&attr, 0, sizeof(attr));
+	action_rss.func = RTE_ETH_HASH_FUNCTION_DEFAULT;
+	action_rss.level = 0;
+	action_rss.types = req_dist_set;
+	action_rss.key_len = 0;
+	action_rss.key = NULL;
+	action_rss.queue = NULL;
+	action_rss.queue_num = tc_dist_queues;
+
+	actions[0].type = RTE_FLOW_ACTION_TYPE_RSS;
+	actions[0].conf = &action_rss;
+	actions[1].type = RTE_FLOW_ACTION_TYPE_END;
+	attr.group = tc_index;
+	attr.ingress = 1;
+	rss_flow = rte_flow_create(eth_dev->data->port_id, &attr, NULL, actions, NULL);
+	if (!rss_flow) {
+		DPAA2_PMD_WARN("%s: Set RSS flow dist on tc%d failed",
+			__func__, tc_index);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int
+dpaa2_setup_flow_dcb_dist(struct rte_eth_dev *eth_dev,
+	uint8_t prio, uint8_t tc)
+{
+	struct dpaa2_dev_priv *priv = eth_dev->data->dev_private;
+	struct rte_flow_attr attr;
+	struct rte_flow_action actions[2];
+	struct rte_flow_item_vlan vlan_item;
+	struct rte_flow_item_vlan vlan_mask;
+	struct rte_flow_item items[2];
+	struct rte_flow_action_jump action_jump;
+	struct rte_flow *qos_flow;
+
+	memset(&attr, 0, sizeof(struct rte_flow_attr));
+	attr.ingress = 1;
+
+	attr.group = priv->num_rx_tc;
+	attr.priority = prio;
+	memset(&vlan_item, 0, sizeof(struct rte_flow_item_vlan));
+	memset(&vlan_mask, 0, sizeof(struct rte_flow_item_vlan));
+	vlan_item.hdr.vlan_tci = rte_cpu_to_be_16(RTE_VLAN_TCI_MAKE(0, prio, 0));
+	vlan_mask.hdr.vlan_tci = rte_cpu_to_be_16(RTE_VLAN_PRI_MASK);
+	items[0].spec = &vlan_item;
+	items[0].mask = &vlan_mask;
+	items[0].type = RTE_FLOW_ITEM_TYPE_VLAN;
+	items[1].type = RTE_FLOW_ITEM_TYPE_END;
+
+	actions[0].type = RTE_FLOW_ACTION_TYPE_JUMP;
+	action_jump.group = tc;
+	actions[0].conf = &action_jump;
+	actions[1].type = RTE_FLOW_ACTION_TYPE_END;
+
+	qos_flow = rte_flow_create(eth_dev->data->port_id,
+		&attr, items, actions, NULL);
+	if (!qos_flow) {
+		DPAA2_PMD_WARN("Failed to direct vlan with prio(%d) to tc%d", prio, tc);
+		return -EIO;
+	}
+	priv->dcb_flow[prio] = qos_flow;
+
+	return 0;
+}
+
+static int
+dpaa2_remove_flow_rss_dist(struct rte_eth_dev *eth_dev,
+	uint8_t tc_index)
+{
+	struct dpaa2_dev_priv *priv = eth_dev->data->dev_private;
+	struct dpaa2_flow_tbl_profile *tbl_profile;
+	int ret;
+
+	tbl_profile = &priv->flow_profile.tc_profile[tc_index];
+	if (!tbl_profile->rss_flow || !tbl_profile->is_rss) {
+		DPAA2_PMD_WARN("%s'TC[%d] is not RSS distributed",
+			eth_dev->data->name, tc_index);
+		return 0;
+	}
+	ret = rte_flow_destroy(eth_dev->data->port_id, tbl_profile->rss_flow, NULL);
+	if (ret)
+		return ret;
+	tbl_profile->rss_flow = NULL;
+
+	return 0;
+}
+
+static int
+dpaa2_update_flow_rss_dist(struct rte_eth_dev *eth_dev,
+	uint64_t req_dist_set, int tc_index)
+{
+	struct dpaa2_dev_priv *priv = eth_dev->data->dev_private;
+	struct dpaa2_flow_tbl_profile *tbl_profile;
+	struct rte_flow_action_rss action_rss;
+	struct rte_flow_action actions[2];
+	int ret;
+
+	tbl_profile = &priv->flow_profile.tc_profile[tc_index];
+	if (!tbl_profile->rss_flow || !tbl_profile->is_rss) {
+		DPAA2_PMD_WARN("%s'TC[%d] is not RSS distributed",
+			eth_dev->data->name, tc_index);
+		return 0;
+	}
+	action_rss.func = RTE_ETH_HASH_FUNCTION_DEFAULT;
+	action_rss.level = 0;
+	action_rss.types = req_dist_set;
+	action_rss.key_len = 0;
+	action_rss.queue_num = tbl_profile->tc_cfg.dist_size;
+	action_rss.key = NULL;
+	action_rss.queue = NULL;
+	actions[0].type = RTE_FLOW_ACTION_TYPE_RSS;
+	actions[0].conf = &action_rss;
+	actions[1].type = RTE_FLOW_ACTION_TYPE_END;
+	ret = rte_flow_actions_update(eth_dev->data->port_id, tbl_profile->rss_flow,
+		actions, NULL);
+
+	return ret;
+}
 
 static int
 dpaa2_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
@@ -613,7 +781,7 @@ dpaa2_dev_info_get(struct rte_eth_dev *dev,
 					dev_rx_offloads_nodis;
 	dev_info->tx_offload_capa = dev_tx_offloads_sup |
 					dev_tx_offloads_nodis;
-	dev_info->dev_capa &= ~RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
+	dev_info->dev_capa = 0;
 
 	dev_info->max_hash_mac_addrs = 0;
 	dev_info->max_vfs = 0;
@@ -884,6 +1052,28 @@ dpaa2_free_rx_tx_queues(struct rte_eth_dev *dev)
 }
 
 static int
+dpaa2_dev_dcb_info(struct rte_eth_dev *dev,
+	struct rte_eth_dcb_info *dcb_info)
+{
+	struct dpaa2_dev_priv *priv = dev->data->dev_private;
+	int i;
+
+	if (!priv->nb_dcb_tcs)
+		return -ENOTSUP;
+
+	memset(dcb_info, 0, sizeof(struct rte_eth_dcb_info));
+	dcb_info->nb_tcs = priv->nb_dcb_tcs;
+	rte_memcpy(dcb_info->prio_tc, priv->prio_dcb_tc,
+		sizeof(uint8_t) * RTE_ETH_DCB_NUM_USER_PRIORITIES);
+	for (i = 0; i < dcb_info->nb_tcs; i++) {
+		dcb_info->tc_queue.tc_rxq[0][i].base = priv->dist_queues * i;
+		dcb_info->tc_queue.tc_rxq[0][i].nb_queue = priv->dist_queues;
+	}
+
+	return 0;
+}
+
+static int
 dpaa2_eth_dev_configure(struct rte_eth_dev *dev)
 {
 	struct dpaa2_dev_priv *priv = dev->data->dev_private;
@@ -895,8 +1085,12 @@ dpaa2_eth_dev_configure(struct rte_eth_dev *dev)
 	int rx_l4_csum_offload = false;
 	int tx_l3_csum_offload = false;
 	int tx_l4_csum_offload = false;
-	int ret, tc_index;
-	uint32_t max_rx_pktlen;
+	int ret, tc_index, nb_tcs;
+	uint32_t max_rx_pktlen, base;
+	struct rte_eth_rss_conf *rss_conf;
+	struct rte_eth_dcb_rx_conf *dcb_rx_conf;
+	struct rte_dpaa2_default_action_conf *def_act_conf;
+	struct dpaa2_flow_tbl_profile *tbl_profile;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -942,15 +1136,64 @@ dpaa2_eth_dev_configure(struct rte_eth_dev *dev)
 		return -1;
 	}
 
-	if (eth_conf->rxmode.mq_mode == RTE_ETH_MQ_RX_RSS) {
-		for (tc_index = 0; tc_index < priv->num_rx_tc; tc_index++) {
-			ret = dpaa2_setup_flow_dist(dev,
-					eth_conf->rx_adv_conf.rss_conf.rss_hf,
-					tc_index);
+	rss_conf = &eth_conf->rx_adv_conf.rss_conf;
+	dcb_rx_conf = &eth_conf->rx_adv_conf.dcb_rx_conf;
+	def_act_conf = eth_conf->rxmode.reserved_ptrs[0];
+
+	for (tc_index = 0; tc_index < priv->num_rx_tc; tc_index++) {
+		tbl_profile = &priv->flow_profile.tc_profile[tc_index];
+		base = priv->dist_queues * tc_index;
+		if (def_act_conf && tc_index < def_act_conf->max_tc) {
+			if (def_act_conf->default_flows[tc_index] >= priv->dist_queues) {
+				tbl_profile->default_drop = true;
+			} else {
+				tbl_profile->default_drop = false;
+				tbl_profile->default_queue.index = base +
+					def_act_conf->default_flows[tc_index];
+			}
+		}
+		if (priv->fs_entries) {
+			ret = dpaa2_setup_table_miss_action(dev, tc_index);
 			if (ret) {
-				DPAA2_PMD_ERR(
-					"Unable to set flow distribution on tc%d."
-					"Check queue config", tc_index);
+				DPAA2_PMD_ERR("Error(%d) to set miss action of %s-tc%d table",
+					ret, dev->data->name, tc_index);
+			}
+		}
+	}
+	if (def_act_conf) {
+		tbl_profile = &priv->flow_profile.qos_profile;
+		if (def_act_conf->default_tc >= priv->num_rx_tc) {
+			tbl_profile->default_drop = true;
+		} else {
+			tbl_profile->default_drop = false;
+			tbl_profile->default_jump.group = def_act_conf->default_tc;
+		}
+	}
+	ret = dpaa2_setup_table_miss_action(dev, priv->num_rx_tc);
+	if (ret) {
+		DPAA2_PMD_ERR("Error(%d) to set miss action of %s-QoS table",
+			ret, dev->data->name);
+	}
+
+	if (eth_conf->rxmode.mq_mode & RTE_ETH_MQ_RX_RSS) {
+		for (tc_index = 0; tc_index < priv->num_rx_tc; tc_index++) {
+			ret = dpaa2_setup_flow_rss_dist(dev, rss_conf->rss_hf, tc_index);
+			if (ret) {
+				DPAA2_PMD_ERR("RSS dist on tc%d err(%d)", tc_index, ret);
+				return ret;
+			}
+		}
+	}
+
+	if ((eth_conf->rxmode.mq_mode & RTE_ETH_MQ_RX_DCB) && priv->qos_entries) {
+		nb_tcs = dcb_rx_conf->nb_tcs;
+		for (tc_index = 0; tc_index < nb_tcs; tc_index++) {
+			if (tc_index >= priv->num_rx_tc)
+				break;
+			ret = dpaa2_setup_flow_dcb_dist(dev, dcb_rx_conf->dcb_tc[tc_index],
+				tc_index);
+			if (ret) {
+				DPAA2_PMD_ERR("DCB direct to tc%d err(%d)", tc_index, ret);
 				return ret;
 			}
 		}
@@ -1097,7 +1340,6 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	struct dpni_taildrop taildrop;
 	uint8_t qopt = 0;
 	uint16_t flow_id;
-	uint32_t bpid;
 	int ret;
 
 	PMD_INIT_FUNC_TRACE();
@@ -1116,18 +1358,6 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 			       nb_rx_desc);
 	}
 
-	if (!priv->bp_list || priv->bp_list->mp != mb_pool) {
-		if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
-			ret = rte_dpaa2_bpid_info_init(mb_pool);
-			if (ret)
-				return ret;
-		}
-		bpid = mempool_to_bpid(mb_pool);
-		ret = dpaa2_attach_bp_list(priv, dpni,
-				rte_dpaa2_bpid_info[bpid].bp_list);
-		if (ret)
-			return ret;
-	}
 	dpaa2_q = priv->rx_vq[rx_queue_id];
 	if (dpaa2_q->fqid != DPAA2_INVALID_FQ_ID) {
 		DPAA2_PMD_WARN("%s: RXQ[%d] has been setup",
@@ -1797,6 +2027,7 @@ dpaa2_dev_close(struct rte_eth_dev *dev)
 	struct fsl_mc_io *dpni = dev->process_private;
 	int i, ret;
 	struct rte_eth_link link;
+	struct dpaa2_flow_tbl_profile *tbl_profile;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -1809,7 +2040,9 @@ dpaa2_dev_close(struct rte_eth_dev *dev)
 	}
 
 	dpaa2_tm_deinit(dev);
-	dpaa2_flow_clean(dev);
+	dpaa2_flow_clean(dev, MAX_TCS);
+	/** No matter dcb flows are created or not, they are destroyed in flow clean.*/
+	memset(priv->dcb_flow, 0, sizeof(void *) * RTE_ETH_DCB_NUM_USER_PRIORITIES);
 	/* Clean the device first */
 	ret = dpni_reset(dpni, CMD_PRI_LOW, priv->token);
 	if (ret) {
@@ -1843,10 +2076,16 @@ dpaa2_dev_close(struct rte_eth_dev *dev)
 	dev->process_private = NULL;
 	rte_free(dpni);
 
-	for (i = 0; i < MAX_TCS; i++)
-		rte_free(priv->extract.tc_extract_param[i]);
-
-	rte_free(priv->extract.qos_extract_param);
+	for (i = 0; i < (MAX_TCS + 1); i++) {
+		if (i < MAX_TCS)
+			tbl_profile = &priv->flow_profile.tc_profile[i];
+		else
+			tbl_profile = &priv->flow_profile.qos_profile;
+		rte_free(tbl_profile->extract_param);
+		tbl_profile->extract_param = NULL;
+		rte_free(tbl_profile->entry_map);
+		tbl_profile->entry_map = NULL;
+	}
 
 	rte_free(priv->cnt_idx_dma_mem);
 	rte_free(priv->cnt_values_dma_mem);
@@ -2746,24 +2985,24 @@ dpaa2_dev_rss_hash_update(struct rte_eth_dev *dev,
 
 	if (rss_conf->rss_hf) {
 		for (tc_index = 0; tc_index < priv->num_rx_tc; tc_index++) {
-			ret = dpaa2_setup_flow_dist(dev, rss_conf->rss_hf,
+			ret = dpaa2_update_flow_rss_dist(dev, rss_conf->rss_hf,
 				tc_index);
-			if (ret) {
-				DPAA2_PMD_ERR("Unable to set flow dist on tc%d",
-					tc_index);
-				return ret;
-			}
+			if (ret)
+				break;
 		}
 	} else {
 		for (tc_index = 0; tc_index < priv->num_rx_tc; tc_index++) {
-			ret = dpaa2_remove_flow_dist(dev, tc_index);
-			if (ret) {
-				DPAA2_PMD_ERR(
-					"Unable to remove flow dist on tc%d",
-					tc_index);
-				return ret;
-			}
+			ret = dpaa2_remove_flow_rss_dist(dev, tc_index);
+			if (ret)
+				break;
 		}
+	}
+	if (ret) {
+		DPAA2_PMD_ERR("%s: %s flow dist on tc%d err(%d)",
+			data->name, rss_conf->rss_hf ? "set" : "remove",
+			tc_index, ret);
+
+		return ret;
 	}
 	eth_conf->rx_adv_conf.rss_conf.rss_hf = rss_conf->rss_hf;
 	return 0;
@@ -2879,23 +3118,34 @@ dpaa2_dev_rss_reta_update(struct rte_eth_dev *dev,
 		}
 	}
 
-	if (!dpaa2_dist_size_is_supported(n)) {
-		DPAA2_PMD_ERR("dist_size %u not supported by HW. Allowed: "
-			"1,2,3,4,6,7,8,12,14,16,24,28,32,48,56,64,...",
-			n);
+	/* The requested distribution size cannot exceed the number of
+	 * distribution queues provisioned per TC. Any HW-specific limitation
+	 * on the exact value is enforced later by the rte_flow update.
+	 */
+	if (n > priv->dist_queues) {
+		DPAA2_PMD_ERR("dist_size %u exceeds max distribution queues %u",
+			n, priv->dist_queues);
 		return -ENOTSUP;
 	}
 
-	/* Apply on every configured RX TC, matching rss_hash_update behavior. */
+	/* Apply on every configured RX TC, matching rss_hash_update behavior.
+	 * Program the new dist_size into each TC's RSS flow profile and push
+	 * it to the live flow via rte_flow_actions_update().
+	 */
 	for (tc_index = 0; tc_index < priv->num_rx_tc; tc_index++) {
-		ret = dpaa2_setup_flow_dist_size(dev,
+		struct dpaa2_flow_tbl_profile *tbl_profile =
+			&priv->flow_profile.tc_profile[tc_index];
+
+		tbl_profile->tc_cfg.dist_size = n;
+		ret = dpaa2_update_flow_rss_dist(dev,
 				eth_conf->rx_adv_conf.rss_conf.rss_hf,
-				tc_index, n);
+				tc_index);
 		if (ret) {
 			DPAA2_PMD_ERR("Failed to apply dist_size=%u on tc%d (err=%d)",
 				n, tc_index, ret);
 			return ret;
 		}
+		priv->dist_size_cur[tc_index] = n;
 	}
 
 	DPAA2_PMD_DEBUG("RETA updated: dist_size now %u on %u TC(s)",
@@ -3453,7 +3703,8 @@ static struct eth_dev_ops dpaa2_ethdev_ops = {
 	.timesync_adjust_time = dpaa2_timesync_adjust_time,
 	.timesync_read_rx_timestamp = dpaa2_timesync_read_rx_timestamp,
 	.timesync_read_tx_timestamp = dpaa2_timesync_read_tx_timestamp,
-	.mtr_ops_get	      = dpaa2_mtr_ops_get,
+	.mtr_ops_get = dpaa2_mtr_ops_get,
+	.get_dcb_info = dpaa2_dev_dcb_info
 };
 
 /* Populate the mac address from physically available (u-boot/firmware) and/or
@@ -3570,7 +3821,9 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	struct dpni_attr attr;
 	struct dpaa2_dev_priv *priv = eth_dev->data->dev_private;
 	struct dpni_buffer_layout layout;
-	int ret, hw_id, i;
+	int ret, hw_id, i, entry_num;
+	struct dpaa2_flow_tbl_profile *tbl_profile;
+	uint64_t iova;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -3668,8 +3921,6 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	priv->dist_queues = attr.num_queues;
 	priv->num_channels = attr.num_channels;
 	priv->channel_inuse = 0;
-	priv->default_flow = RTE_MIN(priv->fs_entries,
-		priv->dist_queues) - 1;
 	rte_spinlock_init(&priv->lpbk_qp_lock);
 
 	/* only if the custom CG is enabled */
@@ -3830,27 +4081,51 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	eth_dev->tx_pkt_burst = dpaa2_dev_tx;
 
 	/* Init fields w.r.t. classification */
-	memset(&priv->extract.qos_key_extract, 0,
-		sizeof(struct dpaa2_key_extract));
-	priv->extract.qos_extract_param = rte_zmalloc(NULL,
-		DPAA2_EXTRACT_PARAM_MAX_SIZE,
-		RTE_CACHE_LINE_SIZE);
-	if (!priv->extract.qos_extract_param) {
-		DPAA2_PMD_ERR("Memory alloc failed");
-		goto init_err;
-	}
-
-	for (i = 0; i < MAX_TCS; i++) {
-		memset(&priv->extract.tc_key_extract[i], 0,
-			sizeof(struct dpaa2_key_extract));
-		priv->extract.tc_extract_param[i] = rte_zmalloc(NULL,
+	for (i = 0; i < (MAX_TCS + 1); i++) {
+		if (i < MAX_TCS) {
+			tbl_profile = &priv->flow_profile.tc_profile[i];
+			entry_num = priv->fs_entries;
+		} else {
+			tbl_profile = &priv->flow_profile.qos_profile;
+			entry_num = priv->qos_entries;
+		}
+		memset(tbl_profile, 0, sizeof(struct dpaa2_flow_tbl_profile));
+		tbl_profile->extract_param = rte_zmalloc(NULL,
 			DPAA2_EXTRACT_PARAM_MAX_SIZE,
 			RTE_CACHE_LINE_SIZE);
-		if (!priv->extract.tc_extract_param[i]) {
-			DPAA2_PMD_ERR("Memory alloc failed");
+		if (!tbl_profile->extract_param)
 			goto init_err;
+		iova = DPAA2_VADDR_TO_IOVA_AND_CHECK(tbl_profile->extract_param,
+			DPAA2_EXTRACT_PARAM_MAX_SIZE);
+		tbl_profile->default_drop = false;
+		if (i < MAX_TCS) {
+			tbl_profile->tc_cfg.dist_size = priv->dist_queues;
+			tbl_profile->tc_cfg.key_cfg_iova = iova;
+			tbl_profile->tc_cfg.tc = i;
+			/** First flow of TC as default flow, otherwise, may be dropped.*/
+			tbl_profile->default_queue.index = priv->dist_queues * i;
+		} else {
+			tbl_profile->qos_cfg.key_cfg_iova = iova;
+			tbl_profile->qos_cfg.keep_entries = true;
+			/** First TC as default TC, otherwise, may be dropped.*/
+			tbl_profile->default_jump.group = 0;
 		}
+		if (!entry_num)
+			continue;
+
+		tbl_profile->entry_map = rte_zmalloc(NULL, entry_num / 8 + 1, 0);
+		if (!tbl_profile->entry_map)
+			goto init_err;
 	}
+
+	for (i = 0; i < priv->num_rx_tc; i++) {
+		if (i >= RTE_ETH_DCB_NUM_USER_PRIORITIES)
+			break;
+		if (i >= priv->qos_entries)
+			break;
+		priv->prio_dcb_tc[i] = i;
+	}
+	priv->nb_dcb_tcs = i;
 
 	ret = dpni_set_max_frame_length(dpni_dev, CMD_PRI_LOW, priv->token,
 					RTE_ETHER_MAX_LEN - RTE_ETHER_CRC_LEN
