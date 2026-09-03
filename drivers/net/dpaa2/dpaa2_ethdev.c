@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016 Freescale Semiconductor, Inc. All rights reserved.
- * Copyright 2016-2025 NXP
+ * Copyright 2016-2026 NXP
  */
 
 #include <time.h>
@@ -682,6 +682,9 @@ dpaa2_free_rx_tx_queues(struct rte_eth_dev *dev)
 						RTE_MAX_LCORE);
 			dpaa2_queue_storage_free(dpaa2_q,
 				RTE_MAX_LCORE);
+			if (dpaa2_q->cfg)
+				rte_free(dpaa2_q->cfg);
+			dpaa2_q->cfg = NULL;
 			priv->rx_vq[i] = NULL;
 		}
 		/* cleanup tx queue cscn */
@@ -934,11 +937,12 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	struct fsl_mc_io *dpni = dev->process_private;
 	bool dpcon_allocated = false;
 	struct dpaa2_queue *dpaa2_q;
-	struct dpni_queue cfg;
-	uint8_t options = 0;
-	uint8_t flow_id;
+	struct dpni_queue *cfg;
+	struct dpni_taildrop taildrop;
+	uint8_t qopt = 0;
+	uint16_t flow_id;
 	uint32_t bpid;
-	int i, ret;
+	int ret;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -975,6 +979,10 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 		dev->data->rx_queues[rx_queue_id] = dpaa2_q;
 		return 0;
 	}
+	cfg = rte_zmalloc(NULL, sizeof(struct dpni_queue), 0);
+	if (!cfg)
+		return -ENOMEM;
+	dpaa2_q->cfg = cfg;
 	dpaa2_q->mb_pool = mb_pool; /**< mbuf pool to populate RX ring. */
 	dpaa2_q->bp_array = rte_dpaa2_bpid_info;
 	dpaa2_q->offloads = rx_conf->offloads;
@@ -1004,124 +1012,100 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 
 	/*Get the flow id from given VQ id*/
 	flow_id = dpaa2_q->flow_id;
-	memset(&cfg, 0, sizeof(struct dpni_queue));
+	memset(cfg, 0, sizeof(struct dpni_queue));
 
-	options = options | DPNI_QUEUE_OPT_USER_CTX;
-	cfg.user_context = (size_t)(dpaa2_q);
+	qopt |= DPNI_QUEUE_OPT_USER_CTX;
+	cfg->user_context = (size_t)(dpaa2_q);
 
 	/* napi: schedule the FQ to its DPCON once, when the channel is first
 	 * grabbed; never re-bound (the MC refuses scheduled->parked at runtime)
 	 */
 	if (dpcon_allocated) {
-		options |= DPNI_QUEUE_OPT_DEST;
-		cfg.destination.type = DPNI_DEST_DPCON;
-		cfg.destination.id = dpaa2_q->napi_dpcon->dpcon_id;
+		qopt |= DPNI_QUEUE_OPT_DEST;
+		cfg->destination.type = DPNI_DEST_DPCON;
+		cfg->destination.id = dpaa2_q->napi_dpcon->dpcon_id;
 	}
 
-	/* check if a private cgr available. */
-	for (i = 0; i < priv->max_cgs; i++) {
-		if (!priv->cgid_in_use[i]) {
-			priv->cgid_in_use[i] = 1;
-			break;
-		}
-	}
-
-	if (i < priv->max_cgs) {
-		options |= DPNI_QUEUE_OPT_SET_CGID;
-		cfg.cgid = i;
-		dpaa2_q->cgid = cfg.cgid;
+	/** RXQs in same TC share same cgid.*/
+	if (dpaa2_q->tc_index < priv->max_cgs) {
+		qopt |= DPNI_QUEUE_OPT_SET_CGID;
+		cfg->cgid = dpaa2_q->tc_index;
+		priv->cgid_in_use[dpaa2_q->tc_index]++;
 	} else {
-		dpaa2_q->cgid = DPAA2_INVALID_CGID;
+		cfg->cgid = DPAA2_INVALID_CGID;
 	}
 
 	/*if ls2088 or rev2 device, enable the stashing */
 
 	if ((dpaa2_svr_family & 0xffff0000) != SVR_LS2080A) {
-		options |= DPNI_QUEUE_OPT_FLC;
-		cfg.flc.stash_control = true;
-		dpaa2_flc_stashing_clear_all(&cfg.flc.value);
+		qopt |= DPNI_QUEUE_OPT_FLC;
+		cfg->flc.stash_control = true;
+		dpaa2_flc_stashing_clear_all(&cfg->flc.value);
 		if (priv->flags & DPAA2_DATA_STASHING_OFF) {
 			dpaa2_flc_stashing_set(DPAA2_FLC_DATA_STASHING, 0,
-				&cfg.flc.value);
+				&cfg->flc.value);
 			dpaa2_q->data_stashing_off = 1;
 		} else {
 			dpaa2_flc_stashing_set(DPAA2_FLC_DATA_STASHING, 1,
-				&cfg.flc.value);
+				&cfg->flc.value);
 			dpaa2_q->data_stashing_off = 0;
 		}
 		if ((dpaa2_svr_family & 0xffff0000) != SVR_LX2160A) {
 			dpaa2_flc_stashing_set(DPAA2_FLC_ANNO_STASHING, 1,
-				&cfg.flc.value);
+				&cfg->flc.value);
 		}
 	}
+
 	ret = dpni_set_queue(dpni, CMD_PRI_LOW, priv->token, DPNI_QUEUE_RX,
-			dpaa2_q->tc_index, flow_id, options, &cfg);
+			dpaa2_q->tc_index, flow_id, qopt, cfg);
 	if (ret) {
+		rte_free(dpaa2_q->cfg);
+		dpaa2_q->cfg = NULL;
 		DPAA2_PMD_ERR("Error in setting the rx flow: = %d", ret);
 		goto err_free_dpcon;
 	}
 
 	dpaa2_q->nb_desc = nb_rx_desc;
-
-	if (!(priv->flags & DPAA2_RX_TAILDROP_OFF)) {
-		struct dpni_taildrop taildrop;
-
+	memset(&taildrop, 0, sizeof(struct dpni_taildrop));
+	if (!(priv->flags & DPAA2_RX_TAILDROP_OFF))
 		taildrop.enable = 1;
-		/* Private CGR will use tail drop length as nb_rx_desc.
-		 * for rest cases we can use standard byte based tail drop.
-		 * There is no HW restriction, but number of CGRs are limited,
-		 * hence this restriction is placed.
-		 */
-		if (dpaa2_q->cgid != DPAA2_INVALID_CGID) {
-			/*enabling per rx queue congestion control */
-			taildrop.threshold = nb_rx_desc;
-			taildrop.units = DPNI_CONGESTION_UNIT_FRAMES;
-			taildrop.oal = 0;
-			DPAA2_PMD_DEBUG("Enabling CG Tail Drop on queue = %d",
-					rx_queue_id);
-			ret = dpni_set_taildrop(dpni, CMD_PRI_LOW, priv->token,
-						DPNI_CP_CONGESTION_GROUP,
-						DPNI_QUEUE_RX,
-						dpaa2_q->tc_index,
-						dpaa2_q->cgid, &taildrop);
-		} else {
-			/*enabling per rx queue congestion control */
-			taildrop.threshold = CONG_THRESHOLD_RX_BYTES_Q;
-			taildrop.units = DPNI_CONGESTION_UNIT_BYTES;
-			taildrop.oal = CONG_RX_OAL;
-			DPAA2_PMD_DEBUG("Enabling Byte based Drop on queue= %d",
-					rx_queue_id);
-			ret = dpni_set_taildrop(dpni, CMD_PRI_LOW, priv->token,
-						DPNI_CP_QUEUE, DPNI_QUEUE_RX,
-						dpaa2_q->tc_index, flow_id,
-						&taildrop);
-		}
-		if (ret) {
-			DPAA2_PMD_ERR("Error in setting taildrop. err=(%d)",
-				ret);
-			goto err_free_dpcon;
-		}
-	} else { /* Disable tail Drop */
-		struct dpni_taildrop taildrop = {0};
-		DPAA2_PMD_INFO("Tail drop is disabled on queue");
-
-		taildrop.enable = 0;
-		if (dpaa2_q->cgid != DPAA2_INVALID_CGID) {
-			ret = dpni_set_taildrop(dpni, CMD_PRI_LOW, priv->token,
-					DPNI_CP_CONGESTION_GROUP, DPNI_QUEUE_RX,
-					dpaa2_q->tc_index,
-					dpaa2_q->cgid, &taildrop);
-		} else {
-			ret = dpni_set_taildrop(dpni, CMD_PRI_LOW, priv->token,
-					DPNI_CP_QUEUE, DPNI_QUEUE_RX,
-					dpaa2_q->tc_index, flow_id, &taildrop);
-		}
-		if (ret) {
-			DPAA2_PMD_ERR("Error in setting taildrop. err=(%d)",
-				ret);
-			goto err_free_dpcon;
-		}
+	/* Private CGR will use tail drop length as nb_rx_desc * queues per TC.
+	 * For rest cases we can use standard byte based tail drop.
+	 * There is no HW restriction, but number of CGRs are limited,
+	 * hence this restriction is placed.
+	 */
+	if (cfg->cgid != DPAA2_INVALID_CGID &&
+		priv->cgid_in_use[dpaa2_q->tc_index] == 1) {
+		/*enabling per TC congestion control */
+		taildrop.threshold = nb_rx_desc * priv->dist_queues;
+		taildrop.units = DPNI_CONGESTION_UNIT_FRAMES;
+		taildrop.oal = 0;
+		DPAA2_PMD_DEBUG("%s CG Tail Drop on TC%d",
+			taildrop.enable ? "Enabling" : "Disabling",
+			dpaa2_q->tc_index);
+		ret = dpni_set_taildrop(dpni, CMD_PRI_LOW, priv->token,
+			DPNI_CP_CONGESTION_GROUP, DPNI_QUEUE_RX,
+			dpaa2_q->tc_index, cfg->cgid, &taildrop);
+	} else if (cfg->cgid == DPAA2_INVALID_CGID) {
+		/*enabling per rx queue congestion control */
+		taildrop.threshold = CONG_THRESHOLD_RX_BYTES_Q;
+		taildrop.units = DPNI_CONGESTION_UNIT_BYTES;
+		taildrop.oal = CONG_RX_OAL;
+		DPAA2_PMD_DEBUG("%s Byte based Drop on TC[%d].flow%d",
+			taildrop.enable ? "Enabling" : "Disabling",
+			dpaa2_q->tc_index, flow_id);
+		ret = dpni_set_taildrop(dpni, CMD_PRI_LOW, priv->token,
+			DPNI_CP_QUEUE, DPNI_QUEUE_RX,
+			dpaa2_q->tc_index, flow_id, &taildrop);
 	}
+	if (ret) {
+		rte_free(dpaa2_q->cfg);
+		dpaa2_q->cfg = NULL;
+		DPAA2_PMD_ERR("Error in setting taildrop. err=(%d)", ret);
+		return ret;
+	}
+
+	dpaa2_q->options = qopt;
 
 	dev->data->rx_queues[rx_queue_id] = dpaa2_q;
 	return 0;
@@ -1150,8 +1134,8 @@ dpaa2_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	struct fsl_mc_io *dpni = dev->process_private;
 	struct dpni_queue tx_conf_cfg;
 	struct dpni_queue tx_flow_cfg;
-	uint8_t options = 0, flow_id;
-	uint16_t channel_id;
+	uint8_t qopt = 0;
+	uint16_t channel_id, flow_id;
 	struct dpni_queue_id qid;
 	uint32_t tc_id;
 	int ret;
@@ -1181,7 +1165,7 @@ dpaa2_dev_tx_queue_setup(struct rte_eth_dev *dev,
 		channel_id = priv->tx_channels[priv->num_channels - 1];
 
 	ret = dpni_set_queue(dpni, CMD_PRI_LOW, priv->token, DPNI_QUEUE_TX,
-			DPNI_BUILD_PARAM(channel_id, tc_id), flow_id, options, &tx_flow_cfg);
+			DPNI_BUILD_PARAM(channel_id, tc_id), flow_id, qopt, &tx_flow_cfg);
 	if (ret) {
 		DPAA2_PMD_ERR("Failed(%d) to set %s's TC[%d].txq[%d]",
 			ret, dev->data->name, tc_id, flow_id);
@@ -1190,7 +1174,7 @@ dpaa2_dev_tx_queue_setup(struct rte_eth_dev *dev,
 
 	ret = dpni_get_queue(dpni, CMD_PRI_LOW, priv->token,
 			DPNI_QUEUE_TX, DPNI_BUILD_PARAM(channel_id, tc_id),
-			flow_id, &tx_flow_cfg, &qid);
+			dpaa2_q->flow_id, &tx_flow_cfg, &qid);
 	if (ret) {
 		DPAA2_PMD_ERR("Error in getting LFQID err=%d", ret);
 		return ret;
@@ -1242,12 +1226,12 @@ dpaa2_dev_tx_queue_setup(struct rte_eth_dev *dev,
 		tc_id = dpaa2_tx_conf_q->tc_index;
 		flow_id = dpaa2_tx_conf_q->flow_id;
 		dpaa2_q->tx_conf_queue = dpaa2_tx_conf_q;
-		options = options | DPNI_QUEUE_OPT_USER_CTX;
+		qopt |= DPNI_QUEUE_OPT_USER_CTX;
 		tx_conf_cfg.user_context = (size_t)(dpaa2_q);
 		ret = dpni_set_queue(dpni, CMD_PRI_LOW, priv->token,
 				DPNI_QUEUE_TX_CONFIRM,
 				DPNI_BUILD_PARAM(channel_id, tc_id),
-				flow_id, options, &tx_conf_cfg);
+				flow_id, qopt, &tx_conf_cfg);
 		if (ret) {
 			DPAA2_PMD_ERR("Set TC[%d].TX[%d] conf flow err=%d",
 				tc_id, flow_id, ret);
@@ -1296,30 +1280,29 @@ dpaa2_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	struct dpaa2_queue *dpaa2_q = dev->data->rx_queues[rx_queue_id];
 	struct dpaa2_dev_priv *priv = dpaa2_q->eth_data->dev_private;
 	struct fsl_mc_io *dpni = priv->eth_dev->process_private;
-	uint8_t options = 0;
+	uint8_t qopt = 0;
 	int ret;
-	struct dpni_queue cfg;
+	struct dpni_queue *cfg = dpaa2_q->cfg;
 
-	memset(&cfg, 0, sizeof(struct dpni_queue));
 	PMD_INIT_FUNC_TRACE();
 
 	total_nb_rx_desc -= dpaa2_q->nb_desc;
 
-	if (dpaa2_q->cgid != DPAA2_INVALID_CGID) {
-		options = DPNI_QUEUE_OPT_CLEAR_CGID;
-		cfg.cgid = dpaa2_q->cgid;
-
-		ret = dpni_set_queue(dpni, CMD_PRI_LOW, priv->token,
-				     DPNI_QUEUE_RX,
-				     dpaa2_q->tc_index, dpaa2_q->flow_id,
-				     options, &cfg);
-		if (ret)
-			DPAA2_PMD_ERR("Unable to clear CGR from q=%u err=%d",
-					dpaa2_q->fqid, ret);
-		priv->cgid_in_use[dpaa2_q->cgid] = 0;
-		dpaa2_q->cgid = DPAA2_INVALID_CGID;
+	if (cfg) {
+		if (cfg->cgid != DPAA2_INVALID_CGID) {
+			qopt = DPNI_QUEUE_OPT_CLEAR_CGID;
+			ret = dpni_set_queue(dpni, CMD_PRI_LOW, priv->token,
+				DPNI_QUEUE_RX, dpaa2_q->tc_index, dpaa2_q->flow_id,
+				qopt, cfg);
+			if (ret) {
+				DPAA2_PMD_ERR("Unable to clear CGR from TC[%d].flow%d err=%d",
+					dpaa2_q->tc_index, dpaa2_q->flow_id, ret);
+			}
+			priv->cgid_in_use[cfg->cgid]--;
+		}
+		rte_free(cfg);
+		dpaa2_q->cfg = NULL;
 	}
-
 	/* keep the DPCON on the FQ across a reconfigure; freed at dev_close */
 	if (dpaa2_q->napi_dpcon)
 		dpaa2_dev_rx_queue_intr_unbind(dpaa2_q);
@@ -2833,9 +2816,11 @@ int dpaa2_eth_eventq_attach(const struct rte_eth_dev *dev,
 	struct fsl_mc_io *dpni = (struct fsl_mc_io *)dev->process_private;
 	struct dpaa2_queue *dpaa2_ethq = eth_priv->rx_vq[eth_rx_queue_id];
 	uint8_t flow_id = dpaa2_ethq->flow_id;
-	struct dpni_queue cfg;
+	struct dpni_queue *cfg;
 	uint8_t options, priority;
 	int ret;
+
+	cfg = dpaa2_ethq->cfg;
 
 	if (queue_conf->ev.sched_type == RTE_SCHED_TYPE_PARALLEL)
 		dpaa2_ethq->cb = dpaa2_dev_process_parallel_event;
@@ -2849,15 +2834,19 @@ int dpaa2_eth_eventq_attach(const struct rte_eth_dev *dev,
 	priority = (RTE_EVENT_DEV_PRIORITY_LOWEST / queue_conf->ev.priority) *
 		   (dpcon->num_priorities - 1);
 
-	memset(&cfg, 0, sizeof(struct dpni_queue));
+	if (!cfg) {
+		DPAA2_PMD_ERR("%s: %s-rxq%d was not setup yet!",
+			__func__, dev->data->name, eth_rx_queue_id);
+		return -EINVAL;
+	}
 	options = DPNI_QUEUE_OPT_DEST;
-	cfg.destination.type = DPNI_DEST_DPCON;
-	cfg.destination.id = dpcon->dpcon_id;
-	cfg.destination.priority = priority;
+	cfg->destination.type = DPNI_DEST_DPCON;
+	cfg->destination.id = dpcon->dpcon_id;
+	cfg->destination.priority = priority;
 
 	if (queue_conf->ev.sched_type == RTE_SCHED_TYPE_ATOMIC) {
 		options |= DPNI_QUEUE_OPT_HOLD_ACTIVE;
-		cfg.destination.hold_active = 1;
+		cfg->destination.hold_active = 1;
 	}
 
 	if (queue_conf->ev.sched_type == RTE_SCHED_TYPE_ORDERED &&
@@ -2896,16 +2885,16 @@ int dpaa2_eth_eventq_attach(const struct rte_eth_dev *dev,
 	}
 
 	options |= DPNI_QUEUE_OPT_USER_CTX;
-	cfg.user_context = (size_t)(dpaa2_ethq);
+	cfg->user_context = (size_t)(dpaa2_ethq);
 
 	ret = dpni_set_queue(dpni, CMD_PRI_LOW, eth_priv->token, DPNI_QUEUE_RX,
-			     dpaa2_ethq->tc_index, flow_id, options, &cfg);
+			     dpaa2_ethq->tc_index, flow_id, options, cfg);
 	if (ret) {
 		DPAA2_PMD_ERR("Error in dpni_set_queue: ret: %d", ret);
 		return ret;
 	}
 
-	memcpy(&dpaa2_ethq->ev, &queue_conf->ev, sizeof(struct rte_event));
+	rte_memcpy(&dpaa2_ethq->ev, &queue_conf->ev, sizeof(struct rte_event));
 
 	return 0;
 }
@@ -2917,17 +2906,15 @@ int dpaa2_eth_eventq_detach(const struct rte_eth_dev *dev,
 	struct dpaa2_dev_priv *eth_priv = dev->data->dev_private;
 	struct fsl_mc_io *dpni = (struct fsl_mc_io *)dev->process_private;
 	struct dpaa2_queue *dpaa2_ethq = eth_priv->rx_vq[eth_rx_queue_id];
-	uint8_t flow_id = dpaa2_ethq->flow_id;
-	struct dpni_queue cfg;
-	uint8_t options;
+	struct dpni_queue *cfg;
 	int ret;
 
-	memset(&cfg, 0, sizeof(struct dpni_queue));
-	options = DPNI_QUEUE_OPT_DEST;
-	cfg.destination.type = DPNI_DEST_NONE;
+	cfg = dpaa2_ethq->cfg;
+	cfg->destination.type = DPNI_DEST_NONE;
+	dpaa2_ethq->options &= ~DPNI_QUEUE_OPT_DEST;
 
 	ret = dpni_set_queue(dpni, CMD_PRI_LOW, eth_priv->token, DPNI_QUEUE_RX,
-			     dpaa2_ethq->tc_index, flow_id, options, &cfg);
+		dpaa2_ethq->tc_index, dpaa2_ethq->flow_id, dpaa2_ethq->options, cfg);
 	if (ret)
 		DPAA2_PMD_ERR("Error in dpni_set_queue: ret: %d", ret);
 
@@ -3547,10 +3534,15 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	rte_spinlock_init(&priv->lpbk_qp_lock);
 
 	/* only if the custom CG is enabled */
-	if (attr.options & DPNI_OPT_CUSTOM_CG)
+	if (attr.options & DPNI_OPT_CUSTOM_CG) {
 		priv->max_cgs = attr.num_cgs;
-	else
+		if (priv->max_cgs < priv->num_rx_tc) {
+			DPAA2_PMD_WARN("DPNI%d has no enough cgids(%d) to set %d TCs",
+				hw_id, priv->max_cgs, priv->num_rx_tc);
+		}
+	} else {
 		priv->max_cgs = 0;
+	}
 
 	for (i = 0; i < priv->max_cgs; i++)
 		priv->cgid_in_use[i] = 0;
