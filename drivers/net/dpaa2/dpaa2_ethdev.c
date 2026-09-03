@@ -3533,6 +3533,8 @@ dpaa2_napi_drain_portal(struct dpaa2_dpio_dev *dpio)
 
 	while ((dq = qbman_swp_dqrr_next(dpio->sw_portal)))
 		qbman_swp_dqrr_consume(dpio->sw_portal, dq);
+	/* flush the indices still pending in the DQRR consume vector */
+	qbman_swp_dqrr_consume(dpio->sw_portal, NULL);
 	qbman_swp_interrupt_clear_status(dpio->sw_portal, 0xffffffff);
 }
 

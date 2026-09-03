@@ -451,7 +451,10 @@ void qbman_swp_prefetch_dqrr_next(struct qbman_swp *s);
  * qbman_swp_dqrr_consume() -  Consume DQRR entries previously returned from
  * qbman_swp_dqrr_next().
  * @s: the software portal object.
- * @dq: the DQRR entry to be consumed.
+ * @dq: the DQRR entry to be consumed, NULL to consume the entries accumulated
+ * so far. Entries are accumulated and consumed in batches, so a caller which
+ * stops polling the portal must call this with a NULL dq to release the
+ * entries it has already processed.
  */
 __rte_internal
 void qbman_swp_dqrr_consume(struct qbman_swp *s, const struct qbman_result *dq);

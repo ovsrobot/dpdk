@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
  * Copyright (C) 2014-2016 Freescale Semiconductor, Inc.
- * Copyright 2018-2020 NXP
+ * Copyright 2018-2020, 2026 NXP
  *
  */
 
@@ -93,6 +93,15 @@ struct qbman_swp {
 		uint32_t valid_bit;
 		uint8_t dqrr_size;
 		int reset_bug;
+		/* Consume index vector: instead of writing DCAP once per
+		 * consumed entry, the indices are accumulated in ci_vector
+		 * and written with a single DCAP access once ci_count
+		 * reaches ci_flush_th.
+		 */
+		bool ci_vec_en;
+		uint8_t ci_count;
+		uint8_t ci_flush_th;
+		uint32_t ci_vector;
 	} dqrr;
 	struct {
 		uint32_t pi;

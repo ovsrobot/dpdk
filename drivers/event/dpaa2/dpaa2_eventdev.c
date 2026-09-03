@@ -320,6 +320,10 @@ skip_linking:
 	do {
 		dq = qbman_swp_dqrr_next(swp);
 		if (!dq) {
+			/* portal is dry: consume whatever is still pending in
+			 * the DQRR consume vector before leaving it idle.
+			 */
+			qbman_swp_dqrr_consume(swp, NULL);
 			if (!num_pkts && timeout_ticks) {
 				dpaa2_eventdev_dequeue_wait(timeout_ticks);
 				timeout_ticks = 0;
