@@ -3927,6 +3927,55 @@ dpaa2_get_devargs(struct rte_devargs *devargs, const char *key)
 	return 1;
 }
 
+/* Resolve the object this DPNI is wired to inside its DPRC container. The
+ * endpoint decides whether MAC-level operations (link, promisc, flow control)
+ * are available, and it is reported to the application by
+ * rte_pmd_dpaa2_ep_name().
+ */
+static int
+dpaa2_dev_ep_init(struct rte_dpaa2_device *dpaa2_dev,
+		  struct dpaa2_dev_priv *priv)
+{
+	struct dpaa2_dprc_dev *dprc_node = dpaa2_dev->container;
+	struct dprc_endpoint endpoint1, endpoint2;
+	int link_state, ret;
+
+	memset(&endpoint1, 0, sizeof(endpoint1));
+	memset(&endpoint2, 0, sizeof(endpoint2));
+	strlcpy(endpoint1.type, "dpni", sizeof(endpoint1.type));
+	endpoint1.id = dpaa2_dev->object_id;
+	ret = dprc_get_connection(&dprc_node->dprc, CMD_PRI_LOW,
+				  dprc_node->token, &endpoint1, &endpoint2,
+				  &link_state);
+	if (ret != 0)
+		return ret;
+
+	if (strcmp(endpoint2.type, "dpmac") == 0)
+		priv->ep_dev_type = DPAA2_MAC;
+	else if (strcmp(endpoint2.type, "dpni") == 0)
+		priv->ep_dev_type = DPAA2_ETH;
+	else if (strcmp(endpoint2.type, "dpdmux") == 0)
+		priv->ep_dev_type = DPAA2_MUX;
+	else if (strcmp(endpoint2.type, "dpsw") == 0)
+		priv->ep_dev_type = DPAA2_SW;
+	else
+		priv->ep_dev_type = DPAA2_UNKNOWN;
+
+	priv->ep_object_id = endpoint2.id;
+
+	/* dpdmux and dpsw endpoints are per-interface, so the interface index
+	 * is part of the name.
+	 */
+	if (priv->ep_dev_type == DPAA2_MUX || priv->ep_dev_type == DPAA2_SW)
+		snprintf(priv->ep_name, sizeof(priv->ep_name), "%s.%d.%d",
+			 endpoint2.type, endpoint2.id, endpoint2.if_id);
+	else
+		snprintf(priv->ep_name, sizeof(priv->ep_name), "%s.%d",
+			 endpoint2.type, endpoint2.id);
+
+	return 0;
+}
+
 static int
 dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 {
@@ -4017,6 +4066,13 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 		DPAA2_PMD_ERR(
 			     "Failure in get dpni@%d attribute, err code %d",
 			     hw_id, ret);
+		goto init_err;
+	}
+
+	ret = dpaa2_dev_ep_init(dpaa2_dev, priv);
+	if (ret) {
+		DPAA2_PMD_ERR("Failure in get dpni@%d endpoint, err code %d",
+			      hw_id, ret);
 		goto init_err;
 	}
 
@@ -4254,7 +4310,7 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	priv->sp_protocol = dpaa2_dev->bus_info->sp_protocol;
 
 	DPAA2_PMD_INFO("%s: netdev created, connected to %s",
-		eth_dev->data->name, dpaa2_dev->ep_name);
+		eth_dev->data->name, priv->ep_name);
 
 	priv->speed_capa = dpaa2_dev_get_speed_capability(eth_dev);
 
