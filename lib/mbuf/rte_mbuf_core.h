@@ -17,6 +17,7 @@
  */
 
 #include <stdalign.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include <rte_byteorder.h>
@@ -686,7 +687,22 @@ struct __rte_cache_aligned rte_mbuf {
 	uint16_t timesync;
 
 	uint32_t dynfield1[9]; /**< Reserved for dynamic fields. */
+
+#if RTE_MBUF_DYNFIELD3_CNT > 0
+	alignas(RTE_CACHE_LINE_SIZE)
+	uintptr_t dynfield3[RTE_MBUF_DYNFIELD3_CNT];
+	/**< Reserved for dynamic fields. */
+#endif /* RTE_MBUF_DYNFIELD3_CNT > 0 */
 };
+
+#define RTE_MBUF_DYNFIELD3_SIZE \
+	(RTE_MBUF_DYNFIELD3_CNT * sizeof(uintptr_t))
+#if RTE_MBUF_DYNFIELD3_CNT > 0
+#define RTE_MBUF_DYNFIELD3_OFFSET \
+	offsetof(struct rte_mbuf, dynfield3)
+#else
+#define RTE_MBUF_DYNFIELD3_OFFSET 0
+#endif
 
 /**
  * Function typedef of callback to free externally attached buffer.

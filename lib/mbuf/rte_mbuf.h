@@ -1231,6 +1231,9 @@ rte_mbuf_dynfield_copy(struct rte_mbuf *mdst, const struct rte_mbuf *msrc)
 	mdst->dynfield2 = msrc->dynfield2;
 #endif
 	memcpy(&mdst->dynfield1, msrc->dynfield1, sizeof(mdst->dynfield1));
+#if RTE_MBUF_DYNFIELD3_CNT > 0
+	memcpy(&mdst->dynfield3, msrc->dynfield3, sizeof(mdst->dynfield3));
+#endif
 }
 
 /* internal */

@@ -135,6 +135,9 @@ init_shared_mem(void)
 #if !RTE_IOVA_IN_MBUF
 		mark_free(dynfield2);
 #endif
+#if RTE_MBUF_DYNFIELD3_CNT > 0
+		mark_free(dynfield3);
+#endif
 
 		/* init free_flags */
 		for (mask = RTE_MBUF_F_FIRST_FREE; mask <= RTE_MBUF_F_LAST_FREE; mask <<= 1)
