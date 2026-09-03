@@ -60,6 +60,22 @@ New Features
   Added the experimental ``rte_cpu_socket_id()`` function
   to map an OS logical CPU ID to the NUMA socket containing that CPU.
 
+* **Added optional extra mbuf dynamic field storage.**
+
+  Added ``mbuf_dynfield3_size`` build option to enable a
+  cache-line-aligned ``dynfield3`` area in ``struct rte_mbuf``.
+  The configured size is defined as ``RTE_MBUF_DYNFIELD3_SIZE``
+  in ``rte_build_config.h``.
+  The extra storage is reserved for dynamic fields registered with
+  ``RTE_MBUF_DYNFIELD_F_NO_COPY``.
+  These fields are not copied by generic mbuf copy and clone operations.
+  Dynamic fields registered without this flag continue to use the existing
+  copied dynamic-field storage.
+  Applications and secondary processes must be built with the same
+  non-zero value as the primary process.
+  The ``mempool/octeontx`` driver is disabled when this option is
+  enabled because it requires a fixed 128-byte mbuf header.
+
 * **Added TPID support to VLAN tag insertion.**
 
   Added ``rte_vlan_insert_tpid()`` to the net library.
@@ -337,7 +353,6 @@ Known Issues
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
-
 
 Tested Platforms
 ----------------

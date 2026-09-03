@@ -234,6 +234,15 @@ The dynamic fields and flags are managed with the functions ``rte_mbuf_dyn*``.
 
 It is not possible to unregister fields or flags.
 
+The build option ``mbuf_dynfield3_size`` can add extra cache-line-aligned
+dynamic field storage to ``struct rte_mbuf``.  This increases every mbuf by
+the configured amount and changes the mbuf layout, so applications and
+secondary processes must be built with the same value as the primary process.
+The option defaults to ``0``.  The extra storage is reserved for dynamic
+fields registered with ``RTE_MBUF_DYNFIELD_F_NO_COPY``.  These fields are not
+copied by mbuf copy and clone operations.  Dynamic fields registered without
+this flag continue to use the existing copied dynamic-field storage.
+
 .. _direct_indirect_buffer:
 
 Direct and Indirect Buffers

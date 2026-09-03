@@ -6,6 +6,11 @@ if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
     reason = 'only supported on 64-bit Linux'
     subdir_done()
 endif
+if get_option('mbuf_dynfield3_size') != 0
+    build = false
+    reason = 'requires sizeof(struct rte_mbuf) <= 128'
+    subdir_done()
+endif
 
 sources = files(
         'octeontx_fpavf.c',

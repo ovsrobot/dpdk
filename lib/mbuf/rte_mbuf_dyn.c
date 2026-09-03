@@ -3,6 +3,7 @@
  */
 
 #include <stdalign.h>
+#include <stddef.h>
 #include <sys/queue.h>
 #include <stdint.h>
 #include <limits.h>
@@ -51,7 +52,7 @@ struct mbuf_dyn_shm {
 	 * The value is the size of the biggest aligned element that
 	 * can fit in the zone.
 	 */
-	uint8_t free_space[sizeof(struct rte_mbuf)];
+	uint16_t free_space[sizeof(struct rte_mbuf)];
 	/** Bitfield of available flags. */
 	uint64_t free_flags;
 };
@@ -135,6 +136,9 @@ init_shared_mem(void)
 #if !RTE_IOVA_IN_MBUF
 		mark_free(dynfield2);
 #endif
+#if RTE_MBUF_DYNFIELD3_SIZE > 0
+		mark_free(dynfield3);
+#endif
 
 		/* init free_flags */
 		for (mask = RTE_MBUF_F_FIRST_FREE; mask <= RTE_MBUF_F_LAST_FREE; mask <<= 1)
@@ -147,11 +151,48 @@ init_shared_mem(void)
 }
 
 /* check if this offset can be used */
+static bool
+dynfield_in_dynfield3(size_t offset, size_t size)
+{
+#if RTE_MBUF_DYNFIELD3_SIZE > 0
+	size_t dynfield3_offset = offsetof(struct rte_mbuf, dynfield3);
+
+	return offset >= dynfield3_offset &&
+		size <= sizeof(((struct rte_mbuf *)0)->dynfield3) &&
+		offset - dynfield3_offset <= sizeof(((struct rte_mbuf *)0)->dynfield3) - size;
+#else
+	RTE_SET_USED(offset);
+	RTE_SET_USED(size);
+	return false;
+#endif
+}
+
+static bool
+dynfield_overlaps_dynfield3(size_t offset, size_t size)
+{
+#if RTE_MBUF_DYNFIELD3_SIZE > 0
+	size_t dynfield3_offset = offsetof(struct rte_mbuf, dynfield3);
+	size_t dynfield3_end = dynfield3_offset + sizeof(((struct rte_mbuf *)0)->dynfield3);
+
+	return offset < dynfield3_end && offset + size > dynfield3_offset;
+#else
+	RTE_SET_USED(offset);
+	RTE_SET_USED(size);
+	return false;
+#endif
+}
+
 static int
-check_offset(size_t offset, size_t size, size_t align)
+check_offset(size_t offset, size_t size, size_t align, unsigned int flags)
 {
 	size_t i;
 
+	if ((flags & RTE_MBUF_DYNFIELD_F_NO_COPY) != 0 &&
+			!dynfield_in_dynfield3(offset, size))
+		return -1;
+	if ((flags & RTE_MBUF_DYNFIELD_F_NO_COPY) == 0 &&
+			dynfield_overlaps_dynfield3(offset, size))
+		return -1;
 	if ((offset & (align - 1)) != 0)
 		return -1;
 	if (offset + size > sizeof(struct rte_mbuf))
@@ -268,7 +309,7 @@ __rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
 		     offset < sizeof(struct rte_mbuf);
 		     offset++) {
 			if (check_offset(offset, params->size,
-						params->align) == 0 &&
+						params->align, params->flags) == 0 &&
 					shm->free_space[offset] < best_zone) {
 				best_zone = shm->free_space[offset];
 				req = offset;
@@ -279,7 +320,8 @@ __rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
 			return -1;
 		}
 	} else {
-		if (check_offset(req, params->size, params->align) < 0) {
+		if (check_offset(req, params->size, params->align,
+				params->flags) < 0) {
 			rte_errno = EBUSY;
 			return -1;
 		}
@@ -342,7 +384,7 @@ rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
 		rte_errno = EINVAL;
 		return -1;
 	}
-	if (params->flags != 0) {
+	if ((params->flags & ~RTE_MBUF_DYNFIELD_F_NO_COPY) != 0) {
 		rte_errno = EINVAL;
 		return -1;
 	}
@@ -573,7 +615,7 @@ void rte_mbuf_dyn_dump(FILE *out)
 	for (i = 0; i < sizeof(struct rte_mbuf); i++) {
 		if ((i % 8) == 0)
 			fprintf(out, "  %4.4zx: ", i);
-		fprintf(out, "%2.2x%s", shm->free_space[i],
+		fprintf(out, "%4.4x%s", shm->free_space[i],
 			(i % 8 != 7) ? " " : "\n");
 	}
 	fprintf(out, "Free bit in mbuf->ol_flags (0 = occupied, 1 = free):\n");

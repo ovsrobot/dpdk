@@ -686,6 +686,12 @@ struct __rte_cache_aligned rte_mbuf {
 	uint16_t timesync;
 
 	uint32_t dynfield1[9]; /**< Reserved for dynamic fields. */
+
+#if RTE_MBUF_DYNFIELD3_SIZE > 0
+	alignas(RTE_CACHE_LINE_SIZE)
+	uint64_t dynfield3[RTE_MBUF_DYNFIELD3_SIZE / sizeof(uint64_t)];
+	/**< Reserved cache-line-aligned space for dynamic fields. */
+#endif /* RTE_MBUF_DYNFIELD3_SIZE > 0 */
 };
 
 /**

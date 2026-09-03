@@ -2569,7 +2569,7 @@ test_mbuf_dyn(struct rte_mempool *pktmbuf_pool)
 	};
 	const struct rte_mbuf_dynfield dynfield_fail_big = {
 		.name = "test-dynfield-fail-big",
-		.size = 256,
+		.size = sizeof(struct rte_mbuf),
 		.align = 1,
 		.flags = 0,
 	};
@@ -2583,8 +2583,28 @@ test_mbuf_dyn(struct rte_mempool *pktmbuf_pool)
 		.name = "test-dynfield",
 		.size = sizeof(uint8_t),
 		.align = alignof(uint8_t),
-		.flags = 1,
+		.flags = RTE_MBUF_DYNFIELD_F_NO_COPY << 1,
 	};
+#if RTE_MBUF_DYNFIELD3_SIZE > 0
+	const struct rte_mbuf_dynfield dynfield3_no_copy = {
+		.name = "test-dynfield3-no-copy",
+		.size = sizeof(uint64_t),
+		.align = alignof(uint64_t),
+		.flags = RTE_MBUF_DYNFIELD_F_NO_COPY,
+	};
+	const struct rte_mbuf_dynfield dynfield_no_copy_bad_offset = {
+		.name = "test-dynfield-no-copy-bad-offset",
+		.size = sizeof(uint64_t),
+		.align = alignof(uint64_t),
+		.flags = RTE_MBUF_DYNFIELD_F_NO_COPY,
+	};
+	const struct rte_mbuf_dynfield dynfield_copy_bad_offset = {
+		.name = "test-dynfield-copy-bad-offset",
+		.size = 2 * sizeof(uint64_t),
+		.align = alignof(uint64_t),
+		.flags = 0,
+	};
+#endif
 	const struct rte_mbuf_dynflag dynflag_fail_flag = {
 		.name = "test-dynflag",
 		.flags = 1,
@@ -2602,7 +2622,11 @@ test_mbuf_dyn(struct rte_mempool *pktmbuf_pool)
 		.flags = 0,
 	};
 	struct rte_mbuf *m = NULL;
+	struct rte_mbuf *mc = NULL;
 	int offset, offset2, offset3;
+#if RTE_MBUF_DYNFIELD3_SIZE > 0
+	int dynfield3_no_copy_offset;
+#endif
 	int flag, flag2, flag3;
 	int ret;
 
@@ -2654,6 +2678,29 @@ test_mbuf_dyn(struct rte_mempool *pktmbuf_pool)
 	if (ret != -1)
 		GOTO_FAIL("dynamic field creation should fail (invalid flag)");
 
+#if RTE_MBUF_DYNFIELD3_SIZE > 0
+	dynfield3_no_copy_offset = rte_mbuf_dynfield_register_offset(&dynfield3_no_copy,
+			offsetof(struct rte_mbuf, dynfield3));
+	if (dynfield3_no_copy_offset != offsetof(struct rte_mbuf, dynfield3))
+		GOTO_FAIL("failed to register no-copy dynfield3 field, offset=%d: %s",
+			dynfield3_no_copy_offset, strerror(errno));
+
+	ret = rte_mbuf_dynfield_register_offset(&dynfield_no_copy_bad_offset,
+			offsetof(struct rte_mbuf, dynfield1[0]));
+	if (ret != -1)
+		GOTO_FAIL("no-copy dynamic field creation should fail outside dynfield3");
+
+	ret = rte_mbuf_dynfield_register_offset(&dynfield_copy_bad_offset,
+			offsetof(struct rte_mbuf, dynfield3));
+	if (ret != -1)
+		GOTO_FAIL("copied dynamic field creation should fail in dynfield3");
+
+	ret = rte_mbuf_dynfield_register_offset(&dynfield_copy_bad_offset,
+			offsetof(struct rte_mbuf, dynfield3) - sizeof(uint64_t));
+	if (ret != -1)
+		GOTO_FAIL("copied dynamic field creation should fail when straddling dynfield3");
+#endif
+
 	ret = rte_mbuf_dynflag_register(&dynflag_fail_flag);
 	if (ret != -1)
 		GOTO_FAIL("dynamic flag creation should fail (invalid flag)");
@@ -2693,13 +2740,29 @@ test_mbuf_dyn(struct rte_mempool *pktmbuf_pool)
 	if (*RTE_MBUF_DYNFIELD(m, offset2, uint16_t *) != 1000)
 		GOTO_FAIL("failed to read dynamic field");
 
+#if RTE_MBUF_DYNFIELD3_SIZE > 0
+	*RTE_MBUF_DYNFIELD(m, dynfield3_no_copy_offset, uint64_t *) =
+		UINT64_C(0x8877665544332211);
+	mc = rte_pktmbuf_alloc(pktmbuf_pool);
+	if (mc == NULL)
+		GOTO_FAIL("Cannot allocate mbuf for dynamic field copy test");
+	*RTE_MBUF_DYNFIELD(mc, dynfield3_no_copy_offset, uint64_t *) =
+		UINT64_C(0xa5a5a5a5a5a5a5a5);
+	rte_mbuf_dynfield_copy(mc, m);
+	if (*RTE_MBUF_DYNFIELD(mc, dynfield3_no_copy_offset, uint64_t *) !=
+			UINT64_C(0xa5a5a5a5a5a5a5a5))
+		GOTO_FAIL("copied no-copy dynfield3 dynamic field");
+#endif
+
 	/* set a dynamic flag */
 	m->ol_flags |= (1ULL << flag);
 
 	rte_mbuf_dyn_dump(stdout);
+	rte_pktmbuf_free(mc);
 	rte_pktmbuf_free(m);
 	return 0;
 fail:
+	rte_pktmbuf_free(mc);
 	rte_pktmbuf_free(m);
 	return -1;
 }
@@ -2776,8 +2839,9 @@ test_mbuf(void)
 	struct rte_mempool *pktmbuf_pool = NULL;
 	struct rte_mempool *pktmbuf_pool2 = NULL;
 
-
-	RTE_BUILD_BUG_ON(sizeof(struct rte_mbuf) != RTE_CACHE_LINE_MIN_SIZE * 2);
+	RTE_BUILD_BUG_ON(sizeof(struct rte_mbuf) !=
+		RTE_CACHE_LINE_MIN_SIZE * 2 +
+		RTE_MBUF_DYNFIELD3_SIZE);
 
 	/* create pktmbuf pool if it does not exist */
 	pktmbuf_pool = rte_pktmbuf_pool_create("test_pktmbuf_pool",

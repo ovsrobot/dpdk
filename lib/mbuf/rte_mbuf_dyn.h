@@ -69,6 +69,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <rte_bitops.h>
 #include <rte_stdatomic.h>
 
 #ifdef __cplusplus
@@ -81,13 +82,21 @@ extern "C" {
 #define RTE_MBUF_DYN_NAMESIZE 64
 
 /**
+ * Do not copy this dynamic field during mbuf clone or copy.
+ *
+ * Fields using this flag are allocated from the optional dynfield3 area
+ * configured by the mbuf_dynfield3_size build option.
+ */
+#define RTE_MBUF_DYNFIELD_F_NO_COPY RTE_BIT32(0)
+
+/**
  * Structure describing the parameters of a mbuf dynamic field.
  */
 struct rte_mbuf_dynfield {
 	char name[RTE_MBUF_DYN_NAMESIZE]; /**< Name of the field. */
 	size_t size;        /**< The number of bytes to reserve. */
 	size_t align;       /**< The alignment constraint (power of 2). */
-	unsigned int flags; /**< Reserved for future use, must be 0. */
+	unsigned int flags; /**< Dynamic field flags. */
 };
 
 /**

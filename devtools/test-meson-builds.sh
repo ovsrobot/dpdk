@@ -259,6 +259,9 @@ fi
 build build-x86-generic cc skipABI --buildtype=debug -Dcheck_includes=true \
 	-Dlibdir=lib -Dcpu_instruction_set=$generic_isa $use_shared
 
+build build-mbuf-dynfield3 cc skipABI --buildtype=debug \
+	-Dmbuf_dynfield3_size=256 $use_shared
+
 # 32-bit with default compiler
 if check_cc_flags '-m32' ; then
 	target_override='i386-pc-linux-gnu'
