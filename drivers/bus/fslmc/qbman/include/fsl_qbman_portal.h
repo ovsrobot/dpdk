@@ -1222,6 +1222,13 @@ __rte_internal
 int qbman_swp_acquire(struct qbman_swp *s, uint16_t bpid, uint64_t *buffers,
 		      unsigned int num_buffers);
 
+/**
+ * qbman_swp_portal_dqrr_size() - Number of entries in a portal's DQRR.
+ * @p: the software portal object, NULL to query the SoC's DQRR size.
+ */
+__rte_internal
+uint32_t qbman_swp_portal_dqrr_size(struct qbman_swp *p);
+
 	/*****************/
 	/* FQ management */
 	/*****************/
