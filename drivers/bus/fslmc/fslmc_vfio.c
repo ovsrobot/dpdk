@@ -281,13 +281,6 @@ fslmc_vfio_get_bus_info(void *regs, struct rte_fslmc_bus_info *bus_info)
 		return ret;
 	}
 
-	memset(&mc_plat_info, 0, sizeof(struct mc_soc_version));
-	ret = mc_get_soc_version(&mc_io, CMD_PRI_LOW, &mc_plat_info);
-	if (ret) {
-		DPAA2_BUS_ERR("Unable to get SoC version err:%d", ret);
-		return ret;
-	}
-
 	for (i = 0; i < RTE_DIM(s_soc_type); i++) {
 		if ((mc_plat_info.svr & DPAA2_SVR_MASK) == s_soc_type[i].svr) {
 			dpaa2_svr_family = s_soc_type[i].svr;
@@ -1041,8 +1034,7 @@ end_mapping:
 			fslmc_mem_va2iova = RTE_BAD_IOVA;
 		TAILQ_INSERT_TAIL(&fslmc_memsegs, dmaseg, next);
 	}
-	DPAA2_BUS_LOG(NOTICE,
-		"%s(%zx): VA(%" PRIx64 "):IOVA(%" PRIx64 "):PHY(%" PRIx64 ")",
+	DPAA2_BUS_DEBUG("%s(%zx): VA(%" PRIx64 "):IOVA(%" PRIx64 "):PHY(%" PRIx64 ")",
 		is_io ? "DMA I/O map size" : "DMA MEM map size",
 		len, vaddr, iovaddr, phy);
 
