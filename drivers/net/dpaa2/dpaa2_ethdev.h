@@ -437,6 +437,8 @@ struct dpaa2_dev_priv {
 	uint8_t max_cgs;
 	uint8_t cgid_in_use[MAX_RX_QUEUES];
 	rte_spinlock_t meter_lock;
+	/* Lowest priority FS flow id to receive flow steering miss frames. */
+	uint16_t default_flow;
 
 	/* Current hash distribution size per RX TC, written by
 	 * dpaa2_setup_flow_dist_size() and read by reta_query / reta_update.
