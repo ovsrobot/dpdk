@@ -8,6 +8,7 @@
 #ifndef _DPAA2_ETHDEV_H
 #define _DPAA2_ETHDEV_H
 
+#include <rte_time.h>
 #include <rte_compat.h>
 #include <rte_event_eth_rx_adapter.h>
 #include <rte_pmd_dpaa2.h>
@@ -100,6 +101,11 @@
 #define DPAA2_RX_SCHED_STRICT_ORDER_FLAG RTE_BIT32(11)
 
 #define DPAA2_RX_PRINT_PSR_RESULT_FLAG RTE_BIT32(12)
+
+#define DPAA2_IEEE1588_DEBUG_FLAG RTE_BIT32(13)
+
+#define DPAA2_IEEE1588_TX_TS_FLAG RTE_BIT32(14)
+#define DPAA2_IEEE1588_RX_TS_FLAG RTE_BIT32(15)
 
 /* DPDMUX index for DPMAC */
 #define DPAA2_DPDMUX_DPMAC_IDX 0
@@ -507,16 +513,16 @@ struct dpaa2_dev_priv {
 	uint64_t ss_iova;
 	uint64_t ss_param_iova;
 	/*stores timestamp of last received packet on dev*/
-	uint64_t rx_timestamp;
+	RTE_ATOMIC(uint64_t) rx_timestamp;
 	/*stores timestamp of last received tx confirmation packet on dev*/
-	uint64_t tx_timestamp;
+	RTE_ATOMIC(uint64_t) tx_timestamp;
 
 	int rx_ts_offset;
 	uint64_t rx_ts_flag;
 	/* stores next tx queue to be confirmed that should be processed,
 	 * it corresponds to last packet transmitted
 	 */
-	struct dpaa2_queue *next_txq_to_cnf;
+	RTE_ATOMIC(struct dpaa2_queue *) next_txq_to_cnf;
 
 	struct rte_eth_dev *eth_dev; /**< Pointer back to holding ethdev */
 	rte_spinlock_t lpbk_qp_lock;
@@ -591,6 +597,21 @@ dpaa2_dev_rx_print_parser_result(struct dpaa2_dev_priv *priv,
 	}
 }
 
+static inline void
+dpaa2_timestamp_debug(struct dpaa2_dev_priv *priv,
+	const char *prefix, uint64_t timestamp)
+{
+	struct timespec ts;
+
+	if (likely(!(priv->flags & DPAA2_IEEE1588_DEBUG_FLAG)))
+		return;
+
+	ts = rte_ns_to_timespec(timestamp);
+	DPAA2_PMD_DEBUG("DPAA2 TS DBG: %s: ns(%" PRIu64 ")->%" PRId64
+		" seconds/%" PRId64 " nanoseconds",
+		prefix, timestamp, (int64_t)ts.tv_sec, (int64_t)ts.tv_nsec);
+}
+
 int dpaa2_distset_to_dpkg_profile_cfg(uint64_t req_dist_set,
 				      struct dpkg_profile_cfg *kg_cfg);
 
@@ -653,6 +674,9 @@ void dpaa2_dev_free_eqresp_buf(uint16_t eqresp_ci, struct dpaa2_queue *dpaa2_q);
 void dpaa2_flow_clean(struct rte_eth_dev *dev);
 uint16_t dpaa2_dev_tx_conf(void *txq, int drain);
 
+void
+dpaa2_dev_tx_ptp_one_step_runtime(struct rte_eth_dev *dev,
+	struct rte_mbuf *buf, int *tstamp, int *set);
 int dpaa2_timesync_enable(struct rte_eth_dev *dev);
 int dpaa2_timesync_disable(struct rte_eth_dev *dev);
 int dpaa2_timesync_read_time(struct rte_eth_dev *dev,
