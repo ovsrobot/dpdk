@@ -290,6 +290,7 @@ struct qdma_virt_queue {
 	struct qdma_cntx_idx_ring *ring_cntx_idx;
 
 	/**Used for silent enabled*/
+	uint16_t idxs[DPAA2_QDMA_MAX_DESC];
 	struct qdma_cntx_sg *cntx_sg[DPAA2_QDMA_MAX_DESC];
 	struct qdma_cntx_fle_sdd *cntx_fle_sdd[DPAA2_QDMA_MAX_DESC];
 	uint16_t silent_idx;
