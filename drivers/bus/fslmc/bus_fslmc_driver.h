@@ -102,6 +102,7 @@ struct rte_dpaa2_device {
 	char ep_name[RTE_DEV_NAME_MAX_LEN];
 	struct rte_intr_handle *intr_handle; /**< Interrupt handle */
 	char name[FSLMC_OBJECT_MAX_LEN];    /**< DPAA2 Object name*/
+	struct rte_dma_dev *dmadev;          /**< DMA device */
 };
 
 typedef int (*rte_dpaa2_obj_create_t)(int vdev_fd,
