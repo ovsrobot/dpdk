@@ -508,6 +508,8 @@ enum rte_crypto_aead_algorithm {
 	/**< AES algorithm in NCA5 mode */
 	RTE_CRYPTO_AEAD_ZUC_NCA6,
 	/**< ZUC-256 algorithm in NCA6 mode */
+	RTE_CRYPTO_AEAD_AES_GMAC,
+	/**< AES algorithm in GMAC mode. */
 };
 
 /** Symmetric AEAD Operations */
