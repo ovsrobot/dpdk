@@ -128,6 +128,16 @@ dpaa2_dev_rx_parse_new(struct dpaa2_dev_priv *priv,
 			ext_packet_type |= RTE_PTYPE_INNER_L3_IPV4;
 		}
 	}
+	if (priv->sp_protocol) {
+		if (frc_parse->fafe2) {
+			frc_parse->fafe2 = 0;
+			ext_packet_type |= RTE_PTYPE_TUNNEL_GENEVE;
+		}
+		if (frc_parse->sum_l.l4.fafe3) {
+			frc_parse->sum_l.l4.fafe3 = 0;
+			ext_packet_type |= RTE_PTYPE_INNER_L3_IPV4;
+		}
+	}
 	switch (frc) {
 	case DPAA2_PKT_TYPE_IPV4_UDP:
 		m->packet_type = RTE_PTYPE_L2_ETHER |

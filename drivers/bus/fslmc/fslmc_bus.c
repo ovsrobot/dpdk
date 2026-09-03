@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- *   Copyright 2016,2018-2021 NXP
+ *   Copyright 2016,2018-2026 NXP
  *
  */
 
@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <stdalign.h>
 #include <stdbool.h>
+#include <sys/mman.h>
 
 #include <eal_export.h>
 #include <rte_log.h>
@@ -34,6 +35,93 @@ struct rte_fslmc_bus_info fslmc_bus_info;
 #define DPAA2_SEQN_DYNFIELD_NAME "dpaa2_seqn_dynfield"
 RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_seqn_dynfield_offset)
 int dpaa2_seqn_dynfield_offset = -1;
+
+/** For LX2160A, LS2088A and LS1088A*/
+#define WRIOP_CCSR_BASE 0x8b80000
+#define WRIOP_CCSR_CTLU_OFFSET 0
+#define WRIOP_CCSR_CTLU_PARSER_OFFSET 0
+#define WRIOP_CCSR_CTLU_PARSER_INGRESS_OFFSET 0
+
+#define WRIOP_INGRESS_PARSER_PHY \
+	(WRIOP_CCSR_BASE + WRIOP_CCSR_CTLU_OFFSET + \
+	WRIOP_CCSR_CTLU_PARSER_OFFSET + \
+	WRIOP_CCSR_CTLU_PARSER_INGRESS_OFFSET)
+
+struct __rte_packed_begin dpaa2_parser_ccsr {
+	uint32_t psr_cfg;
+	uint32_t psr_idle;
+	uint32_t psr_pclm;
+	uint8_t psr_ver_min;
+	uint8_t psr_ver_maj;
+	uint8_t psr_id1_l;
+	uint8_t psr_id1_h;
+	uint32_t psr_rev2;
+	uint8_t rsv[0x2c];
+	uint8_t sp_ins[4032];
+} __rte_packed_end;
+
+#define SP_PROTOCOL_MAGIC_DATA 0xabcd
+#define SP_PROTOCOL_MAGIC_OFFSET 0x4
+
+/** Number of soft parser firmware bytes reported for debugging. */
+#define SP_PRINT_LEN 128
+/** Firmware bytes logged per debug line. */
+#define SP_DUMP_BYTES_PER_LINE 16
+
+static void
+fslmc_soft_parser_protocol_supported(void)
+{
+	int fd, i, pos = 0;
+	void *map_addr = NULL;
+	const struct dpaa2_parser_ccsr *parser_ccsr = NULL;
+	const uint16_t *magic_num;
+	char line[SP_DUMP_BYTES_PER_LINE * 3 + 1];
+
+	fd = open("/dev/mem", O_RDWR | O_SYNC);
+	if (fd < 0) {
+		DPAA2_BUS_ERR("open \"/dev/mem\" ERROR(%d)", fd);
+		goto exit;
+	}
+
+	map_addr = mmap(NULL, sizeof(struct dpaa2_parser_ccsr),
+		PROT_READ | PROT_WRITE, MAP_SHARED, fd,
+		WRIOP_INGRESS_PARSER_PHY);
+	parser_ccsr = map_addr;
+	if (!parser_ccsr) {
+		DPAA2_BUS_ERR("Map 0x%" PRIx64 "(size=0x%zx) failed",
+			(uint64_t)WRIOP_INGRESS_PARSER_PHY,
+			sizeof(struct dpaa2_parser_ccsr));
+		goto exit;
+	}
+
+	DPAA2_BUS_DEBUG("Soft ParserID:0x%02x%02x, Rev:maj(%02x), min(%02x)",
+		parser_ccsr->psr_id1_h, parser_ccsr->psr_id1_l,
+		parser_ccsr->psr_ver_maj, parser_ccsr->psr_ver_min);
+
+	magic_num = (const void *)&parser_ccsr->sp_ins[SP_PROTOCOL_MAGIC_OFFSET];
+	if (*magic_num == SP_PROTOCOL_MAGIC_DATA) {
+		fslmc_bus_info.sp_protocol = true;
+		DPAA2_BUS_INFO("Soft parser protocol support.");
+		DPAA2_BUS_DEBUG("First %d bytes of sp protocol firmware:",
+			SP_PRINT_LEN);
+		for (i = 0; i < SP_PRINT_LEN; i++) {
+			pos += snprintf(&line[pos], sizeof(line) - pos,
+				"%02x ", parser_ccsr->sp_ins[i]);
+			if ((i + 1) % SP_DUMP_BYTES_PER_LINE == 0) {
+				DPAA2_BUS_DEBUG("%s", line);
+				pos = 0;
+			}
+		}
+		if (pos)
+			DPAA2_BUS_DEBUG("%s", line);
+	}
+
+exit:
+	if (map_addr)
+		munmap(map_addr, sizeof(struct dpaa2_parser_ccsr));
+	if (fd >= 0)
+		close(fd);
+}
 
 RTE_EXPORT_INTERNAL_SYMBOL(rte_fslmc_get_device_count)
 uint32_t
@@ -345,6 +433,7 @@ rte_fslmc_scan(void)
 		DPAA2_BUS_ERR("Unable to open VFIO group directory");
 		goto scan_fail;
 	}
+	fslmc_soft_parser_protocol_supported();
 
 	/* Scan the DPRC container object */
 	ret = scan_one_fslmc_device(group_name);
