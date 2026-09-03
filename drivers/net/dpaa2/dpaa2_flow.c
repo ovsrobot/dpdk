@@ -4444,7 +4444,8 @@ dpaa2_configure_flow_fs_action(struct dpaa2_dev_priv *priv,
 		dest_q = dest_priv->tx_vq[0];
 		flow->fs_action_cfg.options =
 			DPNI_FS_OPT_REDIRECT_TO_DPNI_TX;
-		flow->fs_action_cfg.redirect_obj_token =
+		flow->fs_action_cfg.num_tokens = 1;
+		flow->fs_action_cfg.redir_tokens[0] =
 			dest_priv->token;
 		flow->fs_action_cfg.flow_id = dest_q->flow_id;
 	} else if (flow->action_type == RTE_FLOW_ACTION_TYPE_DROP) {

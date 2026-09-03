@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
  *
  * Copyright 2013-2016 Freescale Semiconductor Inc.
- * Copyright 2016-2025 NXP
+ * Copyright 2016-2026 NXP
  *
  */
 #ifndef __FSL_DPNI_H
@@ -121,6 +121,9 @@ struct fsl_mc_io;
  * The stashing is enabled by default.
  */
 #define DPNI_OPT_STASHING_DIS			0x002000
+
+#define DPNI_OPT_V8_HAS_REPLICATION		0x00004000
+
 /*
  * PFDR in PEB mode (v1 layout).
  * The total number of Rx descriptors is limited to 11264 in this mode.
@@ -1554,9 +1557,16 @@ struct dpni_qos_tbl_cfg {
 	int discard_on_miss;
 	int keep_entries;
 	uint8_t default_tc;
+	int set_default_flow_id;
+	uint16_t default_flow_id;
 };
 
 int dpni_set_qos_table(struct fsl_mc_io *mc_io,
+		       uint32_t cmd_flags,
+		       uint16_t token,
+		       const struct dpni_qos_tbl_cfg *cfg);
+
+int dpni_set_qos_table_v2(struct fsl_mc_io *mc_io,
 		       uint32_t cmd_flags,
 		       uint16_t token,
 		       const struct dpni_qos_tbl_cfg *cfg);
@@ -1572,6 +1582,10 @@ struct dpni_rule_cfg {
 	uint64_t mask_iova;
 	uint8_t key_size;
 };
+
+#define DPNI_QOS_OPT_SET_TC_ONLY 0x0
+#define DPNI_QOS_OPT_SET_FLOW_ID 0x1
+#define DPNI_QOS_OPT_UPDATE_IF_EXISTS 0x2
 
 int dpni_add_qos_entry(struct fsl_mc_io *mc_io,
 		       uint32_t cmd_flags,
@@ -1634,6 +1648,22 @@ int dpni_clear_qos_table(struct fsl_mc_io *mc_io,
 #define DPNI_FS_OPT_REDIRECT_TO_DPNI_TX		0x10
 
 /**
+ * Redirect matching traffic into multiple Tx queues of other dpni objects.
+ * The frame will be transmitted directly
+ */
+#define DPNI_FS_OPT_REDIRECT_TO_MULTIPLE_DPNI_TX	0x20
+
+/**
+ * In case the FS rule already exists (key and mask), update its action.
+ * Cannot be used with the actions which redirect the frame towards other DPNIs.
+ */
+#define DPNI_FS_OPT_UPDATE_IF_EXISTS	0x40
+
+#ifndef DPNI_FS_REDIR_MAX_NUM
+#define DPNI_FS_REDIR_MAX_NUM 8
+#endif
+
+/**
  * struct dpni_fs_action_cfg - Action configuration for table look-up
  * @flc: FLC value for traffic matching this rule.  Please check the Frame
  * Descriptor section in the hardware documentation for more information.
@@ -1650,15 +1680,49 @@ int dpni_clear_qos_table(struct fsl_mc_io *mc_io,
  * - if DPNI_FS_OPT_DISCARD is cleared the frame will be enqueued in queue with
  *   index provided in flow_id parameter.
  * @options: Any combination of DPNI_FS_OPT_ values.
+ * @token_num: Number of tokens supplied. For DPNI_FS_OPT_REDIRECT_TO_DPNI_RX
+ *	 or DPNI_FS_OPT_REDIRECT_TO_DPNI_TX, the token_num must be 1 since there is
+ *	 only one token which is necessary. Accepted values are in the
+ *	 [1-8] range in case a REDIRECT option is requested.
+ * @redir_tokens: Array of tokens that identify the object where frame is redirected
+ *	 when this rule is hit. This parameter is used only when one
+ *	 of the flags DPNI_FS_OPT_REDIRECT_TO_DPNI_RX,
+ *	 DPNI_FS_OPT_REDIRECT_TO_DPNI_TX or
+ *	 DPNI_FS_OPT_REDIRECT_TO_MULTIPLE_DPNI_TX is set. The tokens
+ *	 are obtained using dpni_open() API call. The objects must
+ *	 stay open during the operation to ensure the fact that
+ *	 application has access on them.
+ *	 If the object is destroyed of closed, the following actions
+ *	 will take place:
+ *	 - In case of DPNI_FS_OPT_REDIRECT_TO_DPNI_TX and
+ *	 DPNI_FS_OPT_REDIRECT_TO_DPNI_RX:
+ *			 + if DPNI_FS_OPT_DISCARD is set the frame will be
+ *			 discarded by current dpni
+ *			 + if DPNI_FS_OPT_DISCARD is cleared the frame will be
+ *			 enqueued in queue with index provided in flow_id
+ *			 parameter.
+ *	 - In case of DPNI_FS_OPT_REDIRECT_TO_MULTIPLE_DPNI_TX, the
+ *	 frame will be redirected to the remaining opened target
+ *	 DPNIs. If there are no more opened target DPNIs, the frame
+ *	 will be discarded.
  */
 struct dpni_fs_action_cfg {
 	uint64_t flc;
 	uint16_t flow_id;
-	uint16_t redirect_obj_token;
 	uint16_t options;
+	uint16_t num_tokens;
+	uint16_t redir_tokens[DPNI_FS_REDIR_MAX_NUM];
 };
 
 int dpni_add_fs_entry(struct fsl_mc_io *mc_io,
+		      uint32_t cmd_flags,
+		      uint16_t token,
+		      uint8_t tc_id,
+		      uint16_t index,
+		      const struct dpni_rule_cfg *cfg,
+		      const struct dpni_fs_action_cfg *action);
+
+int dpni_add_fs_entry_legacy(struct fsl_mc_io *mc_io,
 		      uint32_t cmd_flags,
 		      uint16_t token,
 		      uint8_t tc_id,
@@ -1928,7 +1992,7 @@ void dpni_extract_sw_sequence_layout(struct dpni_sw_sequence_layout *layout,
  * When used for queue_idx in function dpni_set_rx_dist_default_queue will signal to dpni
  * to drop all unclassified frames
  */
-#define DPNI_FS_MISS_DROP		((uint16_t)-1)
+#define DPNI_FS_MISS_ACTION_DROP		((uint16_t)-1)
 
 /**
  * struct dpni_rx_dist_cfg - distribution configuration
@@ -1941,9 +2005,10 @@ void dpni_extract_sw_sequence_layout(struct dpni_sw_sequence_layout *layout,
  * @enable: enable/disable the distribution.
  * @tc: TC id for which distribution is set
  * @fs_miss_flow_id: when packet misses all rules from flow steering table and hash is
- *		disabled it will be put into this queue id; use DPNI_FS_MISS_DROP to drop
- *		frames. The value of this field is used only when flow steering distribution
- *		is enabled and hash distribution is disabled
+ *		disabled it will be put into this queue id;
+ *		use DPNI_FS_MISS_ACTION_DROP to drop frames.
+ *		The value of this field is used only when flow steering
+ *		distribution is enabled and hash distribution is disabled.
  */
 struct dpni_rx_dist_cfg {
 	uint16_t dist_size;
@@ -2034,6 +2099,29 @@ enum dpni_table_type {
 	DPNI_QOS_TABLE = 3,
 	DPNI_VLAN_TABLE = 4,
 };
+
+struct __rte_packed_begin dpni_dump_table_header {
+	uint16_t table_type;
+	uint16_t table_num_entries;
+	uint16_t table_max_entries;
+	uint8_t default_action;
+	uint8_t match_type;
+	uint8_t reserved[24];
+} __rte_packed_end;
+
+struct __rte_packed_begin dpni_dump_table_entry {
+	uint8_t key[DPNI_MAX_KEY_SIZE];
+	uint8_t mask[DPNI_MAX_KEY_SIZE];
+	uint8_t key_action;
+	uint16_t result[3];
+	uint16_t rule_index;
+	uint8_t reserved[19];
+} __rte_packed_end;
+
+struct __rte_packed_begin dpni_dump_table_rsp {
+	struct dpni_dump_table_header hdr;
+	struct dpni_dump_table_entry entry[];
+} __rte_packed_end;
 
 int dpni_dump_table(struct fsl_mc_io *mc_io,
 			 uint32_t cmd_flags,
