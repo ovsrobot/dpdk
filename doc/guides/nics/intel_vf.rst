@@ -715,7 +715,7 @@ If both methods are enabled, the ptype based method will take precedence
 over the dynamic mbuf field method.
 
 
-Limitations or Knowing issues
+Limitations or Known issues
 -----------------------------
 
 16 Byte RX Descriptor setting is not available
