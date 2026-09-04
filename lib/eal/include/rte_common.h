@@ -121,15 +121,12 @@ extern "C" {
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 #endif
 
-#ifdef RTE_ARCH_STRICT_ALIGN
+/**
+ * Integer types with no alignment requirement.
+ */
 typedef uint64_t unaligned_uint64_t __rte_aligned(1);
 typedef uint32_t unaligned_uint32_t __rte_aligned(1);
 typedef uint16_t unaligned_uint16_t __rte_aligned(1);
-#else
-typedef uint64_t unaligned_uint64_t;
-typedef uint32_t unaligned_uint32_t;
-typedef uint16_t unaligned_uint16_t;
-#endif
 
 /**
  * Force a structure to be packed
