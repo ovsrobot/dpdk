@@ -4513,7 +4513,11 @@ i40e_macaddr_remove(struct rte_eth_dev *dev, uint32_t index)
 
 	macaddr = &(data->mac_addrs[index]);
 
-	pool_sel = dev->data->mac_pool_sel[index];
+	vmdq = (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_VMDQ_FLAG) != 0;
+	if (!vmdq)
+		pool_mask = 1;
+	else
+		pool_mask = dev->data->mac_pool_sel[index];
 
 	for (i = 0; i < sizeof(pool_sel) * CHAR_BIT; i++) {
 		if (pool_sel & RTE_BIT64(i)) {
