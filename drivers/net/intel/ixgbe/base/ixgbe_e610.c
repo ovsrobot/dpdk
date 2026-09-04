@@ -42,41 +42,32 @@ void ixgbe_shutdown_aci(struct ixgbe_hw *hw)
 STATIC void ixgbe_aci_debug_array(struct ixgbe_hw *hw, u16 row_size, u8 *buf,
 				  u16 buf_size)
 {
-	char debug_portion[IXGBE_ACI_MAX_DEBUG_STRING_LENGTH] = {'\0'};
-	char debug_string[IXGBE_ACI_MAX_DEBUG_STRING_LENGTH] = {'\0'};
-	u16 i = 0, j = 0;
-	s16 remaining_space = IXGBE_ACI_MAX_DEBUG_STRING_LENGTH - 1;
-	s16 nbytes = 0;
-	if (!hw)
+	char debug_string[IXGBE_ACI_MAX_DEBUG_STRING_LENGTH];
+	u16 i, j, row;
+	int offset, nbytes;
+
+	if (!hw || !buf || !buf_size || !row_size)
 		return;
-	if (buf && buf_size && row_size) {
-		if (buf_size >= row_size) {
-			for (i = 0; i < (buf_size - row_size); i += row_size) {
-				nbytes = snprintf(debug_string, sizeof(debug_string), "0x%04X : ", i);
-				remaining_space = IXGBE_ACI_MAX_DEBUG_STRING_LENGTH - nbytes - 1;
-				for (j = 0; j < row_size; j++) {
-					nbytes = snprintf(debug_portion, sizeof(debug_portion), "0x%02X ", buf[i + j]);
-					strncat(debug_string, debug_portion, remaining_space);
-					remaining_space -= nbytes;
-					if (remaining_space <= 0) break;
-				}
-				strncat(debug_string, "\n", remaining_space);
-				DEBUGOUT1("%s", debug_string);
-				memset(debug_string, 0, IXGBE_ACI_MAX_DEBUG_STRING_LENGTH);
-			}
+
+	for (i = 0; i < buf_size; i += row_size) {
+		row = buf_size - i;
+		if (row > row_size)
+			row = row_size;
+
+		offset = snprintf(debug_string, sizeof(debug_string),
+				  "0x%04X : ", i);
+
+		for (j = 0; j < row; j++) {
+			nbytes = snprintf(debug_string + offset,
+					  sizeof(debug_string) - offset,
+					  "0x%02X ", buf[i + j]);
+			if (nbytes < 0 ||
+			    (size_t)nbytes >= sizeof(debug_string) - offset)
+				break;
+			offset += nbytes;
 		}
-		if (i < buf_size) {
-			nbytes = snprintf(debug_string, sizeof(debug_string), "0x%04X : ", i);
-			remaining_space = IXGBE_ACI_MAX_DEBUG_STRING_LENGTH - nbytes - 1;
-			for (j = 0; j < (buf_size - i); j++) {
-				nbytes = snprintf(debug_portion, sizeof(debug_portion), "0x%02X ", buf[i + j]);
-				strncat(debug_string, debug_portion, remaining_space);
-				remaining_space -= nbytes;
-				if (remaining_space <= 0) break;
-			}
-			strncat(debug_string, "\n", remaining_space);
-			DEBUGOUT1("%s", debug_string);
-		}
+
+		DEBUGOUT1("%s\n", debug_string);
 	}
 }
 
