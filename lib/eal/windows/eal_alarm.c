@@ -190,7 +190,7 @@ RTE_EXPORT_SYMBOL(rte_eal_alarm_cancel)
 int
 rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 {
-	struct alarm_entry *ap;
+	struct alarm_entry *ap, *ap_next;
 	unsigned int state;
 	int removed;
 	bool executing;
@@ -207,7 +207,7 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 
 		rte_spinlock_lock(&alarm_lock);
 
-		LIST_FOREACH(ap, &alarm_list, next) {
+		LIST_FOREACH_SAFE(ap, &alarm_list, next, ap_next) {
 			if (!alarm_matches(ap, cb_fn, cb_arg))
 				continue;
 

@@ -264,7 +264,7 @@ RTE_EXPORT_SYMBOL(rte_eal_alarm_cancel)
 int
 rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 {
-	struct alarm_entry *ap, *ap_prev;
+	struct alarm_entry *ap, *ap_next;
 	int count = 0;
 	int err = 0;
 	int executing;
@@ -277,15 +277,12 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 	do {
 		executing = 0;
 		rte_spinlock_lock(&alarm_list_lk);
-		/* remove any matches at the start of the list */
-		while (1) {
-			ap = LIST_FIRST(&alarm_list);
-			if (ap == NULL)
-				break;
-			if (cb_fn != ap->cb_fn)
-				break;
-			if (cb_arg != ap->cb_arg && cb_arg != (void *) -1)
-				break;
+
+		LIST_FOREACH_SAFE(ap, &alarm_list, next, ap_next) {
+			if (cb_fn != ap->cb_fn ||
+					(cb_arg != (void *)-1 && cb_arg != ap->cb_arg))
+				continue;
+
 			if (ap->executing == 0) {
 				LIST_REMOVE(ap, next);
 				free(ap);
@@ -301,31 +298,7 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 					executing++;
 				else
 					err = EINPROGRESS;
-
-				break;
 			}
-		}
-		ap_prev = ap;
-
-		/* now go through list, removing entries not at start */
-		LIST_FOREACH(ap, &alarm_list, next) {
-			/* this won't be true first time through */
-			if (cb_fn == ap->cb_fn &&
-					(cb_arg == (void *)-1 ||
-					 cb_arg == ap->cb_arg)) {
-				if (ap->executing == 0) {
-					LIST_REMOVE(ap, next);
-					free(ap);
-					count++;
-					ap = ap_prev;
-				} else if (pthread_equal(ap->executing_id,
-							 pthread_self()) == 0) {
-					executing++;
-				} else {
-					err = EINPROGRESS;
-				}
-			}
-			ap_prev = ap;
 		}
 
 		rte_spinlock_unlock(&alarm_list_lk);
