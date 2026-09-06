@@ -314,18 +314,13 @@ do_capability_setup(uint8_t eventdev_id)
 static void
 signal_handler(int signum)
 {
-	static uint8_t once;
-
-	if (fdata->done)
-		rte_exit(1, "Exiting on signal %d\n", signum);
-	if ((signum == SIGINT || signum == SIGTERM) && !once) {
-		if (cdata.dump_dev)
-			rte_event_dev_dump(0, stdout);
-		once = 1;
+	if (signum == SIGINT || signum == SIGTERM) {
+		if (fdata->done)
+			_exit(1);
 		fdata->done = 1;
 	}
 	if (signum == SIGTSTP)
-		rte_event_dev_dump(0, stdout);
+		cdata.dump_dev_signal = 1;
 }
 
 static inline uint64_t
@@ -451,6 +446,9 @@ main(int argc, char **argv)
 	}
 
 	rte_eal_mp_wait_lcore();
+
+	if (cdata.dump_dev)
+		rte_event_dev_dump(dev_id, stdout);
 
 	if (!cdata.quiet && (port_stat(dev_id, worker_data[0].port_id) !=
 			(uint64_t)-ENOTSUP)) {

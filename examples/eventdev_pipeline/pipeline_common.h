@@ -3,6 +3,7 @@
  * Copyright 2017 Cavium, Inc.
  */
 
+#include <signal.h>
 #include <stdbool.h>
 
 #include <rte_eal.h>
@@ -68,7 +69,7 @@ struct config_data {
 	int enable_queue_priorities;
 	int quiet;
 	int dump_dev;
-	int dump_dev_signal;
+	volatile sig_atomic_t dump_dev_signal;
 	int all_type_queues;
 	unsigned int num_stages;
 	unsigned int worker_cq_depth;
