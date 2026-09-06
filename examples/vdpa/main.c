@@ -288,14 +288,13 @@ vdpa_sample_quit(void)
 	}
 }
 
+/* Set by SIGINT and SIGTERM handler, consumed by main(). */
+static volatile sig_atomic_t quit;
+
 static void
-signal_handler(int signum)
+signal_handler(__rte_unused int signum)
 {
-	if (signum == SIGINT || signum == SIGTERM) {
-		printf("\nSignal %d received, preparing to exit...\n", signum);
-		vdpa_sample_quit();
-		exit(0);
-	}
+	quit = 1;
 }
 
 /* interactive cmd functions */
@@ -513,7 +512,7 @@ main(int argc, char *argv[])
 		}
 
 		printf("enter \'q\' to quit\n");
-		while (scanf("%c", &ch)) {
+		while (!quit && scanf("%c", &ch)) {
 			if (ch == 'q')
 				break;
 			while (ch != '\n') {
@@ -522,8 +521,9 @@ main(int argc, char *argv[])
 			}
 			printf("enter \'q\' to quit\n");
 		}
-		vdpa_sample_quit();
 	}
+
+	vdpa_sample_quit();
 
 	/* clean up the EAL */
 	rte_eal_cleanup();
