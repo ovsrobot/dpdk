@@ -109,6 +109,12 @@ API Changes
     compile with an integer argument, but this is deprecated usage: existing code
     should use ``RTE_ALIGN``, ``RTE_ALIGN_CEIL`` or ``RTE_ALIGN_FLOOR`` instead.
 
+* **eal: Unaligned integer types are now really unaligned.**
+
+  ``unaligned_uint16_t``, ``unaligned_uint32_t`` and ``unaligned_uint64_t``
+  are now declared with an alignment of 1 on all architectures.
+  The compiler may generate narrower loads and stores than before.
+
 
 ABI Changes
 -----------
