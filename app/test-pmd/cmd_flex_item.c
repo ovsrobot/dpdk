@@ -135,10 +135,13 @@ flex_link_item_parse(const char *src, struct rte_flow_item *item)
 	struct rte_flow_item *pattern;
 	struct rte_flow_action *actions;
 
-	sprintf(flow_rule,
-		"flow create 0 pattern %s / end actions drop / end", src);
-	src = flow_rule;
-	ret = flow_parse(src, (void *)data, sizeof(data),
+	ret = snprintf(flow_rule, sizeof(flow_rule),
+		       "flow create 0 pattern %s / end actions drop / end", src);
+	if (ret < 0 || ret >= (int)sizeof(flow_rule)) {
+		printf("Flex item link \"%s\" is too long\n", src);
+		return -ENOSPC;
+	}
+	ret = flow_parse(flow_rule, (void *)data, sizeof(data),
 			 &attr, &pattern, &actions);
 	if (ret)
 		return ret;
