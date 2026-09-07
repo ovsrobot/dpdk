@@ -54,6 +54,8 @@ rte_eal_alarm_cleanup(void)
 	int ret = rte_intr_callback_unregister_sync(intr_handle,
 			eal_alarm_callback, (void *)-1);
 	if (ret >= 0) {
+		close(rte_intr_fd_get(intr_handle));
+		rte_intr_fd_set(intr_handle, -1);
 		rte_intr_instance_free(intr_handle);
 		intr_handle = NULL;
 	}
@@ -62,7 +64,7 @@ rte_eal_alarm_cleanup(void)
 int
 rte_eal_alarm_init(void)
 {
-	int fd;
+	int fd = -1;
 
 	intr_handle = rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_PRIVATE);
 	if (intr_handle == NULL) {
@@ -88,6 +90,8 @@ rte_eal_alarm_init(void)
 
 	return 0;
 error:
+	if (fd >= 0)
+		close(fd);
 	rte_intr_instance_free(intr_handle);
 	return -1;
 }
