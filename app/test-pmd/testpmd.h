@@ -445,8 +445,15 @@ void common_fwd_stream_init(struct fwd_stream *fs);
 #define FLEX_MAX_PATTERNS_NUM 64
 #define FLEX_PARSER_ERR ((struct flex_item *)-1)
 
+/** Spec and mask storage for one flex item input link. */
+struct flex_link_pattern {
+	uint8_t spec[FLEX_MAX_FLOW_PATTERN_LENGTH];
+	uint8_t mask[FLEX_MAX_FLOW_PATTERN_LENGTH];
+};
+
 struct flex_item {
 	struct rte_flow_item_flex_conf flex_conf;
+	struct flex_link_pattern *link_pattern;
 	struct rte_flow_item_flex_handle *flex_handle;
 	uint32_t flex_id;
 };

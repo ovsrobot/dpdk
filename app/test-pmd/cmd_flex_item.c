@@ -124,12 +124,13 @@ enum flex_link_type {
 };
 
 static int
-flex_link_item_parse(const char *src, struct rte_flow_item *item)
+flex_link_item_parse(const char *src, struct rte_flow_item *item,
+		     struct flex_link_pattern *buf)
 {
 #define  FLEX_PARSE_DATA_SIZE 1024
 
 	int ret;
-	uint8_t *ptr, data[FLEX_PARSE_DATA_SIZE] = {0,};
+	uint8_t data[FLEX_PARSE_DATA_SIZE] = {0,};
 	char flow_rule[256];
 	struct rte_flow_attr *attr;
 	struct rte_flow_item *pattern;
@@ -146,31 +147,42 @@ flex_link_item_parse(const char *src, struct rte_flow_item *item)
 	if (ret)
 		return ret;
 	item->type = pattern->type;
+	item->spec = NULL;
+	item->mask = NULL;
+	item->last = NULL;
+	/* Only input links carry a value to match. */
+	if (buf == NULL)
+		return 0;
+	/* rte_flow_conv() reports the item size only if a mask is set. */
+	item->mask = buf->mask;
 	ret = rte_flow_conv(RTE_FLOW_CONV_OP_ITEM_MASK, NULL, 0, item, NULL);
-	if ((ret > 0) && pattern->spec) {
-		ptr = (void *)(uintptr_t)item->spec;
-		memcpy(ptr, pattern->spec, ret);
-	} else {
-		item->spec = NULL;
-	}
-	if ((ret > 0) && pattern->mask) {
-		ptr = (void *)(uintptr_t)item->mask;
-		memcpy(ptr, pattern->mask, ret);
-	} else {
+	if (ret <= 0) {
 		item->mask = NULL;
+		return 0;
 	}
-	if ((ret > 0) && pattern->last) {
-		ptr = (void *)(uintptr_t)item->last;
-		memcpy(ptr, pattern->last, ret);
-	} else {
-		item->last = NULL;
+	if (ret > FLEX_MAX_FLOW_PATTERN_LENGTH) {
+		printf("Flex item link \"%s\" needs %d bytes, maximum is %d\n",
+		       src, ret, FLEX_MAX_FLOW_PATTERN_LENGTH);
+		return -ENOSPC;
 	}
+	if (pattern->last != NULL) {
+		printf("Flex item link \"%s\" can not be a range\n", src);
+		return -ENOTSUP;
+	}
+	if (pattern->spec != NULL) {
+		memcpy(buf->spec, pattern->spec, ret);
+		item->spec = buf->spec;
+	}
+	if (pattern->mask != NULL)
+		memcpy(buf->mask, pattern->mask, ret);
+	else
+		item->mask = NULL;
 	return 0;
 }
 
 static int
 flex_link_parse(json_t *jobj, struct rte_flow_item_flex_link *link,
-		enum flex_link_type link_type)
+		struct flex_link_pattern *buf, enum flex_link_type link_type)
 {
 	const char *key;
 	json_t *je;
@@ -180,7 +192,7 @@ flex_link_parse(json_t *jobj, struct rte_flow_item_flex_link *link,
 			if (!json_is_string(je))
 				return -EINVAL;
 			ret = flex_link_item_parse(json_string_value(je),
-						   &link->item);
+						   &link->item, buf);
 			if (ret)
 				return -EINVAL;
 			if (link_type == FLEX_LINK_IN) {
@@ -204,9 +216,9 @@ flex_link_parse(json_t *jobj, struct rte_flow_item_flex_link *link,
 	return 0;
 }
 
-static int flex_item_config(json_t *jroot,
-			    struct rte_flow_item_flex_conf *flex_conf)
+static int flex_item_config(json_t *jroot, struct flex_item *fp)
 {
+	struct rte_flow_item_flex_conf *flex_conf = &fp->flex_conf;
 	const char *key;
 	json_t *jobj = NULL;
 	int ret = 0;
@@ -251,6 +263,7 @@ static int flex_item_config(json_t *jroot,
 				ji = json_array_get(jobj, i);
 				ret = flex_link_parse(ji,
 						      flex_conf->input_link + i,
+						      fp->link_pattern + i,
 						      FLEX_LINK_IN);
 				if (ret) {
 					printf("Can't parse input_link(s)\n");
@@ -265,7 +278,7 @@ static int flex_item_config(json_t *jroot,
 				ji = json_array_get(jobj, i);
 				ret = flex_link_parse
 					(ji, flex_conf->output_link + i,
-					 FLEX_LINK_OUT);
+					 NULL, FLEX_LINK_OUT);
 				if (ret) {
 					printf("Can't parse output_link(s)\n");
 					goto out;
@@ -281,11 +294,9 @@ out:
 static struct flex_item *
 flex_item_init(void)
 {
-	size_t base_size, samples_size, links_size, spec_size;
+	size_t base_size, samples_size, links_size, pattern_size;
 	struct rte_flow_item_flex_conf *conf;
 	struct flex_item *fp;
-	uint8_t (*pattern)[FLEX_MAX_FLOW_PATTERN_LENGTH];
-	int i;
 
 	base_size = RTE_ALIGN(sizeof(*fp), sizeof(uintptr_t));
 	samples_size = RTE_ALIGN(FLEX_ITEM_MAX_SAMPLES_NUM *
@@ -295,8 +306,8 @@ flex_item_init(void)
 			       sizeof(conf->input_link[0]),
 			       sizeof(uintptr_t));
 	/* spec & mask for all input links */
-	spec_size = 2 * FLEX_MAX_FLOW_PATTERN_LENGTH * FLEX_ITEM_MAX_LINKS_NUM;
-	fp = calloc(1, base_size + samples_size + 2 * links_size + spec_size);
+	pattern_size = FLEX_ITEM_MAX_LINKS_NUM * sizeof(*fp->link_pattern);
+	fp = calloc(1, base_size + samples_size + 2 * links_size + pattern_size);
 	if (fp == NULL) {
 		printf("Can't allocate memory for flex item\n");
 		return NULL;
@@ -308,12 +319,8 @@ flex_item_init(void)
 			   ((uint8_t *)conf->sample_data + samples_size);
 	conf->output_link = (typeof(conf->output_link))
 			    ((uint8_t *)conf->input_link + links_size);
-	pattern = (typeof(pattern))((uint8_t *)conf->output_link + links_size);
-	for (i = 0; i < FLEX_ITEM_MAX_LINKS_NUM; i++) {
-		struct rte_flow_item_flex_link *in = conf->input_link + i;
-		in->item.spec = pattern++;
-		in->item.mask = pattern++;
-	}
+	fp->link_pattern = (typeof(fp->link_pattern))
+			   ((uint8_t *)conf->output_link + links_size);
 	return fp;
 }
 
@@ -328,7 +335,7 @@ flex_item_build_config(struct flex_item *fp, const char *filename)
 		printf("Bad JSON file \"%s\": %s\n", filename, json_error.text);
 		return -1;
 	}
-	ret = flex_item_config(jroot, &fp->flex_conf);
+	ret = flex_item_config(jroot, fp);
 	json_decref(jroot);
 	return ret;
 }
