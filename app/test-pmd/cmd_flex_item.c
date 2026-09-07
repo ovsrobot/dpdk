@@ -287,7 +287,7 @@ flex_item_init(void)
 	uint8_t (*pattern)[FLEX_MAX_FLOW_PATTERN_LENGTH];
 	int i;
 
-	base_size = RTE_ALIGN(sizeof(*conf), sizeof(uintptr_t));
+	base_size = RTE_ALIGN(sizeof(*fp), sizeof(uintptr_t));
 	samples_size = RTE_ALIGN(FLEX_ITEM_MAX_SAMPLES_NUM *
 				 sizeof(conf->sample_data[0]),
 				 sizeof(uintptr_t));
