@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added an example of tcpdump remote pcap daemon.**
+
+  Added an example that implements rpcap to allow live capture in tcpdump.
+
 
 Removed Items
 -------------
