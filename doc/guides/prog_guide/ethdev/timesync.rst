@@ -57,6 +57,129 @@ Rx Timestamp Extraction Workflow
       Stored in a registered mbuf dynamic field (e.g. ``rte_mbuf_dyn_rx_timestamp_register()``).
 
 
+Transmit (Tx) Timestamping Architectures
+----------------------------------------
+
+The framework supports two hardware transmit timestamping architectures:
+
+* **Single Shared Register** (``RTE_ETH_TIMESYNC_TX_SLOT_SINGLE_REG``):
+  The hardware contains a single shared transmit timestamp latch register.
+  Only one outbound packet can be timestamped at a time across the entire port.
+  The application calls ``rte_eth_timesync_read_tx_timestamp(port_id, &ts)`` to retrieve the departure time.
+
+* **Per-Packet Slot Bank** (``RTE_ETH_TIMESYNC_TX_SLOT_PER_PACKET``):
+  The hardware provides a bank of independent transmit timestamp slots or descriptors.
+  Multiple outbound PTP packets can be timestamped concurrently and correlated asynchronously on a per-packet basis using slot handles.
+
+
+Dual-Domain Timestamps
+~~~~~~~~~~~~~~~~~~~~~~
+
+When retrieving transmit timestamps using slot handles, the API returns a dual-domain timestamp structure:
+
+.. code-block:: c
+
+    struct rte_eth_timesync_dual_domain_timestamp {
+        int64_t adjusted_ns; /**< PHC adjusted time (wall-clock nanoseconds) */
+        int64_t raw_ns;      /**< Free-running hardware cycle counter or raw nanoseconds */
+        uint32_t valid_mask; /**< Validity bits for the adjusted/raw domains */
+        uint32_t reserved;   /**< Reserved for future use, must be zero */
+    };
+
+* **Adjusted Domain** (``RTE_ETH_TIMESYNC_DUAL_DOMAIN_TIMESTAMP_ADJUSTED_VALID``):
+  Represents the wall-clock time after frequency adjustments (``rte_eth_timesync_adjust_freq``) or phase steps (``rte_eth_timesync_adjust_time``) have been applied.
+
+* **Raw Domain** (``RTE_ETH_TIMESYNC_DUAL_DOMAIN_TIMESTAMP_RAW_VALID``):
+  Represents the unadjusted free-running hardware cycle counter or raw timestamp.
+  This domain is required when correlating adjusted wall-clock time with the underlying hardware timebase or when performing cross-timestamp analysis.
+
+
+Per-Packet Tx Timestamp Workflow
+--------------------------------
+
+To use per-packet transmit timestamping, applications follow this sequence:
+
+1. **Query Port Capabilities**
+   Determine whether the PMD supports slot-based per-packet timestamping:
+
+   .. code-block:: c
+
+          struct rte_eth_timesync_tx_slot_caps caps;
+
+          ret = rte_eth_timesync_tx_slot_caps(port_id, &caps);
+          if (ret == 0 && caps.type == RTE_ETH_TIMESYNC_TX_SLOT_PER_PACKET) {
+                printf("Port %u supports per-packet timestamping with %u max slots\n",
+                           port_id, caps.max_slots);
+          }
+
+2. **Register Mbuf Dynamic Fields**
+   Register the dynamic field and dynamic flag used to pass slot handles to the Tx datapath:
+
+   .. code-block:: c
+
+       ret = rte_eth_timesync_tx_slot_dynfield_register();
+       if (ret < 0) {
+           /* Dynamic field space exhausted or registration failed */
+       }
+
+   .. note::
+
+      ``rte_eth_timesync_tx_slot_dynfield_register()`` must be called explicitly before ``rte_pktmbuf_pool_create()``.
+      It is **not** called automatically by ``rte_eth_timesync_enable()``.
+      Dynamic fields and flags remain registered until process shutdown; DPDK does not support unregistering them.
+
+3. **Allocate a Timestamp Slot**
+   Before transmitting a PTP packet requiring a transmit timestamp, allocate a slot handle:
+
+   .. code-block:: c
+
+       uint32_t slot_id;
+
+       ret = rte_eth_timesync_tx_slot_alloc(port_id, &slot_id);
+       if (ret != 0) {
+           /* Handle allocation error (e.g. -ENOSPC if all slots are in flight) */
+       }
+
+4. **Stamp the Mbuf**
+   Attach the allocated slot handle to the mbuf:
+
+   .. code-block:: c
+
+         ret = rte_eth_timesync_tx_slot_stamp(slot_id, mbuf);
+         if (ret != 0) {
+            rte_eth_timesync_tx_slot_release(port_id, slot_id);
+            /* The dynfield setup was not completed or an argument is invalid */
+         } else {
+            mbuf->ol_flags |= RTE_MBUF_F_TX_IEEE1588_TMST;
+         }
+
+5. **Transmit the Packet**
+   Send the packet via ``rte_eth_tx_burst()`` as usual.
+
+6. **Poll for Timestamp Completion**
+   Read the captured timestamp using the allocated slot handle:
+
+   .. code-block:: c
+
+       struct rte_eth_timesync_dual_domain_timestamp ts;
+
+       ret = rte_eth_timesync_tx_slot_read(port_id, slot_id, &ts);
+       if (ret == 0) {
+           /* Timestamp is ready */
+           if (ts.valid_mask & RTE_ETH_TIMESYNC_DUAL_DOMAIN_TIMESTAMP_ADJUSTED_VALID) {
+               /* Process ts.adjusted_ns */
+           }
+       } else if (ret == -EAGAIN) {
+           /* Timestamp hardware processing is still pending; retry later */
+       }
+
+7. **Release the Slot**
+   After successfully reading the timestamp or timing out, release the slot handle:
+
+   .. code-block:: c
+
+          rte_eth_timesync_tx_slot_release(port_id, slot_id);
+
 PMD Implementation Requirements
 -------------------------------
 
@@ -70,3 +193,27 @@ To support full timesync capabilities, a Poll Mode Driver (PMD) implements the f
 2. Rx Timestamping (``timesync_read_rx_timestamp``)
 
    Configures Rx filters to latch incoming PTP arrival times and flags received mbufs with ``RTE_MBUF_F_RX_IEEE1588_PTP``.
+
+3. Tx Slot Capability Reporting (``timesync_tx_slot_get_caps``)
+
+   Reports ``RTE_ETH_TIMESYNC_TX_SLOT_SINGLE_REG`` or ``RTE_ETH_TIMESYNC_TX_SLOT_PER_PACKET`` in ``caps->type`` and sets ``caps->max_slots``.
+
+4. Slot Allocation & Release
+   (``timesync_tx_slot_alloc`` / ``timesync_tx_slot_release``)
+
+   Maintains a port-global pool or bitmap of hardware timestamp slots.
+   ``timesync_tx_slot_alloc`` returns an opaque port-unique slot handle and returns ``-ENOSPC`` when no slots are free.
+   ``timesync_tx_slot_release`` clears hardware slot state and returns the handle to the free pool.
+   Passing an invalid or already-released handle should return ``-EINVAL``.
+
+5. Tx Datapath Integration
+
+   Checks if ``RTE_MBUF_F_TX_IEEE1588_TMST`` is set on ``mbuf->ol_flags``.
+   For per-packet slot mode, retrieves ``slot_id`` from mbuf dynamic field via ``*RTE_MBUF_DYNFIELD(m, dynfield_offset, uint32_t *)``.
+   Configures hardware Tx descriptors to capture departure timestamps into the specified slot.
+
+6. Tx Slot Timestamp Retrieval
+   (``timesync_tx_slot_read``)
+
+   Queries hardware slot or descriptor completion ring corresponding to ``slot_id``.
+   Populates ``struct rte_eth_timesync_dual_domain_timestamp`` and returns ``0`` when ready, or ``-EAGAIN`` if pending.
