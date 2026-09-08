@@ -104,15 +104,8 @@ struct __rte_cache_aligned rte_mempool_cache {
 		uint64_t get_success_objs;  /**< Objects successfully allocated. */
 	} stats;                        /**< Statistics */
 #endif
-	/**
-	 * Cache objects
-	 *
-	 * Note:
-	 * Cache is allocated at double size for API/ABI compatibility purposes only.
-	 * When reducing its size at an API/ABI breaking release,
-	 * remember to add a cache guard after it.
-	 */
-	alignas(RTE_CACHE_LINE_SIZE) void *objs[RTE_MEMPOOL_CACHE_MAX_SIZE * 2];
+	/** Cache objects */
+	alignas(RTE_CACHE_LINE_SIZE) void *objs[];
 };
 
 /**
@@ -258,6 +251,7 @@ struct __rte_cache_aligned rte_mempool {
 	int32_t ops_index;
 
 	struct rte_mempool_cache *local_cache; /**< Per-lcore local cache */
+	uint32_t sizeof_cache_per_lcore; /**< Multiplier for indexing into the local cache. */
 
 	uint32_t populated_size;         /**< Number of populated objects. */
 	struct rte_mempool_objhdr_list elt_list; /**< List of objects in pool */
@@ -271,7 +265,17 @@ struct __rte_cache_aligned rte_mempool {
 	 */
 	struct rte_mempool_debug_stats stats[RTE_MAX_LCORE + 1];
 #endif
+
+	/** Padding to ensure mempool header size is cache line aligned. */
+	__extension__ alignas(RTE_CACHE_LINE_SIZE) char cache_line_padding[0];
+	/*
+	 * Private data area is located immediately after the mempool header.
+	 * Per-lcore local cache, if present, is located immediately after the private data area.
+	 */
 };
+
+static_assert((sizeof(struct rte_mempool) & RTE_CACHE_LINE_MASK) == 0,
+		"mempool header size not cache line aligned");
 
 /** Spreading among memory channels not required. */
 #define RTE_MEMPOOL_F_NO_SPREAD		0x0001
@@ -361,18 +365,6 @@ struct __rte_cache_aligned rte_mempool {
 #else
 #define RTE_MEMPOOL_CACHE_STAT_ADD(cache, name, n) do {} while (0)
 #endif
-
-/**
- * @internal Calculate the size of the mempool header.
- *
- * @param mp
- *   Pointer to the memory pool.
- * @param cs
- *   Size of the per-lcore cache.
- */
-#define RTE_MEMPOOL_HEADER_SIZE(mp, cs) \
-	(sizeof(*(mp)) + (((cs) == 0) ? 0 : \
-	(sizeof(struct rte_mempool_cache) * RTE_MAX_LCORE)))
 
 /* return the header of a mempool object (internal) */
 static inline struct rte_mempool_objhdr *
@@ -1048,8 +1040,7 @@ rte_mempool_free(struct rte_mempool *mp);
  * @param cache_size
  *   If cache_size is non-zero, the rte_mempool library will try to
  *   limit the accesses to the common lockless pool, by maintaining a
- *   per-lcore object cache. This argument must be lower or equal to
- *   RTE_MEMPOOL_CACHE_MAX_SIZE and n.
+ *   per-lcore object cache. This argument must be lower or equal to n.
  *   The access to the per-lcore table is of course
  *   faster than the multi-producer/consumer pool. The cache can be
  *   disabled if the cache_size argument is set to 0; it can be useful to
@@ -1329,6 +1320,15 @@ void rte_mempool_stats_reset(struct rte_mempool *mp);
 void rte_mempool_dump(FILE *f, struct rte_mempool *mp);
 
 /**
+ * Free a user-owned mempool cache.
+ *
+ * @param cache
+ *   A pointer to the mempool cache.
+ */
+void
+rte_mempool_cache_free(struct rte_mempool_cache *cache);
+
+/**
  * Create a user-owned mempool cache.
  *
  * This can be used by unregistered non-EAL threads to enable caching when they
@@ -1343,16 +1343,8 @@ void rte_mempool_dump(FILE *f, struct rte_mempool *mp);
  *   SOCKET_ID_ANY if there is no NUMA constraint for the reserved zone.
  */
 struct rte_mempool_cache *
-rte_mempool_cache_create(uint32_t size, int socket_id);
-
-/**
- * Free a user-owned mempool cache.
- *
- * @param cache
- *   A pointer to the mempool cache.
- */
-void
-rte_mempool_cache_free(struct rte_mempool_cache *cache);
+rte_mempool_cache_create(uint32_t size, int socket_id)
+	__rte_malloc __rte_dealloc(rte_mempool_cache_free, 1);
 
 /**
  * Get a pointer to the per-lcore default mempool cache.
@@ -1368,15 +1360,16 @@ rte_mempool_cache_free(struct rte_mempool_cache *cache);
 static __rte_always_inline struct rte_mempool_cache *
 rte_mempool_default_cache(struct rte_mempool *mp, unsigned lcore_id)
 {
-	if (unlikely(mp->cache_size == 0))
+	if (unlikely(mp->local_cache == NULL))
 		return NULL;
 
 	if (unlikely(lcore_id == LCORE_ID_ANY))
 		return NULL;
 
-	rte_mempool_trace_default_cache(mp, lcore_id,
-		&mp->local_cache[lcore_id]);
-	return &mp->local_cache[lcore_id];
+	struct rte_mempool_cache *cache = (struct rte_mempool_cache *)RTE_PTR_ADD(mp->local_cache,
+			lcore_id * (size_t)mp->sizeof_cache_per_lcore);
+	rte_mempool_trace_default_cache(mp, lcore_id, cache);
+	return cache;
 }
 
 /**
@@ -1892,8 +1885,7 @@ void rte_mempool_audit(struct rte_mempool *mp);
  */
 static inline void *rte_mempool_get_priv(struct rte_mempool *mp)
 {
-	return (char *)mp +
-		RTE_MEMPOOL_HEADER_SIZE(mp, mp->cache_size);
+	return (void *)(mp + 1);
 }
 
 /**

@@ -760,7 +760,7 @@ mempool_cache_init(struct rte_mempool_cache *cache, uint32_t size)
 /*
  * Create and initialize a cache for objects that are retrieved from and
  * returned to an underlying mempool. This structure is identical to the
- * local_cache[lcore_id] pointed to by the mempool structure.
+ * local_cache pointed to by the mempool structure.
  */
 RTE_EXPORT_SYMBOL(rte_mempool_cache_create)
 struct rte_mempool_cache *
@@ -768,13 +768,14 @@ rte_mempool_cache_create(uint32_t size, int socket_id)
 {
 	struct rte_mempool_cache *cache;
 
-	if (size == 0 || size > RTE_MEMPOOL_CACHE_MAX_SIZE) {
+	if (size == 0 || sizeof(struct rte_mempool_cache) + size * sizeof(void *) > UINT32_MAX) {
 		rte_errno = EINVAL;
 		return NULL;
 	}
 
-	cache = rte_zmalloc_socket("MEMPOOL_CACHE", sizeof(*cache),
-				  RTE_CACHE_LINE_SIZE, socket_id);
+	cache = rte_zmalloc_socket("MEMPOOL_CACHE",
+			sizeof(struct rte_mempool_cache) + size * sizeof(void *),
+			RTE_CACHE_LINE_SIZE, socket_id);
 	if (cache == NULL) {
 		RTE_MEMPOOL_LOG(ERR, "Cannot allocate mempool cache.");
 		rte_errno = ENOMEM;
@@ -812,16 +813,17 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	struct rte_mempool *mp = NULL;
 	struct rte_tailq_entry *te = NULL;
 	const struct rte_memzone *mz = NULL;
-	size_t mempool_size;
+	size_t mempool_size, sizeof_cache_per_lcore;
 	unsigned int mz_flags = RTE_MEMZONE_1GB|RTE_MEMZONE_SIZE_HINT_ONLY;
 	struct rte_mempool_objsz objsz;
-	unsigned lcore_id;
 	int ret;
 
 	/* compilation-time checks */
 	RTE_BUILD_BUG_ON((sizeof(struct rte_mempool) &
 			  RTE_CACHE_LINE_MASK) != 0);
 	RTE_BUILD_BUG_ON((sizeof(struct rte_mempool_cache) &
+			  RTE_CACHE_LINE_MASK) != 0);
+	RTE_BUILD_BUG_ON((offsetof(struct rte_mempool_cache, objs) &
 			  RTE_CACHE_LINE_MASK) != 0);
 #ifdef RTE_LIBRTE_MEMPOOL_STATS
 	RTE_BUILD_BUG_ON((sizeof(struct rte_mempool_debug_stats) &
@@ -839,7 +841,9 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	}
 
 	/* asked cache too big */
-	if (cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
+	sizeof_cache_per_lcore = cache_size != 0 ? RTE_CACHE_LINE_ROUNDUP(
+			sizeof(struct rte_mempool_cache) + cache_size * sizeof(void *)) : 0;
+	if (sizeof_cache_per_lcore > UINT32_MAX ||
 	    cache_size > n) {
 		rte_errno = EINVAL;
 		return NULL;
@@ -873,9 +877,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	 * reserve a memory zone for this mempool: private data is
 	 * cache-aligned
 	 */
-	private_data_size = (private_data_size +
-			     RTE_MEMPOOL_ALIGN_MASK) & (~RTE_MEMPOOL_ALIGN_MASK);
-
+	private_data_size = RTE_CACHE_LINE_ROUNDUP(private_data_size);
 
 	/* try to allocate tailq entry */
 	te = rte_zmalloc("MEMPOOL_TAILQ_ENTRY", sizeof(*te), 0);
@@ -884,9 +886,9 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 		goto exit_unlock;
 	}
 
-	mempool_size = RTE_MEMPOOL_HEADER_SIZE(mp, cache_size);
+	mempool_size = sizeof(struct rte_mempool);
 	mempool_size += private_data_size;
-	mempool_size = RTE_ALIGN_CEIL(mempool_size, RTE_MEMPOOL_ALIGN);
+	mempool_size += RTE_MAX_LCORE * sizeof_cache_per_lcore;
 
 	ret = snprintf(mz_name, sizeof(mz_name), RTE_MEMPOOL_MZ_FORMAT, name);
 	if (ret < 0 || ret >= (int)sizeof(mz_name)) {
@@ -900,7 +902,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 
 	/* init the mempool structure */
 	mp = mz->addr;
-	memset(mp, 0, RTE_MEMPOOL_HEADER_SIZE(mp, cache_size));
+	memset(mp, 0, sizeof(struct rte_mempool) + private_data_size);
 	ret = strlcpy(mp->name, name, sizeof(mp->name));
 	if (ret < 0 || ret >= (int)sizeof(mp->name)) {
 		rte_errno = ENAMETOOLONG;
@@ -913,7 +915,6 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	mp->elt_size = objsz.elt_size;
 	mp->header_size = objsz.header_size;
 	mp->trailer_size = objsz.trailer_size;
-	/* Size of default caches, zero means disabled. */
 	mp->cache_size = cache_size;
 	mp->private_data_size = private_data_size;
 	STAILQ_INIT(&mp->elt_list);
@@ -937,18 +938,17 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 		goto exit_unlock;
 	}
 
-	/*
-	 * local_cache pointer is set even if cache_size is zero.
-	 * The local_cache points to just past the elt_pa[] array.
-	 */
-	mp->local_cache = (struct rte_mempool_cache *)
-		RTE_PTR_ADD(mp, RTE_MEMPOOL_HEADER_SIZE(mp, 0));
-
-	/* Init all default caches. */
+	/* local_cache pointer is only set if local cache is allocated. */
 	if (cache_size != 0) {
-		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++)
-			mempool_cache_init(&mp->local_cache[lcore_id],
-					   cache_size);
+		mp->local_cache = (struct rte_mempool_cache *)
+			RTE_PTR_ADD(mp, sizeof(struct rte_mempool) + private_data_size);
+		mp->sizeof_cache_per_lcore = sizeof_cache_per_lcore;
+
+		/* Init all default caches. */
+		struct rte_mempool_cache *cache = mp->local_cache;
+		for (unsigned int lcore_id = 0; lcore_id < RTE_MAX_LCORE;
+				lcore_id++, cache = RTE_PTR_ADD(cache, sizeof_cache_per_lcore))
+			mempool_cache_init(cache, cache_size);
 	}
 
 	te->data = mp;
@@ -1012,15 +1012,16 @@ unsigned int
 rte_mempool_avail_count(const struct rte_mempool *mp)
 {
 	unsigned count;
-	unsigned lcore_id;
 
 	count = rte_mempool_ops_get_count(mp);
 
-	if (mp->cache_size == 0)
+	if (mp->local_cache == NULL)
 		return count;
 
-	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++)
-		count += mp->local_cache[lcore_id].len;
+	const struct rte_mempool_cache *cache = mp->local_cache;
+	for (unsigned int lcore_id = 0; lcore_id < RTE_MAX_LCORE;
+			lcore_id++, cache = RTE_PTR_ADD(cache, mp->sizeof_cache_per_lcore))
+		count += cache->len;
 
 	/*
 	 * due to race condition (access to len is not locked), the
@@ -1048,11 +1049,11 @@ rte_mempool_stats_reset(struct rte_mempool *mp)
 
 #ifdef RTE_LIBRTE_MEMPOOL_STATS
 	memset(&mp->stats, 0, sizeof(mp->stats));
-	if (mp->cache_size != 0) {
-		for (unsigned int lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-			memset(&mp->local_cache[lcore_id].stats, 0,
-					sizeof(mp->local_cache[lcore_id].stats));
-		}
+	if (mp->local_cache != NULL) {
+		struct rte_mempool_cache *cache = mp->local_cache;
+		for (unsigned int lcore_id = 0; lcore_id < RTE_MAX_LCORE;
+				lcore_id++, cache = RTE_PTR_ADD(cache, mp->sizeof_cache_per_lcore))
+			memset(&cache->stats, 0, sizeof(cache->stats));
 	}
 
 	RTE_MEMPOOL_LOG(DEBUG, "<%s>@%p: statistics reset", mp->name, mp);
@@ -1066,18 +1067,18 @@ rte_mempool_stats_reset(struct rte_mempool *mp)
 static unsigned
 rte_mempool_dump_cache(FILE *f, const struct rte_mempool *mp)
 {
-	unsigned lcore_id;
 	unsigned count = 0;
-	unsigned cache_count;
 
 	fprintf(f, "  internal cache infos (hide zero value items):\n");
 	fprintf(f, "    cache_size=%"PRIu32"\n", mp->cache_size);
 
-	if (mp->cache_size == 0)
+	if (mp->local_cache == NULL)
 		return count;
 
-	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		cache_count = mp->local_cache[lcore_id].len;
+	const struct rte_mempool_cache *cache = mp->local_cache;
+	for (unsigned int lcore_id = 0; lcore_id < RTE_MAX_LCORE;
+			lcore_id++, cache = RTE_PTR_ADD(cache, mp->sizeof_cache_per_lcore)) {
+		unsigned int cache_count = cache->len;
 		if (cache_count == 0)
 			continue;
 		fprintf(f, "    cache_count[%u]=%"PRIu32"\n",
@@ -1218,15 +1219,13 @@ static void
 mempool_audit_cache(const struct rte_mempool *mp)
 {
 	/* check cache size consistency */
-	unsigned lcore_id;
-
-	if (mp->cache_size == 0)
+	if (mp->local_cache == NULL)
 		return;
 
-	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		const struct rte_mempool_cache *cache;
-		cache = &mp->local_cache[lcore_id];
-		if (cache->len > RTE_DIM(cache->objs)) {
+	const struct rte_mempool_cache *cache = mp->local_cache;
+	for (unsigned int lcore_id = 0; lcore_id < RTE_MAX_LCORE;
+			lcore_id++, cache = RTE_PTR_ADD(cache, mp->sizeof_cache_per_lcore)) {
+		if (cache->len > cache->size) {
 			RTE_MEMPOOL_LOG(CRIT, "badness on cache[%u]",
 				lcore_id);
 			rte_panic("MEMPOOL: invalid cache len\n");
@@ -1319,13 +1318,15 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 		sum.get_success_blks += mp->stats[lcore_id].get_success_blks;
 		sum.get_fail_blks += mp->stats[lcore_id].get_fail_blks;
 	}
-	if (mp->cache_size != 0) {
+	if (mp->local_cache != NULL) {
 		/* Add the statistics stored in the mempool caches. */
-		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-			sum.put_bulk += mp->local_cache[lcore_id].stats.put_bulk;
-			sum.put_objs += mp->local_cache[lcore_id].stats.put_objs;
-			sum.get_success_bulk += mp->local_cache[lcore_id].stats.get_success_bulk;
-			sum.get_success_objs += mp->local_cache[lcore_id].stats.get_success_objs;
+		const struct rte_mempool_cache *cache = mp->local_cache;
+		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE;
+			lcore_id++, cache = RTE_PTR_ADD(cache, mp->sizeof_cache_per_lcore)) {
+			sum.put_bulk += cache->stats.put_bulk;
+			sum.put_objs += cache->stats.put_objs;
+			sum.get_success_bulk += cache->stats.get_success_bulk;
+			sum.get_success_objs += cache->stats.get_success_objs;
 		}
 	}
 	fprintf(f, "  stats:\n");
@@ -1624,10 +1625,11 @@ mempool_info_cb(struct rte_mempool *mp, void *arg)
 				  mp->populated_size);
 
 	cache_count = 0;
-	if (mp->cache_size > 0) {
-		int lcore_id;
-		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++)
-			cache_count += mp->local_cache[lcore_id].len;
+	if (mp->local_cache != NULL) {
+		const struct rte_mempool_cache *cache = mp->local_cache;
+		for (unsigned int lcore_id = 0; lcore_id < RTE_MAX_LCORE;
+				lcore_id++, cache = RTE_PTR_ADD(cache, mp->sizeof_cache_per_lcore))
+			cache_count += cache->len;
 	}
 	rte_tel_data_add_dict_uint(info->d, "total_cache_count", cache_count);
 	common_count = rte_mempool_ops_get_count(mp);
