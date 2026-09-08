@@ -3041,7 +3041,14 @@ get_context_desc(uint64_t ol_flags, const struct rte_mbuf *tx_pkt,
 	uint16_t cd_l2tag2 = 0;
 	uint64_t cd_type_cmd_tso_mss = ICE_TX_DESC_DTYPE_CTX;
 	uint32_t cd_tunneling_params = 0;
-	uint64_t ptp_tx_index = txq->ice_vsi->adapter->ptp_tx_index;
+	uint64_t ptp_tx_index;
+
+	if (ol_flags & rte_eth_timesync_tx_slot_dynflag)
+		ptp_tx_index = *RTE_MBUF_DYNFIELD(tx_pkt,
+				rte_eth_timesync_tx_slot_dynfield_offset,
+				uint32_t *);
+	else
+		ptp_tx_index = txq->ice_vsi->adapter->ptp_tx_index;
 
 	if (ice_calc_context_desc(ol_flags) == 0)
 		return 0;

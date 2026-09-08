@@ -684,6 +684,8 @@ struct ice_adapter {
 	/* For PTP */
 	uint8_t ptp_tx_block;
 	uint8_t ptp_tx_index;
+	/* Atomic bitmask of in-use Tx timestamp slots (bit N = slot N occupied). */
+	RTE_ATOMIC(uint64_t)ts_slot_bitmap;
 	bool ptp_ena;
 	bool txpp_ena;	/* For TxPP */
 	uint64_t time_hw;

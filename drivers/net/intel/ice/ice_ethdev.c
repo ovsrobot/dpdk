@@ -196,6 +196,14 @@ static int ice_timesync_read_rx_timestamp(struct rte_eth_dev *dev,
 					  uint32_t flags);
 static int ice_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 					  struct timespec *timestamp);
+static int ice_timesync_tx_slot_alloc(struct rte_eth_dev *dev,
+						uint32_t *slot_id);
+static int ice_timesync_tx_slot_get_caps(struct rte_eth_dev *dev,
+					       struct rte_eth_timesync_tx_slot_caps *caps);
+static int ice_timesync_tx_slot_read(struct rte_eth_dev *dev, uint32_t slot_id,
+		struct rte_eth_timesync_dual_domain_timestamp *timestamp);
+static int ice_timesync_tx_slot_release(struct rte_eth_dev *dev,
+						  uint32_t slot_id);
 static int ice_timesync_adjust_time(struct rte_eth_dev *dev, int64_t delta);
 static int ice_timesync_adjust_freq(struct rte_eth_dev *dev, int64_t ppm);
 static int ice_timesync_read_time(struct rte_eth_dev *dev,
@@ -340,6 +348,10 @@ static const struct eth_dev_ops ice_eth_dev_ops = {
 	.timesync_enable              = ice_timesync_enable,
 	.timesync_read_rx_timestamp   = ice_timesync_read_rx_timestamp,
 	.timesync_read_tx_timestamp   = ice_timesync_read_tx_timestamp,
+	.timesync_tx_slot_alloc = ice_timesync_tx_slot_alloc,
+	.timesync_tx_slot_get_caps  = ice_timesync_tx_slot_get_caps,
+	.timesync_tx_slot_read  = ice_timesync_tx_slot_read,
+	.timesync_tx_slot_release = ice_timesync_tx_slot_release,
 	.timesync_adjust_time         = ice_timesync_adjust_time,
 	.timesync_adjust_freq         = ice_timesync_adjust_freq,
 	.timesync_read_time           = ice_timesync_read_time,
@@ -7157,6 +7169,189 @@ static int ice_ptp_write_init(struct ice_hw *hw)
 	return ice_ptp_init_time(hw, ns, true);
 }
 
+/*
+ * Allocate one Tx timestamp slot from the per-port 64-slot bitmap using CAS.
+ * Returns slot index [0..max-1] or -ENOSPC if all slots are taken.
+ * For E822, max is capped so PFs sharing a quad use non-overlapping ranges.
+ */
+static int
+ice_ptp_alloc_tx_slot(struct ice_adapter *ad)
+{
+	uint64_t old, new_bm, range_mask, free_in_range;
+	uint8_t slot, max_slots, base_slot;
+	bool swapped;
+
+	/*
+	 * E822: multiple PFs share one quad's 64 slots.
+	 * Divide evenly: each PF occupies (64 / ports_per_quad) slots starting
+	 * at (pf_offset_in_quad * slots_per_pf).
+	 */
+	if (ad->hw.phy_model == ICE_PHY_E822) {
+		uint8_t ppq = ICE_PORTS_PER_QUAD;
+		uint8_t slots_per_pf = 64 / ppq;
+		uint8_t pf_offset = ad->hw.pf_id % ppq;
+
+		base_slot = pf_offset * slots_per_pf;
+		max_slots = slots_per_pf;
+	} else {
+		/* E810, E830, ETH56G: full 64 slots per PF BAR / per lport */
+		base_slot = 0;
+		max_slots = 64;
+	}
+
+	range_mask = (max_slots == 64) ? UINT64_MAX :
+		     (((uint64_t)1 << max_slots) - 1) << base_slot;
+
+	do {
+		old = rte_atomic_load_explicit(&ad->ts_slot_bitmap,
+					       rte_memory_order_relaxed);
+		free_in_range = ~old & range_mask;
+		if (free_in_range == 0)
+			return -ENOSPC;
+
+		slot = (uint8_t)rte_ctz64(free_in_range);
+		new_bm = old | RTE_BIT64(slot);
+		swapped = rte_atomic_compare_exchange_weak_explicit(&ad->ts_slot_bitmap,
+				&old, new_bm, rte_memory_order_acquire,
+				rte_memory_order_relaxed);
+	} while (!swapped);
+
+	return slot;
+}
+
+/* Release a Tx timestamp slot back to the bitmap. */
+static void
+ice_ptp_release_tx_slot(struct ice_adapter *ad, uint8_t slot)
+{
+	rte_atomic_fetch_and_explicit(&ad->ts_slot_bitmap, ~RTE_BIT64(slot),
+				      rte_memory_order_release);
+}
+
+/* Allocate a Tx timestamp slot from the per-port bitmap for the per-packet slot API. */
+static int
+ice_get_next_tx_desc_idx(struct rte_eth_dev *dev)
+{
+	struct ice_adapter *ad;
+	int slot;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	ad = ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	slot = ice_ptp_alloc_tx_slot(ad);
+	if (slot < 0) {
+		PMD_DRV_LOG(DEBUG, "PTP Tx: all 64 timestamp slots busy");
+		return slot;
+	}
+
+	/*
+	 * Do NOT update ptp_tx_index: that field belongs to the legacy
+	 * single-inflight path and is set statically in ice_ptp_init_info().
+	 */
+	return slot;
+}
+
+static int
+ice_ptp_read_tx_dual_timestamp(struct rte_eth_dev *dev, uint8_t slot,
+			       struct rte_eth_timesync_dual_domain_timestamp *dual)
+{
+	struct ice_adapter *ad;
+	struct ice_hw *hw;
+	uint64_t tstamp_ready, tstamp, adjusted_ns;
+	int ret;
+
+	if (dev == NULL || dual == NULL)
+		return -EINVAL;
+
+	ad = ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+
+	ret = ice_get_phy_tx_tstamp_ready(hw, ad->ptp_tx_block, &tstamp_ready);
+	if (ret)
+		return -EAGAIN;
+
+	if (!(tstamp_ready & RTE_BIT64(slot)))
+		return -EAGAIN;
+
+	ret = ice_read_phy_tstamp(hw, ad->ptp_tx_block, slot, &tstamp);
+	if (ret || tstamp == 0)
+		return -EAGAIN;
+
+	adjusted_ns = ice_tstamp_convert_32b_64b(hw, ad, 1,
+			(tstamp >> 8) & 0xFFFFFFFF);
+
+	dual->adjusted_ns = (int64_t)adjusted_ns;
+	dual->raw_ns = 0;
+	dual->valid_mask = RTE_ETH_TIMESYNC_DUAL_DOMAIN_TIMESTAMP_ADJUSTED_VALID;
+
+	return 0;
+}
+
+static void
+ice_ptp_free_tx_slot(struct rte_eth_dev *dev, uint8_t slot)
+{
+	struct ice_adapter *ad;
+	struct ice_hw *hw;
+
+	if (dev == NULL)
+		return;
+
+	ad = ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+
+	if (hw->phy_model == ICE_PHY_E810)
+		(void)ice_clear_phy_tstamp(hw, ad->ptp_tx_block, slot);
+	ice_ptp_release_tx_slot(ad, slot);
+}
+
+static int
+ice_timesync_tx_slot_get_caps(struct rte_eth_dev *dev __rte_unused,
+				    struct rte_eth_timesync_tx_slot_caps *caps)
+{
+	caps->type = RTE_ETH_TIMESYNC_TX_SLOT_PER_PACKET;
+	caps->max_slots = 64;
+	return 0;
+}
+
+static int
+ice_timesync_tx_slot_alloc(struct rte_eth_dev *dev,
+				     uint32_t *slot_id)
+{
+	int idx;
+
+	if (dev == NULL || slot_id == NULL)
+		return -EINVAL;
+
+	idx = ice_get_next_tx_desc_idx(dev);
+	if (idx < 0)
+		return idx;
+
+	*slot_id = (uint32_t)(uint16_t)idx;
+	return 0;
+}
+
+static int
+ice_timesync_tx_slot_read(struct rte_eth_dev *dev, uint32_t slot_id,
+		struct rte_eth_timesync_dual_domain_timestamp *timestamp)
+{
+	if (dev == NULL || timestamp == NULL || slot_id > 63)
+		return -EINVAL;
+
+	memset(timestamp, 0, sizeof(*timestamp));
+
+	return ice_ptp_read_tx_dual_timestamp(dev, (uint8_t)slot_id, timestamp);
+}
+
+static int
+ice_timesync_tx_slot_release(struct rte_eth_dev *dev, uint32_t slot_id)
+{
+	if (dev == NULL || slot_id > 63)
+		return -EINVAL;
+
+	ice_ptp_free_tx_slot(dev, (uint8_t)slot_id);
+	return 0;
+}
+
 static int
 ice_timesync_enable(struct rte_eth_dev *dev)
 {
@@ -7239,6 +7434,11 @@ ice_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 	/* Set the end time with a delay of 10 microseconds */
 	end_time = rte_get_timer_cycles() + (rte_get_timer_hz() / 100000);
 
+	/*
+	 * ptp_tx_index is a static slot set in ice_ptp_init_info(); it is NOT
+	 * allocated via ice_ptp_alloc_tx_slot() so the bitmap must not be
+	 * touched.
+	 */
 	do {
 		ret = ice_get_phy_tx_tstamp_ready(hw, ad->ptp_tx_block, &tstamp_ready);
 		if (ret) {
@@ -7246,11 +7446,15 @@ ice_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 			return -1;
 		}
 
-		if ((tstamp_ready & BIT_ULL(0)) == 0 && rte_get_timer_cycles() > end_time) {
+		if (!(tstamp_ready & BIT_ULL(ad->ptp_tx_index)) &&
+		    rte_get_timer_cycles() > end_time) {
 			PMD_DRV_LOG(ERR, "Timeout to get phy ready for timestamp");
+			if (hw->phy_model == ICE_PHY_E810)
+				(void)ice_clear_phy_tstamp(hw, ad->ptp_tx_block,
+							   ad->ptp_tx_index);
 			return -1;
 		}
-	} while ((tstamp_ready & BIT_ULL(0)) == 0);
+	} while (!(tstamp_ready & BIT_ULL(ad->ptp_tx_index)));
 
 	ret = ice_read_phy_tstamp(hw, ad->ptp_tx_block, ad->ptp_tx_index, &tstamp);
 	if (ret || tstamp == 0) {
@@ -7260,6 +7464,9 @@ ice_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 
 	ts_ns = ice_tstamp_convert_32b_64b(hw, ad, 1, (tstamp >> 8) & mask);
 	*timestamp = rte_ns_to_timespec(ts_ns);
+
+	if (hw->phy_model == ICE_PHY_E810)
+		(void)ice_clear_phy_tstamp(hw, ad->ptp_tx_block, ad->ptp_tx_index);
 
 	return 0;
 }
