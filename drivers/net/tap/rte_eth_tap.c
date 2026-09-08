@@ -1947,6 +1947,7 @@ clean:
 
 	if (rte_intr_fd_get(pmd->intr_handle) >= 0) {
 		tap_nl_final(rte_intr_fd_get(pmd->intr_handle));
+		/* fd is not owned by the driver, only clear reference here. */
 		rte_intr_fd_set(pmd->intr_handle, -1);
 	}
 
