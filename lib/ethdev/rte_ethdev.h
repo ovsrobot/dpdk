@@ -5478,6 +5478,10 @@ int rte_eth_timesync_enable(uint16_t port_id);
 /**
  * Disable IEEE1588/802.1AS timestamping for an Ethernet device.
  *
+ * The caller must ensure no Tx timestamp operations are in flight before
+ * calling this function, unless the PMD explicitly supports that concurrency.
+ * This function does not make the PMD hardware lifecycle safe by itself.
+ *
  * @param port_id
  *   The port identifier of the Ethernet device.
  *
@@ -5513,6 +5517,10 @@ int rte_eth_timesync_read_rx_timestamp(uint16_t port_id,
 /**
  * Read an IEEE1588/802.1AS Tx timestamp from an Ethernet device.
  *
+ * This API reads the transmit timestamp reported by the device.
+ * The supported Tx timestamp mechanism can be queried with
+ * rte_eth_timesync_tx_slot_caps().
+ *
  * @param port_id
  *   The port identifier of the Ethernet device.
  * @param timestamp
@@ -5527,6 +5535,218 @@ int rte_eth_timesync_read_rx_timestamp(uint16_t port_id,
  */
 int rte_eth_timesync_read_tx_timestamp(uint16_t port_id,
 		struct timespec *timestamp);
+
+/** Valid bit for rte_eth_timesync_dual_domain_timestamp.adjusted_ns. */
+#define RTE_ETH_TIMESYNC_DUAL_DOMAIN_TIMESTAMP_ADJUSTED_VALID	RTE_BIT32(0)
+/** Valid bit for rte_eth_timesync_dual_domain_timestamp.raw_ns. */
+#define RTE_ETH_TIMESYNC_DUAL_DOMAIN_TIMESTAMP_RAW_VALID	RTE_BIT32(1)
+
+/**
+ * Dual-domain Tx timestamp payload in nanoseconds.
+ *
+ * `adjusted_ns` is the synchronized/adjusted domain.
+ * `raw_ns` is the free-running raw hardware clock domain.
+ *
+ * Scalar `int64_t` nanoseconds are used (instead of `struct timespec`) to
+ * keep both domains compact in one payload and to avoid extra split/merge
+ * conversions when processing per-packet timestamp correlation data.
+ */
+struct rte_eth_timesync_dual_domain_timestamp {
+	int64_t adjusted_ns;
+	int64_t raw_ns;
+	uint32_t valid_mask;
+	uint32_t reserved; /**< Reserved for future use, must be zero. */
+};
+
+/** Tx timestamp retrieval mechanism supported by a port. */
+enum rte_eth_timesync_tx_slot_type {
+	RTE_ETH_TIMESYNC_TX_SLOT_NONE       = 0, /**< not supported */
+	/** One hardware latch register shared across all packets. */
+	RTE_ETH_TIMESYNC_TX_SLOT_SINGLE_REG = 1,
+	/** Per-packet slot bank supports concurrent in-flight correlation. */
+	RTE_ETH_TIMESYNC_TX_SLOT_PER_PACKET = 2,
+};
+
+/**
+ * Tx timestamp capabilities returned by
+ * rte_eth_timesync_tx_slot_caps().
+ */
+struct rte_eth_timesync_tx_slot_caps {
+	enum rte_eth_timesync_tx_slot_type type; /**< mechanism supported by this port */
+	uint32_t max_slots; /**< concurrent slots available; valid only for PER_PACKET */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Query the Tx timestamp capability of a port.
+ *
+ * Reports whether the hardware uses a single shared latch register
+ * (RTE_ETH_TIMESYNC_TX_SLOT_SINGLE_REG) or a per-packet slot bank
+ * (RTE_ETH_TIMESYNC_TX_SLOT_PER_PACKET), and how many concurrent slots exist.
+ *
+ * Applications use this to select the mechanism supported by the port:
+ *   - Per-packet slots: rte_eth_timesync_tx_slot_alloc() +
+ *     rte_eth_timesync_tx_slot_read()
+ *   - Single register: rte_eth_timesync_read_tx_timestamp()
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param caps
+ *   Output Tx timestamp capability structure.
+ *
+ * @return
+ *   - 0: Success.
+ *   - -ENODEV: The port ID is invalid.
+ *   - -EIO: if device is removed.
+ *   - -ENOTSUP: The function is not supported by the Ethernet driver.
+ *   - -EINVAL: Invalid parameters.
+ */
+__rte_experimental
+int rte_eth_timesync_tx_slot_caps(uint16_t port_id,
+		struct rte_eth_timesync_tx_slot_caps *caps);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Allocate a Tx timestamp slot handle for per-packet timestamp correlation.
+ *
+ * Intended for PTP/event timestamping rates.
+ *
+ * Slots are allocated from a port-global pool and can be used across any
+ * Tx queue on the port. The application stamps an mbuf with the slot handle
+ * using rte_eth_timesync_tx_slot_stamp() before transmission.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param slot_id
+ *   Output opaque handle identifying the allocated slot.
+ *   The value is meaningful only to the PMD that produced it; the application
+ *   must not interpret, modify, or fabricate slot handles.
+ *
+ * @return
+ *   - 0: Success.
+ *   - -ENOSPC: No free slots are available.
+ *   - -ENODEV: The port ID is invalid.
+ *   - -EIO: if device is removed.
+ *   - -ENOTSUP: The function is not supported by the Ethernet driver.
+ *   - -EINVAL: Invalid parameters.
+ */
+__rte_experimental
+int rte_eth_timesync_tx_slot_alloc(uint16_t port_id, uint32_t *slot_id);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Read a per-packet Tx timestamp using a previously allocated slot handle.
+ *
+ * Intended for PTP/event timestamping rates.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param slot_id
+ *   Opaque slot handle returned by rte_eth_timesync_tx_slot_alloc().
+ *   Passing a handle not returned by alloc, or one that has already been
+ *   released, is undefined behaviour — PMDs should return -EINVAL.
+ * @param timestamp
+ *   Output dual-domain timestamp payload.
+ *
+ * @return
+ *   - 0: Success.
+ *   - -EAGAIN: Timestamp is not ready yet.
+ *   - -ENODEV: The port ID is invalid.
+ *   - -EIO: if device is removed.
+ *   - -ENOTSUP: The function is not supported by the Ethernet driver.
+ *   - -EINVAL: Invalid parameters or unrecognised slot handle.
+ */
+__rte_experimental
+int rte_eth_timesync_tx_slot_read(uint16_t port_id,
+		uint32_t slot_id,
+		struct rte_eth_timesync_dual_domain_timestamp *timestamp);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Release a previously allocated Tx timestamp slot handle.
+ *
+ * After release, the handle must not be reused for read or stamp_mbuf.
+ * Releasing an already-released or invalid handle is undefined behaviour —
+ * PMDs should return -EINVAL.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param slot_id
+ *   Opaque slot handle to release.
+ *
+ * @return
+ *   - 0: Success.
+ *   - -ENODEV: The port ID is invalid.
+ *   - -EIO: if device is removed.
+ *   - -ENOTSUP: The function is not supported by the Ethernet driver.
+ *   - -EINVAL: Invalid parameters.
+ */
+__rte_experimental
+int rte_eth_timesync_tx_slot_release(uint16_t port_id, uint32_t slot_id);
+
+/** Mbuf dynfield name for the Tx timestamp slot handle. */
+#define RTE_ETH_TIMESYNC_TX_SLOT_DYNFIELD_NAME "rte_eth_timesync_tx_slot"
+/** Mbuf dynflag name indicating Tx timestamp slot handle is present. */
+#define RTE_ETH_TIMESYNC_TX_SLOT_DYNFLAG_NAME "rte_eth_timesync_tx_slot_flag"
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Register the per-packet Tx timestamp slot dynfield and dynflag in the mbuf
+ * layout.
+ *
+ * Must be called before the first rte_pktmbuf_pool_create() when the
+ * application intends to use rte_eth_timesync_tx_slot_stamp() for
+ * per-packet Tx timestamp correlation. Calling it after pool creation may
+ * still succeed if the default dynfield area has not been exhausted.
+ *
+ * This must be called explicitly by the application; it is not called
+ * automatically by rte_eth_timesync_enable(). It may be called before or
+ * after rte_eth_timesync_enable().
+ *
+ * Note: dynfields and dynflags cannot be unregistered in DPDK. Once
+ * registered they remain allocated for the lifetime of the process, whether
+ * or not the application ultimately uses per-packet slot correlation.
+ *
+ * @return
+ *   - 0: Success (or already registered).
+ *   - -ENOTSUP: Registration and lookup both failed (no dynfield space).
+ */
+__rte_experimental
+int rte_eth_timesync_tx_slot_dynfield_register(void);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Set Tx timestamp slot metadata in an mbuf so the Tx path steers the
+ * NIC to capture the timestamp in the correct per-packet slot.
+ *
+ * rte_eth_timesync_tx_slot_dynfield_register() must be called before this
+ * function. This function must be called after
+ * rte_eth_timesync_tx_slot_alloc() and before rte_eth_tx_burst().
+ * It is safe for concurrent callers that stamp separate mbufs. Applications
+ * must use this function only for ports that report
+ * RTE_ETH_TIMESYNC_TX_SLOT_PER_PACKET from rte_eth_timesync_tx_slot_caps().
+ *
+ * @param slot_id  Opaque slot handle from rte_eth_timesync_tx_slot_alloc().
+ * @param m        Mbuf to stamp.
+ * @return
+ *   - 0: Success.
+ *   - -EINVAL: Invalid parameters.
+ *   - -ENOTSUP: The dynfield is not registered.
+ */
+__rte_experimental
+int rte_eth_timesync_tx_slot_stamp(uint32_t slot_id, struct rte_mbuf *m);
 
 /**
  * Adjust the timesync clock on an Ethernet device.

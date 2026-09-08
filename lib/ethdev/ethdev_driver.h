@@ -795,6 +795,26 @@ typedef int (*eth_timesync_read_rx_timestamp_t)(struct rte_eth_dev *dev,
 typedef int (*eth_timesync_read_tx_timestamp_t)(struct rte_eth_dev *dev,
 						struct timespec *timestamp);
 
+/** @internal Query Tx timestamp hardware capability (single-register vs per-packet slot bank). */
+typedef int (*eth_timesync_tx_slot_get_caps_t)(struct rte_eth_dev *dev,
+		struct rte_eth_timesync_tx_slot_caps *caps);
+
+/** @internal Allocate a per-packet Tx timestamp slot handle. */
+typedef int (*eth_timesync_tx_slot_alloc_t)(struct rte_eth_dev *dev,
+		uint32_t *slot_id);
+
+/** @internal Read a dual-domain Tx timestamp by slot handle. */
+typedef int (*eth_timesync_tx_slot_read_t)(struct rte_eth_dev *dev,
+		uint32_t slot_id,
+		struct rte_eth_timesync_dual_domain_timestamp *timestamp);
+
+/** @internal Release a previously allocated Tx timestamp slot handle. */
+typedef int (*eth_timesync_tx_slot_release_t)(struct rte_eth_dev *dev,
+		uint32_t slot_id);
+
+extern int rte_eth_timesync_tx_slot_dynfield_offset;
+extern uint64_t rte_eth_timesync_tx_slot_dynflag;
+
 /** @internal Function used to adjust the device clock. */
 typedef int (*eth_timesync_adjust_time)(struct rte_eth_dev *dev, int64_t);
 
@@ -1561,6 +1581,14 @@ struct eth_dev_ops {
 	eth_timesync_read_rx_timestamp_t timesync_read_rx_timestamp;
 	/** Read the IEEE1588/802.1AS Tx timestamp */
 	eth_timesync_read_tx_timestamp_t timesync_read_tx_timestamp;
+	/** Query Tx timestamp hardware capability (single-reg vs per-packet) */
+	eth_timesync_tx_slot_get_caps_t timesync_tx_slot_get_caps;
+	/** Allocate a Tx timestamp slot handle */
+	eth_timesync_tx_slot_alloc_t timesync_tx_slot_alloc;
+	/** Read a Tx timestamp using a slot handle */
+	eth_timesync_tx_slot_read_t timesync_tx_slot_read;
+	/** Release a Tx timestamp slot handle */
+	eth_timesync_tx_slot_release_t timesync_tx_slot_release;
 	/** Adjust the device clock */
 	eth_timesync_adjust_time   timesync_adjust_time;
 	/** Adjust the clock frequency */

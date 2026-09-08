@@ -21,6 +21,7 @@
 #include <rte_mempool.h>
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
+#include <rte_mbuf_dyn.h>
 #include <rte_errno.h>
 #include <rte_spinlock.h>
 #include <rte_string_fns.h>
@@ -6118,7 +6119,6 @@ rte_eth_dev_rx_intr_disable(uint16_t port_id,
 	return ret;
 }
 
-
 RTE_EXPORT_SYMBOL(rte_eth_add_rx_callback)
 const struct rte_eth_rxtx_callback *
 rte_eth_add_rx_callback(uint16_t port_id, uint16_t queue_id,
@@ -6603,6 +6603,11 @@ rte_eth_dev_set_mc_addr_list(uint16_t port_id,
 	return ret;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_timesync_tx_slot_dynfield_offset)
+int rte_eth_timesync_tx_slot_dynfield_offset = -1;
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_timesync_tx_slot_dynflag)
+uint64_t rte_eth_timesync_tx_slot_dynflag;
+
 RTE_EXPORT_SYMBOL(rte_eth_timesync_enable)
 int
 rte_eth_timesync_enable(uint16_t port_id)
@@ -6683,7 +6688,7 @@ rte_eth_timesync_read_tx_timestamp(uint16_t port_id,
 
 	if (timestamp == NULL) {
 		RTE_ETHDEV_LOG_LINE(ERR,
-			"Cannot read ethdev port %u Tx timestamp to NULL",
+			"Cannot read Tx timestamp for ethdev port %u: timestamp is NULL",
 			port_id);
 		return -EINVAL;
 	}
@@ -6697,6 +6702,148 @@ rte_eth_timesync_read_tx_timestamp(uint16_t port_id,
 
 	return ret;
 
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_timesync_tx_slot_alloc, 26.11)
+int rte_eth_timesync_tx_slot_alloc(uint16_t port_id, uint32_t *slot_id)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (slot_id == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Cannot allocate Tx timestamp slot for ethdev port %u: slot_id is NULL",
+			port_id);
+		return -EINVAL;
+	}
+
+	if (dev->dev_ops->timesync_tx_slot_alloc == NULL)
+		return -ENOTSUP;
+
+	return eth_err(port_id,
+			dev->dev_ops->timesync_tx_slot_alloc(dev, slot_id));
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_timesync_tx_slot_caps, 26.11)
+int
+rte_eth_timesync_tx_slot_caps(uint16_t port_id,
+		struct rte_eth_timesync_tx_slot_caps *caps)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (caps == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Cannot get Tx timestamp capabilities for ethdev port %u: caps is NULL",
+			port_id);
+		return -EINVAL;
+	}
+
+	if (dev->dev_ops->timesync_tx_slot_get_caps == NULL)
+		return -ENOTSUP;
+
+	return eth_err(port_id,
+			dev->dev_ops->timesync_tx_slot_get_caps(dev, caps));
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_timesync_tx_slot_read, 26.11)
+int
+rte_eth_timesync_tx_slot_read(uint16_t port_id,
+					uint32_t slot_id,
+					struct rte_eth_timesync_dual_domain_timestamp *timestamp)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (timestamp == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Cannot read Tx timestamp slot for ethdev port %u: timestamp is NULL",
+			port_id);
+		return -EINVAL;
+	}
+
+	if (dev->dev_ops->timesync_tx_slot_read == NULL)
+		return -ENOTSUP;
+
+	return eth_err(port_id,
+			dev->dev_ops->timesync_tx_slot_read(dev,
+				slot_id, timestamp));
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_timesync_tx_slot_release, 26.11)
+int rte_eth_timesync_tx_slot_release(uint16_t port_id, uint32_t slot_id)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (dev->dev_ops->timesync_tx_slot_release == NULL)
+		return -ENOTSUP;
+
+	return eth_err(port_id,
+			dev->dev_ops->timesync_tx_slot_release(dev,
+				slot_id));
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_timesync_tx_slot_dynfield_register, 26.11)
+int rte_eth_timesync_tx_slot_dynfield_register(void)
+{
+	const struct rte_mbuf_dynfield slot_dynfield = {
+		.name  = RTE_ETH_TIMESYNC_TX_SLOT_DYNFIELD_NAME,
+		.size  = sizeof(uint32_t),
+		.align = alignof(uint32_t),
+	};
+	int flag_bit;
+
+	if (rte_eth_timesync_tx_slot_dynfield_offset >= 0 &&
+	    rte_eth_timesync_tx_slot_dynflag != 0)
+		return 0;
+
+	if (rte_eth_timesync_tx_slot_dynfield_offset < 0) {
+		rte_eth_timesync_tx_slot_dynfield_offset =
+				rte_mbuf_dynfield_register(&slot_dynfield);
+		if (rte_eth_timesync_tx_slot_dynfield_offset < 0)
+			rte_eth_timesync_tx_slot_dynfield_offset =
+					rte_mbuf_dynfield_lookup(
+						RTE_ETH_TIMESYNC_TX_SLOT_DYNFIELD_NAME, NULL);
+	}
+	if (rte_eth_timesync_tx_slot_dynfield_offset < 0)
+		return -ENOTSUP;
+
+	if (rte_eth_timesync_tx_slot_dynflag == 0) {
+		flag_bit = rte_mbuf_dynflag_register(
+			&(const struct rte_mbuf_dynflag){
+				.name = RTE_ETH_TIMESYNC_TX_SLOT_DYNFLAG_NAME});
+		if (flag_bit < 0)
+			flag_bit = rte_mbuf_dynflag_lookup(
+				RTE_ETH_TIMESYNC_TX_SLOT_DYNFLAG_NAME, NULL);
+		if (flag_bit < 0)
+			return -ENOTSUP;
+		rte_eth_timesync_tx_slot_dynflag = RTE_BIT64(flag_bit);
+	}
+
+	return 0;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_timesync_tx_slot_stamp, 26.11)
+int rte_eth_timesync_tx_slot_stamp(uint32_t slot_id, struct rte_mbuf *m)
+{
+	if (unlikely(m == NULL))
+		return -EINVAL;
+	if (unlikely(rte_eth_timesync_tx_slot_dynfield_offset < 0 ||
+		     rte_eth_timesync_tx_slot_dynflag == 0))
+		return -ENOTSUP;
+	*RTE_MBUF_DYNFIELD(m, rte_eth_timesync_tx_slot_dynfield_offset,
+			   uint32_t *) = slot_id;
+	m->ol_flags |= rte_eth_timesync_tx_slot_dynflag;
+	return 0;
 }
 
 RTE_EXPORT_SYMBOL(rte_eth_timesync_adjust_time)
