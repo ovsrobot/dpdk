@@ -1902,7 +1902,7 @@ mlx5_traffic_enable(struct rte_eth_dev *dev)
 		}
 	}
 	/* Add MAC address flows. */
-	for (i = 0; i != MLX5_MAX_MAC_ADDRESSES; ++i) {
+	for (i = 0; i != priv->sh->dev_cap.max_mac_addrs; ++i) {
 		struct rte_ether_addr *mac = &dev->data->mac_addrs[i];
 
 		/* Add flows for unicast and multicast mac addresses added by API. */
@@ -2172,7 +2172,7 @@ mlx5_traffic_vlan_add(struct rte_eth_dev *dev, const uint16_t vid)
 		return 0;
 
 	/* Add all unicast DMAC flow rules with new VLAN attached. */
-	for (i = 0; i != MLX5_MAX_MAC_ADDRESSES; ++i) {
+	for (i = 0; i != priv->sh->dev_cap.max_mac_addrs; ++i) {
 		struct rte_ether_addr *mac = &dev->data->mac_addrs[i];
 
 		if (rte_is_zero_ether_addr(mac))
@@ -2189,7 +2189,7 @@ mlx5_traffic_vlan_add(struct rte_eth_dev *dev, const uint16_t vid)
 		 * Removing after creating VLAN rules so that traffic "gap" is not introduced.
 		 */
 
-		for (i = 0; i != MLX5_MAX_MAC_ADDRESSES; ++i) {
+		for (i = 0; i != priv->sh->dev_cap.max_mac_addrs; ++i) {
 			struct rte_ether_addr *mac = &dev->data->mac_addrs[i];
 
 			if (rte_is_zero_ether_addr(mac))
@@ -2227,7 +2227,7 @@ mlx5_traffic_vlan_remove(struct rte_eth_dev *dev, const uint16_t vid)
 		 * Recreating first to ensure no traffic "gap".
 		 */
 
-		for (i = 0; i != MLX5_MAX_MAC_ADDRESSES; ++i) {
+		for (i = 0; i != priv->sh->dev_cap.max_mac_addrs; ++i) {
 			struct rte_ether_addr *mac = &dev->data->mac_addrs[i];
 
 			if (rte_is_zero_ether_addr(mac))
@@ -2240,7 +2240,7 @@ mlx5_traffic_vlan_remove(struct rte_eth_dev *dev, const uint16_t vid)
 	}
 
 	/* Remove all unicast DMAC flow rules with this VLAN. */
-	for (i = 0; i != MLX5_MAX_MAC_ADDRESSES; ++i) {
+	for (i = 0; i != priv->sh->dev_cap.max_mac_addrs; ++i) {
 		struct rte_ether_addr *mac = &dev->data->mac_addrs[i];
 
 		if (rte_is_zero_ether_addr(mac))
