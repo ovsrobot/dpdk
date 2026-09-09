@@ -910,6 +910,14 @@ static int event_register(struct lcore_conf *qconf)
 	return 0;
 }
 
+static void
+rx_interrupt_wait(struct lcore_conf *qconf)
+{
+	turn_on_off_intr(qconf, 1);
+	sleep_until_rx_interrupt(qconf->n_rx_queue, rte_lcore_id());
+	turn_on_off_intr(qconf, 0);
+}
+
 /* Main processing loop. 8< */
 static int main_intr_loop(__rte_unused void *dummy)
 {
@@ -1054,11 +1062,7 @@ start_rx:
 			else {
 				/* suspend until rx interrupt triggers */
 				if (intr_en) {
-					turn_on_off_intr(qconf, 1);
-					sleep_until_rx_interrupt(
-							qconf->n_rx_queue,
-							lcore_id);
-					turn_on_off_intr(qconf, 0);
+					rx_interrupt_wait(qconf);
 					/**
 					 * start receiving packets immediately
 					 */
@@ -1372,11 +1376,7 @@ start_rx:
 			else {
 				/* suspend until rx interrupt triggers */
 				if (intr_en) {
-					turn_on_off_intr(qconf, 1);
-					sleep_until_rx_interrupt(
-							qconf->n_rx_queue,
-							lcore_id);
-					turn_on_off_intr(qconf, 0);
+					rx_interrupt_wait(qconf);
 					/**
 					 * start receiving packets immediately
 					 */
