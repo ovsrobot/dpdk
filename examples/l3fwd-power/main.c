@@ -368,6 +368,7 @@ struct __rte_cache_aligned lcore_conf {
 	struct rte_eth_dev_tx_buffer *tx_buffer[RTE_MAX_ETHPORTS];
 	lookup_struct_t * ipv4_lookup_struct;
 	lookup_struct_t * ipv6_lookup_struct;
+	bool intr_registered;
 };
 
 struct __rte_cache_aligned lcore_stats {
@@ -953,6 +954,16 @@ rx_interrupt_wait(struct lcore_conf *qconf)
 	if (ret != 0)
 		return ret;
 
+	/* some PMDs expose the interrupt fd only once the queue is armed */
+	if (!qconf->intr_registered) {
+		ret = event_register(qconf);
+		if (ret != 0) {
+			rx_intr_disable_all(qconf);
+			return ret;
+		}
+		qconf->intr_registered = true;
+	}
+
 	sleep_until_rx_interrupt(qconf->n_rx_queue, rte_lcore_id());
 	rx_intr_disable_all(qconf);
 	return 0;
@@ -970,7 +981,7 @@ static int main_intr_loop(__rte_unused void *dummy)
 	struct lcore_rx_queue *rx_queue;
 	uint32_t lcore_rx_idle_count = 0;
 	uint32_t lcore_idle_hint = 0;
-	int intr_en = 0;
+	int intr_en = 1;
 	int ret;
 
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
@@ -997,12 +1008,6 @@ static int main_intr_loop(__rte_unused void *dummy)
 				" -- lcoreid=%u portid=%u rxqueueid=%" PRIu16 "\n",
 				lcore_id, portid, queueid);
 	}
-
-	/* add into event wait list */
-	if (event_register(qconf) == 0)
-		intr_en = 1;
-	else
-		RTE_LOG(INFO, L3FWD_POWER, "RX interrupt won't enable.\n");
 
 	while (!is_done()) {
 		stats[lcore_id].nb_iteration_looped++;
@@ -1107,6 +1112,8 @@ start_rx:
 					if (ret == -EAGAIN)
 						goto start_rx;
 					if (ret != 0) {
+						RTE_LOG(INFO, L3FWD_POWER,
+							"RX interrupt won't enable.\n");
 						intr_en = 0;
 						continue;
 					}
@@ -1260,7 +1267,7 @@ main_legacy_loop(__rte_unused void *dummy)
 	enum freq_scale_hint_t lcore_scaleup_hint;
 	uint32_t lcore_rx_idle_count = 0;
 	uint32_t lcore_idle_hint = 0;
-	int intr_en = 0;
+	int intr_en = 1;
 	int ret;
 
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S * BURST_TX_DRAIN_US;
@@ -1285,12 +1292,6 @@ main_legacy_loop(__rte_unused void *dummy)
 		RTE_LOG(INFO, L3FWD_POWER, " -- lcoreid=%u portid=%u "
 			"rxqueueid=%" PRIu16 "\n", lcore_id, portid, queueid);
 	}
-
-	/* add into event wait list */
-	if (event_register(qconf) == 0)
-		intr_en = 1;
-	else
-		RTE_LOG(INFO, L3FWD_POWER, "RX interrupt won't enable.\n");
 
 	while (!is_done()) {
 		stats[lcore_id].nb_iteration_looped++;
@@ -1428,6 +1429,8 @@ start_rx:
 					if (ret == -EAGAIN)
 						goto start_rx;
 					if (ret != 0) {
+						RTE_LOG(INFO, L3FWD_POWER,
+							"RX interrupt won't enable.\n");
 						intr_en = 0;
 						continue;
 					}
