@@ -85,6 +85,7 @@ npa_aura_pool_init(struct mbox *m_box, uint32_t aura_id, struct npa_aura_s *aura
 	struct npa_aq_enq_req *aura_init_req, *pool_init_req;
 	struct npa_aq_enq_rsp *aura_init_rsp, *pool_init_rsp;
 	struct mbox_dev *mdev = &m_box->dev[0];
+	struct ndc_sync_op *ndc_req;
 	int rc = -ENOSPC, off;
 	struct mbox *mbox;
 
@@ -128,10 +129,33 @@ npa_aura_pool_init(struct mbox *m_box, uint32_t aura_id, struct npa_aura_s *aura
 	off = mbox->rx_start + aura_init_rsp->hdr.next_msgoff;
 	pool_init_rsp = (struct npa_aq_enq_rsp *)((uintptr_t)mdev->mbase + off);
 
-	if (aura_init_rsp->hdr.rc == 0 && pool_init_rsp->hdr.rc == 0)
-		rc = 0;
-	else
+	if (aura_init_rsp->hdr.rc != 0 || pool_init_rsp->hdr.rc != 0) {
 		rc = NPA_ERR_AURA_POOL_INIT;
+		goto exit;
+	}
+
+	/* CN20K does not use NDC for NPA */
+	if (roc_model_is_cn20k()) {
+		rc = 0;
+		goto exit;
+	}
+
+	/* Sync NDC-NPA for LF to ensure the new aura/pool contexts are
+	 * visible to the data path before any MMIO aura operations.
+	 */
+	ndc_req = mbox_alloc_msg_ndc_sync_op(mbox);
+	if (ndc_req == NULL) {
+		rc = -ENOSPC;
+		goto exit;
+	}
+	ndc_req->npa_lf_sync = 1;
+	rc = mbox_process(mbox);
+	if (rc) {
+		plt_err("Error on NDC-NPA LF sync after init, rc %d", rc);
+		rc = NPA_ERR_AURA_POOL_INIT;
+		goto exit;
+	}
+	rc = 0;
 exit:
 	mbox_put(mbox);
 	return rc;
