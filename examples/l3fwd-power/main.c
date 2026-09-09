@@ -950,6 +950,26 @@ static int event_register(struct lcore_conf *qconf)
 	return 0;
 }
 
+static bool
+rx_queue_pending(struct lcore_conf *qconf)
+{
+	struct lcore_rx_queue *rx_queue;
+	uint16_t queue_id;
+	uint16_t port_id;
+	int i;
+
+	for (i = 0; i < qconf->n_rx_queue; ++i) {
+		rx_queue = &(qconf->rx_queue_list[i]);
+		port_id = rx_queue->port_id;
+		queue_id = rx_queue->queue_id;
+
+		if (rte_eth_rx_queue_count(port_id, queue_id) > 0)
+			return true;
+	}
+
+	return false;
+}
+
 static int
 rx_interrupt_wait(struct lcore_conf *qconf)
 {
@@ -969,7 +989,12 @@ rx_interrupt_wait(struct lcore_conf *qconf)
 		qconf->intr_registered = true;
 	}
 
-	sleep_until_rx_interrupt(qconf->n_rx_queue, rte_lcore_id());
+	/*
+	 * A packet that arrived during the arm window raises no new wakeup on
+	 * edge-triggered PMDs, so skip the sleep if a queue already has traffic.
+	 */
+	if (!rx_queue_pending(qconf))
+		sleep_until_rx_interrupt(qconf->n_rx_queue, rte_lcore_id());
 	rx_intr_disable_all(qconf);
 	return 0;
 }
