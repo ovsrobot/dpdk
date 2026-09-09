@@ -360,6 +360,8 @@ def call_api(
     include_diff_markers: bool = False,
     verbose: bool = False,
     timeout: int = 120,
+    enable_tools: bool = True,
+    max_tool_rounds: int = 10,
 ) -> tuple[str, TokenUsage]:
     """Build the per-provider request body and dispatch via _common."""
     if provider == "anthropic":
@@ -399,6 +401,8 @@ def call_api(
         request_data,
         timeout=timeout,
         verbose=verbose,
+        enable_tools=enable_tools,
+        max_tool_rounds=max_tool_rounds,
     )
 
 
@@ -665,6 +669,18 @@ Token Usage:
         metavar="SECONDS",
         help="API request timeout in seconds (default: 120)",
     )
+    parser.add_argument(
+        "--no-tools",
+        action="store_true",
+        help="Disable tool calling (git, grep, file read). Tools are enabled by default.",
+    )
+    parser.add_argument(
+        "--max-tool-rounds",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Maximum tool calling rounds (default: 10)",
+    )
 
     # Email options
     email_group = parser.add_argument_group("Email Options")
@@ -811,6 +827,8 @@ Token Usage:
             args.diff,
             args.verbose,
             args.timeout,
+            enable_tools=not args.no_tools,
+            max_tool_rounds=args.max_tool_rounds,
         )
         total_usage.add(call_usage)
 

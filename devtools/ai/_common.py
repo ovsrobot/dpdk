@@ -369,39 +369,35 @@ def _print_verbose_usage(usage: TokenUsage) -> None:
     print("===================", file=sys.stderr)
 
 
-def send_request(
+def _execute_api_call(
     provider: str,
     auth: str,
     model: str,
     request_data: dict[str, Any],
-    *,
-    timeout: int = 120,
-    verbose: bool = False,
-) -> tuple[str, TokenUsage]:
-    """Send a prebuilt request to a provider and return (response_text, usage).
-
-    The caller assembles the provider-specific request body via its own
-    build_*_request helpers (the prompts differ per script). This function
-    handles transport, error reporting, and token-usage extraction.
+    timeout: int,
+) -> dict[str, Any]:
+    """Execute a single API call and return the result.
 
     Args:
-        provider: Provider name (anthropic, openai, xai, google)
-        auth: Authentication string - either "direct:<api_key>" or "vertex"
+        provider: Provider name
+        auth: Authentication string
         model: Model identifier
-        request_data: Provider-specific request payload
+        request_data: Request payload
         timeout: Request timeout in seconds
-        verbose: Show detailed token usage
 
     Returns:
-        Tuple of (response_text, token_usage)
+        API response as dictionary
+
+    Raises:
+        Calls error() on failure (does not return)
     """
-    url, headers, request_data = _build_request_meta(provider, auth, model, request_data)
-    body = json.dumps(request_data).encode("utf-8")
+    url, headers, req_data = _build_request_meta(provider, auth, model, request_data)
+    body = json.dumps(req_data).encode("utf-8")
     req = Request(url, data=body, headers=headers)
 
     try:
         with urlopen(req, timeout=timeout) as response:
-            result = json.loads(response.read().decode("utf-8"))
+            return json.loads(response.read().decode("utf-8"))
     except HTTPError as e:
         error_body = e.read().decode("utf-8")
         try:
@@ -421,7 +417,242 @@ def send_request(
     except TimeoutError:
         error(f"Request timed out after {timeout} seconds")
 
-    usage = _extract_usage(provider, result)
+
+def _handle_anthropic_tool_use(
+    result: dict[str, Any],
+    messages: list[dict[str, Any]],
+    verbose: bool,
+    round_num: int,
+) -> bool:
+    """Handle Anthropic tool use response.
+
+    Args:
+        result: API response
+        messages: Message history (modified in place)
+        verbose: Print debug info
+        round_num: Current round number (for logging)
+
+    Returns:
+        True if tools were used, False otherwise
+    """
+    stop_reason = result.get("stop_reason")
+    if stop_reason != "tool_use":
+        return False
+
+    try:
+        from _tools import execute_tool
+    except ImportError:
+        def execute_tool(tool_name, tool_input):
+            raise RuntimeError(f"Cannot run {tool_name} - bad _tools.py")
+
+    content_blocks = result.get("content", [])
+    tool_results = []
+
     if verbose:
-        _print_verbose_usage(usage)
-    return _extract_text(provider, result), usage
+        print(f"\n=== Tool Use Round {round_num + 1} ===", file=sys.stderr)
+
+    for block in content_blocks:
+        if block.get("type") == "tool_use":
+            tool_name = block.get("name")
+            tool_input = block.get("input", {})
+            tool_use_id = block.get("id")
+
+            if verbose:
+                print(f"Calling tool: {tool_name}", file=sys.stderr)
+                print(f"Input: {json.dumps(tool_input, indent=2)}", file=sys.stderr)
+
+            # Execute the tool
+            try:
+                tool_output = execute_tool(tool_name, tool_input)
+                is_error = False
+            except Exception as e:
+                tool_output = f"Tool error: {e}"
+                is_error = True
+
+            if verbose:
+                output_preview = tool_output[:200] + "..." if len(tool_output) > 200 else tool_output
+                print(f"Output: {output_preview}", file=sys.stderr)
+                if is_error:
+                    print(f"Error occurred", file=sys.stderr)
+
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": tool_use_id,
+                "content": tool_output,
+                "is_error": is_error,
+            })
+
+    # Add assistant message with tool use
+    messages.append({
+        "role": "assistant",
+        "content": content_blocks,
+    })
+
+    # Add user message with tool results
+    messages.append({
+        "role": "user",
+        "content": tool_results,
+    })
+
+    return True
+
+
+def _handle_openai_tool_use(
+    result: dict[str, Any],
+    messages: list[dict[str, Any]],
+    verbose: bool,
+    round_num: int,
+) -> bool:
+    """Handle OpenAI/xAI tool use response.
+
+    Args:
+        result: API response
+        messages: Message history (modified in place)
+        verbose: Print debug info
+        round_num: Current round number (for logging)
+
+    Returns:
+        True if tools were used, False otherwise
+    """
+    choices = result.get("choices", [])
+    if not choices:
+        return False
+
+    message = choices[0].get("message", {})
+    tool_calls = message.get("tool_calls")
+
+    if not tool_calls:
+        return False
+
+    if verbose:
+        print(f"\n=== Tool Use Round {round_num + 1} ===", file=sys.stderr)
+
+    # Add assistant message with tool calls
+    messages.append(message)
+
+    # Execute each tool and collect results
+    tool_messages = []
+    for tool_call in tool_calls:
+        tool_id = tool_call.get("id")
+        function = tool_call.get("function", {})
+        tool_name = function.get("name")
+        tool_args_str = function.get("arguments", "{}")
+
+        try:
+            tool_input = json.loads(tool_args_str)
+        except json.JSONDecodeError:
+            tool_input = {}
+
+        if verbose:
+            print(f"Calling tool: {tool_name}", file=sys.stderr)
+            print(f"Input: {json.dumps(tool_input, indent=2)}", file=sys.stderr)
+
+        # Execute the tool
+        try:
+            from _tools import execute_tool
+            tool_output = execute_tool(tool_name, tool_input)
+        except Exception as e:
+            tool_output = f"Tool error: {e}"
+
+        if verbose:
+            output_preview = tool_output[:200] + "..." if len(tool_output) > 200 else tool_output
+            print(f"Output: {output_preview}", file=sys.stderr)
+
+        tool_messages.append({
+            "role": "tool",
+            "tool_call_id": tool_id,
+            "name": tool_name,
+            "content": tool_output,
+        })
+
+    # Add all tool results as separate messages
+    messages.extend(tool_messages)
+    return True
+
+
+def send_request(
+    provider: str,
+    auth: str,
+    model: str,
+    request_data: dict[str, Any],
+    *,
+    timeout: int = 120,
+    verbose: bool = False,
+    enable_tools: bool = False,
+    max_tool_rounds: int = 10,
+) -> tuple[str, TokenUsage]:
+    """Send a prebuilt request to a provider and return (response_text, usage).
+
+    The caller assembles the provider-specific request body via its own
+    build_*_request helpers (the prompts differ per script). This function
+    handles transport, error reporting, and token-usage extraction.
+
+    If enable_tools is True, implements a tool-use loop where the model can
+    call tools, this function executes them, and sends results back until
+    the model returns a text response.
+
+    Args:
+        provider: Provider name (anthropic, openai, xai, google)
+        auth: Authentication string - either "direct:<api_key>" or "vertex"
+        model: Model identifier
+        request_data: Provider-specific request payload
+        timeout: Request timeout in seconds
+        verbose: Show detailed token usage
+        enable_tools: Enable tool calling support
+        max_tool_rounds: Maximum number of tool calling rounds (default: 10)
+
+    Returns:
+        Tuple of (response_text, token_usage)
+    """
+    # Add tools to request if enabled
+    if enable_tools:
+        if provider == "anthropic":
+            from _tools import get_tools_for_provider
+            request_data["tools"] = get_tools_for_provider(provider)
+        elif provider in ("openai", "xai"):
+            from _tools import get_tools_for_provider
+            request_data["tools"] = get_tools_for_provider(provider)
+            # Disable parallel tool calling for OpenAI/xAI (sequential execution only)
+            request_data["parallel_tool_calls"] = False
+        elif provider == "google":
+            # Google Gemini tool calling not yet implemented
+            if verbose:
+                print("Warning: Tool calling not yet supported for Google Gemini", file=sys.stderr)
+            enable_tools = False
+
+    total_usage = TokenUsage()
+    messages = request_data.get("messages", [])
+
+    # Tool use loop
+    for round_num in range(max_tool_rounds):
+        result = _execute_api_call(provider, auth, model, request_data, timeout)
+
+        usage = _extract_usage(provider, result)
+        total_usage.add(usage)
+
+        # Check if tools were used
+        tools_used = False
+        if enable_tools:
+            if provider == "anthropic":
+                tools_used = _handle_anthropic_tool_use(result, messages, verbose, round_num)
+            elif provider in ("openai", "xai"):
+                tools_used = _handle_openai_tool_use(result, messages, verbose, round_num)
+
+        if not tools_used:
+            # Final response
+            if verbose and round_num > 0:
+                print(f"=== Tool Use Complete ({round_num} rounds) ===\n", file=sys.stderr)
+            if verbose:
+                _print_verbose_usage(total_usage)
+            return _extract_text(provider, result), total_usage
+
+        # Update messages for next round
+        request_data["messages"] = messages
+
+    # Max rounds exceeded
+    if verbose:
+        print(f"Warning: Max tool rounds ({max_tool_rounds}) exceeded", file=sys.stderr)
+        _print_verbose_usage(total_usage)
+
+    # Return whatever we have
+    return _extract_text(provider, result), total_usage

@@ -589,6 +589,8 @@ def call_api(
     output_format: str = "text",
     verbose: bool = False,
     timeout: int = 300,
+    enable_tools: bool = True,
+    max_tool_rounds: int = 10,
 ) -> tuple[str, TokenUsage]:
     """Build the per-provider request body and dispatch via _common."""
     if provider == "anthropic":
@@ -625,6 +627,8 @@ def call_api(
         request_data,
         timeout=timeout,
         verbose=verbose,
+        enable_tools=enable_tools,
+        max_tool_rounds=max_tool_rounds,
     )
 
 
@@ -870,6 +874,18 @@ Exit Codes:
         metavar="SECONDS",
         help="API request timeout in seconds (default: 300)",
     )
+    parser.add_argument(
+        "--no-tools",
+        action="store_true",
+        help="Disable tool calling (git, grep, file read). Tools are enabled by default.",
+    )
+    parser.add_argument(
+        "--max-tool-rounds",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Maximum tool calling rounds (default: 10)",
+    )
 
     # Date and release options
     parser.add_argument(
@@ -1079,6 +1095,8 @@ Exit Codes:
                     args.output_format,
                     args.verbose,
                     args.timeout,
+                    enable_tools=not args.no_tools,
+                    max_tool_rounds=args.max_tool_rounds,
                 )
                 total_usage.add(call_usage)
                 all_reviews.append((patch_label, review_text))
@@ -1149,6 +1167,8 @@ Exit Codes:
                     args.output_format,
                     args.verbose,
                     args.timeout,
+                    enable_tools=not args.no_tools,
+                    max_tool_rounds=args.max_tool_rounds,
                 )
                 total_usage.add(call_usage)
                 all_reviews.append((chunk_label, review_text))
@@ -1203,6 +1223,8 @@ Exit Codes:
             args.output_format,
             args.verbose,
             args.timeout,
+            enable_tools=not args.no_tools,
+            max_tool_rounds=args.max_tool_rounds,
         )
         total_usage.add(call_usage)
 
