@@ -10,7 +10,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdarg.h>
-#include <sys/mman.h>
 
 #include <rte_ethdev.h>
 #include <rte_log.h>
@@ -23,9 +22,9 @@
 
 #include <dpaa2_ethdev.h>
 #include <dpaa2_pmd_logs.h>
+#include "dpaa2_parser_decode.h"
 
 static char *dpaa2_flow_control_log;
-static int dpaa2_sp_loaded = -1;
 
 /* Default size of a key */
 #define DPNI_DEFAULT_KEY_SIZE 24
@@ -433,92 +432,6 @@ dpaa2_flow_fs_entry_log(const char *log_info,
 	for (idx = 0; idx < flow->fs_rule_size; idx++)
 		DPAA2_FLOW_DUMP("%02x ", mask[idx]);
 	DPAA2_FLOW_DUMP("\r\n");
-}
-
-/** For LX2160A, LS2088A and LS1088A*/
-#define WRIOP_CCSR_BASE 0x8b80000
-#define WRIOP_CCSR_CTLU_OFFSET 0
-#define WRIOP_CCSR_CTLU_PARSER_OFFSET 0
-#define WRIOP_CCSR_CTLU_PARSER_INGRESS_OFFSET 0
-
-#define WRIOP_INGRESS_PARSER_PHY \
-	(WRIOP_CCSR_BASE + WRIOP_CCSR_CTLU_OFFSET + \
-	WRIOP_CCSR_CTLU_PARSER_OFFSET + \
-	WRIOP_CCSR_CTLU_PARSER_INGRESS_OFFSET)
-
-struct dpaa2_parser_ccsr {
-	uint32_t psr_cfg;
-	uint32_t psr_idle;
-	uint32_t psr_pclm;
-	uint8_t psr_ver_min;
-	uint8_t psr_ver_maj;
-	uint8_t psr_id1_l;
-	uint8_t psr_id1_h;
-	uint32_t psr_rev2;
-	uint8_t rsv[0x2c];
-	uint8_t sp_ins[4032];
-};
-
-int
-dpaa2_soft_parser_loaded(void)
-{
-	int fd, i, ret = 0;
-	struct dpaa2_parser_ccsr *parser_ccsr = NULL;
-
-	dpaa2_flow_control_log = getenv("DPAA2_FLOW_CONTROL_LOG");
-
-	if (dpaa2_sp_loaded >= 0)
-		return dpaa2_sp_loaded;
-
-	fd = open("/dev/mem", O_RDWR | O_SYNC);
-	if (fd < 0) {
-		DPAA2_PMD_ERR("open \"/dev/mem\" ERROR(%d)", fd);
-		ret = fd;
-		goto exit;
-	}
-
-	parser_ccsr = mmap(NULL, sizeof(struct dpaa2_parser_ccsr),
-		PROT_READ | PROT_WRITE, MAP_SHARED, fd,
-		WRIOP_INGRESS_PARSER_PHY);
-	if (!parser_ccsr) {
-		DPAA2_PMD_ERR("Map 0x%" PRIx64 "(size=0x%x) failed",
-			(uint64_t)WRIOP_INGRESS_PARSER_PHY,
-			(uint32_t)sizeof(struct dpaa2_parser_ccsr));
-		ret = -ENOBUFS;
-		goto exit;
-	}
-
-	DPAA2_PMD_INFO("Parser ID:0x%02x%02x, Rev:major(%02x), minor(%02x)",
-		parser_ccsr->psr_id1_h, parser_ccsr->psr_id1_l,
-		parser_ccsr->psr_ver_maj, parser_ccsr->psr_ver_min);
-
-	if (dpaa2_flow_control_log) {
-		for (i = 0; i < 64; i++) {
-			DPAA2_FLOW_DUMP("%02x ",
-				parser_ccsr->sp_ins[i]);
-			if (!((i + 1) % 16))
-				DPAA2_FLOW_DUMP("\r\n");
-		}
-	}
-
-	for (i = 0; i < 16; i++) {
-		if (parser_ccsr->sp_ins[i]) {
-			dpaa2_sp_loaded = 1;
-			break;
-		}
-	}
-	if (dpaa2_sp_loaded < 0)
-		dpaa2_sp_loaded = 0;
-
-	ret = dpaa2_sp_loaded;
-
-exit:
-	if (parser_ccsr)
-		munmap(parser_ccsr, sizeof(struct dpaa2_parser_ccsr));
-	if (fd >= 0)
-		close(fd);
-
-	return ret;
 }
 
 static int
@@ -3539,6 +3452,11 @@ dpaa2_configure_flow_gre(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
+	if (!priv->sp_protocol) {
+		DPAA2_PMD_ERR("vXLAN flow with spec is not supported without SP.");
+		return -ENOTSUP;
+	}
+
 	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
 		RTE_FLOW_ITEM_TYPE_GRE);
 	if (ret) {
@@ -3583,6 +3501,11 @@ dpaa2_configure_flow_vxlan(struct dpaa2_dev_flow *flow,
 	const struct rte_flow_item_vxlan *spec, *mask;
 	struct dpaa2_dev_priv *priv = dev->data->dev_private;
 	const struct rte_flow_item *pattern = &dpaa2_pattern->generic_item;
+
+	if (!priv->sp_protocol) {
+		DPAA2_PMD_ERR("eCPRI flow is not supported without SP.");
+		return -ENOTSUP;
+	}
 
 	group = attr->group;
 
@@ -3681,6 +3604,11 @@ dpaa2_configure_flow_ecpri(struct dpaa2_dev_flow *flow,
 	uint64_t mask_data[DPAA2_ECPRI_MAX_EXTRACT_NB];
 	uint8_t extract_size[DPAA2_ECPRI_MAX_EXTRACT_NB];
 	uint8_t extract_off[DPAA2_ECPRI_MAX_EXTRACT_NB];
+
+	if (!priv->sp_protocol) {
+		DPAA2_PMD_ERR("ROCEV2 flow is not supported without SP.");
+		return -ENOTSUP;
+	}
 
 	group = attr->group;
 
@@ -4000,6 +3928,11 @@ dpaa2_configure_flow_gtp(struct dpaa2_dev_flow *flow,
 	struct dpaa2_dev_priv *priv = dev->data->dev_private;
 	const struct rte_flow_item *pattern =
 		&dpaa2_pattern->generic_item;
+
+	if (!priv->sp_protocol) {
+		DPAA2_PMD_ERR("GENEVE flow is not supported without SP.");
+		return -ENOTSUP;
+	}
 
 	group = attr->group;
 
@@ -4726,7 +4659,7 @@ dpaa2_configure_qos_table(struct dpaa2_dev_priv *priv,
 
 static int
 dpaa2_flow_item_convert(const struct rte_flow_item pattern[],
-			struct rte_dpaa2_flow_item **dpaa2_pattern)
+	struct rte_dpaa2_flow_item **dpaa2_pattern, int sp_protocol)
 {
 	struct rte_dpaa2_flow_item *new_pattern;
 	int num = 0, tunnel_start = 0;
@@ -4738,7 +4671,7 @@ dpaa2_flow_item_convert(const struct rte_flow_item pattern[],
 	}
 
 	new_pattern = rte_malloc(NULL, sizeof(struct rte_dpaa2_flow_item) * num,
-				 RTE_CACHE_LINE_SIZE);
+			RTE_CACHE_LINE_SIZE);
 	if (!new_pattern) {
 		DPAA2_PMD_ERR("Failed to alloc %d flow items", num);
 		return -ENOMEM;
@@ -4746,13 +4679,13 @@ dpaa2_flow_item_convert(const struct rte_flow_item pattern[],
 
 	num = 0;
 	while (pattern[num].type != RTE_FLOW_ITEM_TYPE_END) {
-		memcpy(&new_pattern[num].generic_item, &pattern[num],
-		       sizeof(struct rte_flow_item));
+		rte_memcpy(&new_pattern[num].generic_item, &pattern[num],
+			sizeof(struct rte_flow_item));
 		new_pattern[num].in_tunnel = 0;
 
 		if (pattern[num].type == RTE_FLOW_ITEM_TYPE_VXLAN)
 			tunnel_start = 1;
-		else if (tunnel_start)
+		else if (tunnel_start && sp_protocol)
 			new_pattern[num].in_tunnel = 1;
 		num++;
 	}
@@ -4789,7 +4722,8 @@ dpaa2_generic_flow_set(struct dpaa2_dev_flow *flow,
 	if (ret)
 		return ret;
 
-	ret = dpaa2_flow_item_convert(pattern, &dpaa2_pattern);
+	ret = dpaa2_flow_item_convert(pattern, &dpaa2_pattern,
+		priv->sp_protocol);
 	if (ret)
 		return ret;
 
@@ -5130,7 +5064,8 @@ dpaa2_dev_verify_attr(struct dpni_attr *dpni_attr,
 }
 
 static inline int
-dpaa2_dev_verify_patterns(const struct rte_flow_item pattern[])
+dpaa2_dev_verify_patterns(const struct rte_flow_item pattern[],
+	int sp_support)
 {
 	unsigned int i, j, is_found = 0;
 	int ret = 0;
@@ -5154,7 +5089,7 @@ dpaa2_dev_verify_patterns(const struct rte_flow_item pattern[])
 		}
 		if (is_found)
 			continue;
-		if (dpaa2_sp_loaded > 0) {
+		if (sp_support) {
 			for (i = 0; i < sp_supported_num; i++) {
 				if (sp_supported[i] == pattern[j].type) {
 					is_found = 1;
@@ -5233,7 +5168,7 @@ dpaa2_flow_validate(struct rte_eth_dev *dev,
 		goto not_valid_params;
 	}
 	/* Verify input pattern list */
-	ret = dpaa2_dev_verify_patterns(pattern);
+	ret = dpaa2_dev_verify_patterns(pattern, priv->sp_protocol);
 	if (ret < 0) {
 		DPAA2_PMD_ERR("Invalid pattern list is given");
 		rte_flow_error_set(error, EPERM,
