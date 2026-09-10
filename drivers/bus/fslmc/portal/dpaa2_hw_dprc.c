@@ -27,7 +27,6 @@ rte_dpaa2_create_dprc_device(int vdev_fd __rte_unused,
 	struct rte_dpaa2_device *obj)
 {
 	struct dpaa2_dprc_dev *dprc_node;
-	struct dprc_endpoint endpoint1, endpoint2;
 	struct rte_dpaa2_device *dev;
 	int ret, dprc_id = obj->object_id;
 
@@ -49,45 +48,13 @@ rte_dpaa2_create_dprc_device(int vdev_fd __rte_unused,
 		return ret;
 	}
 
-	RTE_BUS_FOREACH_DEV(dev, &rte_fslmc_bus) {
-		/** DPRC is always created before it's children are created.*/
+	/* DPRC is always created before its children are created, so every
+	 * device scanned so far belongs to this container. Endpoint lookup is
+	 * left to the object drivers, which know how many interfaces their
+	 * object has and can report a failure to their own caller.
+	 */
+	RTE_BUS_FOREACH_DEV(dev, &rte_fslmc_bus)
 		dev->container = dprc_node;
-		if (dev->dev_type == DPAA2_ETH) {
-			int link_state;
-
-			memset(&endpoint1, 0, sizeof(struct dprc_endpoint));
-			memset(&endpoint2, 0, sizeof(struct dprc_endpoint));
-			strcpy(endpoint1.type, "dpni");
-			endpoint1.id = dev->object_id;
-			ret = dprc_get_connection(&dprc_node->dprc,
-						CMD_PRI_LOW,
-						dprc_node->token,
-						&endpoint1, &endpoint2,
-						&link_state);
-			if (ret) {
-				DPAA2_BUS_ERR("dpni.%d connection failed!",
-					dev->object_id);
-				dprc_close(&dprc_node->dprc, CMD_PRI_LOW,
-					   dprc_node->token);
-				rte_free(dprc_node);
-				return ret;
-			}
-
-			if (!strcmp(endpoint2.type, "dpmac"))
-				dev->ep_dev_type = DPAA2_MAC;
-			else if (!strcmp(endpoint2.type, "dpni"))
-				dev->ep_dev_type = DPAA2_ETH;
-			else if (!strcmp(endpoint2.type, "dpdmux"))
-				dev->ep_dev_type = DPAA2_MUX;
-			else
-				dev->ep_dev_type = DPAA2_UNKNOWN;
-
-			dev->ep_object_id = endpoint2.id;
-		} else {
-			dev->ep_dev_type = DPAA2_UNKNOWN;
-		}
-		sprintf(dev->ep_name, "%s.%d", endpoint2.type, endpoint2.id);
-	}
 
 	TAILQ_INSERT_TAIL(&dprc_dev_list, dprc_node, next);
 
