@@ -3,6 +3,7 @@
  */
 
 #include <sys/queue.h>
+#include <rte_string_fns.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>

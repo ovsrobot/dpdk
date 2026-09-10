@@ -8,6 +8,9 @@
 #include <time.h>
 #include <net/if.h>
 #include <unistd.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #include <eal_export.h>
 #include <rte_ip.h>
@@ -569,6 +572,7 @@ build_authenc_gcm_fd(dpaa2_sec_session *sess,
 		DPAA2_SET_FLE_BPID(sge + 1, bpid);
 		DPAA2_SET_FLE_BPID(sge + 2, bpid);
 		DPAA2_SET_FLE_BPID(sge + 3, bpid);
+		DPAA2_SET_FLE_BPID(sge + 4, bpid);
 	} else {
 		DPAA2_SET_FD_IVP(fd);
 		DPAA2_SET_FLE_IVP(fle);
@@ -577,6 +581,7 @@ build_authenc_gcm_fd(dpaa2_sec_session *sess,
 		DPAA2_SET_FLE_IVP((sge + 1));
 		DPAA2_SET_FLE_IVP((sge + 2));
 		DPAA2_SET_FLE_IVP((sge + 3));
+		DPAA2_SET_FLE_IVP((sge + 4));
 	}
 
 	/* Save the shared descriptor */
@@ -4332,17 +4337,48 @@ dpaa2_sec_uninit(const struct rte_cryptodev *dev)
 	return 0;
 }
 
+/* Parse a base-10 integer. Returns 0 on success and stores the result in
+ * *val, or a negative errno if the string is empty, malformed, or out of
+ * range. Unlike atoi() this detects errors instead of silently yielding 0.
+ */
+static int
+dpaa2_sec_parse_int(const char *str, long *val)
+{
+	char *endptr;
+	long tmp;
+
+	if (str == NULL || *str == '\0')
+		return -EINVAL;
+
+	errno = 0;
+	tmp = strtol(str, &endptr, 10);
+	if (errno != 0)
+		return -errno;
+	if (endptr == str || *endptr != '\0')
+		return -EINVAL;
+
+	*val = tmp;
+
+	return 0;
+}
+
 static int
 check_devargs_handler(const char *key, const char *value,
 		      void *opaque)
 {
 	struct rte_cryptodev *dev = (struct rte_cryptodev *)opaque;
 	struct dpaa2_sec_dev_private *priv = dev->data->dev_private;
+	long val;
 
 	if (!strcmp(key, "drv_strict_order")) {
 		priv->en_loose_ordered = false;
 	} else if (!strcmp(key, "drv_dump_mode")) {
-		dpaa2_sec_dp_dump = atoi(value);
+		if (dpaa2_sec_parse_int(value, &val)) {
+			DPAA2_SEC_WARN("Invalid %s value '%s', ignored",
+				key, value);
+			return -1;
+		}
+		dpaa2_sec_dp_dump = val;
 		if (dpaa2_sec_dp_dump > DPAA2_SEC_DP_FULL_DUMP) {
 			DPAA2_SEC_WARN("WARN: DPAA2_SEC_DP_DUMP_LEVEL is not "
 				      "supported, changing to FULL error"

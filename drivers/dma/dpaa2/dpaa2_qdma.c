@@ -180,7 +180,7 @@ dpaa2_qdma_multi_eq(struct qdma_virt_queue *qdma_vq)
 	return num_tx;
 }
 
-static void
+static int
 fle_sdd_pre_populate(struct qdma_cntx_fle_sdd *fle_sdd,
 	struct dpaa2_qdma_rbp *rbp, uint64_t src, uint64_t dest,
 	uint32_t fmt)
@@ -256,6 +256,8 @@ fle_sdd_pre_populate(struct qdma_cntx_fle_sdd *fle_sdd,
 
 	/* Final bit: 1, for last frame list */
 	DPAA2_SET_FLE_FIN(&fle[DPAA2_QDMA_DST_FLE]);
+
+	return 0;
 }
 
 static void
@@ -871,9 +873,15 @@ dpaa2_qdma_long_copy(struct qdma_virt_queue *qdma_vq,
 
 	if (qdma_vq->fle_pre_populate) {
 		if (unlikely(!fle[DPAA2_QDMA_SRC_FLE].length)) {
-			fle_sdd_pre_populate(fle_sdd,
+			ret = fle_sdd_pre_populate(fle_sdd,
 				&qdma_vq->rbp,
 				0, 0, QBMAN_FLE_WORD4_FMT_SBF);
+			if (unlikely(ret)) {
+				if (!is_silent)
+					rte_mempool_put(qdma_vq->fle_pool,
+						fle_sdd);
+				return ret;
+			}
 		}
 
 		fle_post_populate(fle, src, dst, length);
