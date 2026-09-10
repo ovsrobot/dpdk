@@ -4412,25 +4412,57 @@ check_devargs_handler(const char *key, const char *value,
 static void
 dpaa2_sec_get_devargs(struct rte_cryptodev *cryptodev, const char *key)
 {
+	struct dpaa2_sec_dev_private *internals;
 	struct rte_kvargs *kvlist;
 	struct rte_devargs *devargs;
+	int ret;
+	char *env;
+	long val;
+
+	internals = cryptodev->data->dev_private;
 
 	devargs = cryptodev->device->devargs;
 	if (!devargs)
-		return;
+		goto env_set;
 
 	kvlist = rte_kvargs_parse(devargs->args, NULL);
 	if (!kvlist)
-		return;
+		goto env_set;
 
 	if (!rte_kvargs_count(kvlist, key)) {
 		rte_kvargs_free(kvlist);
-		return;
+		goto env_set;
 	}
 
-	rte_kvargs_process(kvlist, key,
+	ret = rte_kvargs_process(kvlist, key,
 			check_devargs_handler, (void *)cryptodev);
 	rte_kvargs_free(kvlist);
+	if (!ret)
+		return;
+
+env_set:
+	env = getenv(DRIVER_STRICT_ORDER);
+	if (env) {
+		if (dpaa2_sec_parse_int(env, &val))
+			DPAA2_SEC_WARN("Invalid %s value '%s', ignored",
+				DRIVER_STRICT_ORDER, env);
+		else
+			internals->en_loose_ordered = !val;
+	}
+
+	env = getenv(DRIVER_DUMP_MODE);
+	if (env) {
+		if (dpaa2_sec_parse_int(env, &val)) {
+			DPAA2_SEC_WARN("Invalid %s value '%s', ignored",
+				DRIVER_DUMP_MODE, env);
+		} else {
+			if (val > DPAA2_SEC_DP_FULL_DUMP)
+				val = DPAA2_SEC_DP_FULL_DUMP;
+			else if (val < DPAA2_SEC_DP_NO_DUMP)
+				val = DPAA2_SEC_DP_NO_DUMP;
+			dpaa2_sec_dp_dump = val;
+		}
+	}
 }
 
 static int
