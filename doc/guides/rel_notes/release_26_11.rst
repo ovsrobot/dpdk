@@ -97,10 +97,20 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* mempool: When creating a mempool, the cache size can be freely specified
+  (although still not exceed the number of elements),
+  and is no longer limited by the ``RTE_MEMPOOL_CACHE_MAX_SIZE`` build time configuration parameter.
+  Although ``RTE_MEMPOOL_CACHE_MAX_SIZE`` has lost its original meaning,
+  it was kept for compatibility purposes,
+  as it is often used for the ``cache_size`` parameter when creating mempools.
+
+* mempool: Updated the ``rte_mempool`` structure as follows:
+  - Added the ``sizeof_cache_per_lcore`` field, for indexing into the per-lcore local cache.
+
 * mempool: Updated the ``rte_mempool_cache`` structure as follows:
   - Removed the deprecated and obsolete ``flushthresh`` field.
   - Removed the ``unused`` field.
-  - Reduced the size of the ``objs`` array from ``RTE_MEMPOOL_CACHE_MAX_SIZE`` * 2 to ``RTE_MEMPOOL_CACHE_MAX_SIZE``.
+  - Changed the ``objs`` array from fixed size to variable size.
 
 ABI Changes
 -----------
