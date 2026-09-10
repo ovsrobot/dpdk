@@ -198,6 +198,7 @@ struct __rte_cache_aligned dpaa2_queue {
 	uint16_t tm_sw_td;	/*!< TM software taildrop */
 	uint64_t offloads;
 	uint64_t lpbk_cntx;
+	int32_t ts_to_cnfd;
 	uint8_t data_stashing_off;
 	/* NAPI rx-interrupt: per-queue DPCON bound to this FQ at dev_start
 	 * (DEST_DPCON, static); the polling worker points the channel's CDAN at
