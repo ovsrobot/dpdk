@@ -205,20 +205,6 @@ dev_vfio_get_iommu_mode(void);
 
 /**
  * @internal
- * Check if VFIO NOIOMMU mode is enabled.
- *
- * This function is only relevant on Linux.
- *
- * @return
- *   1 if enabled.
- *   0 if not enabled or not supported.
- */
-__rte_internal
-int
-dev_vfio_noiommu_is_enabled(void);
-
-/**
- * @internal
  * Parse IOMMU group number for a device.
  *
  * This function is only relevant on Linux in group mode.
