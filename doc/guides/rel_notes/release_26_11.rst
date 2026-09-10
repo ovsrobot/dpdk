@@ -56,6 +56,25 @@ New Features
      =======================================================
 
 
+* **Added Hyperscan regex PMD.**
+
+  Added a new software regex PMD (``regex_hs``) based on Intel
+  Hyperscan library. The PMD is a virtual device created with
+  ``--vdev=regex_hs`` and implements the ``rte_regexdev`` API using
+  Hyperscan block mode scanning. Key capabilities include:
+
+  - Runtime pattern compilation via ``hs_compile_ext_multi()`` and
+    serialized database import/export
+  - Up to 64 queue pairs with per-queue-pair Hyperscan scratch space
+    for lock-free parallel scanning across multiple lcores
+  - Per-queue-pair extended statistics (enqueued, dequeued, matches)
+  - Support for standard DPDK PCRE rule flags and PMD-private
+    Hyperscan compile flags (singlematch, prefilter, SOM-leftmost,
+    combination, quiet)
+  - Per-rule extended match parameters (minimum/maximum start offset)
+  - Device lifecycle with start, stop, close, and device dump
+
+
 Removed Items
 -------------
 
