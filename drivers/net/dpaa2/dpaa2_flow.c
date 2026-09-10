@@ -140,7 +140,8 @@ enum rte_flow_item_type dpaa2_hp_supported_pattern_type[] = {
 
 static const
 enum rte_flow_item_type dpaa2_sp_supported_pattern_type[] = {
-	RTE_FLOW_ITEM_TYPE_ECPRI
+	RTE_FLOW_ITEM_TYPE_ECPRI,
+	RTE_FLOW_ITEM_TYPE_GENEVE
 };
 
 static const enum rte_flow_action_type dpaa2_supported_fs_action_type[] = {
@@ -248,6 +249,10 @@ static const struct rte_flow_item_vxlan dpaa2_flow_item_vxlan_mask = {
 	.vni = {0xff, 0xff, 0xff},
 };
 
+static const struct rte_flow_item_geneve dpaa2_flow_item_geneve_mask = {
+	.protocol = RTE_BE16(0xffff),
+	.vni = {0xff, 0xff, 0xff},
+};
 
 static const struct rte_flow_item_ecpri dpaa2_flow_item_ecpri_mask = {
 	.hdr.common.type = 0xff,
@@ -1572,6 +1577,10 @@ dpaa2_flow_extract_support(const uint8_t *mask_src,
 	case RTE_FLOW_ITEM_TYPE_GTP:
 		mask_support = (const char *)&dpaa2_flow_item_gtp_mask;
 		size = sizeof(struct rte_flow_item_gtp);
+		break;
+	case RTE_FLOW_ITEM_TYPE_GENEVE:
+		mask_support = (const char *)&dpaa2_flow_item_geneve_mask;
+		size = sizeof(struct rte_flow_item_geneve);
 		break;
 	default:
 		return -EINVAL;
@@ -3371,6 +3380,89 @@ dpaa2_flow_raw_extract_rule_set(struct dpaa2_generic_flow *flow,
 	return 0;
 }
 
+static int
+dpaa2_flow_geneve_extract_rule_set(struct dpaa2_generic_flow *flow,
+	const struct rte_flow_attr *attr,
+	const struct rte_dpaa2_flow_item *dpaa2_pattern,
+	int *extract_cfg, enum dpaa2_flow_dist_type dist_type)
+{
+	int ret, local_cfg = 0;
+	uint32_t bit_offset;
+	const struct rte_flow_item_geneve *spec, *mask;
+	struct dpaa2_dev_priv *priv = flow->priv;
+	const struct rte_flow_item *pattern = &dpaa2_pattern->generic_item;
+	char hex_dump[DPAA2_FLOW_HDR_HEX_DUMP_SIZE];
+
+	if (!priv->sp_protocol) {
+		DPAA2_PMD_ERR("GENEVE flow is not supported without SP.");
+		return -ENOTSUP;
+	}
+
+	/* Parse pattern list to get the matching parameters */
+	spec = pattern->spec;
+	mask = pattern->mask ?
+		pattern->mask : &dpaa2_flow_item_geneve_mask;
+
+	if (dpaa2_pattern->in_tunnel) {
+		DPAA2_PMD_ERR("Tunnel-GENEVE distribution not support");
+		return -ENOTSUP;
+	}
+
+	ret = dpaa2_protocol_psr_bit_offset(&bit_offset,
+		DPAA2_PARSER_GENEVE_ID);
+	if (ret)
+		return ret;
+
+	ret = dpaa2_flow_identify_by_faf(priv, flow,
+		bit_offset, dist_type, attr->group, &local_cfg);
+	if (ret)
+		return ret;
+
+	if (!spec)
+		goto quit;
+
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_GENEVE);
+	if (ret) {
+		dpaa2_flow_hdr_hexdump(hex_dump, sizeof(hex_dump), (const uint8_t *)mask,
+			sizeof(struct rte_flow_item_geneve));
+		DPAA2_PMD_ERR("Extract GENEVE(%s) failed(%d)",
+			hex_dump, ret);
+
+		return ret;
+	}
+
+	if (mask->protocol && mask->protocol != 0xffff) {
+		DPAA2_PMD_ERR("Not support to extract geneve protocol.");
+		return -EINVAL;
+	}
+
+	if (mask->protocol) {
+		ret = dpaa2_flow_add_pr_extract_rule(flow,
+			DPAA2_GENEVE_PROTOCOL_OFFSET,
+			sizeof(mask->protocol), &spec->protocol,
+			&mask->protocol, priv, attr->group, &local_cfg,
+			dist_type);
+		if (ret)
+			return ret;
+	}
+
+	if (mask->vni[0] || mask->vni[1] || mask->vni[2]) {
+		ret = dpaa2_flow_add_pr_extract_rule(flow,
+			DPAA2_GENEVE_VNI_OFFSET,
+			sizeof(mask->vni), spec->vni,
+			mask->vni,
+			priv, attr->group, &local_cfg, dist_type);
+		if (ret)
+			return ret;
+	}
+
+quit:
+	if (extract_cfg)
+		(*extract_cfg) |= local_cfg;
+
+	return 0;
+}
 
 static inline int
 dpaa2_flow_verify_entry(struct dpaa2_dev_priv *priv,
@@ -4233,6 +4325,14 @@ dpaa2_flow_generic_extract_rule_set(struct dpaa2_generic_flow *flow,
 				&dpaa2_pattern[i], &extract_cfg, dist_type);
 			if (ret) {
 				DPAA2_PMD_ERR("GTP flow config failed!");
+				goto end_extract_set;
+			}
+			break;
+		case RTE_FLOW_ITEM_TYPE_GENEVE:
+			ret = dpaa2_flow_geneve_extract_rule_set(flow, attr,
+				&dpaa2_pattern[i], &extract_cfg, dist_type);
+			if (ret) {
+				DPAA2_PMD_ERR("GENEVE flow config failed!");
 				goto end_extract_set;
 			}
 			break;
