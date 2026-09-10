@@ -162,16 +162,6 @@ dpaa2_dev_rx_parse_new(struct dpaa2_dev_priv *priv,
 			ext_packet_type |= RTE_PTYPE_INNER_L3_IPV4;
 		}
 	}
-	if (priv->sp_protocol) {
-		if (frc_parse->fafe2) {
-			frc_parse->fafe2 = 0;
-			ext_packet_type |= RTE_PTYPE_TUNNEL_GENEVE;
-		}
-		if (frc_parse->sum_l.l4.fafe3) {
-			frc_parse->sum_l.l4.fafe3 = 0;
-			ext_packet_type |= RTE_PTYPE_INNER_L3_IPV4;
-		}
-	}
 	switch (frc) {
 	case DPAA2_PKT_TYPE_IPV4_UDP:
 		m->packet_type = RTE_PTYPE_L2_ETHER |
@@ -740,7 +730,7 @@ dpaa2_dev_tx_mbuf_to_sg_fd(struct rte_mempool *hw_mp,
 
 	if (mbuf->pool->ops_index == hw_mp->ops_index &&
 		RTE_MBUF_DIRECT(mbuf) &&
-		(mbuf->data_off > RTE_ALIGN(sg_size + offset, 8))) {
+		mbuf->data_off > RTE_ALIGN(sg_size + offset, 8)) {
 		sg_mbuf = mbuf;
 		mp = mbuf->pool;
 		if (need_conf) {
@@ -1563,7 +1553,7 @@ conf_again:
 			mp = mbufs[idx]->pool;
 		if (unlikely(rte_mbuf_refcnt_read(mbufs[idx]) > 1))
 			bulk_free = false;
-		if (bulk_free == true &&
+		if (bulk_free &&
 			!dpaa2_dev_is_mbuf_from_spec_pool(mp, mbufs[idx]))
 			bulk_free = false;
 		if (unlikely(mbufs[idx]->ol_flags & RTE_MBUF_F_TX_IEEE1588_TMST)) {
