@@ -60,7 +60,7 @@ headers += files(
 driver_sdk_headers = files(
         'bus_driver.h',
         'dev_driver.h',
-        'rte_vfio.h',
+        'dev_vfio.h',
 )
 
 # special case install the generic headers, since they go in a subdir
