@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
  *   Copyright (c) 2015-2016 Freescale Semiconductor, Inc. All rights reserved.
- *   Copyright 2016-2025 NXP
+ *   Copyright 2016-2026 NXP
  *
  */
 
@@ -26,6 +26,13 @@
 #include "base/dpaa2_hw_dpni_annot.h"
 #include "dpaa2_parser_decode.h"
 
+#define DPAA2_FLOW_FRM_REPLICATION_ACTION_MC_REV RTE_FSL_MC_REV(10, 39, 106)
+#define DPAA2_FS_FLOW_HW_ACTION_UPDATE_MC_REV RTE_FSL_MC_REV(10, 39, 106)
+#define DPAA2_QOS_FLOW_HW_ACTION_UPDATE_MC_REV RTE_FSL_MC_REV(10, 39, 109)
+#define DPAA2_POLICER_SET_V2_MC_REV RTE_FSL_MC_REV(10, 39, 109)
+#define DPAA2_POLICER_NOT_RESET_COUNTER_MC_REV DPAA2_POLICER_SET_V2_MC_REV
+#define DPAA2_QOS_FLOW_TABLE_MISS_FLOW_ACTION_MC_REV RTE_FSL_MC_REV(10, 39, 109)
+#define DPAA2_QOS_FLOW_TABLE_SET_V3_MC_REV RTE_FSL_MC_REV(10, 39, 109)
 
 #define DPAA2_MIN_RX_BUF_SIZE 512
 #define DPAA2_MAX_RX_PKT_LEN  10240 /*WRIOP support*/
@@ -36,6 +43,10 @@
 #define MAX_TX_QUEUES		128
 #define MAX_DPNI		8
 #define DPAA2_MAX_CHANNELS	16
+
+#define DPAA2_DEV_PRIV_TO_DPAA2_DEV(priv) \
+	container_of((((struct dpaa2_dev_priv *)priv)->eth_dev->device), \
+	struct rte_dpaa2_device, device)
 
 #define DPAA2_EXTRACT_PARAM_MAX_SIZE \
 	RTE_ALIGN(sizeof(struct dpni_ext_set_rx_tc_dist), 256)
@@ -256,125 +267,9 @@ struct dpaa2_dyn_rx_protocol_pos {
 #define DPAA2_FS_FLC_FLOW_OFFSET \
 	(DPAA2_FS_FLC_TC_OFFSET + DPAA2_FS_FLC_TC_BIT_SIZE)
 
-#define DPAA2_FAPR_SIZE \
-	(sizeof(struct dpaa2_annot_hdr) - \
-	offsetof(struct dpaa2_annot_hdr, word3))
-
-#define DPAA2_PR_NXTHDR_OFFSET 0
-
-#define DPAA2_FAFE_PSR_OFFSET 2
-#define DPAA2_FAFE_PSR_SIZE 2
-
-#define DPAA2_FAF_PSR_OFFSET 4
-#define DPAA2_FAF_PSR_SIZE 12
-
-#define DPAA2_FAF_TOTAL_SIZE \
-	(DPAA2_FAFE_PSR_SIZE + DPAA2_FAF_PSR_SIZE)
-
-/* Just most popular Frame attribute flags (FAF) here.*/
-enum dpaa2_rx_faf_offset {
-	/* Set by SP start*/
-	FAFE_VXLAN_IN_VLAN_FRAM = 0,
-	FAFE_VXLAN_IN_IPV4_FRAM = 1,
-	FAFE_VXLAN_IN_IPV6_FRAM = 2,
-	FAFE_VXLAN_IN_UDP_FRAM = 3,
-	FAFE_VXLAN_IN_TCP_FRAM = 4,
-
-	FAFE_ECPRI_FRAM = 7,
-	/* Set by SP end*/
-
-	FAF_GTP_PRIMED_FRAM = 1 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_PTP_FRAM = 3 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_VXLAN_FRAM = 4 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_ETH_FRAM = 10 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_LLC_SNAP_FRAM = 18 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_VLAN_FRAM = 21 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_PPPOE_PPP_FRAM = 25 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_MPLS_FRAM = 27 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_ARP_FRAM = 30 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_IPV4_FRAM = 34 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_IPV6_FRAM = 42 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_IP_FRAM = 48 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_IP_FRAG_FRAM = 50 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_ICMP_FRAM = 57 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_IGMP_FRAM = 58 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_GRE_FRAM = 65 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_UDP_FRAM = 70 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_TCP_FRAM = 72 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_IPSEC_FRAM = 77 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_IPSEC_ESP_FRAM = 78 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_IPSEC_AH_FRAM = 79 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_SCTP_FRAM = 81 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_DCCP_FRAM = 83 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_GTP_FRAM = 87 + DPAA2_FAFE_PSR_SIZE * 8,
-	FAF_ESP_FRAM = 89 + DPAA2_FAFE_PSR_SIZE * 8,
-};
-
-enum dpaa2_ecpri_fafe_type {
-	ECPRI_FAFE_TYPE_0 = (8 - FAFE_ECPRI_FRAM),
-	ECPRI_FAFE_TYPE_1 = (8 - FAFE_ECPRI_FRAM) | (1 << 1),
-	ECPRI_FAFE_TYPE_2 = (8 - FAFE_ECPRI_FRAM) | (2 << 1),
-	ECPRI_FAFE_TYPE_3 = (8 - FAFE_ECPRI_FRAM) | (3 << 1),
-	ECPRI_FAFE_TYPE_4 = (8 - FAFE_ECPRI_FRAM) | (4 << 1),
-	ECPRI_FAFE_TYPE_5 = (8 - FAFE_ECPRI_FRAM) | (5 << 1),
-	ECPRI_FAFE_TYPE_6 = (8 - FAFE_ECPRI_FRAM) | (6 << 1),
-	ECPRI_FAFE_TYPE_7 = (8 - FAFE_ECPRI_FRAM) | (7 << 1)
-};
-
-#define DPAA2_PR_ETH_OFF_OFFSET 19
-#define DPAA2_PR_TCI_OFF_OFFSET 21
-#define DPAA2_PR_LAST_ETYPE_OFFSET 23
-#define DPAA2_PR_L3_OFF_OFFSET 27
-#define DPAA2_PR_L4_OFF_OFFSET 30
-#define DPAA2_PR_L5_OFF_OFFSET 31
-#define DPAA2_PR_NXTHDR_OFF_OFFSET 34
-
 #define DPAA2_ECPRI_MAX_EXTRACT_NB 8
 
-struct ipv4_sd_addr_extract_rule {
-	uint32_t ipv4_src;
-	uint32_t ipv4_dst;
-};
-
-struct ipv6_sd_addr_extract_rule {
-	uint8_t ipv6_src[NH_FLD_IPV6_ADDR_SIZE];
-	uint8_t ipv6_dst[NH_FLD_IPV6_ADDR_SIZE];
-};
-
-struct ipv4_ds_addr_extract_rule {
-	uint32_t ipv4_dst;
-	uint32_t ipv4_src;
-};
-
-struct ipv6_ds_addr_extract_rule {
-	uint8_t ipv6_dst[NH_FLD_IPV6_ADDR_SIZE];
-	uint8_t ipv6_src[NH_FLD_IPV6_ADDR_SIZE];
-};
-
-union ip_addr_extract_rule {
-	struct ipv4_sd_addr_extract_rule ipv4_sd_addr;
-	struct ipv6_sd_addr_extract_rule ipv6_sd_addr;
-	struct ipv4_ds_addr_extract_rule ipv4_ds_addr;
-	struct ipv6_ds_addr_extract_rule ipv6_ds_addr;
-};
-
-union ip_src_addr_extract_rule {
-	uint32_t ipv4_src;
-	uint8_t ipv6_src[NH_FLD_IPV6_ADDR_SIZE];
-};
-
-union ip_dst_addr_extract_rule {
-	uint32_t ipv4_dst;
-	uint8_t ipv6_dst[NH_FLD_IPV6_ADDR_SIZE];
-};
-
-enum ip_addr_extract_type {
-	IP_NONE_ADDR_EXTRACT,
-	IP_SRC_EXTRACT,
-	IP_DST_EXTRACT,
-	IP_SRC_DST_EXTRACT,
-	IP_DST_SRC_EXTRACT
-};
+#define DPAA2_IBTH_MAX_EXTRACT_NB 4
 
 enum key_prot_type {
 	/* HW extracts from standard protocol fields*/
@@ -391,9 +286,9 @@ struct key_prot_field {
 	uint32_t key_field;
 };
 
-struct dpaa2_raw_region {
-	uint8_t raw_start;
-	uint8_t raw_size;
+struct dpaa2_ip_addr_extract {
+	uint32_t field;
+	uint8_t max_size;
 };
 
 struct dpaa2_key_profile {
@@ -401,35 +296,52 @@ struct dpaa2_key_profile {
 	uint8_t key_offset[DPKG_MAX_NUM_OF_EXTRACTS];
 	uint8_t key_size[DPKG_MAX_NUM_OF_EXTRACTS];
 
-	enum ip_addr_extract_type ip_addr_type;
-	uint8_t ip_addr_extract_pos;
-	uint8_t ip_addr_extract_off;
+	struct dpaa2_ip_addr_extract ip_addr_extracts[2];
 
-	uint8_t raw_extract_pos;
-	uint8_t raw_extract_off;
-	uint8_t raw_extract_num;
-
-	uint8_t l4_src_port_present;
-	uint8_t l4_src_port_pos;
-	uint8_t l4_src_port_offset;
-	uint8_t l4_dst_port_present;
-	uint8_t l4_dst_port_pos;
-	uint8_t l4_dst_port_offset;
+	uint8_t l4_sp_present;
+	uint8_t l4_sp_extract_idx;
+	uint8_t l4_sp_key_offset;
+	uint8_t l4_dp_present;
+	uint8_t l4_dp_extract_idx;
+	uint8_t l4_dp_key_offset;
 	struct key_prot_field prot_field[DPKG_MAX_NUM_OF_EXTRACTS];
 	uint16_t key_max_size;
-	struct dpaa2_raw_region raw_region;
 };
 
-struct dpaa2_key_extract {
+struct dpaa2_flow_tbl_profile {
 	struct dpkg_profile_cfg dpkg;
 	struct dpaa2_key_profile key_profile;
+	uint8_t *extract_param;
+	int entry_num;
+	uint8_t *entry_map;
+	int enabled;
+	int is_rss;
+	void *rss_flow;
+	union {
+		struct dpni_qos_tbl_cfg qos_cfg;
+		struct dpni_rx_dist_cfg tc_cfg;
+	};
+	int default_drop;
+	union {
+		struct rte_flow_action_jump default_jump;
+		struct rte_flow_action_queue default_queue;
+	};
 };
 
-struct extract_s {
-	struct dpaa2_key_extract qos_key_extract;
-	struct dpaa2_key_extract tc_key_extract[MAX_TCS];
-	uint8_t *qos_extract_param;
-	uint8_t *tc_extract_param[MAX_TCS];
+struct dpaa2_flow_profile {
+	struct dpaa2_flow_tbl_profile qos_profile;
+	struct dpaa2_flow_tbl_profile tc_profile[MAX_TCS];
+	/** Meter per TC.*/
+	struct dpaa2_dev_meter_profile *tc_mtr_profile[MAX_TCS];
+	void *mtr_flow[MAX_TCS];
+	void *mempool[MAX_TCS];
+	uint8_t bp_idx[MAX_TCS];
+};
+
+struct rte_dpaa2_default_action_conf {
+	uint8_t default_tc;
+	uint8_t max_tc;
+	uint16_t default_flows[];
 };
 
 struct dpaa2_dev_meter_profile {
@@ -493,15 +405,12 @@ struct dpaa2_dev_priv {
 	/** RXQs in same TC share same cgid.*/
 	uint8_t cgid_in_use[MAX_TCS];
 	rte_spinlock_t meter_lock;
-	/* Lowest priority FS flow id to receive flow steering miss frames. */
-	uint16_t default_flow;
 
 	/* Current hash distribution size per RX TC, written by
 	 * dpaa2_setup_flow_dist_size() and read by reta_query / reta_update.
 	 * Zero means "use default" (= nb_rx_queues clamped to dist_queues).
 	 */
 	uint16_t dist_size_cur[MAX_TCS];
-
 	uint16_t dpni_ver_major;
 	uint16_t dpni_ver_minor;
 	uint32_t speed_capa;
@@ -510,7 +419,10 @@ struct dpaa2_dev_priv {
 	uint16_t ep_object_id;                 /**< Endpoint DPAA2 Object ID */
 	char ep_name[RTE_DEV_NAME_MAX_LEN];
 
-	struct extract_s extract;
+	struct dpaa2_flow_profile flow_profile;
+	uint8_t nb_dcb_tcs;
+	uint8_t prio_dcb_tc[RTE_ETH_DCB_NUM_USER_PRIORITIES];
+	void *dcb_flow[RTE_ETH_DCB_NUM_USER_PRIORITIES];
 
 	uint16_t ss_offset;
 	uint64_t ss_iova;
@@ -530,6 +442,7 @@ struct dpaa2_dev_priv {
 	struct rte_eth_dev *eth_dev; /**< Pointer back to holding ethdev */
 	rte_spinlock_t lpbk_qp_lock;
 
+	bool enable_bp_flow_ctrl;
 	bool sp_protocol;
 	uint8_t channel_inuse;
 	/* Rx-interrupt mode latched at the first dev_configure */
@@ -549,7 +462,7 @@ struct dpaa2_dev_priv {
 	 */
 	union dpni_statistics pg_xstats[DPNI_MAX_STATISTICS_PAGE_ID][DPNI_STAT_MAX_PARAM];
 
-	struct dpaa2_dev_flow *curr;
+	struct dpaa2_generic_flow *cur_flow;
 	LIST_HEAD(, dpaa2_dev_flow) flows;
 	LIST_HEAD(, dpaa2_dev_meter_profile) profiles;
 	LIST_HEAD(, dpaa2_dev_meter_policy) policies;
@@ -568,6 +481,12 @@ static inline int dpaa2_dev_cmp_dpni_ver(struct dpaa2_dev_priv *priv,
 		return priv->dpni_ver_minor - ver_minor;
 	return priv->dpni_ver_major - ver_major;
 }
+
+/* Flow dumps are emitted as partial lines built up across several calls,
+ * so they cannot use the line-oriented RTE_LOG_LINE helpers. Write to the
+ * EAL log stream instead of stdout.
+ */
+#define DPAA2_FLOW_DUMP(...) fprintf(rte_log_get_stream(), __VA_ARGS__)
 
 static inline void
 dpaa2_dev_rx_print_parser_result(struct dpaa2_dev_priv *priv,
@@ -619,21 +538,270 @@ dpaa2_timestamp_debug(struct dpaa2_dev_priv *priv,
 		prefix, timestamp, ts.tv_sec, ts.tv_nsec);
 }
 
-int dpaa2_distset_to_dpkg_profile_cfg(uint64_t req_dist_set,
-				      struct dpkg_profile_cfg *kg_cfg);
+static inline void
+dpaa2_prot_field_string(uint32_t prot, uint32_t field,
+	char *string, size_t size)
+{
+	if (prot == NET_PROT_ETH) {
+		strlcpy(string, "eth", size);
+		if (field == NH_FLD_ETH_DA)
+			rte_strlcat(string, ".dst", size);
+		else if (field == NH_FLD_ETH_SA)
+			rte_strlcat(string, ".src", size);
+		else if (field == NH_FLD_ETH_TYPE)
+			rte_strlcat(string, ".type", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_VLAN) {
+		strlcpy(string, "vlan", size);
+		if (field == NH_FLD_VLAN_TCI)
+			rte_strlcat(string, ".tci", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_IP) {
+		strlcpy(string, "ip", size);
+		if (field == NH_FLD_IP_SRC)
+			rte_strlcat(string, ".src", size);
+		else if (field == NH_FLD_IP_DST)
+			rte_strlcat(string, ".dst", size);
+		else if (field == NH_FLD_IP_PROTO)
+			rte_strlcat(string, ".proto", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_TCP) {
+		strlcpy(string, "tcp", size);
+		if (field == NH_FLD_TCP_PORT_SRC)
+			rte_strlcat(string, ".src", size);
+		else if (field == NH_FLD_TCP_PORT_DST)
+			rte_strlcat(string, ".dst", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_UDP) {
+		strlcpy(string, "udp", size);
+		if (field == NH_FLD_UDP_PORT_SRC)
+			rte_strlcat(string, ".src", size);
+		else if (field == NH_FLD_UDP_PORT_DST)
+			rte_strlcat(string, ".dst", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_ICMP) {
+		strlcpy(string, "icmp", size);
+		if (field == NH_FLD_ICMP_TYPE)
+			rte_strlcat(string, ".type", size);
+		else if (field == NH_FLD_ICMP_CODE)
+			rte_strlcat(string, ".code", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_SCTP) {
+		strlcpy(string, "sctp", size);
+		if (field == NH_FLD_SCTP_PORT_SRC)
+			rte_strlcat(string, ".src", size);
+		else if (field == NH_FLD_SCTP_PORT_DST)
+			rte_strlcat(string, ".dst", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_GRE) {
+		strlcpy(string, "gre", size);
+		if (field == NH_FLD_GRE_TYPE)
+			rte_strlcat(string, ".type", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_GTP) {
+		strlcpy(string, "gtp", size);
+		if (field == NH_FLD_GTP_TEID)
+			rte_strlcat(string, ".teid", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else if (prot == NET_PROT_IPSEC_ESP) {
+		strlcpy(string, "esp", size);
+		if (field == NH_FLD_IPSEC_ESP_SPI)
+			rte_strlcat(string, ".spi", size);
+		else if (field == NH_FLD_IPSEC_ESP_SEQUENCE_NUM)
+			rte_strlcat(string, ".seq", size);
+		else
+			rte_strlcat(string, ".unknown field", size);
+	} else {
+		snprintf(string, size, "unknown protocol(%d)", prot);
+	}
+}
 
-int dpaa2_setup_flow_dist(struct rte_eth_dev *eth_dev,
-		uint64_t req_dist_set, int tc_index);
+static inline void
+dpaa2_dump_dpkg(const struct dpkg_profile_cfg *dpkg)
+{
+	int idx;
+	char string[32];
+	const struct dpkg_extract *extract;
+	enum dpkg_extract_type type;
+	enum net_prot prot;
+	uint32_t field;
 
-int dpaa2_setup_flow_dist_size(struct rte_eth_dev *eth_dev,
-		uint64_t req_dist_set, int tc_index, uint16_t dist_size);
+	for (idx = 0; idx < dpkg->num_extracts; idx++) {
+		extract = &dpkg->extracts[idx];
+		type = extract->type;
+		if (type == DPKG_EXTRACT_FROM_HDR) {
+			prot = extract->extract.from_hdr.prot;
+			field = extract->extract.from_hdr.field;
+			dpaa2_prot_field_string(prot, field, string, sizeof(string));
+		} else if (type == DPKG_EXTRACT_FROM_DATA) {
+			snprintf(string, sizeof(string), "raw offset/len: %d/%d",
+				extract->extract.from_data.offset,
+				extract->extract.from_data.size);
+		} else if (type == DPKG_EXTRACT_FROM_PARSE) {
+			snprintf(string, sizeof(string),
+				"parse offset/len: %d/%d",
+				extract->extract.from_parse.offset,
+				extract->extract.from_parse.size);
+		}
+		DPAA2_FLOW_DUMP("%s", string);
+		if ((idx + 1) < dpkg->num_extracts)
+			DPAA2_FLOW_DUMP(" / ");
+		else
+			DPAA2_FLOW_DUMP("\r\n\n");
+	}
+}
 
-int dpaa2_remove_flow_dist(struct rte_eth_dev *eth_dev,
-			   uint8_t tc_index);
+static inline int
+dpaa2_extract_prev_ip_addr_pos(const struct dpaa2_key_profile *profile)
+{
+	int idx = -ENXIO;
 
-int dpaa2_attach_bp_list(struct dpaa2_dev_priv *priv,
-	struct fsl_mc_io *dpni, void *blist);
+	if (!profile->num)
+		return -ENXIO;
 
+	for (idx = profile->num - 1; idx >= 0; idx--) {
+		if (!(profile->prot_field[idx].type == DPAA2_NET_PROT_KEY &&
+			profile->prot_field[idx].prot == NET_PROT_IP &&
+			(profile->prot_field[idx].key_field == NH_FLD_IP_SRC ||
+			profile->prot_field[idx].key_field == NH_FLD_IP_DST)))
+			break;
+	}
+
+	if (idx >= 0)
+		return idx;
+	return -ENXIO;
+}
+
+static inline int
+dpaa2_extract_ip_addr_add(uint32_t field,
+	struct dpaa2_key_profile *key_profile, uint8_t size,
+	int *update, int *pos)
+{
+	struct dpaa2_ip_addr_extract *ip_addr_extracts;
+	uint8_t i = 0;
+	uint16_t max_size_save = key_profile->key_max_size;
+	char log_buf[128];
+
+	if (field != NH_FLD_IP_SRC && field != NH_FLD_IP_DST)
+		return -EINVAL;
+
+	max_size_save -= key_profile->ip_addr_extracts[0].max_size;
+	max_size_save -= key_profile->ip_addr_extracts[1].max_size;
+	ip_addr_extracts = key_profile->ip_addr_extracts;
+	while (i < 2) {
+		if (ip_addr_extracts[i].field == field) {
+			if (size > ip_addr_extracts[i].max_size)
+				ip_addr_extracts[i].max_size = size;
+			break;
+		}
+		if (!ip_addr_extracts[i].field) {
+			ip_addr_extracts[i].field = field;
+			ip_addr_extracts[i].max_size = size;
+			if (update)
+				*update = 1;
+			break;
+		}
+		i++;
+	}
+	if (i > 1) {
+		snprintf(log_buf, sizeof(log_buf),
+			"field[0](%d)/size[0](%d)/field[1](%d)/size[1](%d)",
+			ip_addr_extracts[0].field,
+			ip_addr_extracts[0].max_size,
+			ip_addr_extracts[1].field,
+			ip_addr_extracts[1].max_size);
+		DPAA2_FLOW_DUMP("Invalid IP address extracts:%s\n",
+			log_buf);
+		return -EINVAL;
+	}
+
+	if (pos)
+		*pos = i;
+
+	max_size_save += key_profile->ip_addr_extracts[0].max_size;
+	max_size_save += key_profile->ip_addr_extracts[1].max_size;
+	key_profile->key_max_size = max_size_save;
+
+	return 0;
+}
+
+static inline uint8_t
+dpaa2_profile_insert_no_ipaddr_extract(struct dpaa2_key_profile *profile,
+	uint8_t size, uint8_t *poffset, int *ppos,
+	const struct key_prot_field *prot)
+{
+	uint8_t idx, ip_addr_num = 0, offset;
+
+	if (profile->ip_addr_extracts[0].field &&
+		profile->ip_addr_extracts[1].field) {
+		idx = profile->num - 2;
+		ip_addr_num = 2;
+	} else if (profile->ip_addr_extracts[0].field) {
+		idx = profile->num - 1;
+		ip_addr_num = 1;
+	} else {
+		idx = profile->num;
+	}
+
+	if (idx > 0)
+		offset = profile->key_offset[idx - 1] + profile->key_size[idx - 1];
+	else
+		offset = 0;
+
+	if (idx > 0) {
+		profile->key_offset[idx] =
+			profile->key_offset[idx - 1] + profile->key_size[idx - 1];
+	} else {
+		profile->key_offset[idx] = 0;
+	}
+	if (ppos)
+		*ppos = profile->key_offset[idx];
+	profile->key_size[idx] = size;
+	profile->key_max_size += size;
+	profile->num++;
+
+	if (ip_addr_num > 0) {
+		memmove(&profile->prot_field[idx + 1],
+			&profile->prot_field[idx],
+			sizeof(struct key_prot_field) * ip_addr_num);
+	}
+	if (poffset)
+		*poffset = offset;
+
+	if (prot) {
+		rte_memcpy(&profile->prot_field[idx], prot,
+			sizeof(struct key_prot_field));
+	}
+
+	return idx;
+}
+
+static inline void
+dpaa2_dpkg_insert_extract(struct dpkg_profile_cfg *kg_cfg,
+	int idx, const struct dpkg_extract *extract)
+{
+	int i;
+
+	if (idx != kg_cfg->num_extracts) {
+		/* Not the last extract index, must have IP address extract.*/
+		for (i = kg_cfg->num_extracts - 1; i >= idx; i--) {
+			rte_memcpy(&kg_cfg->extracts[i + 1],
+				&kg_cfg->extracts[i], sizeof(struct dpkg_extract));
+		}
+	}
+
+	rte_memcpy(&kg_cfg->extracts[idx], extract, sizeof(struct dpkg_extract));
+	kg_cfg->num_extracts++;
+}
 __rte_internal
 int dpaa2_eth_eventq_attach(const struct rte_eth_dev *dev,
 		int eth_rx_queue_id,
@@ -678,7 +846,7 @@ uint16_t dpaa2_dev_tx_multi_txq_ordered(void **queue,
 		struct rte_mbuf **bufs, uint16_t nb_pkts);
 
 void dpaa2_dev_free_eqresp_buf(uint16_t eqresp_ci, struct dpaa2_queue *dpaa2_q);
-void dpaa2_flow_clean(struct rte_eth_dev *dev);
+void dpaa2_flow_clean(struct rte_eth_dev *dev, uint8_t tc_id);
 uint16_t dpaa2_dev_tx_conf(void *txq, int drain);
 
 void
