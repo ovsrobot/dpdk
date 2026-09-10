@@ -405,7 +405,7 @@ struct dpaa2_dev_priv {
 	/** RXQs in same TC share same cgid.*/
 	uint8_t cgid_in_use[MAX_TCS];
 	rte_spinlock_t meter_lock;
-
+	struct dpni_pools_cfg pools_cfg;
 	/* Current hash distribution size per RX TC, written by
 	 * dpaa2_setup_flow_dist_size() and read by reta_query / reta_update.
 	 * Zero means "use default" (= nb_rx_queues clamped to dist_queues).
