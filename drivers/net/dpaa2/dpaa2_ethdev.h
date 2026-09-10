@@ -205,7 +205,8 @@
 	(DPAA2_PKT_TYPE_VLAN_1 | DPAA2_PKT_TYPE_VLAN_2)
 
 /* mac counters */
-#define DPAA2_MAC_NUM_STATS            (DPMAC_CNT_EGR_CONTROL_FRAME + 1)
+#define DPAA2_MAC_NUM_STATS \
+	(sizeof(struct dpni_dpmac_counters) / sizeof(uint64_t))
 #define DPAA2_MAC_STATS_INDEX_DMA_SIZE (DPAA2_MAC_NUM_STATS * sizeof(uint32_t))
 #define DPAA2_MAC_STATS_VALUE_DMA_SIZE (DPAA2_MAC_NUM_STATS * sizeof(uint64_t))
 
@@ -542,6 +543,12 @@ struct dpaa2_dev_priv {
 	uint64_t cnt_idx_iova, cnt_values_iova;
 	uint64_t mc_rev;
 
+	/* Cache one dpni_statistics result per (page_id, param) pair to avoid
+	 * redundant MC commands when multiple xstats share the same page.
+	 * Put it in heap to avoid allocating multi-KB stack in runtime.
+	 */
+	union dpni_statistics pg_xstats[DPNI_MAX_STATISTICS_PAGE_ID][DPNI_STAT_MAX_PARAM];
+
 	struct dpaa2_dev_flow *curr;
 	LIST_HEAD(, dpaa2_dev_flow) flows;
 	LIST_HEAD(, dpaa2_dev_meter_profile) profiles;
@@ -702,8 +709,5 @@ dpaa2_eth_sg_fd_to_mbuf(struct dpaa2_dev_priv *priv, const struct qbman_fd *fd);
 
 int dpaa2_mtr_ops_get(struct rte_eth_dev *dev, void *ops);
 int dpaa2_soft_parser_loaded(void);
-
-void
-dpaa2_dev_mac_setup_stats(struct rte_eth_dev *dev);
 
 #endif /* _DPAA2_ETHDEV_H */
