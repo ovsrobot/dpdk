@@ -66,15 +66,23 @@ qdma_cntx_idx_ring_eq(struct qdma_cntx_idx_ring *ring,
 	const uint16_t *elem, uint16_t nb,
 	uint16_t *free_space)
 {
-	uint16_t i;
-
 	if (unlikely(nb > ring->free_space))
 		return 0;
 
-	for (i = 0; i < nb; i++) {
-		ring->cntx_idx_ring[ring->tail] = elem[i];
-		ring->tail = (ring->tail + 1) &
-			(DPAA2_QDMA_MAX_DESC - 1);
+	if ((ring->tail + nb) < DPAA2_QDMA_MAX_DESC) {
+		rte_memcpy(&ring->cntx_idx_ring[ring->tail],
+			elem, nb * sizeof(uint16_t));
+		ring->tail += nb;
+	} else {
+		rte_memcpy(&ring->cntx_idx_ring[ring->tail],
+			elem,
+			(DPAA2_QDMA_MAX_DESC - ring->tail) *
+			sizeof(uint16_t));
+		rte_memcpy(&ring->cntx_idx_ring[0],
+			&elem[DPAA2_QDMA_MAX_DESC - ring->tail],
+			(nb - DPAA2_QDMA_MAX_DESC + ring->tail) *
+			sizeof(uint16_t));
+		ring->tail = (ring->tail + nb) & (DPAA2_QDMA_MAX_DESC - 1);
 	}
 	ring->free_space -= nb;
 	ring->nb_in_ring += nb;
