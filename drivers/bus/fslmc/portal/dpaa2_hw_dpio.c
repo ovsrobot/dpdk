@@ -305,6 +305,10 @@ dpaa2_configure_stashing(struct dpaa2_dpio_dev *dpio_dev, int cpu_id, bool ethrx
 static void dpaa2_put_qbman_swp(struct dpaa2_dpio_dev *dpio_dev)
 {
 	if (dpio_dev) {
+		/* consume indices may still be pending in the portal's DQRR
+		 * consume vector; flush them before the portal is released.
+		 */
+		qbman_swp_dqrr_consume(dpio_dev->sw_portal, NULL);
 		/* rx-queue interrupts (net PMD) can arm a portal without the
 		 * event driver; tear it down unconditionally. Safe when never
 		 * armed: intr_deinit returns early if intr is not enabled.

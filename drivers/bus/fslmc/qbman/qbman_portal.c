@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
  * Copyright (C) 2014-2016 Freescale Semiconductor, Inc.
- * Copyright 2018-2020,2023-2024 NXP
+ * Copyright 2018-2020,2023-2024,2026 NXP
  *
  */
 
@@ -9,13 +9,20 @@
 #include "qbman_portal.h"
 
 #include <eal_export.h>
+#include <rte_bitops.h>
 
 /* QBMan portal management command codes */
 #define QBMAN_MC_ACQUIRE       0x30
 #define QBMAN_WQCHAN_CONFIGURE 0x46
 
 /* Reverse mapping of QBMAN_CENA_SWP_DQRR() */
-#define QBMAN_IDX_FROM_DQRR(p) (((unsigned long)p & 0x1ff) >> 6)
+#define QBMAN_IDX_FROM_DQRR(p) (((unsigned long)(p) & 0x1ff) >> 6)
+
+/* DCAP consume-index-vector mode: the vector of DQRR indices to consume starts
+ * at bit 16 of DCAP and bit 8 selects vector mode over single-index mode.
+ */
+#define DQRR_DCAP_CI_VEC_OFFSET 16
+#define DQRR_DCAP_CI_VEC_SELECT 0x100
 
 /* QBMan FQ management command codes */
 #define QBMAN_FQ_SCHEDULE	0x48
@@ -284,6 +291,18 @@ struct qbman_swp *qbman_swp_init(const struct qbman_swp_desc *d)
 		p->dqrr.dqrr_size = 8;
 		p->dqrr.reset_bug = 0;
 	}
+	/* Consume DQRR entries in vector mode by default and flush the vector
+	 * once half the ring is pending. A smaller threshold gives little
+	 * benefit; a threshold close to the ring size starves WRIOP of DQRR
+	 * space and slows its enqueues down.
+	 *
+	 * The DCAP consume vector only holds (32 - DQRR_DCAP_CI_VEC_OFFSET)
+	 * index bits, so vector mode can only address a ring that fits in
+	 * them; fall back to per-entry consume for anything larger.
+	 */
+	p->dqrr.ci_vec_en =
+		p->dqrr.dqrr_size <= (32 - DQRR_DCAP_CI_VEC_OFFSET);
+	p->dqrr.ci_flush_th = p->dqrr.dqrr_size / 2;
 
 	ret = qbman_swp_sys_init(&p->sys, d, p->dqrr.dqrr_size);
 	if (ret) {
@@ -2225,13 +2244,47 @@ const struct qbman_result *qbman_swp_dqrr_next_mem_back(struct qbman_swp *s)
 	return p;
 }
 
-/* Consume DQRR entries previously returned from qbman_swp_dqrr_next(). */
+/* Write the pending consume vector to DCAP if it holds at least "threshold"
+ * indices, consuming all of them with a single register access.
+ */
+static inline void
+qbman_swp_dqrr_vec_flush(struct qbman_swp *s, uint8_t threshold)
+{
+	if (s->dqrr.ci_count < threshold)
+		return;
+
+	qbman_cinh_write(&s->sys, QBMAN_CINH_SWP_DCAP,
+			 s->dqrr.ci_vector | DQRR_DCAP_CI_VEC_SELECT);
+	s->dqrr.ci_vector = 0;
+	s->dqrr.ci_count = 0;
+}
+
+/* Add a DQRR index to the pending consume vector, flushing it once the
+ * configured threshold is reached.
+ */
+static inline void
+qbman_swp_dqrr_vec_consume(struct qbman_swp *s, uint8_t idx)
+{
+	s->dqrr.ci_vector |= RTE_BIT32(idx + DQRR_DCAP_CI_VEC_OFFSET);
+	s->dqrr.ci_count++;
+	qbman_swp_dqrr_vec_flush(s, s->dqrr.ci_flush_th);
+}
+
+/* Consume DQRR entries previously returned from qbman_swp_dqrr_next().
+ * A NULL dq flushes any indices still pending in the consume vector, which
+ * the caller must do before it stops polling the portal.
+ */
 RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_consume)
 void qbman_swp_dqrr_consume(struct qbman_swp *s,
 			    const struct qbman_result *dq)
 {
-	qbman_cinh_write(&s->sys,
-			QBMAN_CINH_SWP_DCAP, QBMAN_IDX_FROM_DQRR(dq));
+	if (unlikely(dq == NULL))
+		qbman_swp_dqrr_vec_flush(s, 1);
+	else if (s->dqrr.ci_vec_en)
+		qbman_swp_dqrr_vec_consume(s, QBMAN_IDX_FROM_DQRR(dq));
+	else
+		qbman_cinh_write(&s->sys, QBMAN_CINH_SWP_DCAP,
+				 QBMAN_IDX_FROM_DQRR(dq));
 }
 
 /* Consume DQRR entries previously returned from qbman_swp_dqrr_next(). */
@@ -2239,7 +2292,10 @@ RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_idx_consume)
 void qbman_swp_dqrr_idx_consume(struct qbman_swp *s,
 			    uint8_t dqrr_index)
 {
-	qbman_cinh_write(&s->sys, QBMAN_CINH_SWP_DCAP, dqrr_index);
+	if (s->dqrr.ci_vec_en)
+		qbman_swp_dqrr_vec_consume(s, dqrr_index);
+	else
+		qbman_cinh_write(&s->sys, QBMAN_CINH_SWP_DCAP, dqrr_index);
 }
 
 /*********************************/
