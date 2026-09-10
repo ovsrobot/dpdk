@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
  *
  * Copyright 2013-2016 Freescale Semiconductor Inc.
- * Copyright 2016-2025 NXP
+ * Copyright 2016-2026 NXP
  *
  */
 #include <fsl_mc_sys.h>
@@ -1937,30 +1937,41 @@ int dpni_get_queue_tx_confirmation_mode(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-int dpni_set_qos_table(struct fsl_mc_io *mc_io,
-		       uint32_t cmd_flags,
-		       uint16_t token,
-		       const struct dpni_qos_tbl_cfg *cfg)
+static int
+_dpni_set_qos_table(struct fsl_mc_io *mc_io, uint32_t cmd_flags,
+	uint16_t token, const struct dpni_qos_tbl_cfg *cfg, uint16_t cmd_id)
 {
 	struct dpni_cmd_set_qos_table *cmd_params;
 	struct mc_command cmd = { 0 };
 
 	/* prepare command */
-	cmd.header = mc_encode_cmd_header(DPNI_CMDID_SET_QOS_TBL,
-					  cmd_flags,
-					  token);
-	cmd_params = (struct dpni_cmd_set_qos_table *)cmd.params;
+	cmd.header = mc_encode_cmd_header(cmd_id, cmd_flags, token);
+	cmd_params = (void *)cmd.params;
 	cmd_params->default_tc = cfg->default_tc;
 	cmd_params->key_cfg_iova = cpu_to_le64(cfg->key_cfg_iova);
-	dpni_set_field(cmd_params->discard_on_miss,
-		       ENABLE,
-		       cfg->discard_on_miss);
-	dpni_set_field(cmd_params->discard_on_miss,
-					KEEP_QOS_ENTRIES,
-			       cfg->keep_entries);
+	if (DPNI_CMD_VER(cmd_id) > DPNI_CMD_VERSION_2)
+		cmd_params->default_flow_id = cpu_to_le16(cfg->default_flow_id);
+	dpni_set_field(cmd_params->flags, DISCARD_ON_MISS, cfg->discard_on_miss);
+	dpni_set_field(cmd_params->flags, KEEP_QOS_ENTRIES, cfg->keep_entries);
+	if (DPNI_CMD_VER(cmd_id) > DPNI_CMD_VERSION_2)
+		dpni_set_field(cmd_params->flags, SET_DEFAULT_FLOW_ID, cfg->set_default_flow_id);
 
 	/* send command to mc*/
 	return mc_send_command(mc_io, &cmd);
+}
+
+int
+dpni_set_qos_table(struct fsl_mc_io *mc_io, uint32_t cmd_flags,
+	uint16_t token, const struct dpni_qos_tbl_cfg *cfg)
+{
+	return _dpni_set_qos_table(mc_io, cmd_flags, token, cfg, DPNI_CMDID_SET_QOS_TBL);
+}
+
+int
+dpni_set_qos_table_v2(struct fsl_mc_io *mc_io, uint32_t cmd_flags,
+	uint16_t token, const struct dpni_qos_tbl_cfg *cfg)
+{
+	return _dpni_set_qos_table(mc_io, cmd_flags, token, cfg, DPNI_CMDID_SET_QOS_TBL_V2);
 }
 
 /**
@@ -2086,6 +2097,7 @@ int dpni_add_fs_entry(struct fsl_mc_io *mc_io,
 {
 	struct dpni_cmd_add_fs_entry *cmd_params;
 	struct mc_command cmd = { 0 };
+	int i;
 
 	/* prepare command */
 	cmd.header = mc_encode_cmd_header(DPNI_CMDID_ADD_FS_ENT,
@@ -2100,7 +2112,36 @@ int dpni_add_fs_entry(struct fsl_mc_io *mc_io,
 	cmd_params->options = cpu_to_le16(action->options);
 	cmd_params->flow_id = cpu_to_le16(action->flow_id);
 	cmd_params->flc = cpu_to_le64(action->flc);
-	cmd_params->redir_token = cpu_to_le16(action->redirect_obj_token);
+	cmd_params->token_num = action->num_tokens;
+	for (i = 0; i < DPNI_FS_REDIR_MAX_NUM; i++)
+		cmd_params->redir_tokens[i] = cpu_to_le16(action->redir_tokens[i]);
+
+	/* send command to mc*/
+	return mc_send_command(mc_io, &cmd);
+}
+
+int dpni_add_fs_entry_legacy(struct fsl_mc_io *mc_io,
+	uint32_t cmd_flags, uint16_t token,
+	uint8_t tc_id, uint16_t index,
+	const struct dpni_rule_cfg *cfg,
+	const struct dpni_fs_action_cfg *action)
+{
+	struct dpni_cmd_add_fs_entry *cmd_params;
+	struct mc_command cmd = { 0 };
+
+	/* prepare command */
+	cmd.header = mc_encode_cmd_header(DPNI_CMDID_ADD_FS_ENT_LEGACY,
+		cmd_flags, token);
+	cmd_params = (struct dpni_cmd_add_fs_entry *)cmd.params;
+	cmd_params->tc_id = tc_id;
+	cmd_params->key_size = cfg->key_size;
+	cmd_params->index = cpu_to_le16(index);
+	cmd_params->key_iova = cpu_to_le64(cfg->key_iova);
+	cmd_params->mask_iova = cpu_to_le64(cfg->mask_iova);
+	cmd_params->options = cpu_to_le16(action->options);
+	cmd_params->flow_id = cpu_to_le16(action->flow_id);
+	cmd_params->flc = cpu_to_le64(action->flc);
+	cmd_params->redir_tokens[0] = cpu_to_le16(action->redir_tokens[0]);
 
 	/* send command to mc*/
 	return mc_send_command(mc_io, &cmd);
@@ -2169,30 +2210,16 @@ int dpni_clear_fs_entries(struct fsl_mc_io *mc_io,
 	return mc_send_command(mc_io, &cmd);
 }
 
-/**
- * dpni_set_rx_tc_policing() - Set Rx traffic class policing configuration
- * @mc_io:	Pointer to MC portal's I/O object
- * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
- * @token:	Token of DPNI object
- * @tc_id:	Traffic class selection (0-7)
- * @cfg:	Traffic class policing configuration
- *
- * Return:	'0' on Success; error code otherwise.
- */
-int dpni_set_rx_tc_policing(struct fsl_mc_io *mc_io,
-			    uint32_t cmd_flags,
-			    uint16_t token,
-			    uint8_t tc_id,
-			    const struct dpni_rx_tc_policing_cfg *cfg)
+static int
+_dpni_set_rx_tc_policing(struct fsl_mc_io *mc_io,
+	uint32_t cmd_flags, uint16_t token, uint8_t tc_id,
+	const struct dpni_rx_tc_policing_cfg *cfg, uint16_t cmd_id)
 {
 	struct dpni_cmd_set_rx_tc_policing *cmd_params;
 	struct mc_command cmd = { 0 };
 
-	/* prepare command */
-	cmd.header = mc_encode_cmd_header(DPNI_CMDID_SET_RX_TC_POLICING,
-					  cmd_flags,
-					  token);
-	cmd_params = (struct dpni_cmd_set_rx_tc_policing *)cmd.params;
+	cmd.header = mc_encode_cmd_header(cmd_id, cmd_flags, token);
+	cmd_params = (void *)cmd.params;
 	dpni_set_field(cmd_params->mode_color, COLOR, cfg->default_color);
 	dpni_set_field(cmd_params->mode_color, MODE, cfg->mode);
 	dpni_set_field(cmd_params->units, UNITS, cfg->units);
@@ -2205,6 +2232,34 @@ int dpni_set_rx_tc_policing(struct fsl_mc_io *mc_io,
 
 	/* send command to mc*/
 	return mc_send_command(mc_io, &cmd);
+}
+
+/**
+ * dpni_set_rx_tc_policing() - Set Rx traffic class policing configuration
+ * @mc_io:	Pointer to MC portal's I/O object
+ * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
+ * @token:	Token of DPNI object
+ * @tc_id:	Traffic class selection (0-7)
+ * @cfg:	Traffic class policing configuration
+ *
+ * Return:	'0' on Success; error code otherwise.
+ */
+int
+dpni_set_rx_tc_policing(struct fsl_mc_io *mc_io,
+	uint32_t cmd_flags, uint16_t token, uint8_t tc_id,
+	const struct dpni_rx_tc_policing_cfg *cfg)
+{
+	return _dpni_set_rx_tc_policing(mc_io, cmd_flags, token, tc_id, cfg,
+		DPNI_CMDID_SET_RX_TC_POLICING);
+}
+
+int
+dpni_set_rx_tc_policing_v1(struct fsl_mc_io *mc_io,
+	uint32_t cmd_flags, uint16_t token, uint8_t tc_id,
+	const struct dpni_rx_tc_policing_cfg *cfg)
+{
+	return _dpni_set_rx_tc_policing(mc_io, cmd_flags, token, tc_id, cfg,
+		DPNI_CMDID_SET_RX_TC_POLICING_V1);
 }
 
 /**

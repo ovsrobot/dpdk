@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
  *
  * Copyright 2013-2016 Freescale Semiconductor Inc.
- * Copyright 2016-2025 NXP
+ * Copyright 2016-2026 NXP
  *
  */
 #ifndef _FSL_DPNI_CMD_H
@@ -20,6 +20,7 @@
 #define DPNI_CMD_VERSION_7			7
 #define DPNI_CMD_ID_OFFSET			4
 
+#define DPNI_CMD_VER(cmd_id) ((cmd_id) & ((1 << DPNI_CMD_ID_OFFSET) - 1))
 #define DPNI_CMD(id)	(((id) << DPNI_CMD_ID_OFFSET) | DPNI_CMD_BASE_VERSION)
 #define DPNI_CMD_V2(id)	(((id) << DPNI_CMD_ID_OFFSET) | DPNI_CMD_VERSION_2)
 #define DPNI_CMD_V3(id)	(((id) << DPNI_CMD_ID_OFFSET) | DPNI_CMD_VERSION_3)
@@ -77,13 +78,16 @@
 
 #define DPNI_CMDID_SET_RX_TC_DIST		DPNI_CMD_V4(0x235)
 
-#define DPNI_CMDID_SET_RX_TC_POLICING		DPNI_CMD(0x23E)
+#define DPNI_CMDID_SET_RX_TC_POLICING_V1	DPNI_CMD(0x23E)
+#define DPNI_CMDID_SET_RX_TC_POLICING		DPNI_CMD_V2(0x23E)
 
-#define DPNI_CMDID_SET_QOS_TBL			DPNI_CMD_V2(0x240)
+#define DPNI_CMDID_SET_QOS_TBL			DPNI_CMD_V3(0x240)
+#define DPNI_CMDID_SET_QOS_TBL_V2		DPNI_CMD_V2(0x240)
 #define DPNI_CMDID_ADD_QOS_ENT			DPNI_CMD_V2(0x241)
 #define DPNI_CMDID_REMOVE_QOS_ENT		DPNI_CMD(0x242)
 #define DPNI_CMDID_CLR_QOS_TBL			DPNI_CMD(0x243)
-#define DPNI_CMDID_ADD_FS_ENT			DPNI_CMD_V2(0x244)
+#define DPNI_CMDID_ADD_FS_ENT_LEGACY	DPNI_CMD_V2(0x244)
+#define DPNI_CMDID_ADD_FS_ENT			DPNI_CMD_V3(0x244)
 #define DPNI_CMDID_REMOVE_FS_ENT		DPNI_CMD(0x245)
 #define DPNI_CMDID_CLR_FS_ENT			DPNI_CMD(0x246)
 
@@ -584,18 +588,17 @@ struct dpni_cmd_set_queue {
 #define DPNI_DISCARD_ON_MISS_SIZE	1
 #define DPNI_KEEP_QOS_ENTRIES_SHIFT		1
 #define DPNI_KEEP_QOS_ENTRIES_SIZE		1
+#define DPNI_SET_DEFAULT_FLOW_ID_SHIFT  2
+#define DPNI_SET_DEFAULT_FLOW_ID_SIZE   1
 
 struct dpni_cmd_set_qos_table {
-	uint32_t pad;
+	uint16_t pad;
+	uint16_t default_flow_id;
 	uint8_t default_tc;
-	/* only the LSB */
-	uint8_t discard_on_miss;
+	uint8_t flags;
 	uint16_t pad1[21];
 	uint64_t key_cfg_iova;
 };
-
-#define DPNI_QOS_OPT_SET_TC_ONLY 0x0
-#define DPNI_QOS_OPT_SET_FLOW_ID 0x1
 
 struct dpni_cmd_add_qos_entry {
 	uint8_t flags;
@@ -616,6 +619,10 @@ struct dpni_cmd_remove_qos_entry {
 	uint64_t mask_iova;
 };
 
+#ifndef DPNI_FS_REDIR_MAX_NUM
+#define DPNI_FS_REDIR_MAX_NUM 8
+#endif
+
 struct dpni_cmd_add_fs_entry {
 	uint16_t options;
 	uint8_t tc_id;
@@ -625,7 +632,8 @@ struct dpni_cmd_add_fs_entry {
 	uint64_t key_iova;
 	uint64_t mask_iova;
 	uint64_t flc;
-	uint16_t redir_token;
+	uint16_t redir_tokens[DPNI_FS_REDIR_MAX_NUM];
+	uint8_t token_num;
 };
 
 struct dpni_cmd_remove_fs_entry {
