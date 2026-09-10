@@ -22,6 +22,7 @@
 #include <dpaa2_hw_pvt.h>
 #include <dpaa2_hw_dpio.h>
 #include <dpaa2_hw_mempool.h>
+#include <dpaax_ptp.h>
 
 #include "dpaa2_pmd_logs.h"
 #include "dpaa2_ethdev.h"
@@ -108,6 +109,30 @@ dpaa2_dev_rx_mbuf_sched_set(struct rte_mbuf *m,
 			m->hash.rss);
 	}
 }
+
+static inline void
+dpaa2_dev_rx_read_timestamp(struct dpaa2_dev_priv *priv,
+	struct rte_mbuf *m)
+{
+	struct dpaa2_annot_hdr *annotation;
+	rte_mbuf_timestamp_t *ts;
+
+	if (!(priv->flags & DPAA2_IEEE1588_RX_TS_FLAG))
+		return;
+
+	annotation = (void *)((uint8_t *)m->buf_addr + DPAA2_FD_PTA_SIZE);
+	if (BIT_ISSET_AT_POS(annotation->word1, DPAA2_ETH_FAS_PTP)) {
+		m->ol_flags |= RTE_MBUF_F_RX_IEEE1588_PTP;
+		m->ol_flags |= RTE_MBUF_F_RX_IEEE1588_TMST;
+	}
+	ts = RTE_MBUF_DYNFIELD(m, priv->rx_ts_offset, void *);
+	*ts = annotation->word2;
+	m->ol_flags |= priv->rx_ts_flag;
+	rte_atomic_store_explicit(&priv->rx_timestamp, *ts,
+		rte_memory_order_relaxed);
+	dpaa2_timestamp_debug(priv, __func__, priv->rx_timestamp);
+}
+
 static void __rte_hot
 dpaa2_dev_rx_parse_new(struct dpaa2_dev_priv *priv,
 	struct rte_mbuf *m, const struct qbman_fd *fd,
@@ -948,6 +973,8 @@ dump_err_pkts(struct dpaa2_queue *dpaa2_q)
 		if (priv->psr_dynfield_offset >= 0)
 			dpaa2_dev_rx_parse_offset(priv, mbuf, fd);
 
+		dpaa2_dev_rx_read_timestamp(priv, mbuf);
+
 		dpaa2_dev_rx_print_parser_result(priv, fd, mbuf);
 		DPAA2_PMD_ERR("Err pkt on port[%d]:", eth_data->port_id);
 		DPAA2_PMD_ERR("FD offset: %d, FD err: %x, FAS status: %x",
@@ -1122,6 +1149,8 @@ dpaa2_dev_prefetch_rx_common(void *queue, struct rte_mbuf **bufs,
 			bufs[num_rx] = dpaa2_eth_fd_to_mbuf(priv, fd);
 		if (priv->psr_dynfield_offset >= 0)
 			dpaa2_dev_rx_parse_offset(priv, bufs[num_rx], fd);
+
+		dpaa2_dev_rx_read_timestamp(priv, bufs[num_rx]);
 
 		dpaa2_dev_rx_print_parser_result(priv, fd, bufs[num_rx]);
 
@@ -1373,6 +1402,7 @@ dpaa2_dev_rx_common(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts,
 			if (priv->psr_dynfield_offset >= 0)
 				dpaa2_dev_rx_parse_offset(priv, bufs[num_rx], fd);
 
+			dpaa2_dev_rx_read_timestamp(priv, bufs[num_rx]);
 			dpaa2_dev_rx_print_parser_result(priv, fd, bufs[num_rx]);
 
 			dq_storage++;
@@ -1416,6 +1446,8 @@ dpaa2_dev_is_mbuf_from_spec_pool(struct rte_mempool *mp,
 	return true;
 }
 
+#define swp_idx (DPAA2_PER_LCORE_ETHRX_DPIO->index)
+
 uint16_t dpaa2_dev_tx_conf(void *txq, int drain)
 {
 	/* Function receive frames for a given device and VQ*/
@@ -1433,7 +1465,10 @@ uint16_t dpaa2_dev_tx_conf(void *txq, int drain)
 
 	struct rte_mbuf *mbufs[dpaa2_dqrr_size];
 	struct rte_mempool *mp = NULL;
-	#define swp_idx (DPAA2_PER_LCORE_ETHRX_DPIO->index)
+	struct rte_eth_dev_data *eth_data = dpaa2_q->eth_data;
+	struct dpaa2_dev_priv *priv = eth_data->dev_private;
+	struct dpaa2_annot_hdr *annotation;
+	void *v_addr;
 
 conf_again:
 	bulk_free = true;
@@ -1531,6 +1566,17 @@ conf_again:
 		if (bulk_free == true &&
 			!dpaa2_dev_is_mbuf_from_spec_pool(mp, mbufs[idx]))
 			bulk_free = false;
+		if (unlikely(mbufs[idx]->ol_flags & RTE_MBUF_F_TX_IEEE1588_TMST)) {
+			v_addr = mbufs[idx]->buf_addr;
+			annotation = (void *)((size_t)v_addr + DPAA2_FD_PTA_SIZE);
+			rte_atomic_store_explicit(&priv->tx_timestamp,
+				annotation->word2,
+				rte_memory_order_relaxed);
+			rte_atomic_store_explicit(&priv->next_txq_to_cnf,
+				dpaa2_txq, rte_memory_order_relaxed);
+			dpaa2_q->ts_to_cnfd--;
+			dpaa2_timestamp_debug(priv, __func__, priv->tx_timestamp);
+		}
 		idx++;
 		dq_storage++;
 		if (idx >= dpaa2_dqrr_size)
@@ -1613,7 +1659,7 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
 	/* Function to transmit the frames to given device and VQ*/
 	uint32_t loop, retry_count, i;
-	int32_t ret, tstamp[MAX_TX_RING_SLOTS];
+	int32_t ret, tstamp[MAX_TX_RING_SLOTS], ptp_set_count, ptp_set;
 	struct qbman_fd fd_arr[MAX_TX_RING_SLOTS];
 	uint32_t frames_to_send;
 	struct qbman_eq_desc eqdesc;
@@ -1659,6 +1705,7 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 tx_again:
 	/*Check if the queue is congested*/
 	retry_count = 0;
+	ptp_set_count = 0;
 	while (qbman_result_SCN_state(dpaa2_q->cscn)) {
 		retry_count++;
 		/* Retry for some time before giving up */
@@ -1688,6 +1735,17 @@ tx_again:
 		}
 
 		tstamp[loop] = false;
+		if (unlikely(((*bufs)->ol_flags & RTE_MBUF_F_TX_IEEE1588_TMST) &&
+			(priv->flags & DPAA2_IEEE1588_TX_TS_FLAG))) {
+			ptp_set = false;
+			dpaa2_dev_tx_ptp_one_step_runtime(priv->eth_dev, *bufs,
+				&tstamp[loop], &ptp_set);
+			if (ptp_set)
+				ptp_set_count++;
+			if (ptp_set_count > 1)
+				DPAA2_PMD_WARN("Multiple ptp formats in burst transmission!");
+			goto skip_fast_mbuf2fd;
+		}
 
 		ret = dpaa2_dev_tx_fast_mbuf_to_fd(eth_data,
 			*bufs, &fd_arr[loop], priv->tx_conf_type);
@@ -1696,6 +1754,7 @@ tx_again:
 			continue;
 		}
 
+skip_fast_mbuf2fd:
 		if (unlikely((*bufs)->nb_segs > 1)) {
 			ret = dpaa2_dev_tx_mbuf_to_sg_fd(hw_mp, *bufs, &fd_arr[loop],
 				dpaa2_q, priv->tx_conf_type, &dy_conf[loop], tstamp[loop]);
@@ -1846,7 +1905,7 @@ dpaa2_dev_tx_multi_txq_ordered(void **queue,
 {
 	/* Function to transmit the frames to multiple queues respectively.*/
 	uint32_t loop, retry_count, sent = 0, i;
-	int32_t ret = 0, tstamp[MAX_TX_RING_SLOTS];
+	int32_t ret = 0, tstamp[MAX_TX_RING_SLOTS], ptp_set_count, ptp_set;
 	struct qbman_fd fd_arr[MAX_TX_RING_SLOTS];
 	uint32_t frames_to_send, num_free_eq_desc = 0;
 	struct rte_mempool *hw_mp;
@@ -1869,6 +1928,7 @@ dpaa2_dev_tx_multi_txq_ordered(void **queue,
 	swp = DPAA2_PER_LCORE_PORTAL;
 
 tx_again:
+	ptp_set_count = 0;
 	frames_to_send = (nb_pkts > dpaa2_eqcr_size) ?
 		dpaa2_eqcr_size : nb_pkts;
 
@@ -1925,6 +1985,17 @@ tx_again:
 		}
 
 		tstamp[loop] = false;
+		if (unlikely(((*bufs)->ol_flags & RTE_MBUF_F_TX_IEEE1588_TMST) &&
+			(priv->flags & DPAA2_IEEE1588_TX_TS_FLAG))) {
+			ptp_set = false;
+			dpaa2_dev_tx_ptp_one_step_runtime(priv->eth_dev, *bufs,
+				&tstamp[loop], &ptp_set);
+			if (ptp_set)
+				ptp_set_count++;
+			if (ptp_set_count > 1)
+				DPAA2_PMD_WARN("Multiple ptp formats in burst transmission!");
+			goto skip_fast_mbuf2fd;
+		}
 
 		ret = dpaa2_dev_tx_fast_mbuf_to_fd(eth_data,
 				*bufs, &fd_arr[loop], priv->tx_conf_type);
@@ -1935,6 +2006,7 @@ tx_again:
 			continue;
 		}
 
+skip_fast_mbuf2fd:
 		if (unlikely((*bufs)->nb_segs > 1)) {
 			ret = dpaa2_dev_tx_mbuf_to_sg_fd(hw_mp, *bufs, &fd_arr[loop],
 				dpaa2_q[loop], priv->tx_conf_type, &dy_conf[loop], tstamp[loop]);
