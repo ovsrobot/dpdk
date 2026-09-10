@@ -26,19 +26,43 @@
 #include "dpaa2_pmd_logs.h"
 #include "dpaa2_ethdev.h"
 #include "base/dpaa2_hw_dpni_annot.h"
-#include "dpaa2_parse_dump.h"
+#include "dpaa2_parser_decode.h"
 
-static inline uint32_t __rte_hot
-dpaa2_dev_rx_parse_slow(struct rte_mbuf *mbuf,
-			struct dpaa2_annot_hdr *annotation);
-
-static void enable_tx_tstamp(struct qbman_fd *fd) __rte_unused;
-
-static inline rte_mbuf_timestamp_t *
-dpaa2_timestamp_dynfield(struct rte_mbuf *mbuf)
+static inline void
+dpaa2_dev_rx_annot_prefetch(const struct qbman_fd *fd)
 {
-	return RTE_MBUF_DYNFIELD(mbuf,
-		dpaa2_timestamp_dynfield_offset, rte_mbuf_timestamp_t *);
+	size_t fd_addr;
+	void *hw_annot_addr;
+
+	fd_addr = (size_t)DPAA2_IOVA_TO_VADDR(DPAA2_GET_FD_ADDR(fd));
+	hw_annot_addr = (void *)(fd_addr + DPAA2_FD_PTA_SIZE);
+	rte_prefetch0(hw_annot_addr);
+}
+
+static inline void
+dpaa2_dev_rx_parse_offset(struct dpaa2_dev_priv *priv,
+	struct rte_mbuf *mbuf, const struct qbman_fd *fd)
+{
+	size_t fd_addr;
+	const struct dpaa2_annot_hdr *annotation;
+	uint64_t word6;
+	struct dpaa2_psr_result_word6 *decoded;
+	struct dpaa2_dyn_rx_protocol_pos *pos;
+
+	fd_addr = (size_t)DPAA2_IOVA_TO_VADDR(DPAA2_GET_FD_ADDR(fd));
+	annotation = (void *)(fd_addr + DPAA2_FD_PTA_SIZE);
+
+	RTE_ASSERT(priv->psr_dynfield_offset >=
+		offsetof(struct rte_mbuf, dynfield1[0]) &&
+		priv->psr_dynfield_offset < (sizeof(struct rte_mbuf) -
+		sizeof(struct dpaa2_dyn_rx_protocol_pos)));
+	pos = (void *)((uint8_t *)mbuf + priv->psr_dynfield_offset);
+
+	word6 = rte_be_to_cpu_64(annotation->word6);
+	decoded = (void *)&word6;
+	pos->l3_offset = decoded->l3_off;
+	pos->l4_offset = decoded->l4_off;
+	pos->l5_offset = decoded->l5_off;
 }
 
 #define DPAA2_MBUF_TO_CONTIG_FD(_mbuf, _fd, _bpid)  do { \
@@ -51,81 +75,20 @@ dpaa2_timestamp_dynfield(struct rte_mbuf *mbuf)
 	DPAA2_RESET_FD_FLC(_fd);		\
 } while (0)
 
-static inline void __rte_hot
-dpaa2_dev_rx_parse_new(struct rte_mbuf *m, const struct qbman_fd *fd,
-		       void *hw_annot_addr)
+
+static inline void
+dpaa2_dev_rx_mbuf_sched_set(struct rte_mbuf *m,
+	const struct qbman_fd *fd)
 {
-	uint16_t frc = DPAA2_GET_FD_FRC_PARSE_SUM(fd);
-	struct dpaa2_annot_hdr *annotation =
-			(struct dpaa2_annot_hdr *)hw_annot_addr;
 	uint32_t flc_lo, tc, flow;
 
-	if (unlikely(dpaa2_print_parser_result))
-		dpaa2_print_parse_result(annotation);
-
-	m->packet_type = RTE_PTYPE_UNKNOWN;
-	switch (frc) {
-	case DPAA2_PKT_TYPE_ETHER:
-		m->packet_type = RTE_PTYPE_L2_ETHER;
-		break;
-	case DPAA2_PKT_TYPE_IPV4:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV4;
-		break;
-	case DPAA2_PKT_TYPE_IPV6:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV6;
-		break;
-	case DPAA2_PKT_TYPE_IPV4_EXT:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV4_EXT;
-		break;
-	case DPAA2_PKT_TYPE_IPV6_EXT:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV6_EXT;
-		break;
-	case DPAA2_PKT_TYPE_IPV4_TCP:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_TCP;
-		break;
-	case DPAA2_PKT_TYPE_IPV6_TCP:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_TCP;
-		break;
-	case DPAA2_PKT_TYPE_IPV4_UDP:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_UDP;
-		break;
-	case DPAA2_PKT_TYPE_IPV6_UDP:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_UDP;
-		break;
-	case DPAA2_PKT_TYPE_IPV4_SCTP:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_SCTP;
-		break;
-	case DPAA2_PKT_TYPE_IPV6_SCTP:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_SCTP;
-		break;
-	case DPAA2_PKT_TYPE_IPV4_ICMP:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_ICMP;
-		break;
-	case DPAA2_PKT_TYPE_IPV6_ICMP:
-		m->packet_type = RTE_PTYPE_L2_ETHER |
-			RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_ICMP;
-		break;
-	default:
-		m->packet_type = dpaa2_dev_rx_parse_slow(m, annotation);
-	}
 	flc_lo = fd->simple.flc_lo;
 	if (flc_lo & (1 << DPAA2_FS_FLC_FS_MARK_OFFSET)) {
 		m->ol_flags |= RTE_MBUF_F_RX_FDIR;
 		tc = (flc_lo >> DPAA2_FS_FLC_TC_OFFSET) &
 			DPAA2_FS_FLC_TC_MASK;
 		flow = flc_lo >> DPAA2_FS_FLC_FLOW_OFFSET;
-		rte_mbuf_sched_set(m, flow, tc, 0);
+		rte_mbuf_sched_set(m, flow, tc, DPAA2_GET_FD_DROPP(fd));
 		DPAA2_PMD_DP_DEBUG("FS frame received from TC[%d]->flow%d",
 			tc, flow);
 	} else {
@@ -134,12 +97,86 @@ dpaa2_dev_rx_parse_new(struct rte_mbuf *m, const struct qbman_fd *fd,
 		DPAA2_PMD_DP_DEBUG("Hash frame received with RSS(%08x)",
 			m->hash.rss);
 	}
+}
 
-	if (dpaa2_enable_ts[m->port]) {
-		*dpaa2_timestamp_dynfield(m) = annotation->word2;
-		m->ol_flags |= dpaa2_timestamp_rx_dynflag;
-		DPAA2_PMD_DP_DEBUG("pkt timestamp:0x%" PRIx64 "",
-				*dpaa2_timestamp_dynfield(m));
+static void __rte_hot
+dpaa2_dev_rx_parse_new(struct dpaa2_dev_priv *priv,
+	struct rte_mbuf *m, const struct qbman_fd *fd,
+	void *hw_annot_addr, int is_vlan)
+{
+	uint16_t frc = DPAA2_GET_FD_FRC_PARSE_SUM(fd);
+	struct dpaa2_psr_summary *frc_parse = (void *)&frc;
+	struct dpaa2_annot_hdr *annotation = hw_annot_addr;
+	int default_parsed = false, vlan2 = false;
+	uint32_t ext_packet_type = RTE_PTYPE_UNKNOWN;
+
+	RTE_SET_USED(priv);
+
+	m->packet_type = RTE_PTYPE_UNKNOWN;
+	if (unlikely(is_vlan)) {
+		if (frc & DPAA2_PKT_TYPE_VLAN_2)
+			vlan2 = true;
+		frc &= (~DPAA2_PKT_TYPE_VLAN);
+	}
+	if (priv->sp_protocol) {
+		if (frc_parse->fafe2) {
+			frc_parse->fafe2 = 0;
+			ext_packet_type |= RTE_PTYPE_TUNNEL_GENEVE;
+		}
+		if (frc_parse->sum_l.l4.fafe3) {
+			frc_parse->sum_l.l4.fafe3 = 0;
+			ext_packet_type |= RTE_PTYPE_INNER_L3_IPV4;
+		}
+	}
+	switch (frc) {
+	case DPAA2_PKT_TYPE_IPV4_UDP:
+		m->packet_type = RTE_PTYPE_L2_ETHER |
+			RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_UDP;
+		break;
+	case DPAA2_PKT_TYPE_IPV4_TCP:
+		m->packet_type = RTE_PTYPE_L2_ETHER |
+			RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_TCP;
+		break;
+	case DPAA2_PKT_TYPE_IPV4:
+		m->packet_type = RTE_PTYPE_L2_ETHER |
+			RTE_PTYPE_L3_IPV4;
+		break;
+	case DPAA2_PKT_TYPE_IPV6_UDP:
+		m->packet_type = RTE_PTYPE_L2_ETHER |
+			RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_UDP;
+		break;
+	case DPAA2_PKT_TYPE_IPV6_TCP:
+		m->packet_type = RTE_PTYPE_L2_ETHER |
+			RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_TCP;
+		break;
+	case DPAA2_PKT_TYPE_IPV6:
+		m->packet_type = RTE_PTYPE_L2_ETHER |
+			RTE_PTYPE_L3_IPV6;
+		break;
+	case DPAA2_PKT_TYPE_ETHER:
+		m->packet_type = RTE_PTYPE_L2_ETHER;
+		break;
+	default:
+		m->packet_type = dpaa2_dev_rx_parse_frc(fd, m, annotation);
+		default_parsed = true;
+	}
+
+	m->packet_type |= ext_packet_type;
+
+	if (unlikely(is_vlan && !default_parsed)) {
+		struct dpaa2_psr_result_word5 word5;
+		rte_be16_t *vlan_tci = NULL;
+
+		m->ol_flags |= RTE_MBUF_F_RX_VLAN;
+		*(rte_be64_t *)&word5 = rte_cpu_to_be_64(annotation->word5);
+		if (vlan2) {
+			vlan_tci = rte_pktmbuf_mtod_offset(m, void *,
+				word5.vlan_tci_n_off);
+		} else {
+			vlan_tci = rte_pktmbuf_mtod_offset(m, void *,
+				word5.vlan_tci_1_off);
+		}
+		m->vlan_tci = rte_be_to_cpu_16(*vlan_tci);
 	}
 
 	DPAA2_PMD_DP_DEBUG("HW frc = 0x%x\t packet type =0x%x "
@@ -249,36 +286,18 @@ parse_done:
 }
 
 static inline uint32_t __rte_hot
-dpaa2_dev_rx_parse(struct rte_mbuf *mbuf, void *hw_annot_addr)
+dpaa2_dev_rx_parse(struct dpaa2_dev_priv *priv,
+	struct rte_mbuf *mbuf, void *hw_annot_addr)
 {
-	struct dpaa2_annot_hdr *annotation =
-			(struct dpaa2_annot_hdr *)hw_annot_addr;
+	struct dpaa2_annot_hdr *annotation = hw_annot_addr;
 
 	DPAA2_PMD_DP_DEBUG("(fast parse) Annotation = 0x%" PRIx64 "\t",
-			   annotation->word4);
+		annotation->word4);
 
-	if (BIT_ISSET_AT_POS(annotation->word1, DPAA2_ETH_FAS_L3CE))
-		mbuf->ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_BAD;
-	else if (BIT_ISSET_AT_POS(annotation->word1, DPAA2_ETH_FAS_L3CV))
-		mbuf->ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_GOOD;
-
-	if (BIT_ISSET_AT_POS(annotation->word1, DPAA2_ETH_FAS_L4CE))
-		mbuf->ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_BAD;
-	else if (BIT_ISSET_AT_POS(annotation->word1, DPAA2_ETH_FAS_L4CV))
-		mbuf->ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_GOOD;
-
-	if (unlikely(dpaa2_print_parser_result))
-		dpaa2_print_parse_result(annotation);
-
-	if (dpaa2_enable_ts[mbuf->port]) {
-		*dpaa2_timestamp_dynfield(mbuf) = annotation->word2;
-		mbuf->ol_flags |= dpaa2_timestamp_rx_dynflag;
-		DPAA2_PMD_DP_DEBUG("pkt timestamp: 0x%" PRIx64 "",
-				*dpaa2_timestamp_dynfield(mbuf));
-	}
+	RTE_SET_USED(priv);
 
 	/* Check detailed parsing requirement */
-	if (annotation->word3 & 0x7FFFFC3FFFF)
+	if (unlikely(annotation->word3 & 0x7FFFFC3FFFF))
 		return dpaa2_dev_rx_parse_slow(mbuf, annotation);
 
 	/* Return some common types from parse processing */
@@ -307,8 +326,7 @@ dpaa2_dev_rx_parse(struct rte_mbuf *mbuf, void *hw_annot_addr)
 }
 
 static inline struct rte_mbuf *__rte_hot
-eth_sg_fd_to_mbuf(const struct qbman_fd *fd,
-		  int port_id)
+dpaa2_eth_sg_fd_to_mbuf(struct dpaa2_dev_priv *priv, const struct qbman_fd *fd)
 {
 	struct qbman_sge *sgt, *sge;
 	size_t sg_addr, fd_addr;
@@ -336,12 +354,14 @@ eth_sg_fd_to_mbuf(const struct qbman_fd *fd,
 	first_seg->pkt_len = DPAA2_GET_FD_LEN(fd);
 	first_seg->nb_segs = 1;
 	first_seg->next = NULL;
-	first_seg->port = port_id;
-	if (dpaa2_svr_family == SVR_LX2160A)
-		dpaa2_dev_rx_parse_new(first_seg, fd, hw_annot_addr);
-	else
-		first_seg->packet_type =
-			dpaa2_dev_rx_parse(first_seg, hw_annot_addr);
+	first_seg->port = priv->eth_dev->data->port_id;
+	if (dpaa2_svr_family == SVR_LX2160A) {
+		dpaa2_dev_rx_parse_new(priv, first_seg, fd, hw_annot_addr, false);
+	} else {
+		first_seg->packet_type = dpaa2_dev_rx_parse(priv, first_seg,
+			hw_annot_addr);
+	}
+	dpaa2_dev_rx_mbuf_sched_set(first_seg, fd);
 
 	rte_mbuf_refcnt_set(first_seg, 1);
 #ifdef RTE_LIBRTE_MEMPOOL_DEBUG
@@ -381,13 +401,22 @@ eth_sg_fd_to_mbuf(const struct qbman_fd *fd,
 }
 
 static inline struct rte_mbuf *__rte_hot
-eth_fd_to_mbuf(const struct qbman_fd *fd,
-	       int port_id)
+dpaa2_eth_fd_to_mbuf(struct dpaa2_dev_priv *priv, const struct qbman_fd *fd)
 {
 	void *v_addr = DPAA2_IOVA_TO_VADDR(DPAA2_GET_FD_ADDR(fd));
 	void *hw_annot_addr = (void *)((size_t)v_addr + DPAA2_FD_PTA_SIZE);
 	struct rte_mbuf *mbuf = DPAA2_INLINE_MBUF_FROM_BUF(v_addr,
-		     rte_dpaa2_bpid_info[DPAA2_GET_FD_BPID(fd)].meta_data_size);
+		rte_dpaa2_bpid_info[DPAA2_GET_FD_BPID(fd)].meta_data_size);
+	int is_vlan = false;
+
+	if (unlikely(dpaa2_svr_family == SVR_LX2160A &&
+		(DPAA2_GET_FD_FRC_PARSE_SUM(fd) &
+		DPAA2_PKT_TYPE_VLAN))) {
+		mbuf->data_off = DPAA2_GET_FD_OFFSET(fd);
+		rte_prefetch0(rte_pktmbuf_mtod(mbuf, void *));
+		rte_prefetch0(hw_annot_addr);
+		is_vlan = true;
+	}
 
 	/* need to repopulated some of the fields,
 	 * as they may have changed in last transmission
@@ -397,7 +426,7 @@ eth_fd_to_mbuf(const struct qbman_fd *fd,
 	mbuf->data_off = DPAA2_GET_FD_OFFSET(fd);
 	mbuf->data_len = DPAA2_GET_FD_LEN(fd);
 	mbuf->pkt_len = mbuf->data_len;
-	mbuf->port = port_id;
+	mbuf->port = priv->eth_dev->data->port_id;
 	mbuf->next = NULL;
 	mbuf->hash.sched.color = DPAA2_GET_FD_DROPP(fd);
 	rte_mbuf_refcnt_set(mbuf, 1);
@@ -413,9 +442,10 @@ eth_fd_to_mbuf(const struct qbman_fd *fd,
 	 */
 
 	if (dpaa2_svr_family == SVR_LX2160A)
-		dpaa2_dev_rx_parse_new(mbuf, fd, hw_annot_addr);
+		dpaa2_dev_rx_parse_new(priv, mbuf, fd, hw_annot_addr, is_vlan);
 	else
-		mbuf->packet_type = dpaa2_dev_rx_parse(mbuf, hw_annot_addr);
+		mbuf->packet_type = dpaa2_dev_rx_parse(priv, mbuf, hw_annot_addr);
+	dpaa2_dev_rx_mbuf_sched_set(mbuf, fd);
 
 	DPAA2_PMD_DP_DEBUG("to mbuf - mbuf =%p, mbuf->buf_addr =%p, off = %d,"
 		"fd_off=%d fd =%" PRIx64 ", meta = %d  bpid =%d, len=%d",
@@ -674,6 +704,7 @@ dump_err_pkts(struct dpaa2_queue *dpaa2_q)
 	struct dpaa2_fas *fas;
 	struct rte_mbuf *mbuf;
 	char title[32];
+	struct dpaa2_dev_priv *priv = eth_data->dev_private;
 
 	if (unlikely(!DPAA2_PER_LCORE_DPIO)) {
 		ret = dpaa2_affine_qbman_swp();
@@ -729,15 +760,16 @@ dump_err_pkts(struct dpaa2_queue *dpaa2_q)
 		hw_annot_addr = (void *)((size_t)v_addr + DPAA2_FD_PTA_SIZE);
 		fas = hw_annot_addr;
 
+		if (priv->psr_dynfield_offset >= 0)
+			dpaa2_dev_rx_annot_prefetch(fd);
 		if (DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg)
-			mbuf = eth_sg_fd_to_mbuf(fd, eth_data->port_id);
+			mbuf = dpaa2_eth_sg_fd_to_mbuf(priv, fd);
 		else
-			mbuf = eth_fd_to_mbuf(fd, eth_data->port_id);
+			mbuf = dpaa2_eth_fd_to_mbuf(priv, fd);
+		if (priv->psr_dynfield_offset >= 0)
+			dpaa2_dev_rx_parse_offset(priv, mbuf, fd);
 
-		if (!dpaa2_print_parser_result) {
-			/** Don't print parse result twice.*/
-			dpaa2_print_parse_result(hw_annot_addr);
-		}
+		dpaa2_dev_rx_print_parser_result(priv, fd, mbuf);
 
 		DPAA2_PMD_ERR("Err pkt on port[%d]:", eth_data->port_id);
 		DPAA2_PMD_ERR("FD offset: %d, FD err: %x, FAS status: %x",
@@ -792,18 +824,12 @@ dpaa2_dev_prefetch_rx_common(void *queue, struct rte_mbuf **bufs,
 	struct qbman_pull_desc pulldesc;
 	struct queue_storage_info_t *q_storage;
 	struct rte_eth_dev_data *eth_data = dpaa2_q->eth_data;
+	struct dpaa2_dev_priv *priv = eth_data->dev_private;
 
 	q_storage = dpaa2_q->q_storage[rte_lcore_id()];
 
-	/* the error-queue drain runs on the regular portal (DPAA2_PER_LCORE_PORTAL);
-	 * the channel/interrupt path owns the ethrx portal, so skip it there
-	 */
-	if (!by_channel) {
-		struct dpaa2_dev_priv *priv = eth_data->dev_private;
-
-		if (unlikely(priv->flags & DPAAX_RX_ERROR_QUEUE_FLAG))
-			dump_err_pkts(priv->rx_err_vq);
-	}
+	if (unlikely(priv->flags & DPAAX_RX_ERROR_QUEUE_FLAG))
+		dump_err_pkts(priv->rx_err_vq);
 
 	if (unlikely(!DPAA2_PER_LCORE_ETHRX_DPIO)) {
 		ret = dpaa2_affine_qbman_ethrx_swp();
@@ -909,18 +935,17 @@ dpaa2_dev_prefetch_rx_common(void *queue, struct rte_mbuf **bufs,
 			dpaa2_dev_prefetch_next_psr(dq_storage);
 
 		fd = qbman_result_DQ_fd(dq_storage);
-		if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
-			bufs[num_rx] = eth_sg_fd_to_mbuf(fd, eth_data->port_id);
-		else
-			bufs[num_rx] = eth_fd_to_mbuf(fd, eth_data->port_id);
-#if defined(RTE_LIBRTE_IEEE1588)
-		if (bufs[num_rx]->ol_flags & RTE_MBUF_F_RX_IEEE1588_TMST) {
-			struct dpaa2_dev_priv *priv = eth_data->dev_private;
 
-			priv->rx_timestamp =
-				*dpaa2_timestamp_dynfield(bufs[num_rx]);
-		}
-#endif
+		if (priv->psr_dynfield_offset >= 0)
+			dpaa2_dev_rx_annot_prefetch(fd);
+		if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
+			bufs[num_rx] = dpaa2_eth_sg_fd_to_mbuf(priv, fd);
+		else
+			bufs[num_rx] = dpaa2_eth_fd_to_mbuf(priv, fd);
+		if (priv->psr_dynfield_offset >= 0)
+			dpaa2_dev_rx_parse_offset(priv, bufs[num_rx], fd);
+
+		dpaa2_dev_rx_print_parser_result(priv, fd, bufs[num_rx]);
 
 		dq_storage++;
 		num_rx++;
@@ -989,7 +1014,10 @@ dpaa2_dev_process_parallel_event(struct qbman_swp *swp,
 	ev->queue_id = rxq->ev.queue_id;
 	ev->priority = rxq->ev.priority;
 
-	ev->mbuf = eth_fd_to_mbuf(fd, rxq->eth_data->port_id);
+	if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
+		ev->mbuf = dpaa2_eth_sg_fd_to_mbuf(rxq->eth_data->dev_private, fd);
+	else
+		ev->mbuf = dpaa2_eth_fd_to_mbuf(rxq->eth_data->dev_private, fd);
 
 	qbman_swp_dqrr_consume(swp, dq);
 }
@@ -1014,7 +1042,10 @@ dpaa2_dev_process_atomic_event(struct qbman_swp *swp __rte_unused,
 	ev->queue_id = rxq->ev.queue_id;
 	ev->priority = rxq->ev.priority;
 
-	ev->mbuf = eth_fd_to_mbuf(fd, rxq->eth_data->port_id);
+	if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
+		ev->mbuf = dpaa2_eth_sg_fd_to_mbuf(rxq->eth_data->dev_private, fd);
+	else
+		ev->mbuf = dpaa2_eth_fd_to_mbuf(rxq->eth_data->dev_private, fd);
 
 	dqrr_index = qbman_get_dqrr_idx(dq);
 	*dpaa2_seqn(ev->mbuf) = dqrr_index + 1;
@@ -1041,7 +1072,10 @@ dpaa2_dev_process_ordered_event(struct qbman_swp *swp,
 	ev->queue_id = rxq->ev.queue_id;
 	ev->priority = rxq->ev.priority;
 
-	ev->mbuf = eth_fd_to_mbuf(fd, rxq->eth_data->port_id);
+	if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
+		ev->mbuf = dpaa2_eth_sg_fd_to_mbuf(rxq->eth_data->dev_private, fd);
+	else
+		ev->mbuf = dpaa2_eth_fd_to_mbuf(rxq->eth_data->dev_private, fd);
 
 	*dpaa2_seqn(ev->mbuf) = DPAA2_ENQUEUE_FLAG_ORP;
 	*dpaa2_seqn(ev->mbuf) |= qbman_result_DQ_odpid(dq) << DPAA2_EQCR_OPRID_SHIFT;
@@ -1151,12 +1185,15 @@ dpaa2_dev_rx_common(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts,
 				dpaa2_dev_prefetch_next_psr(dq_storage);
 
 			fd = qbman_result_DQ_fd(dq_storage);
+
+			if (priv->psr_dynfield_offset >= 0)
+				dpaa2_dev_rx_annot_prefetch(fd);
 			if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
-				bufs[num_rx] = eth_sg_fd_to_mbuf(fd,
-							eth_data->port_id);
+				bufs[num_rx] = dpaa2_eth_sg_fd_to_mbuf(priv, fd);
 			else
-				bufs[num_rx] = eth_fd_to_mbuf(fd,
-							eth_data->port_id);
+				bufs[num_rx] = dpaa2_eth_fd_to_mbuf(priv, fd);
+			if (priv->psr_dynfield_offset >= 0)
+				dpaa2_dev_rx_parse_offset(priv, bufs[num_rx], fd);
 
 #if defined(RTE_LIBRTE_IEEE1588)
 		if (bufs[num_rx]->ol_flags & RTE_MBUF_F_RX_IEEE1588_TMST) {
@@ -1164,6 +1201,7 @@ dpaa2_dev_rx_common(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts,
 				*dpaa2_timestamp_dynfield(bufs[num_rx]);
 		}
 #endif
+			dpaa2_dev_rx_print_parser_result(priv, fd, bufs[num_rx]);
 
 			dq_storage++;
 			num_rx++;
@@ -1314,7 +1352,7 @@ uint16_t dpaa2_dev_tx_conf(void *queue)
 
 	return num_tx_conf;
 }
-
+#ifdef RTE_LIBRTE_IEEE1588
 /* Configure the egress frame annotation for timestamp update */
 static void enable_tx_tstamp(struct qbman_fd *fd)
 {
@@ -1336,7 +1374,7 @@ static void enable_tx_tstamp(struct qbman_fd *fd)
 	fd_faead->ctrl = DPAA2_ANNOT_FAEAD_A2V | DPAA2_ANNOT_FAEAD_UPDV |
 				DPAA2_ANNOT_FAEAD_UPD;
 }
-
+#endif
 /*
  * Callback to handle sending packets through WRIOP based interface
  */
@@ -1617,8 +1655,12 @@ dpaa2_dev_free_eqresp_buf(uint16_t eqresp_ci,
 	fd = qbman_result_eqresp_fd(&dpio_dev->eqresp[eqresp_ci]);
 
 	/* Setting port id does not matter as we are to free the mbuf */
-	m = eth_fd_to_mbuf(fd, 0);
-	rte_pktmbuf_free(m);
+	if (unlikely(DPAA2_FD_GET_FORMAT(fd) == qbman_fd_sg))
+		m = dpaa2_eth_sg_fd_to_mbuf(dpaa2_q->eth_data->dev_private, fd);
+	else
+		m = dpaa2_eth_fd_to_mbuf(dpaa2_q->eth_data->dev_private, fd);
+	if (m)
+		rte_pktmbuf_free(m);
 }
 
 static void

@@ -21,6 +21,8 @@
 #include <mc/fsl_dpmac.h>
 
 #include "base/dpaa2_hw_dpni_annot.h"
+#include "dpaa2_parser_decode.h"
+
 
 #define DPAA2_MIN_RX_BUF_SIZE 512
 #define DPAA2_MAX_RX_PKT_LEN  10240 /*WRIOP support*/
@@ -101,6 +103,7 @@
 #define DPAA2_DATA_STASHING_OFF		RTE_BIT32(10)
 
 #define DPAAX_RX_ERROR_QUEUE_FLAG	RTE_BIT32(11)
+#define DPAA2_RX_PRINT_PSR_RESULT_FLAG RTE_BIT32(12)
 
 /* DPDMUX index for DPMAC */
 #define DPAA2_DPDMUX_DPMAC_IDX 0
@@ -124,31 +127,62 @@
 	RTE_ETH_RSS_PPPOE)
 
 /* LX2 FRC Parsed values (Little Endian) */
-#define DPAA2_PKT_TYPE_ETHER		0x0060
-#define DPAA2_PKT_TYPE_IPV4		0x0000
-#define DPAA2_PKT_TYPE_IPV6		0x0020
+#define DPAA2_PKT_TYPE_ETHER \
+	(DPAA2_PSR_SUMMARY_NONIP << DPAA2_PSR_SUMMARY_NON_IP_L2_BIT_SIZE)
+#define DPAA2_PKT_TYPE_IPV4 \
+	(DPAA2_PSR_SUMMARY_IPV4 << DPAA2_PSR_SUMMARY_L4_BIT_SIZE)
+#define DPAA2_PKT_TYPE_IPV6 \
+	(DPAA2_PSR_SUMMARY_IPV6 << DPAA2_PSR_SUMMARY_L4_BIT_SIZE)
+
+/**Tunnel*/
+#define DPAA2_PKT_TYPE_L3_EXT \
+	(DPAA2_PSR_SUMMARY_L4_EXT << DPAA2_PSR_SUMMARY_L4_EXT_L3_POS)
+#define DPAA2_PKT_TYPE_L3_EXT_IPV4 \
+	(DPAA2_PSR_SUMMARY_IPV4 << DPAA2_PSR_SUMMARY_L4_EXT_BIT_SIZE)
+#define DPAA2_PKT_TYPE_L3_EXT_IPV6 \
+	(DPAA2_PSR_SUMMARY_IPV6 << DPAA2_PSR_SUMMARY_L4_EXT_BIT_SIZE)
 #define DPAA2_PKT_TYPE_IPV4_EXT \
-			(0x0001 | DPAA2_PKT_TYPE_IPV4)
+	(DPAA2_PKT_TYPE_L3_EXT | DPAA2_PKT_TYPE_L3_EXT_IPV4)
 #define DPAA2_PKT_TYPE_IPV6_EXT \
-			(0x0001 | DPAA2_PKT_TYPE_IPV6)
+	(DPAA2_PKT_TYPE_L3_EXT | DPAA2_PKT_TYPE_L3_EXT_IPV6)
+#define DPAA2_PKT_TYPE_IPV4_EXT_GRE_IPV4 \
+	(DPAA2_PKT_TYPE_IPV4_EXT | DPAA2_PSR_SUMMARY_GRE_IPV4)
+#define DPAA2_PKT_TYPE_IPV4_EXT_GRE_IPV4_UDP_TCP \
+	(DPAA2_PKT_TYPE_IPV4_EXT | DPAA2_PSR_SUMMARY_GRE_IPV4_UDP_TCP)
+#define DPAA2_PKT_TYPE_IPV4_EXT_GRE_IPV6 \
+	(DPAA2_PKT_TYPE_IPV4_EXT | DPAA2_PSR_SUMMARY_GRE_IPV6)
+#define DPAA2_PKT_TYPE_IPV4_EXT_GRE_IPV6_UDP_TCP \
+	(DPAA2_PKT_TYPE_IPV4_EXT | DPAA2_PSR_SUMMARY_GRE_IPV6_UDP_TCP)
+#define DPAA2_PKT_TYPE_IPV6_EXT_GRE_IPV4 \
+	(DPAA2_PKT_TYPE_IPV6_EXT | DPAA2_PSR_SUMMARY_GRE_IPV4)
+#define DPAA2_PKT_TYPE_IPV6_EXT_GRE_IPV4_UDP_TCP \
+	(DPAA2_PKT_TYPE_IPV6_EXT | DPAA2_PSR_SUMMARY_GRE_IPV4_UDP_TCP)
+#define DPAA2_PKT_TYPE_IPV6_EXT_GRE_IPV6 \
+	(DPAA2_PKT_TYPE_IPV6_EXT | DPAA2_PSR_SUMMARY_GRE_IPV6)
+#define DPAA2_PKT_TYPE_IPV6_EXT_GRE_IPV6_UDP_TCP \
+	(DPAA2_PKT_TYPE_IPV6_EXT | DPAA2_PSR_SUMMARY_GRE_IPV6_UDP_TCP)
+
 #define DPAA2_PKT_TYPE_IPV4_TCP \
-			(0x000e | DPAA2_PKT_TYPE_IPV4)
+	(DPAA2_PSR_SUMMARY_TCP | DPAA2_PKT_TYPE_IPV4)
 #define DPAA2_PKT_TYPE_IPV6_TCP \
-			(0x000e | DPAA2_PKT_TYPE_IPV6)
+	(DPAA2_PSR_SUMMARY_TCP | DPAA2_PKT_TYPE_IPV6)
 #define DPAA2_PKT_TYPE_IPV4_UDP \
-			(0x0010 | DPAA2_PKT_TYPE_IPV4)
+	(DPAA2_PSR_SUMMARY_UDP | DPAA2_PKT_TYPE_IPV4)
 #define DPAA2_PKT_TYPE_IPV6_UDP \
-			(0x0010 | DPAA2_PKT_TYPE_IPV6)
-#define DPAA2_PKT_TYPE_IPV4_SCTP	\
-			(0x000f | DPAA2_PKT_TYPE_IPV4)
-#define DPAA2_PKT_TYPE_IPV6_SCTP	\
-			(0x000f | DPAA2_PKT_TYPE_IPV6)
+	(DPAA2_PSR_SUMMARY_UDP | DPAA2_PKT_TYPE_IPV6)
+#define DPAA2_PKT_TYPE_IPV4_SCTP \
+	(DPAA2_PSR_SUMMARY_SCTP | DPAA2_PKT_TYPE_IPV4)
+#define DPAA2_PKT_TYPE_IPV6_SCTP \
+	(DPAA2_PSR_SUMMARY_SCTP | DPAA2_PKT_TYPE_IPV6)
 #define DPAA2_PKT_TYPE_IPV4_ICMP \
-			(0x0003 | DPAA2_PKT_TYPE_IPV4_EXT)
+	(DPAA2_PSR_SUMMARY_ICMP | DPAA2_PKT_TYPE_IPV4)
 #define DPAA2_PKT_TYPE_IPV6_ICMP \
-			(0x0003 | DPAA2_PKT_TYPE_IPV6_EXT)
-#define DPAA2_PKT_TYPE_VLAN_1		0x0160
-#define DPAA2_PKT_TYPE_VLAN_2		0x0260
+	(DPAA2_PSR_SUMMARY_ICMP | DPAA2_PKT_TYPE_IPV6)
+
+#define DPAA2_PKT_TYPE_VLAN_1	0x0100
+#define DPAA2_PKT_TYPE_VLAN_2	0x0200
+#define DPAA2_PKT_TYPE_VLAN \
+	(DPAA2_PKT_TYPE_VLAN_1 | DPAA2_PKT_TYPE_VLAN_2)
 
 /* mac counters */
 #define DPAA2_MAC_NUM_STATS            (DPMAC_CNT_EGR_CONTROL_FRAME + 1)
@@ -173,17 +207,33 @@ struct sw_buf_free {
 	struct rte_mbuf *seg;
 };
 
-/* enable timestamp in mbuf*/
-extern bool dpaa2_enable_ts[];
-extern uint64_t dpaa2_timestamp_rx_dynflag;
-extern int dpaa2_timestamp_dynfield_offset;
-
 /* Externally defined */
 extern const struct rte_flow_ops dpaa2_flow_ops;
 
 extern const struct rte_tm_ops dpaa2_tm_ops;
 
-extern bool dpaa2_print_parser_result;
+struct dpaa2_dyn_rx_protocol_pos {
+	uint8_t l3_offset;
+	uint8_t l4_offset;
+	uint8_t l5_offset;
+	uint8_t rsv;
+};
+
+#define L3_OFFSET_OF_MBUF_DYN 0
+#define L4_OFFSET_OF_MBUF_DYN 1
+#define L5_OFFSET_OF_MBUF_DYN 2
+
+#define DPAA2_FS_FLC_FS_MARK_OFFSET \
+	(DPAA2_FLC_DATA_STASHING + DPAA2_FLC_STASHING_MAX_BIT_SIZE)
+
+#define DPAA2_FS_FLC_TC_OFFSET \
+	(DPAA2_FS_FLC_FS_MARK_OFFSET + DPAA2_FLC_STASHING_MAX_BIT_SIZE)
+
+#define DPAA2_FS_FLC_TC_BIT_SIZE (sizeof(uint8_t) * 8)
+#define DPAA2_FS_FLC_TC_MASK ((1 << DPAA2_FS_FLC_TC_BIT_SIZE) - 1)
+
+#define DPAA2_FS_FLC_FLOW_OFFSET \
+	(DPAA2_FS_FLC_TC_OFFSET + DPAA2_FS_FLC_TC_BIT_SIZE)
 
 #define DPAA2_FAPR_SIZE \
 	(sizeof(struct dpaa2_annot_hdr) - \
@@ -257,42 +307,6 @@ enum dpaa2_ecpri_fafe_type {
 #define DPAA2_PR_L4_OFF_OFFSET 30
 #define DPAA2_PR_L5_OFF_OFFSET 31
 #define DPAA2_PR_NXTHDR_OFF_OFFSET 34
-
-/* Set by SP for vxlan distribution start*/
-#define DPAA2_VXLAN_IN_TCI_OFFSET 16
-
-#define DPAA2_VXLAN_IN_DADDR0_OFFSET 20
-#define DPAA2_VXLAN_IN_DADDR1_OFFSET 22
-#define DPAA2_VXLAN_IN_DADDR2_OFFSET 24
-#define DPAA2_VXLAN_IN_DADDR3_OFFSET 25
-#define DPAA2_VXLAN_IN_DADDR4_OFFSET 26
-#define DPAA2_VXLAN_IN_DADDR5_OFFSET 28
-
-#define DPAA2_VXLAN_IN_SADDR0_OFFSET 29
-#define DPAA2_VXLAN_IN_SADDR1_OFFSET 32
-#define DPAA2_VXLAN_IN_SADDR2_OFFSET 33
-#define DPAA2_VXLAN_IN_SADDR3_OFFSET 35
-#define DPAA2_VXLAN_IN_SADDR4_OFFSET 41
-#define DPAA2_VXLAN_IN_SADDR5_OFFSET 42
-
-#define DPAA2_VXLAN_VNI_OFFSET 43
-#define DPAA2_VXLAN_IN_TYPE_OFFSET 46
-/* Set by SP for vxlan distribution end*/
-
-/* ECPRI shares SP context with VXLAN*/
-#define DPAA2_ECPRI_MSG_OFFSET DPAA2_VXLAN_VNI_OFFSET
-
-#define DPAA2_FS_FLC_FS_MARK_OFFSET \
-	(DPAA2_FLC_DATA_STASHING + DPAA2_FLC_STASHING_MAX_BIT_SIZE)
-
-#define DPAA2_FS_FLC_TC_OFFSET \
-	(DPAA2_FS_FLC_FS_MARK_OFFSET + DPAA2_FLC_STASHING_MAX_BIT_SIZE)
-
-#define DPAA2_FS_FLC_TC_BIT_SIZE (sizeof(uint8_t) * 8)
-#define DPAA2_FS_FLC_TC_MASK ((1 << DPAA2_FS_FLC_TC_BIT_SIZE) - 1)
-
-#define DPAA2_FS_FLC_FLOW_OFFSET \
-	(DPAA2_FS_FLC_TC_OFFSET + DPAA2_FS_FLC_TC_BIT_SIZE)
 
 #define DPAA2_ECPRI_MAX_EXTRACT_NB 8
 
@@ -436,6 +450,7 @@ struct dpaa2_dev_priv {
 	void *tx_conf_vq[MAX_TX_QUEUES];
 	void *rx_err_vq;
 	uint32_t flags; /*dpaa2 config flags */
+	int psr_dynfield_offset;
 	uint8_t max_mac_filters;
 	uint8_t max_vlan_filters;
 	uint8_t num_rx_tc;
@@ -475,6 +490,9 @@ struct dpaa2_dev_priv {
 	uint64_t rx_timestamp;
 	/*stores timestamp of last received tx confirmation packet on dev*/
 	uint64_t tx_timestamp;
+
+	int rx_ts_offset;
+	uint64_t rx_ts_flag;
 	/* stores pointer to next tx_conf queue that should be processed,
 	 * it corresponds to last packet transmitted
 	 */
@@ -483,6 +501,7 @@ struct dpaa2_dev_priv {
 	struct rte_eth_dev *eth_dev; /**< Pointer back to holding ethdev */
 	rte_spinlock_t lpbk_qp_lock;
 
+	bool sp_protocol;
 	uint8_t channel_inuse;
 	/* Rx-interrupt mode latched at the first dev_configure */
 	uint8_t intr_mode;
@@ -512,6 +531,41 @@ static inline int dpaa2_dev_cmp_dpni_ver(struct dpaa2_dev_priv *priv,
 	if (priv->dpni_ver_major == ver_major)
 		return priv->dpni_ver_minor - ver_minor;
 	return priv->dpni_ver_major - ver_major;
+}
+
+static inline void
+dpaa2_dev_rx_print_parser_result(struct dpaa2_dev_priv *priv,
+	const struct qbman_fd *fd, const struct rte_mbuf *m)
+{
+	size_t fd_addr;
+	void *hw_annot_addr;
+
+	if (likely(!(priv->flags & DPAA2_RX_PRINT_PSR_RESULT_FLAG)))
+		return;
+
+	if (dpaa2_svr_family == SVR_LX2160A)
+		dpaa2_print_fd_frc(fd);
+
+	fd_addr = (size_t)DPAA2_IOVA_TO_VADDR(DPAA2_GET_FD_ADDR(fd));
+	hw_annot_addr = (void *)(fd_addr + DPAA2_FD_PTA_SIZE);
+	dpaa2_print_parse_result(hw_annot_addr, priv->sp_protocol);
+	if (m->ol_flags & RTE_MBUF_F_RX_FDIR) {
+		const struct rte_mbuf_sched *sched;
+		uint16_t i;
+		struct dpaa2_queue *rxq;
+
+		sched = &m->hash.sched;
+		for (i = 0; i < MAX_RX_QUEUES; i++) {
+			rxq = priv->rx_vq[i];
+			if (rxq->tc_index == sched->traffic_class &&
+				rxq->flow_id == sched->queue_id)
+				break;
+		}
+		fprintf(rte_log_get_stream(), "Directed to TC%d-flow%d(rxq%d), color(%d)\n",
+			sched->traffic_class, sched->queue_id, i, sched->color);
+	} else if (m->ol_flags & RTE_MBUF_F_RX_RSS_HASH) {
+		fprintf(rte_log_get_stream(), "Balanced with hash(0x%08x)\n", m->hash.rss);
+	}
 }
 
 int dpaa2_distset_to_dpkg_profile_cfg(uint64_t req_dist_set,
