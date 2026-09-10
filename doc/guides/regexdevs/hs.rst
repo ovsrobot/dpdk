@@ -205,6 +205,11 @@ Limitations
 - Multi-process mode is not supported.
 - Each queue pair must be used by exactly one lcore
   (single-producer/single-consumer model).
+- Control-plane calls (``configure``, ``queue_pair_setup``,
+  ``start``, ``stop``, ``close``) must not be called concurrently
+  with ``enqueue_burst``/``dequeue_burst`` on any queue pair, or with
+  each other. The application must quiesce the datapath before
+  invoking any control-plane function.
 
 Debugging Options
 -----------------
