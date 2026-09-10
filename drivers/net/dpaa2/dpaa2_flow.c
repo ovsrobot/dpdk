@@ -3831,6 +3831,52 @@ dpaa2_flow_clear_fs_table(struct dpaa2_dev_priv *priv,
 	return 0;
 }
 
+static int
+dpaa2_flow_fs_table_set_default(struct dpaa2_dev_priv *priv,
+	uint8_t tc_id, int discard, uint16_t default_queue)
+{
+	int ret;
+	struct rte_dpaa2_device *dpaa2_dev;
+	struct dpni_rx_dist_cfg *tc_cfg;
+	struct fsl_mc_io *dpni = priv->hw;
+	struct dpaa2_flow_tbl_profile *tbl_profile;
+	struct dpaa2_queue *queue;
+	char mc_rev[1024];
+
+	dpaa2_dev = DPAA2_DEV_PRIV_TO_DPAA2_DEV(priv);
+	tbl_profile = &priv->flow_profile.tc_profile[tc_id];
+	snprintf(mc_rev, 1024, "MC rev(%d.%d.%d)",
+		RTE_FSL_MC_REV_MAJOR(dpaa2_dev->bus_info->mc_rev),
+		RTE_FSL_MC_REV_MINOR(dpaa2_dev->bus_info->mc_rev),
+		RTE_FSL_MC_REV_REVISION(dpaa2_dev->bus_info->mc_rev));
+	if (!tbl_profile->dpkg.num_extracts &&
+		dpaa2_dev->bus_info->mc_rev < DPAA2_QOS_FLOW_TABLE_SET_V3_MC_REV) {
+		DPAA2_PMD_DEBUG("%s can't set miss action of FS table indepentently.",
+			mc_rev);
+		return 0;
+	}
+	tc_cfg = &tbl_profile->tc_cfg;
+	tc_cfg->enable = true;
+	if (discard) {
+		tbl_profile->default_drop = true;
+		tc_cfg->fs_miss_flow_id = DPNI_FS_MISS_ACTION_DROP;
+	} else {
+		queue = dpaa2_flow_queue_action_to_queue(priv, tc_id, default_queue);
+		if (!queue)
+			return -EINVAL;
+		tbl_profile->default_drop = false;
+		tbl_profile->default_queue.index = default_queue;
+		tc_cfg->fs_miss_flow_id = queue->flow_id;
+	}
+	ret = dpni_set_rx_fs_dist(dpni, CMD_PRI_LOW, priv->token, tc_cfg);
+	if (ret < 0) {
+		DPAA2_PMD_ERR("%s: Failed(%d) to set default action of TC[%d]",
+			__func__, ret, tc_id);
+		return ret;
+	}
+
+	return 0;
+}
 
 static int
 dpaa2_flow_fs_rss_table_config(struct dpaa2_dev_priv *priv,
@@ -3924,6 +3970,62 @@ successful_config:
 	return 0;
 }
 
+static int
+dpaa2_flow_qos_table_set_default(struct dpaa2_dev_priv *priv,
+	int discard, uint8_t default_tc, uint16_t default_flow)
+{
+	int ret;
+	struct rte_dpaa2_device *dpaa2_dev;
+	struct dpni_qos_tbl_cfg qos_cfg;
+	struct fsl_mc_io *dpni = priv->hw;
+	struct dpaa2_flow_tbl_profile *tbl_profile;
+	char mc_rev[1024];
+
+	dpaa2_dev = DPAA2_DEV_PRIV_TO_DPAA2_DEV(priv);
+	tbl_profile = &priv->flow_profile.qos_profile;
+	snprintf(mc_rev, 1024, "MC rev(%d.%d.%d)",
+		RTE_FSL_MC_REV_MAJOR(dpaa2_dev->bus_info->mc_rev),
+		RTE_FSL_MC_REV_MINOR(dpaa2_dev->bus_info->mc_rev),
+		RTE_FSL_MC_REV_REVISION(dpaa2_dev->bus_info->mc_rev));
+	if (!tbl_profile->dpkg.num_extracts &&
+		dpaa2_dev->bus_info->mc_rev < DPAA2_QOS_FLOW_TABLE_SET_V3_MC_REV) {
+		DPAA2_PMD_DEBUG("%s can't set miss action of QoS table indepentently.",
+			mc_rev);
+		return 0;
+	}
+	if (default_flow < priv->dist_queues &&
+		dpaa2_dev->bus_info->mc_rev < DPAA2_QOS_FLOW_TABLE_MISS_FLOW_ACTION_MC_REV) {
+		DPAA2_PMD_WARN("%s can't direct miss traffic to TC%d-flow%d by QoS table only.",
+			mc_rev, default_tc, default_flow);
+		return 0;
+	}
+
+	rte_memcpy(&qos_cfg, &tbl_profile->qos_cfg, sizeof(struct dpni_qos_tbl_cfg));
+	qos_cfg.key_cfg_iova = 0;
+	qos_cfg.default_tc = default_tc;
+	qos_cfg.default_flow_id = default_flow;
+	qos_cfg.discard_on_miss = discard ? true : false;
+	qos_cfg.set_default_flow_id = default_flow < priv->dist_queues ? true : false;
+
+	ret = dpni_set_qos_table(dpni, CMD_PRI_LOW, priv->token, &qos_cfg);
+	if (ret < 0) {
+		DPAA2_PMD_ERR("%s: Failed(%d) to set default action of QoS",
+			__func__, ret);
+		return ret;
+	}
+	if (discard) {
+		tbl_profile->default_drop = true;
+	} else {
+		tbl_profile->default_drop = false;
+		tbl_profile->default_jump.group = default_tc;
+	}
+	rte_memcpy(&tbl_profile->qos_cfg.discard_on_miss,
+		&qos_cfg.discard_on_miss,
+		sizeof(struct dpni_qos_tbl_cfg) -
+		offsetof(struct dpni_qos_tbl_cfg, discard_on_miss));
+
+	return 0;
+}
 
 static int
 dpaa2_flow_qos_table_config(struct dpaa2_dev_priv *priv,
@@ -5927,6 +6029,140 @@ dpaa2_flow_destroy(struct rte_eth_dev *dev,
 	return qos_ret ? qos_ret : fs_ret;
 }
 
+static int
+dpaa2_flow_set_miss_actions(struct rte_eth_dev *dev,
+	uint32_t group, const struct rte_flow_group_attr *attr,
+	const struct rte_flow_action actions[], struct rte_flow_error *err)
+{
+	struct dpaa2_dev_priv *priv = dev->data->dev_private;
+	enum dpaa2_flow_dist_type flow_type = DPAA2_FLOW_NULL_TYPE;
+	int end_of_list = 0, i = 0, discard = false, err_code = 0;
+	const struct rte_flow_action_jump *action_jump = NULL;
+	const struct rte_flow_action_queue *dest_queue = NULL;
+	uint32_t group_id, group_type;
+	enum rte_flow_error_type error_type = RTE_FLOW_ERROR_TYPE_NONE;
+	const char *err_str = NULL;
+	struct dpaa2_queue *miss_rxq = NULL;
+	uint8_t qos_tc = 0xff;
+	uint16_t qos_flow = 0xffff;
+
+	RTE_SET_USED(attr);
+
+	group_type = RTE_DPAA2_FLOW_GROUP_TYPE_GET(group);
+	group_id = RTE_DPAA2_FLOW_GROUP_ID_GET(group);
+	if (group_id >= priv->num_rx_tc &&
+		group_type == RTE_DPAA2_ONE_LEVEL_GROUP_FLOW) {
+		group_type = RTE_DPAA2_QOS_GROUP_FLOW;
+		group_id = 0;
+	}
+	if (group_type == RTE_DPAA2_QOS_GROUP_FLOW)
+		flow_type = DPAA2_FLOW_QOS_TYPE;
+	else if (group_type == RTE_DPAA2_FS_GROUP_FLOW)
+		flow_type = DPAA2_FLOW_FS_TYPE;
+	else if (group >= priv->num_rx_tc)
+		flow_type = DPAA2_FLOW_QOS_TYPE;
+	else
+		flow_type = DPAA2_FLOW_FS_TYPE;
+
+	while (!end_of_list) {
+		switch (actions[i].type) {
+		case RTE_FLOW_ACTION_TYPE_QUEUE:
+			dest_queue = actions[i].conf;
+			if (dest_queue->index >= dev->data->nb_rx_queues) {
+				error_type = RTE_FLOW_ERROR_TYPE_ACTION_CONF;
+				err_code = -EINVAL;
+				err_str = "Queue index overflows";
+				goto failure_to_set_miss_actions;
+			}
+			miss_rxq = priv->rx_vq[dest_queue->index];
+			break;
+		case RTE_FLOW_ACTION_TYPE_JUMP:
+			action_jump = actions[i].conf;
+			break;
+		case RTE_FLOW_ACTION_TYPE_DROP:
+			discard = true;
+			break;
+		case RTE_FLOW_ACTION_TYPE_END:
+			end_of_list = 1;
+			break;
+		default:
+			DPAA2_PMD_WARN("Invalid default action type[%d]:(%d)",
+				i, actions[i].type);
+			break;
+		}
+		i++;
+	}
+
+	if (flow_type == DPAA2_FLOW_QOS_TYPE) {
+		if (!priv->qos_entries) {
+			error_type = RTE_FLOW_ERROR_TYPE_ACTION;
+			err_code = -EINVAL;
+			err_str = "No QoS table available!";
+			goto failure_to_set_miss_actions;
+		}
+		if (action_jump && miss_rxq) {
+			if (action_jump->group != miss_rxq->tc_index) {
+				error_type = RTE_FLOW_ERROR_TYPE_ACTION;
+				err_code = -EINVAL;
+				err_str = "Jump group conflicts to miss queue's TC";
+				goto failure_to_set_miss_actions;
+			}
+		}
+		if (action_jump)
+			qos_tc = action_jump->group;
+		if (miss_rxq) {
+			qos_tc = miss_rxq->tc_index;
+			qos_flow = miss_rxq->flow_id;
+		}
+		if ((!discard && qos_tc == 0xff) ||
+			(discard && qos_tc != 0xff)) {
+			error_type = RTE_FLOW_ERROR_TYPE_ACTION;
+			err_code = -EINVAL;
+			err_str = "Invalid miss action set for QoS table";
+			goto failure_to_set_miss_actions;
+		}
+		err_code = dpaa2_flow_qos_table_set_default(priv, discard, qos_tc, qos_flow);
+		if (err_code) {
+			error_type = RTE_FLOW_ERROR_TYPE_UNSPECIFIED;
+			err_str = "Failed to set miss action for QoS table";
+			goto failure_to_set_miss_actions;
+		}
+
+		return 0;
+	}
+
+	if (!priv->fs_entries) {
+		error_type = RTE_FLOW_ERROR_TYPE_ACTION;
+		err_code = -EINVAL;
+		err_str = "No FS table available!";
+		goto failure_to_set_miss_actions;
+	}
+	if (!discard && !miss_rxq) {
+		error_type = RTE_FLOW_ERROR_TYPE_ACTION;
+		err_code = -EINVAL;
+		err_str = "Invalid miss action set for FS table";
+		goto failure_to_set_miss_actions;
+	}
+	if (miss_rxq && miss_rxq->tc_index != group_id) {
+		error_type = RTE_FLOW_ERROR_TYPE_ATTR_GROUP;
+		err_code = -EINVAL;
+		err_str = "Group conflicts with dest queue's TC ID";
+		goto failure_to_set_miss_actions;
+	}
+	err_code = dpaa2_flow_fs_table_set_default(priv, group_id, discard,
+		dest_queue ? dest_queue->index : 0);
+	if (err_code) {
+		error_type = RTE_FLOW_ERROR_TYPE_UNSPECIFIED;
+		err_str = "Failed to set miss action for FS table";
+	}
+
+failure_to_set_miss_actions:
+	if (err_str)
+		DPAA2_PMD_ERR("%s: %s", __func__, err_str);
+	rte_flow_error_set(err, -err_code, error_type, NULL, err_str);
+
+	return err_code;
+}
 
 static int
 dpaa2_flow_actions_update(struct rte_eth_dev *dev,
@@ -6380,6 +6616,7 @@ const struct rte_flow_ops dpaa2_flow_ops = {
 	.create	= dpaa2_flow_create,
 	.validate = dpaa2_flow_validate,
 	.destroy = dpaa2_flow_destroy,
+	.group_set_miss_actions = dpaa2_flow_set_miss_actions,
 	.actions_update = dpaa2_flow_actions_update,
 	.flush	= dpaa2_flow_flush,
 	.query	= dpaa2_flow_query,
