@@ -79,6 +79,8 @@ Removed Items
     ``rte_rib6_is_equal``
   * table: ``RTE_LPM_IPV6_ADDR_SIZE``
 
+* mempool: Removed the deprecated and obsolete ``flushthresh`` field from the ``rte_mempool_cache`` structure.
+
 
 API Changes
 -----------
@@ -95,6 +97,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* mempool: Updated the ``rte_mempool_cache`` structure as follows:
+  - Removed the deprecated and obsolete ``flushthresh`` field.
+  - Removed the ``unused`` field.
+  - Reduced the size of the ``objs`` array from ``RTE_MEMPOOL_CACHE_MAX_SIZE`` * 2 to ``RTE_MEMPOOL_CACHE_MAX_SIZE``.
 
 ABI Changes
 -----------
