@@ -55,12 +55,12 @@ headers += files(
         'rte_trace_point_register.h',
         'rte_uuid.h',
         'rte_version.h',
-        'rte_vfio.h',
 )
 
 driver_sdk_headers = files(
         'bus_driver.h',
         'dev_driver.h',
+        'rte_vfio.h',
 )
 
 # special case install the generic headers, since they go in a subdir
