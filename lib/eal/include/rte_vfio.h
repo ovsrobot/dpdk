@@ -111,6 +111,15 @@ int rte_vfio_enable(const char *modname);
 
 /**
  * @internal
+ * Cleanup VFIO resources.
+ *
+ * This function is only relevant to Linux.
+ */
+__rte_internal
+void rte_vfio_cleanup(void);
+
+/**
+ * @internal
  * Check whether a VFIO-related kmod is enabled.
  *
  * This function is only relevant to Linux.
