@@ -187,7 +187,15 @@ fle_sdd_pre_populate(struct qdma_cntx_fle_sdd *fle_sdd,
 {
 	struct qbman_fle *fle = fle_sdd->fle;
 	struct qdma_sdd *sdd = fle_sdd->sdd;
-	uint64_t sdd_iova = DPAA2_VADDR_TO_IOVA(sdd);
+	uint64_t sdd_iova, iova_size;
+
+	iova_size = sizeof(struct qdma_sdd) * DPAA2_QDMA_MAX_SDD;
+	sdd_iova = DPAA2_VADDR_TO_IOVA_AND_CHECK(sdd, iova_size);
+	if (sdd_iova == RTE_BAD_IOVA) {
+		DPAA2_QDMA_ERR("No IOMMU map for sdd(%p)(size=%" PRIu64 ")",
+			sdd, iova_size);
+		return -ENOMEM;
+	}
 
 	/* first frame list to source descriptor */
 	DPAA2_SET_FLE_ADDR(&fle[DPAA2_QDMA_SDD_FLE], sdd_iova);
@@ -285,22 +293,36 @@ sg_entry_pre_populate(struct qdma_cntx_sg *sg_cntx)
 	}
 }
 
-static void
+static int
 fle_sdd_sg_pre_populate(struct qdma_cntx_sg *sg_cntx,
 	struct qdma_virt_queue *qdma_vq)
 {
 	struct qdma_sg_entry *src_sge = sg_cntx->sg_src_entry;
 	struct qdma_sg_entry *dst_sge = sg_cntx->sg_dst_entry;
-	rte_iova_t src_sge_iova, dst_sge_iova;
+	rte_iova_t src_sge_iova, dst_sge_iova, iova_size;
 	struct dpaa2_qdma_rbp *rbp = &qdma_vq->rbp;
 
 	memset(sg_cntx, 0, sizeof(struct qdma_cntx_sg));
 
-	src_sge_iova = DPAA2_VADDR_TO_IOVA(src_sge);
-	dst_sge_iova = DPAA2_VADDR_TO_IOVA(dst_sge);
+	iova_size = RTE_DPAAX_QDMA_JOB_SUBMIT_MAX *
+		sizeof(struct qdma_sg_entry);
+
+	src_sge_iova = DPAA2_VADDR_TO_IOVA_AND_CHECK(src_sge, iova_size);
+	if (src_sge_iova == RTE_BAD_IOVA) {
+		DPAA2_QDMA_ERR("No IOMMU map for src_sge(%p)(size=%" PRIu64 ")",
+			src_sge, (uint64_t)iova_size);
+		return -ENOMEM;
+	}
+
+	dst_sge_iova = DPAA2_VADDR_TO_IOVA_AND_CHECK(dst_sge, iova_size);
+	if (dst_sge_iova == RTE_BAD_IOVA) {
+		DPAA2_QDMA_ERR("No IOMMU map for dst_sge(%p)(size=%" PRIu64 ")",
+			dst_sge, (uint64_t)iova_size);
+		return -ENOMEM;
+	}
 
 	sg_entry_pre_populate(sg_cntx);
-	fle_sdd_pre_populate(&sg_cntx->fle_sdd,
+	return fle_sdd_pre_populate(&sg_cntx->fle_sdd,
 		rbp, src_sge_iova, dst_sge_iova,
 		QBMAN_FLE_WORD4_FMT_SGE);
 }
@@ -671,7 +693,13 @@ dpaa2_qdma_copy_sg(void *dev_private,
 
 	if (qdma_vq->fle_pre_populate) {
 		if (unlikely(!fle[DPAA2_QDMA_SRC_FLE].length)) {
-			fle_sdd_sg_pre_populate(cntx_sg, qdma_vq);
+			ret = fle_sdd_sg_pre_populate(cntx_sg, qdma_vq);
+			if (unlikely(ret)) {
+				if (!qdma_dev->is_silent)
+					rte_mempool_put(qdma_vq->fle_pool,
+						cntx_sg);
+				return ret;
+			}
 			if (!qdma_dev->is_silent && cntx_sg && idx_addr) {
 				for (i = 0; i < nb_src; i++)
 					cntx_sg->cntx_idx[i] = idx_addr[i];
