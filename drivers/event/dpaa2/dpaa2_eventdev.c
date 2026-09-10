@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright 2017,2019-2022 NXP
+ * Copyright 2017,2019-2022,2026 NXP
  */
 
 #include <assert.h>
@@ -389,10 +389,11 @@ dpaa2_eventdev_info_get(struct rte_eventdev *dev,
 	/* we only support dpio up to number of cores */
 	if (dev_info->max_event_ports > rte_lcore_count())
 		dev_info->max_event_ports = rte_lcore_count();
-	dev_info->max_event_port_dequeue_depth =
-		DPAA2_EVENT_MAX_PORT_DEQUEUE_DEPTH;
-	dev_info->max_event_port_enqueue_depth =
-		DPAA2_EVENT_MAX_PORT_ENQUEUE_DEPTH;
+	/* A dequeue drains the portal DQRR and an enqueue fills the EQCR, so
+	 * the hardware ring sizes are the real limits.
+	 */
+	dev_info->max_event_port_dequeue_depth = qbman_swp_portal_dqrr_size(NULL);
+	dev_info->max_event_port_enqueue_depth = dpaa2_eqcr_size;
 	dev_info->max_num_events = DPAA2_EVENT_MAX_NUM_EVENTS;
 	dev_info->event_dev_cap = RTE_EVENT_DEV_CAP_DISTRIBUTED_SCHED |
 		RTE_EVENT_DEV_CAP_ATOMIC |
@@ -527,12 +528,9 @@ dpaa2_eventdev_port_def_conf(struct rte_eventdev *dev, uint8_t port_id,
 	RTE_SET_USED(dev);
 	RTE_SET_USED(port_id);
 
-	port_conf->new_event_threshold =
-		DPAA2_EVENT_MAX_NUM_EVENTS;
-	port_conf->dequeue_depth =
-		DPAA2_EVENT_MAX_PORT_DEQUEUE_DEPTH;
-	port_conf->enqueue_depth =
-		DPAA2_EVENT_MAX_PORT_ENQUEUE_DEPTH;
+	port_conf->new_event_threshold = DPAA2_EVENT_MAX_NUM_EVENTS;
+	port_conf->dequeue_depth = qbman_swp_portal_dqrr_size(NULL);
+	port_conf->enqueue_depth = dpaa2_eqcr_size;
 	port_conf->event_port_cfg = 0;
 }
 
@@ -977,18 +975,31 @@ dpaa2_eventdev_txa_enqueue_same_dest(void *port,
 				     struct rte_event ev[],
 				     uint16_t nb_events)
 {
-	struct rte_mbuf *m[DPAA2_EVENT_MAX_PORT_ENQUEUE_DEPTH], *m0;
-	uint8_t qid, i;
+	struct rte_mbuf *m[MAX_TX_RING_SLOTS], *m0;
+	uint16_t sent = 0, burst, i, port_id;
+	uint8_t qid;
 
 	RTE_SET_USED(port);
 
-	m0 = (struct rte_mbuf *)ev[0].mbuf;
+	m0 = ev[0].mbuf;
 	qid = rte_event_eth_tx_adapter_txq_get(m0);
+	port_id = m0->port;
 
-	for (i = 0; i < nb_events; i++)
-		m[i] = (struct rte_mbuf *)ev[i].mbuf;
+	/* The advertised enqueue depth is the EQCR size, which may exceed the
+	 * on-stack burst array, so transmit in ring-sized chunks.
+	 */
+	while (sent < nb_events) {
+		burst = RTE_MIN(nb_events - sent, (uint16_t)RTE_DIM(m));
+		for (i = 0; i < burst; i++)
+			m[i] = ev[sent + i].mbuf;
 
-	return rte_eth_tx_burst(m0->port, qid, m, nb_events);
+		i = rte_eth_tx_burst(port_id, qid, m, burst);
+		sent += i;
+		if (i < burst)
+			break;
+	}
+
+	return sent;
 }
 
 static uint16_t
@@ -996,19 +1007,28 @@ dpaa2_eventdev_txa_enqueue(void *port,
 			   struct rte_event ev[],
 			   uint16_t nb_events)
 {
-	void *txq[DPAA2_EVENT_MAX_PORT_ENQUEUE_DEPTH];
-	struct rte_mbuf *m[DPAA2_EVENT_MAX_PORT_ENQUEUE_DEPTH];
-	uint8_t qid, i;
+	void *txq[MAX_TX_RING_SLOTS];
+	struct rte_mbuf *m[MAX_TX_RING_SLOTS];
+	uint16_t sent = 0, burst, i;
+	uint8_t qid;
 
 	RTE_SET_USED(port);
 
-	for (i = 0; i < nb_events; i++) {
-		m[i] = (struct rte_mbuf *)ev[i].mbuf;
-		qid = rte_event_eth_tx_adapter_txq_get(m[i]);
-		txq[i] = rte_eth_devices[m[i]->port].data->tx_queues[qid];
+	while (sent < nb_events) {
+		burst = RTE_MIN(nb_events - sent, (uint16_t)RTE_DIM(m));
+		for (i = 0; i < burst; i++) {
+			m[i] = ev[sent + i].mbuf;
+			qid = rte_event_eth_tx_adapter_txq_get(m[i]);
+			txq[i] = rte_eth_devices[m[i]->port].data->tx_queues[qid];
+		}
+
+		i = dpaa2_dev_tx_multi_txq_ordered(txq, m, burst);
+		sent += i;
+		if (i < burst)
+			break;
 	}
 
-	return dpaa2_dev_tx_multi_txq_ordered(txq, m, nb_events);
+	return sent;
 }
 
 static struct eventdev_ops dpaa2_eventdev_ops = {

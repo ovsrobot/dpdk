@@ -73,6 +73,11 @@ enum qbman_sdqcr_fc {
 static struct qbman_swp *portal_idx_map[MAX_QBMAN_PORTALS];
 
 uint32_t qman_version;
+/* DQRR size of the portals initialised so far. All portals of a SoC have the
+ * same size, so this doubles as the SoC's DQRR size for callers that have no
+ * portal at hand.
+ */
+static uint32_t dpaa2_portal_dqrr_size = 8;
 
 /* Internal Function declaration */
 static int
@@ -239,6 +244,15 @@ static int (*qbman_swp_release_ptr)(struct qbman_swp *s,
 			const uint64_t *buffers, unsigned int num_buffers)
 			= qbman_swp_release_direct;
 
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_portal_dqrr_size)
+uint32_t qbman_swp_portal_dqrr_size(struct qbman_swp *p)
+{
+	if (p != NULL)
+		return p->dqrr.dqrr_size;
+
+	return dpaa2_portal_dqrr_size;
+}
+
 /*********************************/
 /* Portal constructor/destructor */
 /*********************************/
@@ -303,6 +317,7 @@ struct qbman_swp *qbman_swp_init(const struct qbman_swp_desc *d)
 	p->dqrr.ci_vec_en =
 		p->dqrr.dqrr_size <= (32 - DQRR_DCAP_CI_VEC_OFFSET);
 	p->dqrr.ci_flush_th = p->dqrr.dqrr_size / 2;
+	dpaa2_portal_dqrr_size = p->dqrr.dqrr_size;
 
 	ret = qbman_swp_sys_init(&p->sys, d, p->dqrr.dqrr_size);
 	if (ret) {
