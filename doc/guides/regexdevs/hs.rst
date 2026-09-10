@@ -23,7 +23,16 @@ Features
 - Although Hyperscan supports 1,000,000 patterns, the current DPDK public API
   limits match-result rule IDs to 20 bits. Rule IDs above ``0xFFFFF`` cannot
   be represented without truncation.
+- Up to 65,535 matches per scan operation (API field width limit);
+  cumulative totals are tracked via per-queue-pair xstats
 - Per-rule extended match parameters (minimum/maximum start offset)
+- Hyperscan block-mode engine supports scan buffers up to 4 GB
+  (library capability)
+- Through the current ``rte_regexdev`` API, this PMD advertises
+  ``max_payload_size = 65,535`` bytes (``uint16_t`` field width), so
+  ``dpdk-test-regex`` validation is limited to about 64 KB per op
+- Hyperscan uses x86 vectorized instructions (SSSE3/AVX2/AVX-512)
+  for high throughput
 - Per-queue-pair statistics via xstats
 
 In the RegEx driver feature matrix, this PMD reports:
