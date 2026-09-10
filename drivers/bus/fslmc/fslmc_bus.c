@@ -29,6 +29,7 @@
 
 struct rte_bus rte_fslmc_bus;
 static int fslmc_bus_device_count[DPAA2_DEVTYPE_MAX];
+struct rte_fslmc_bus_info fslmc_bus_info;
 
 #define DPAA2_SEQN_DYNFIELD_NAME "dpaa2_seqn_dynfield"
 RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_seqn_dynfield_offset)
@@ -199,6 +200,7 @@ scan_one_fslmc_device(char *dev_name)
 		goto cleanup;
 	}
 	dev->device.devargs = rte_bus_find_devargs(&rte_fslmc_bus, dev_name);
+	dev->bus_info = &fslmc_bus_info;
 
 	/* Update the device found into the device_count table */
 	fslmc_bus_device_count[dev->dev_type]++;

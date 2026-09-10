@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
  *   Copyright (c) 2016 Freescale Semiconductor, Inc. All rights reserved.
- *   Copyright 2016-2022 NXP
+ *   Copyright 2016-2026 NXP
  *
  */
 #include <uapi/linux/vfio.h>
@@ -63,44 +63,8 @@ static struct dpio_dev_list dpio_dev_list
 	= TAILQ_HEAD_INITIALIZER(dpio_dev_list); /*!< DPIO device list */
 static uint32_t io_space_count;
 
-/* Variable to store DPAA2 platform type */
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_svr_family)
-uint32_t dpaa2_svr_family;
-
-/* Variable to store DPAA2 DQRR size */
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_dqrr_size)
-uint8_t dpaa2_dqrr_size;
-/* Variable to store DPAA2 EQCR size */
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_eqcr_size)
-uint8_t dpaa2_eqcr_size;
-
 /* Variable to hold the portal_key, once created.*/
 static pthread_key_t dpaa2_portal_key;
-
-/*Stashing Macros default for LS208x*/
-static int dpaa2_core_cluster_base = 0x04;
-static int dpaa2_cluster_sz = 2;
-
-/* For LS208X platform There are four clusters with following mapping:
- * Cluster 1 (ID = x04) : CPU0, CPU1;
- * Cluster 2 (ID = x05) : CPU2, CPU3;
- * Cluster 3 (ID = x06) : CPU4, CPU5;
- * Cluster 4 (ID = x07) : CPU6, CPU7;
- */
-/* For LS108X platform There are two clusters with following mapping:
- * Cluster 1 (ID = x02) : CPU0, CPU1, CPU2, CPU3;
- * Cluster 2 (ID = x03) : CPU4, CPU5, CPU6, CPU7;
- */
-/* For LX2160 platform There are four clusters with following mapping:
- * Cluster 1 (ID = x00) : CPU0, CPU1;
- * Cluster 2 (ID = x01) : CPU2, CPU3;
- * Cluster 3 (ID = x02) : CPU4, CPU5;
- * Cluster 4 (ID = x03) : CPU6, CPU7;
- * Cluster 1 (ID = x04) : CPU8, CPU9;
- * Cluster 2 (ID = x05) : CPU10, CP11;
- * Cluster 3 (ID = x06) : CPU12, CPU13;
- * Cluster 4 (ID = x07) : CPU14, CPU15;
- */
 
 static struct dpaa2_dpio_dev *get_dpio_dev_from_id(int32_t dpio_id)
 {
@@ -139,14 +103,6 @@ dpaa2_get_core_id(void)
 	}
 
 	return cpu_id;
-}
-
-static int
-dpaa2_core_cluster_sdest(int cpu_id)
-{
-	int x = cpu_id / dpaa2_cluster_sz;
-
-	return dpaa2_core_cluster_base + x;
 }
 
 static void
@@ -307,15 +263,17 @@ dpaa2_configure_stashing(struct dpaa2_dpio_dev *dpio_dev, int cpu_id, bool ethrx
 	/* Set the STASH Destination depending on Current CPU ID.
 	 * Valid values of SDEST are 4,5,6,7. Where,
 	 */
-	sdest = dpaa2_core_cluster_sdest(cpu_id);
+	sdest = fslmc_vfio_core_cluster_sdest(cpu_id);
 	DPAA2_BUS_DEBUG("Portal= %d  CPU= %u SDEST= %d",
 			dpio_dev->index, cpu_id, sdest);
+	if (sdest < 0)
+		return sdest;
 
 	ret = dpio_set_stashing_destination(dpio_dev->dpio, CMD_PRI_LOW,
 					    dpio_dev->token, sdest);
 	if (ret) {
 		DPAA2_BUS_ERR("%d ERROR in SDEST",  ret);
-		return -1;
+		return ret;
 	}
 
 #ifdef RTE_EVENT_DPAA2
@@ -540,33 +498,6 @@ dpaa2_create_dpio_device(int vdev_fd,
 				dpio_dev->token, &attr)) {
 		DPAA2_BUS_ERR("DPIO Get attribute failed");
 		goto err;
-	}
-
-	/* find the SoC type for the first time */
-	if (!dpaa2_svr_family) {
-		struct mc_soc_version mc_plat_info = {0};
-
-		if (mc_get_soc_version(dpio_dev->dpio,
-				       CMD_PRI_LOW, &mc_plat_info)) {
-			DPAA2_BUS_ERR("Unable to get SoC version information");
-		} else if ((mc_plat_info.svr & 0xffff0000) == SVR_LS1080A) {
-			dpaa2_core_cluster_base = 0x02;
-			dpaa2_cluster_sz = 4;
-			DPAA2_BUS_DEBUG("LS108x (A53) Platform Detected");
-		} else if ((mc_plat_info.svr & 0xffff0000) == SVR_LX2160A) {
-			dpaa2_core_cluster_base = 0x00;
-			dpaa2_cluster_sz = 2;
-			DPAA2_BUS_DEBUG("LX2160 Platform Detected");
-		}
-		dpaa2_svr_family = (mc_plat_info.svr & 0xffff0000);
-
-		if (dpaa2_svr_family == SVR_LX2160A) {
-			dpaa2_dqrr_size = DPAA2_LX2_DQRR_RING_SIZE;
-			dpaa2_eqcr_size = DPAA2_LX2_EQCR_RING_SIZE;
-		} else {
-			dpaa2_dqrr_size = DPAA2_DQRR_RING_SIZE;
-			dpaa2_eqcr_size = DPAA2_EQCR_RING_SIZE;
-		}
 	}
 
 	if (dpaa2_svr_family == SVR_LX2160A)

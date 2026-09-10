@@ -1123,9 +1123,9 @@ dpaa2_dev_rx_common(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts,
 	/* Function receive frames for a given device and VQ */
 	struct dpaa2_queue *dpaa2_q = queue;
 	struct qbman_result *dq_storage;
-	uint32_t fqid = dpaa2_q->fqid;
-	int ret, num_rx = 0, next_pull = nb_pkts, num_pulled;
-	uint8_t pending, status;
+	uint32_t fqid = dpaa2_q->fqid, next_pull = nb_pkts;
+	int ret;
+	uint8_t pending, status, num_rx = 0, num_pulled;
 	struct qbman_swp *swp;
 	const struct qbman_fd *fd;
 	struct qbman_pull_desc pulldesc;
@@ -1269,8 +1269,8 @@ uint16_t dpaa2_dev_tx_conf(void *queue)
 	struct dpaa2_queue *dpaa2_q = (struct dpaa2_queue *)queue;
 	struct qbman_result *dq_storage;
 	uint32_t fqid = dpaa2_q->fqid;
-	int ret, num_tx_conf = 0, num_pulled;
-	uint8_t pending, status;
+	int ret, num_tx_conf = 0;
+	uint8_t pending, status, num_pulled;
 	struct qbman_swp *swp;
 	const struct qbman_fd *fd;
 	struct qbman_pull_desc pulldesc;

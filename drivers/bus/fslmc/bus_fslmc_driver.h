@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- *   Copyright 2016,2021-2023 NXP
+ *   Copyright 2016,2021-2026 NXP
  *
  */
 
@@ -89,6 +89,14 @@ enum rte_dpaa2_dev_type {
 	DPAA2_DEVTYPE_MAX,
 };
 
+struct rte_fslmc_bus_info {
+	void *mem_pool;
+	int sp_protocol;
+	uint64_t mc_rev;
+	uint32_t svr;
+	uint32_t pvr;
+};
+
 /**
  * A structure describing a DPAA2 device.
  */
@@ -102,6 +110,7 @@ struct rte_dpaa2_device {
 	char ep_name[RTE_DEV_NAME_MAX_LEN];
 	struct rte_intr_handle *intr_handle; /**< Interrupt handle */
 	char name[FSLMC_OBJECT_MAX_LEN];    /**< DPAA2 Object name*/
+	const struct rte_fslmc_bus_info *bus_info;
 };
 
 typedef int (*rte_dpaa2_obj_create_t)(int vdev_fd,

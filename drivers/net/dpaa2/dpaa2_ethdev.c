@@ -329,24 +329,21 @@ dpaa2_fw_version_get(struct rte_eth_dev *dev,
 	char *fw_version, size_t fw_size)
 {
 	int ret;
+	uint32_t major, minor, rev;
+	struct dpaa2_dev_priv *priv = dev->data->dev_private;
 	struct fsl_mc_io *dpni = dev->process_private;
 	struct mc_soc_version mc_plat_info = {0};
-	struct mc_version mc_ver_info = {0};
 
 	PMD_INIT_FUNC_TRACE();
 
+	major = RTE_FSL_MC_REV_MAJOR(priv->mc_rev);
+	minor = RTE_FSL_MC_REV_MINOR(priv->mc_rev);
+	rev = RTE_FSL_MC_REV_REVISION(priv->mc_rev);
 	if (mc_get_soc_version(dpni, CMD_PRI_LOW, &mc_plat_info))
 		DPAA2_PMD_WARN("\tmc_get_soc_version failed");
 
-	if (mc_get_version(dpni, CMD_PRI_LOW, &mc_ver_info))
-		DPAA2_PMD_WARN("\tmc_get_version failed");
-
-	ret = snprintf(fw_version, fw_size,
-		       "%x-%d.%d.%d",
-		       mc_plat_info.svr,
-		       mc_ver_info.major,
-		       mc_ver_info.minor,
-		       mc_ver_info.revision);
+	ret = snprintf(fw_version, fw_size, "%x-%d.%d.%d",
+		mc_plat_info.svr, major, minor, rev);
 	if (ret < 0)
 		return -EINVAL;
 
@@ -3537,6 +3534,7 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 		goto init_err;
 	}
 
+	priv->mc_rev = dpaa2_dev->bus_info->mc_rev;
 	priv->num_rx_tc = attr.num_rx_tcs;
 	priv->num_tx_tc = attr.num_tx_tcs;
 	priv->qos_entries = attr.qos_entries;

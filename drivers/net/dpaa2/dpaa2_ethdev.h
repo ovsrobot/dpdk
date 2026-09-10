@@ -528,6 +528,7 @@ struct dpaa2_dev_priv {
 	uint32_t *cnt_idx_dma_mem;
 	uint64_t *cnt_values_dma_mem;
 	uint64_t cnt_idx_iova, cnt_values_iova;
+	uint64_t mc_rev;
 
 	struct dpaa2_dev_flow *curr;
 	LIST_HEAD(, dpaa2_dev_flow) flows;
