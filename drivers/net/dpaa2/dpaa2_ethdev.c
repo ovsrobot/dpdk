@@ -1424,6 +1424,13 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	DPAA2_PMD_DEBUG("dev =%p, queue =%d, pool = %p, conf =%p",
 			dev, rx_queue_id, mb_pool, rx_conf);
 
+	/* Rx deferred start is not supported */
+	if (rx_conf->rx_deferred_start) {
+		DPAA2_PMD_ERR("%s: Rx deferred start not supported",
+			dev->data->name);
+		return -EINVAL;
+	}
+
 	total_nb_rx_desc += nb_rx_desc;
 	if (total_nb_rx_desc > MAX_NB_RX_DESC_IN_PEB &&
 	    (priv->options & DPNI_OPT_V1_PFDR_IN_PEB)) {
