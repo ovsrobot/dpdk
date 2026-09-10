@@ -182,6 +182,16 @@ committed. Applications must not resubmit the original full array on
 partial failure — only correct the failed rule and resubmit it along
 with any remaining rules from the returned index onward.
 
+Calling ``rte_regexdev_start()`` is optional with this PMD:
+``enqueue_burst()`` auto-starts the device if a database has already
+been compiled or imported, so applications (such as
+``dpdk-test-regex``) that go straight from ``configure()``/
+``queue_pair_setup()`` to ``enqueue_burst()`` without an explicit
+``start()`` call still work correctly. Applications that intend to
+call ``start()`` explicitly should still do so before the first
+``enqueue_burst()`` call, since once the device auto-starts, a
+subsequent explicit ``start()`` call will fail with ``-EBUSY``.
+
 Statistics
 ~~~~~~~~~~
 
@@ -197,12 +207,18 @@ Limitations
   Hyperscan PMD and is not supported. DPDK requires ordering matches by rule
   ID, start offset, and match length, while Hyperscan without SOM reports only
   the match end offset.
-- Scanning is synchronous: ``enqueue_burst`` blocks until
-  ``hs_scan()`` completes for each operation.
 - Multi-segment mbufs are linearized (``rte_pktmbuf_linearize()``)
-  before scanning; linearization failure marks the op with
-  ``RTE_REGEX_OPS_RSP_RESOURCE_LIMIT_REACHED_F``.
-- Multi-process mode is not supported.
+  before scanning. If linearization fails (first mbuf buffer too
+  small for the full packet), the op is returned to the application
+  with ``RTE_REGEX_OPS_RSP_RESOURCE_LIMIT_REACHED_F`` and zero
+  matches. Applications scanning large payloads should allocate
+  mbufs with sufficient ``data_room_size``.
+- Multi-process mode is not supported. The PMD rejects secondary
+  processes at probe time. Hyperscan's compiled database and scratch
+  space are allocated in process-private memory and cannot be shared
+  across separate OS processes. Multi-lcore (multiple threads within
+  a single process) is fully supported — each lcore uses its own
+  queue pair with dedicated scratch space.
 - Each queue pair must be used by exactly one lcore
   (single-producer/single-consumer model).
 - Control-plane calls (``configure``, ``queue_pair_setup``,
