@@ -478,7 +478,8 @@ struct dpaa2_dev_priv {
 	uint8_t en_ordered;
 	uint8_t en_loose_ordered;
 	uint8_t max_cgs;
-	uint8_t cgid_in_use[MAX_RX_QUEUES];
+	/** RXQs in same TC share same cgid.*/
+	uint8_t cgid_in_use[MAX_TCS];
 	rte_spinlock_t meter_lock;
 	/* Lowest priority FS flow id to receive flow steering miss frames. */
 	uint16_t default_flow;

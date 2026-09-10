@@ -176,7 +176,6 @@ struct __rte_cache_aligned dpaa2_queue {
 	uint32_t fqid;		/*!< Unique ID of this queue */
 	uint16_t flow_id;	/*!< To be used by DPAA2 framework */
 	uint8_t tc_index;	/*!< traffic class identifier */
-	uint8_t cgid;		/*! < Congestion Group id for this queue */
 	uint64_t rx_pkts;
 	uint64_t tx_pkts;
 	uint64_t err_pkts;
@@ -186,6 +185,8 @@ struct __rte_cache_aligned dpaa2_queue {
 		/**Egress*/
 		struct qbman_result *cscn;
 	};
+	void *cfg;
+	uint8_t options;
 	struct rte_event ev;
 	dpaa2_queue_cb_dqrr_t *cb;
 	dpaa2_queue_cb_eqresp_free_t *cb_eqresp_free;
