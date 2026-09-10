@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added AES-GMAC AEAD algorithm.**
+
+  Added ``RTE_CRYPTO_AEAD_AES_GMAC`` to the AEAD algorithm enumeration, for
+  NULL encryption with GMAC authentication. The NXP dpaa2_sec PMD supports it
+  for IPsec protocol offload.
+
 
 Removed Items
 -------------

@@ -186,6 +186,7 @@ crypto_aead_algorithm_strings[] = {
 	[RTE_CRYPTO_AEAD_SNOW5G_NCA4] = "snow5g-nca4",
 	[RTE_CRYPTO_AEAD_AES_NCA5]    = "aes-nca5",
 	[RTE_CRYPTO_AEAD_ZUC_NCA6]    = "zuc-nca6",
+	[RTE_CRYPTO_AEAD_AES_GMAC]    = "aes-gmac",
 };
 
 
