@@ -56,7 +56,6 @@ __rte_bpf_validate_debug_evaluate_start(struct rte_bpf_validate_debug *debug,
  *   Current value of the program counter, or next after last instruction.
  * @param events
  *   Bitmask of events.
- *   Step bit is always implied and should not be set.
  * @return
  *   Non-negative value: evaluation should continue;
  *   -ECANCELED: evaluation should fail without calling this API again;
