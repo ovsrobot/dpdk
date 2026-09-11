@@ -16,6 +16,7 @@
 #include <rte_byteorder.h>
 #include <rte_errno.h>
 
+#include "bpf_def.h"
 #include "test.h"
 
 #if !defined(RTE_LIB_BPF)
@@ -52,7 +53,7 @@ test_bpf(void)
  *   TEST_SUCCESS on success, error code on failure.
  */
 static int
-bpf_load_test(uint32_t nb_ins, const struct ebpf_insn *ins, int expected_errno)
+bpf_load_test(uint32_t nb_ins, const struct rte_ebpf_insn *ins, int expected_errno)
 {
 	const struct rte_bpf_prm prm = {
 		.ins = ins,
@@ -87,7 +88,7 @@ bpf_load_test(uint32_t nb_ins, const struct ebpf_insn *ins, int expected_errno)
 static int
 test_no_instructions(void)
 {
-	static const struct ebpf_insn ins[] = {};
+	static const struct rte_ebpf_insn ins[] = {};
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
 }
 
@@ -100,7 +101,7 @@ REGISTER_FAST_TEST(bpf_no_instructions_autotest, NOHUGE_OK, ASAN_OK, test_no_ins
 static int
 test_exit_only(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			.code = (BPF_JMP | EBPF_EXIT),
 		},
@@ -117,7 +118,7 @@ REGISTER_FAST_TEST(bpf_exit_only_autotest, NOHUGE_OK, ASAN_OK, test_exit_only);
 static int
 test_no_exit(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set return value to the program argument. */
 			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
@@ -136,7 +137,7 @@ REGISTER_FAST_TEST(bpf_no_exit_autotest, NOHUGE_OK, ASAN_OK, test_no_exit);
 static int
 test_minimal_working(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set return value to the program argument. */
 			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
@@ -158,7 +159,7 @@ REGISTER_FAST_TEST(bpf_minimal_working_autotest, NOHUGE_OK, ASAN_OK, test_minima
 static int
 test_add_one(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set return value to one. */
 			.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
@@ -186,7 +187,7 @@ REGISTER_FAST_TEST(bpf_add_one_autotest, NOHUGE_OK, ASAN_OK, test_add_one);
 static int
 test_subtract_one(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Subtract one from the program argument. */
 			.code = (EBPF_ALU64 | BPF_SUB | BPF_K),
@@ -214,7 +215,7 @@ REGISTER_FAST_TEST(bpf_subtract_one_autotest, NOHUGE_OK, ASAN_OK, test_subtract_
 static int
 test_jump_over_invalid_first(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Jump over the next instruction for some r1. */
 			.code = (BPF_JMP | BPF_JEQ | BPF_K),
@@ -251,7 +252,7 @@ REGISTER_FAST_TEST(bpf_jump_over_invalid_first_autotest, NOHUGE_OK, ASAN_OK,
 static int
 test_jump_over_invalid_non_first(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set return value to the program argument. */
 			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
@@ -401,7 +402,7 @@ dummy_prepare(void *arg)
 }
 
 /* store immediate test-cases */
-static const struct ebpf_insn test_store1_prog[] = {
+static const struct rte_ebpf_insn test_store1_prog[] = {
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_B),
 		.dst_reg = EBPF_REG_1,
@@ -464,7 +465,7 @@ test_store1_check(uint64_t rc, const void *arg)
 }
 
 /* store register test-cases */
-static const struct ebpf_insn test_store2_prog[] = {
+static const struct rte_ebpf_insn test_store2_prog[] = {
 
 	{
 		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
@@ -507,7 +508,7 @@ static const struct ebpf_insn test_store2_prog[] = {
 };
 
 /* load test-cases */
-static const struct ebpf_insn test_load1_prog[] = {
+static const struct rte_ebpf_insn test_load1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
@@ -584,7 +585,7 @@ test_load1_check(uint64_t rc, const void *arg)
 }
 
 /* load immediate test-cases */
-static const struct ebpf_insn test_ldimm1_prog[] = {
+static const struct rte_ebpf_insn test_ldimm1_prog[] = {
 
 	{
 		.code = (BPF_LD | BPF_IMM | EBPF_DW),
@@ -672,7 +673,7 @@ test_ldimm1_check(uint64_t rc, const void *arg)
 
 
 /* alu mul test-cases */
-static const struct ebpf_insn test_mul1_prog[] = {
+static const struct rte_ebpf_insn test_mul1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
@@ -784,7 +785,7 @@ test_mul1_check(uint64_t rc, const void *arg)
 }
 
 /* alu shift test-cases */
-static const struct ebpf_insn test_shift1_prog[] = {
+static const struct rte_ebpf_insn test_shift1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
@@ -979,7 +980,7 @@ test_shift1_check(uint64_t rc, const void *arg)
 }
 
 /* jmp test-cases */
-static const struct ebpf_insn test_jump1_prog[] = {
+static const struct rte_ebpf_insn test_jump1_prog[] = {
 
 	[0] = {
 		.code = (BPF_ALU | EBPF_MOV | BPF_K),
@@ -1188,7 +1189,7 @@ test_jump1_check(uint64_t rc, const void *arg)
 }
 
 /* Jump test case - check ip4_dest in particular subnet */
-static const struct ebpf_insn test_jump2_prog[] = {
+static const struct rte_ebpf_insn test_jump2_prog[] = {
 
 	[0] = {
 		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
@@ -1353,7 +1354,7 @@ test_jump2_check(uint64_t rc, const void *arg)
 }
 
 /* alu (add, sub, and, or, xor, neg)  test-cases */
-static const struct ebpf_insn test_alu1_prog[] = {
+static const struct rte_ebpf_insn test_alu1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
@@ -1535,7 +1536,7 @@ test_alu1_check(uint64_t rc, const void *arg)
 }
 
 /* endianness conversions (BE->LE/LE->BE)  test-cases */
-static const struct ebpf_insn test_bele1_prog[] = {
+static const struct rte_ebpf_insn test_bele1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_H),
@@ -1701,7 +1702,7 @@ test_bele1_check(uint64_t rc, const void *arg)
 }
 
 /* atomic add test-cases */
-static const struct ebpf_insn test_xadd1_prog[] = {
+static const struct rte_ebpf_insn test_xadd1_prog[] = {
 
 	{
 		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
@@ -1889,7 +1890,7 @@ test_xadd1_check(uint64_t rc, const void *arg)
 }
 
 /* alu div test-cases */
-static const struct ebpf_insn test_div1_prog[] = {
+static const struct rte_ebpf_insn test_div1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
@@ -2013,7 +2014,7 @@ test_div1_check(uint64_t rc, const void *arg)
 }
 
 /* call test-cases */
-static const struct ebpf_insn test_call1_prog[] = {
+static const struct rte_ebpf_insn test_call1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
@@ -2138,7 +2139,7 @@ static const struct rte_bpf_xsym test_call1_xsym[] = {
 	},
 };
 
-static const struct ebpf_insn test_call2_prog[] = {
+static const struct rte_ebpf_insn test_call2_prog[] = {
 
 	{
 		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
@@ -2264,7 +2265,7 @@ static const struct rte_bpf_xsym test_call2_xsym[] = {
 	},
 };
 
-static const struct ebpf_insn test_call3_prog[] = {
+static const struct rte_ebpf_insn test_call3_prog[] = {
 
 	{
 		.code = (BPF_JMP | EBPF_CALL),
@@ -2377,7 +2378,7 @@ static const struct rte_bpf_xsym test_call3_xsym[] = {
 };
 
 /* Test for stack corruption in multiple function calls */
-static const struct ebpf_insn test_call4_prog[] = {
+static const struct rte_ebpf_insn test_call4_prog[] = {
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_B),
 		.dst_reg = EBPF_REG_10,
@@ -2550,7 +2551,7 @@ static const struct rte_bpf_xsym test_call4_xsym[] = {
 };
 
 /* string compare test case */
-static const struct ebpf_insn test_call5_prog[] = {
+static const struct rte_ebpf_insn test_call5_prog[] = {
 
 	[0] = {
 		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
@@ -2758,7 +2759,7 @@ static const struct rte_bpf_xsym test_call5_xsym[] = {
 };
 
 /* load mbuf (BPF_ABS/BPF_IND) test-cases */
-static const struct ebpf_insn test_ld_mbuf1_prog[] = {
+static const struct rte_ebpf_insn test_ld_mbuf1_prog[] = {
 
 	/* BPF_ABS/BPF_IND implicitly expect mbuf ptr in R6 */
 	{
@@ -3016,7 +3017,7 @@ test_ld_mbuf2_check(uint64_t rc, const void *arg)
 }
 
 /* same as test_ld_mbuf1, but now store intermediate results on the stack */
-static const struct ebpf_insn test_ld_mbuf3_prog[] = {
+static const struct rte_ebpf_insn test_ld_mbuf3_prog[] = {
 
 	/* BPF_ABS/BPF_IND implicitly expect mbuf ptr in R6 */
 	{
@@ -3165,7 +3166,7 @@ static const struct ebpf_insn test_ld_mbuf3_prog[] = {
 };
 
 /* divide INT64_MIN by -1 */
-static const struct ebpf_insn test_int64min_udiv_uint64max_prog[] = {
+static const struct rte_ebpf_insn test_int64min_udiv_uint64max_prog[] = {
 	/* Load INT64_MIN into r0 */
 	{
 		.code = (BPF_LD | BPF_IMM | EBPF_DW),
@@ -3197,7 +3198,7 @@ test_int64min_udiv_uint64max_check(uint64_t rc, const void *arg)
 }
 
 /* modulo INT64_MIN by -1 */
-static const struct ebpf_insn test_int64min_umod_uint64max_prog[] = {
+static const struct rte_ebpf_insn test_int64min_umod_uint64max_prog[] = {
 	/* Load INT64_MIN into r0 */
 	{
 		.code = (BPF_LD | BPF_IMM | EBPF_DW),
@@ -3652,7 +3653,7 @@ REGISTER_FAST_TEST(bpf_load_null_autotest, NOHUGE_OK, ASAN_OK, test_bpf_load_nul
 static int
 test_bpf_exec_wrong_nb_prog_arg(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{ .code = (EBPF_ALU64 | EBPF_MOV | BPF_K), .dst_reg = EBPF_REG_0, .imm = 0 },
 		{ .code = (BPF_JMP | EBPF_EXIT), }
 	};
@@ -3694,7 +3695,7 @@ REGISTER_FAST_TEST(bpf_exec_wrong_nb_prog_arg_autotest, NOHUGE_OK, ASAN_OK,
 static int
 test_bpf_exec_wrong_flags(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{ .code = (EBPF_ALU64 | EBPF_MOV | BPF_K), .dst_reg = EBPF_REG_0, .imm = 0 },
 		{ .code = (BPF_JMP | EBPF_EXIT), }
 	};
@@ -3757,7 +3758,7 @@ typedef uint64_t (*text_xfunc_t)(uint64_t argument);
 static int
 call_from_bpf_test(text_xfunc_t xfunc)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			.code = (BPF_JMP | EBPF_CALL),
 			.imm = 0,  /* xsym #0 */
@@ -4935,7 +4936,7 @@ static const struct xchg_arg xchg_input = {
 
 /* Run program against xchg_input and compare output value with expected. */
 static int
-run_xchg_test(uint32_t nb_ins, const struct ebpf_insn *ins, struct xchg_arg expected)
+run_xchg_test(uint32_t nb_ins, const struct rte_ebpf_insn *ins, struct xchg_arg expected)
 {
 	const struct rte_bpf_prm prm = {
 		.ins = ins,
@@ -5002,7 +5003,7 @@ run_xchg_test(uint32_t nb_ins, const struct ebpf_insn *ins, struct xchg_arg expe
 static int
 test_xadd32(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r0 to return value. */
 			.code = (BPF_LD | BPF_IMM | EBPF_DW),
@@ -5082,7 +5083,7 @@ REGISTER_FAST_TEST(bpf_xadd32_autotest, NOHUGE_OK, ASAN_OK, test_xadd32);
 static int
 test_xadd64(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r0 to return value. */
 			.code = (BPF_LD | BPF_IMM | EBPF_DW),
@@ -5148,7 +5149,7 @@ REGISTER_FAST_TEST(bpf_xadd64_autotest, NOHUGE_OK, ASAN_OK, test_xadd64);
 static int
 test_xchg32(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r2 to return value. */
 			.code = (BPF_LD | BPF_IMM | EBPF_DW),
@@ -5243,7 +5244,7 @@ REGISTER_FAST_TEST(bpf_xchg32_autotest, NOHUGE_OK, ASAN_OK, test_xchg32);
 static int
 test_xchg64(void)
 {
-	static const struct ebpf_insn ins[] = {
+	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r2 to return value. */
 			.code = (BPF_LD | BPF_IMM | EBPF_DW),
@@ -5306,7 +5307,7 @@ REGISTER_FAST_TEST(bpf_xchg64_autotest, NOHUGE_OK, ASAN_OK, test_xchg64);
 static int
 test_atomic_imm(int32_t imm, bool is_valid)
 {
-	const struct ebpf_insn ins[] = {
+	const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r2 to return value. */
 			.code = (BPF_LD | BPF_IMM | EBPF_DW),
