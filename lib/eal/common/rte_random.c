@@ -247,7 +247,18 @@ eal_rand_init(void)
 
 	RTE_LCORE_VAR_ALLOC(rand_state);
 
-	seed = __rte_random_initial_seed();
+	const char *env = getenv("DPDK_RANDOM_SEED");
+	if (env != NULL && *env != '\0') {
+		char *end;
+
+		errno = 0;
+		seed = strtoull(env, &end, 0);
+		if (errno != 0 || *end != '\0')
+			rte_exit(EXIT_FAILURE,
+				 "invalid DPDK_RANDOM_SEED: %s\n", env);
+	} else {
+		seed = __rte_random_initial_seed();
+	}
 
 	rte_srand(seed);
 }
