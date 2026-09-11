@@ -26,32 +26,32 @@ static const char *const alu_op_tbl[16] = {
 	[BPF_OR >> 4] = "or",	   [BPF_AND >> 4] = "and",
 	[BPF_LSH >> 4] = "lsh",	   [BPF_RSH >> 4] = "rsh",
 	[BPF_NEG >> 4] = "neg",	   [BPF_MOD >> 4] = "mod",
-	[BPF_XOR >> 4] = "xor",	   [EBPF_MOV >> 4] = "mov",
-	[EBPF_ARSH >> 4] = "arsh", [EBPF_END >> 4] = "endian",
+	[BPF_XOR >> 4] = "xor",	   [BPF_MOV >> 4] = "mov",
+	[BPF_ARSH >> 4] = "arsh", [BPF_END >> 4] = "endian",
 };
 
 static const char *const size_tbl[] = {
 	[BPF_W >> 3] = "w",
 	[BPF_H >> 3] = "h",
 	[BPF_B >> 3] = "b",
-	[EBPF_DW >> 3] = "dw",
+	[BPF_DW >> 3] = "dw",
 };
 
 static const char *const jump_tbl[16] = {
 	[BPF_JA >> 4] = "ja",	   [BPF_JEQ >> 4] = "jeq",
 	[BPF_JGT >> 4] = "jgt",	   [BPF_JGE >> 4] = "jge",
-	[BPF_JSET >> 4] = "jset",  [EBPF_JNE >> 4] = "jne",
-	[EBPF_JSGT >> 4] = "jsgt", [EBPF_JSGE >> 4] = "jsge",
-	[EBPF_CALL >> 4] = "call", [EBPF_EXIT >> 4] = "exit",
-	[EBPF_JLT >> 4] = "jlt",   [EBPF_JLE >> 4] = "jle",
-	[EBPF_JSLT >> 4] = "jslt", [EBPF_JSLE >> 4] = "jsle",
+	[BPF_JSET >> 4] = "jset",  [BPF_JNE >> 4] = "jne",
+	[BPF_JSGT >> 4] = "jsgt", [BPF_JSGE >> 4] = "jsge",
+	[BPF_CALL >> 4] = "call", [BPF_EXIT >> 4] = "exit",
+	[BPF_JLT >> 4] = "jlt",   [BPF_JLE >> 4] = "jle",
+	[BPF_JSLT >> 4] = "jslt", [BPF_JSLE >> 4] = "jsle",
 };
 
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_bpf_insn_is_wide, 26.07)
 bool
 rte_bpf_insn_is_wide(const struct rte_ebpf_insn *ins)
 {
-	return ins->code == (BPF_LD | BPF_IMM | EBPF_DW);
+	return ins->code == (BPF_LD | BPF_IMM | BPF_DW);
 }
 
 
@@ -83,9 +83,9 @@ static inline const char *
 atomic_op(int32_t imm)
 {
 	switch (imm) {
-	case BPF_ATOMIC_ADD:
+	case BPF_ADD:
 		return "xadd";
-	case BPF_ATOMIC_XCHG:
+	case BPF_XCHG:
 		return "xchg";
 	default:
 		return NULL;
@@ -110,7 +110,7 @@ format_disassembly(char *buffer, size_t bufsz, const struct rte_ebpf_insn *ins,
 	case BPF_ALU:
 		postfix = "32";
 		/* fall through */
-	case EBPF_ALU64:
+	case BPF_ALU64:
 		op = alu_op_tbl[BPF_OP_INDEX(ins->code)];
 		if (ins->off != 0)
 			/* Not yet supported variation with non-zero offset. */
@@ -124,7 +124,7 @@ format_disassembly(char *buffer, size_t bufsz, const struct rte_ebpf_insn *ins,
 	case BPF_LD:
 		op = "ld";
 		postfix = size_tbl[BPF_SIZE_INDEX(ins->code)];
-		if (ins->code == (BPF_LD | BPF_IMM | EBPF_DW)) {
+		if (ins->code == (BPF_LD | BPF_IMM | BPF_DW)) {
 			uint64_t val;
 
 			if (ins->src_reg != 0)
@@ -172,7 +172,7 @@ format_disassembly(char *buffer, size_t bufsz, const struct rte_ebpf_insn *ins,
 		case BPF_MEM:
 			op = "stx";
 			break;
-		case EBPF_ATOMIC:
+		case BPF_ATOMIC:
 			op = atomic_op(ins->imm);
 			if (op == NULL)
 				return snprintf(buffer, bufsz,
@@ -201,10 +201,10 @@ format_disassembly(char *buffer, size_t bufsz, const struct rte_ebpf_insn *ins,
 		switch (BPF_OP(ins->code)) {
 		case BPF_JA:
 			return snprintf(buffer, bufsz, "%s %s%s", op, jump, warning);
-		case EBPF_CALL:
+		case BPF_CALL:
 			/* Call of helper function with index in immediate. */
 			return snprintf(buffer, bufsz, "%s #%u%s", op, ins->imm, warning);
-		case EBPF_EXIT:
+		case BPF_EXIT:
 			return snprintf(buffer, bufsz, "%s%s", op, warning);
 		}
 

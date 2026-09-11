@@ -60,17 +60,17 @@ enum {
  * eBPF to x86_64 register mappings.
  */
 static const uint32_t ebpf2x86[] = {
-	[EBPF_REG_0] = RAX,
-	[EBPF_REG_1] = RDI,
-	[EBPF_REG_2] = RSI,
-	[EBPF_REG_3] = RDX,
-	[EBPF_REG_4] = RCX,
-	[EBPF_REG_5] = R8,
-	[EBPF_REG_6] = RBX,
-	[EBPF_REG_7] = R13,
-	[EBPF_REG_8] = R14,
-	[EBPF_REG_9] = R15,
-	[EBPF_REG_10] = RBP,
+	[BPF_REG_0] = RAX,
+	[BPF_REG_1] = RDI,
+	[BPF_REG_2] = RSI,
+	[BPF_REG_3] = RDX,
+	[BPF_REG_4] = RCX,
+	[BPF_REG_5] = R8,
+	[BPF_REG_6] = RBX,
+	[BPF_REG_7] = R13,
+	[BPF_REG_8] = R14,
+	[BPF_REG_9] = R15,
+	[BPF_REG_10] = RBP,
 };
 
 /*
@@ -166,11 +166,11 @@ emit_rex(struct bpf_jit_state *st, uint32_t op, uint32_t reg, uint32_t rm)
 	USED(st->reguse, rm);
 
 	rex = 0;
-	if (BPF_CLASS(op) == EBPF_ALU64 ||
-			op == (BPF_ST | BPF_MEM | EBPF_DW) ||
-			op == (BPF_STX | BPF_MEM | EBPF_DW) ||
-			op == (BPF_STX | EBPF_ATOMIC | EBPF_DW) ||
-			op == (BPF_LD | BPF_IMM | EBPF_DW) ||
+	if (BPF_CLASS(op) == BPF_ALU64 ||
+			op == (BPF_ST | BPF_MEM | BPF_DW) ||
+			op == (BPF_STX | BPF_MEM | BPF_DW) ||
+			op == (BPF_STX | BPF_ATOMIC | BPF_DW) ||
+			op == (BPF_LD | BPF_IMM | BPF_DW) ||
 			(BPF_CLASS(op) == BPF_LDX &&
 			BPF_MODE(op) == BPF_MEM &&
 			BPF_SIZE(op) != BPF_W))
@@ -237,7 +237,7 @@ emit_xchg_reg(struct bpf_jit_state *st, uint32_t sreg, uint32_t dreg)
 {
 	const uint8_t ops = 0x87;
 
-	emit_rex(st, EBPF_ALU64, sreg, dreg);
+	emit_rex(st, BPF_ALU64, sreg, dreg);
 	emit_bytes(st, &ops, sizeof(ops));
 	emit_modregrm(st, MOD_DIRECT, sreg, dreg);
 }
@@ -314,7 +314,7 @@ emit_be2le_48(struct bpf_jit_state *st, uint32_t dreg, uint32_t imm)
 	const uint8_t ops = 0x0F;
 	const uint8_t mods = 1;
 
-	rop = (imm == 64) ? EBPF_ALU64 : BPF_ALU;
+	rop = (imm == 64) ? BPF_ALU64 : BPF_ALU;
 	emit_rex(st, rop, 0, dreg);
 	emit_bytes(st, &ops, sizeof(ops));
 	emit_modregrm(st, MOD_DIRECT, mods, dreg);
@@ -340,7 +340,7 @@ emit_le2be(struct bpf_jit_state *st, uint32_t dreg, uint32_t imm)
 	if (imm == 16)
 		emit_movzwl(st, dreg, dreg);
 	else if (imm == 32)
-		emit_mov_reg(st, BPF_ALU | EBPF_MOV | BPF_X, dreg, dreg);
+		emit_mov_reg(st, BPF_ALU | BPF_MOV | BPF_X, dreg, dreg);
 }
 
 /*
@@ -418,7 +418,7 @@ emit_shift(struct bpf_jit_state *st, uint32_t op, uint32_t dreg)
 	static const uint8_t mods[] = {
 		[GET_BPF_OP(BPF_LSH)] = 4,
 		[GET_BPF_OP(BPF_RSH)] = 5,
-		[GET_BPF_OP(EBPF_ARSH)] = 7,
+		[GET_BPF_OP(BPF_ARSH)] = 7,
 	};
 
 	bop = GET_BPF_OP(op);
@@ -497,7 +497,7 @@ emit_ld_imm64(struct bpf_jit_state *st, uint32_t dreg, uint32_t imm0,
 
 	const uint8_t ops = 0xB8;
 
-	op = (imm1 == 0) ? BPF_ALU : EBPF_ALU64;
+	op = (imm1 == 0) ? BPF_ALU : BPF_ALU64;
 
 	emit_rex(st, op, 0, dreg);
 	emit_opcode(st, ops, dreg);
@@ -531,19 +531,19 @@ emit_mul(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t dreg,
 	const uint8_t mods = 4;
 
 	/* save rax & rdx */
-	emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RAX, REG_TMP0);
-	emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RDX, REG_TMP1);
+	emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RAX, REG_TMP0);
+	emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RDX, REG_TMP1);
 
 	/* rax = dreg */
-	emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, dreg, RAX);
+	emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, dreg, RAX);
 
 	if (BPF_SRC(op) == BPF_X)
 		/* rdx = sreg */
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X,
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X,
 			sreg == RAX ? REG_TMP0 : sreg, RDX);
 	else
 		/* rdx = imm */
-		emit_mov_imm(st, EBPF_ALU64 | EBPF_MOV | BPF_K, RDX, imm);
+		emit_mov_imm(st, BPF_ALU64 | BPF_MOV | BPF_K, RDX, imm);
 
 	emit_rex(st, op, RAX, RDX);
 	emit_bytes(st, &ops, sizeof(ops));
@@ -551,13 +551,13 @@ emit_mul(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t dreg,
 
 	if (dreg != RDX)
 		/* restore rdx */
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, REG_TMP1, RDX);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, REG_TMP1, RDX);
 
 	if (dreg != RAX) {
 		/* dreg = rax */
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RAX, dreg);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RAX, dreg);
 		/* restore rax */
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, REG_TMP0, RAX);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, REG_TMP0, RAX);
 	}
 }
 
@@ -670,10 +670,10 @@ emit_st_atomic(struct bpf_jit_state *st, uint32_t op, uint32_t sreg,
 	const uint8_t lck = 0xF0; /* lock prefix */
 
 	switch (atomic_op) {
-	case BPF_ATOMIC_ADD:
+	case BPF_ADD:
 		ops = 0x01; /* add opcode */
 		break;
-	case BPF_ATOMIC_XCHG:
+	case BPF_XCHG:
 		ops = 0x87; /* xchg opcode */
 		break;
 	default:
@@ -687,7 +687,7 @@ emit_st_atomic(struct bpf_jit_state *st, uint32_t op, uint32_t sreg,
 	mods = (imsz == 1) ? MOD_IDISP8 : MOD_IDISP32;
 
 	/* xchg already implies lock */
-	if (atomic_op != BPF_ATOMIC_XCHG)
+	if (atomic_op != BPF_XCHG)
 		emit_bytes(st, &lck, sizeof(lck));
 	emit_rex(st, op, sreg, dreg);
 	emit_bytes(st, &ops, sizeof(ops));
@@ -777,15 +777,15 @@ emit_movcc_reg(struct bpf_jit_state *st, uint32_t op, uint32_t sreg,
 
 	static const uint8_t ops[][2] = {
 		[GET_BPF_OP(BPF_JEQ)] = {0x0F, 0x44},  /* CMOVZ */
-		[GET_BPF_OP(EBPF_JNE)] = {0x0F, 0x45},  /* CMOVNE */
+		[GET_BPF_OP(BPF_JNE)] = {0x0F, 0x45},  /* CMOVNE */
 		[GET_BPF_OP(BPF_JGT)] = {0x0F, 0x47},  /* CMOVA */
-		[GET_BPF_OP(EBPF_JLT)] = {0x0F, 0x42},  /* CMOVB */
+		[GET_BPF_OP(BPF_JLT)] = {0x0F, 0x42},  /* CMOVB */
 		[GET_BPF_OP(BPF_JGE)] = {0x0F, 0x43},  /* CMOVAE */
-		[GET_BPF_OP(EBPF_JLE)] = {0x0F, 0x46},  /* CMOVBE */
-		[GET_BPF_OP(EBPF_JSGT)] = {0x0F, 0x4F}, /* CMOVG */
-		[GET_BPF_OP(EBPF_JSLT)] = {0x0F, 0x4C}, /* CMOVL */
-		[GET_BPF_OP(EBPF_JSGE)] = {0x0F, 0x4D}, /* CMOVGE */
-		[GET_BPF_OP(EBPF_JSLE)] = {0x0F, 0x4E}, /* CMOVLE */
+		[GET_BPF_OP(BPF_JLE)] = {0x0F, 0x46},  /* CMOVBE */
+		[GET_BPF_OP(BPF_JSGT)] = {0x0F, 0x4F}, /* CMOVG */
+		[GET_BPF_OP(BPF_JSLT)] = {0x0F, 0x4C}, /* CMOVL */
+		[GET_BPF_OP(BPF_JSGE)] = {0x0F, 0x4D}, /* CMOVGE */
+		[GET_BPF_OP(BPF_JSLE)] = {0x0F, 0x4E}, /* CMOVLE */
 		[GET_BPF_OP(BPF_JSET)] = {0x0F, 0x45}, /* CMOVNE */
 	};
 
@@ -818,29 +818,29 @@ emit_abs_jcc(struct bpf_jit_state *st, uint32_t op, int32_t ofs)
 
 	static const uint8_t op8[] = {
 		[GET_BPF_OP(BPF_JEQ)] = 0x74,  /* JE */
-		[GET_BPF_OP(EBPF_JNE)] = 0x75,  /* JNE */
+		[GET_BPF_OP(BPF_JNE)] = 0x75,  /* JNE */
 		[GET_BPF_OP(BPF_JGT)] = 0x77,  /* JA */
-		[GET_BPF_OP(EBPF_JLT)] = 0x72,  /* JB */
+		[GET_BPF_OP(BPF_JLT)] = 0x72,  /* JB */
 		[GET_BPF_OP(BPF_JGE)] = 0x73,  /* JAE */
-		[GET_BPF_OP(EBPF_JLE)] = 0x76,  /* JBE */
-		[GET_BPF_OP(EBPF_JSGT)] = 0x7F, /* JG */
-		[GET_BPF_OP(EBPF_JSLT)] = 0x7C, /* JL */
-		[GET_BPF_OP(EBPF_JSGE)] = 0x7D, /*JGE */
-		[GET_BPF_OP(EBPF_JSLE)] = 0x7E, /* JLE */
+		[GET_BPF_OP(BPF_JLE)] = 0x76,  /* JBE */
+		[GET_BPF_OP(BPF_JSGT)] = 0x7F, /* JG */
+		[GET_BPF_OP(BPF_JSLT)] = 0x7C, /* JL */
+		[GET_BPF_OP(BPF_JSGE)] = 0x7D, /*JGE */
+		[GET_BPF_OP(BPF_JSLE)] = 0x7E, /* JLE */
 		[GET_BPF_OP(BPF_JSET)] = 0x75, /*JNE */
 	};
 
 	static const uint8_t op32[][2] = {
 		[GET_BPF_OP(BPF_JEQ)] = {0x0F, 0x84},  /* JE */
-		[GET_BPF_OP(EBPF_JNE)] = {0x0F, 0x85},  /* JNE */
+		[GET_BPF_OP(BPF_JNE)] = {0x0F, 0x85},  /* JNE */
 		[GET_BPF_OP(BPF_JGT)] = {0x0F, 0x87},  /* JA */
-		[GET_BPF_OP(EBPF_JLT)] = {0x0F, 0x82},  /* JB */
+		[GET_BPF_OP(BPF_JLT)] = {0x0F, 0x82},  /* JB */
 		[GET_BPF_OP(BPF_JGE)] = {0x0F, 0x83},  /* JAE */
-		[GET_BPF_OP(EBPF_JLE)] = {0x0F, 0x86},  /* JBE */
-		[GET_BPF_OP(EBPF_JSGT)] = {0x0F, 0x8F}, /* JG */
-		[GET_BPF_OP(EBPF_JSLT)] = {0x0F, 0x8C}, /* JL */
-		[GET_BPF_OP(EBPF_JSGE)] = {0x0F, 0x8D}, /*JGE */
-		[GET_BPF_OP(EBPF_JSLE)] = {0x0F, 0x8E}, /* JLE */
+		[GET_BPF_OP(BPF_JLE)] = {0x0F, 0x86},  /* JBE */
+		[GET_BPF_OP(BPF_JSGT)] = {0x0F, 0x8F}, /* JG */
+		[GET_BPF_OP(BPF_JSLT)] = {0x0F, 0x8C}, /* JL */
+		[GET_BPF_OP(BPF_JSGE)] = {0x0F, 0x8D}, /*JGE */
+		[GET_BPF_OP(BPF_JSLE)] = {0x0F, 0x8E}, /* JLE */
 		[GET_BPF_OP(BPF_JSET)] = {0x0F, 0x85}, /*JNE */
 	};
 
@@ -929,9 +929,9 @@ emit_jcc_imm(struct bpf_jit_state *st, uint32_t op, uint32_t dreg,
 	uint32_t imm, int32_t ofs)
 {
 	if (BPF_OP(op) == BPF_JSET)
-		emit_tst_imm(st, EBPF_ALU64, dreg, imm);
+		emit_tst_imm(st, BPF_ALU64, dreg, imm);
 	else
-		emit_cmp_imm(st, EBPF_ALU64, dreg, imm);
+		emit_cmp_imm(st, BPF_ALU64, dreg, imm);
 
 	emit_jcc(st, op, ofs);
 }
@@ -970,9 +970,9 @@ emit_jcc_reg(struct bpf_jit_state *st, uint32_t op, uint32_t sreg,
 	uint32_t dreg, int32_t ofs)
 {
 	if (BPF_OP(op) == BPF_JSET)
-		emit_tst_reg(st, EBPF_ALU64, sreg, dreg);
+		emit_tst_reg(st, BPF_ALU64, sreg, dreg);
 	else
-		emit_cmp_reg(st, EBPF_ALU64, sreg, dreg);
+		emit_cmp_reg(st, BPF_ALU64, sreg, dreg);
 
 	emit_jcc(st, op, ofs);
 }
@@ -1019,13 +1019,13 @@ emit_div(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t dreg,
 
 	/* save rax & rdx */
 	if (dreg != RAX)
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RAX, REG_TMP0);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RAX, REG_TMP0);
 	if (dreg != RDX)
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RDX, REG_TMP1);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RDX, REG_TMP1);
 
 	/* fill rax & rdx */
-	emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, dreg, RAX);
-	emit_mov_imm(st, EBPF_ALU64 | EBPF_MOV | BPF_K, RDX, 0);
+	emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, dreg, RAX);
+	emit_mov_imm(st, BPF_ALU64 | BPF_MOV | BPF_K, RDX, 0);
 
 	if (BPF_SRC(op) == BPF_X) {
 		sr = sreg;
@@ -1035,7 +1035,7 @@ emit_div(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t dreg,
 			sr = REG_TMP1;
 	} else {
 		sr = REG_DIV_IMM;
-		emit_mov_imm(st, EBPF_ALU64 | EBPF_MOV | BPF_K, sr, imm);
+		emit_mov_imm(st, BPF_ALU64 | BPF_MOV | BPF_K, sr, imm);
 	}
 
 	emit_rex(st, op, 0, sr);
@@ -1043,14 +1043,14 @@ emit_div(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t dreg,
 	emit_modregrm(st, MOD_DIRECT, mods, sr);
 
 	if (BPF_OP(op) == BPF_DIV)
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RAX, dreg);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RAX, dreg);
 	else
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RDX, dreg);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RDX, dreg);
 
 	if (dreg != RAX)
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, REG_TMP0, RAX);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, REG_TMP0, RAX);
 	if (dreg != RDX)
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, REG_TMP1, RDX);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, REG_TMP1, RDX);
 }
 
 /*
@@ -1059,53 +1059,53 @@ emit_div(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t dreg,
  * calculate load offset and check is it inside first packet segment.
  */
 static void
-emit_ldmb_fast_path(struct bpf_jit_state *st, const uint32_t rg[EBPF_REG_7],
+emit_ldmb_fast_path(struct bpf_jit_state *st, const uint32_t rg[BPF_REG_7],
 	uint32_t sreg, uint32_t mode, uint32_t sz, uint32_t imm,
 	const int32_t ofs[LDMB_OFS_NUM])
 {
 	/* make R2 contain *off* value */
 
-	if (sreg != rg[EBPF_REG_2]) {
-		emit_mov_imm(st, EBPF_ALU64 | EBPF_MOV | BPF_K,
-			rg[EBPF_REG_2], imm);
+	if (sreg != rg[BPF_REG_2]) {
+		emit_mov_imm(st, BPF_ALU64 | BPF_MOV | BPF_K,
+			rg[BPF_REG_2], imm);
 		if (mode == BPF_IND)
-			emit_alu_reg(st, EBPF_ALU64 | BPF_ADD | BPF_X,
-				sreg, rg[EBPF_REG_2]);
+			emit_alu_reg(st, BPF_ALU64 | BPF_ADD | BPF_X,
+				sreg, rg[BPF_REG_2]);
 	} else
 		/* BPF_IND with sreg == R2 */
-		emit_alu_imm(st, EBPF_ALU64 | BPF_ADD | BPF_K,
-			rg[EBPF_REG_2], imm);
+		emit_alu_imm(st, BPF_ALU64 | BPF_ADD | BPF_K,
+			rg[BPF_REG_2], imm);
 
 	/* R3 = mbuf->data_len */
 	emit_ld_reg(st, BPF_LDX | BPF_MEM | BPF_H,
-		rg[EBPF_REG_6], rg[EBPF_REG_3],
+		rg[BPF_REG_6], rg[BPF_REG_3],
 		offsetof(struct rte_mbuf, data_len));
 
 	/* R3 = R3 - R2 */
-	emit_alu_reg(st, EBPF_ALU64 | BPF_SUB | BPF_X,
-		rg[EBPF_REG_2], rg[EBPF_REG_3]);
+	emit_alu_reg(st, BPF_ALU64 | BPF_SUB | BPF_X,
+		rg[BPF_REG_2], rg[BPF_REG_3]);
 
 	/* JSLT R3, <sz> <slow_path> */
-	emit_cmp_imm(st, EBPF_ALU64, rg[EBPF_REG_3], sz);
-	emit_abs_jcc(st, BPF_JMP | EBPF_JSLT | BPF_K, ofs[LDMB_SLP_OFS]);
+	emit_cmp_imm(st, BPF_ALU64, rg[BPF_REG_3], sz);
+	emit_abs_jcc(st, BPF_JMP | BPF_JSLT | BPF_K, ofs[LDMB_SLP_OFS]);
 
 	/* R3 = mbuf->data_off */
 	emit_ld_reg(st, BPF_LDX | BPF_MEM | BPF_H,
-		rg[EBPF_REG_6], rg[EBPF_REG_3],
+		rg[BPF_REG_6], rg[BPF_REG_3],
 		offsetof(struct rte_mbuf, data_off));
 
 	/* R0 = mbuf->buf_addr */
-	emit_ld_reg(st, BPF_LDX | BPF_MEM | EBPF_DW,
-		rg[EBPF_REG_6], rg[EBPF_REG_0],
+	emit_ld_reg(st, BPF_LDX | BPF_MEM | BPF_DW,
+		rg[BPF_REG_6], rg[BPF_REG_0],
 		offsetof(struct rte_mbuf, buf_addr));
 
 	/* R0 = R0 + R3 */
-	emit_alu_reg(st, EBPF_ALU64 | BPF_ADD | BPF_X,
-		rg[EBPF_REG_3], rg[EBPF_REG_0]);
+	emit_alu_reg(st, BPF_ALU64 | BPF_ADD | BPF_X,
+		rg[BPF_REG_3], rg[BPF_REG_0]);
 
 	/* R0 = R0 + R2 */
-	emit_alu_reg(st, EBPF_ALU64 | BPF_ADD | BPF_X,
-		rg[EBPF_REG_2], rg[EBPF_REG_0]);
+	emit_alu_reg(st, BPF_ALU64 | BPF_ADD | BPF_X,
+		rg[BPF_REG_2], rg[BPF_REG_0]);
 
 	/* JMP <fin_part> */
 	emit_abs_jmp(st, ofs[LDMB_FIN_OFS]);
@@ -1117,29 +1117,29 @@ emit_ldmb_fast_path(struct bpf_jit_state *st, const uint32_t rg[EBPF_REG_7],
  * call __rte_pktmbuf_read() and check return value.
  */
 static void
-emit_ldmb_slow_path(struct bpf_jit_state *st, const uint32_t rg[EBPF_REG_7],
+emit_ldmb_slow_path(struct bpf_jit_state *st, const uint32_t rg[BPF_REG_7],
 	uint32_t sz)
 {
 	/* make R3 contain *len* value (1/2/4) */
 
-	emit_mov_imm(st, EBPF_ALU64 | EBPF_MOV | BPF_K, rg[EBPF_REG_3], sz);
+	emit_mov_imm(st, BPF_ALU64 | BPF_MOV | BPF_K, rg[BPF_REG_3], sz);
 
 	/* make R4 contain (RBP - ldmb.stack_ofs) */
 
-	emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RBP, rg[EBPF_REG_4]);
-	emit_alu_imm(st, EBPF_ALU64 | BPF_SUB | BPF_K, rg[EBPF_REG_4],
+	emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RBP, rg[BPF_REG_4]);
+	emit_alu_imm(st, BPF_ALU64 | BPF_SUB | BPF_K, rg[BPF_REG_4],
 		st->ldmb.stack_ofs);
 
 	/* make R1 contain mbuf ptr */
 
-	emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X,
-		rg[EBPF_REG_6], rg[EBPF_REG_1]);
+	emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X,
+		rg[BPF_REG_6], rg[BPF_REG_1]);
 
 	/* call rte_pktmbuf_read */
 	emit_call(st, (uintptr_t)__rte_pktmbuf_read);
 
 	/* check that return value (R0) is not zero */
-	emit_tst_reg(st, EBPF_ALU64, rg[EBPF_REG_0], rg[EBPF_REG_0]);
+	emit_tst_reg(st, BPF_ALU64, rg[BPF_REG_0], rg[BPF_REG_0]);
 	emit_abs_jcc(st, BPF_JMP | BPF_JEQ | BPF_K, st->exit.off);
 }
 
@@ -1180,7 +1180,7 @@ static void
 emit_ld_mbuf(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t imm)
 {
 	uint32_t i, mode, opsz, sz;
-	uint32_t rg[EBPF_REG_7];
+	uint32_t rg[BPF_REG_7];
 	int32_t ofs[LDMB_OFS_NUM];
 
 	mode = BPF_MODE(op);
@@ -1201,7 +1201,7 @@ emit_ld_mbuf(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t imm)
 	ofs[LDMB_SLP_OFS] = st->sz;
 	emit_ldmb_slow_path(st, rg, sz);
 	ofs[LDMB_FIN_OFS] = st->sz;
-	emit_ldmb_fin(st, rg[EBPF_REG_0], opsz, sz);
+	emit_ldmb_fin(st, rg[BPF_REG_0], opsz, sz);
 
 	RTE_VERIFY(ofs[LDMB_FIN_OFS] - ofs[LDMB_FSP_OFS] <= INT8_MAX);
 
@@ -1210,7 +1210,7 @@ emit_ld_mbuf(struct bpf_jit_state *st, uint32_t op, uint32_t sreg, uint32_t imm)
 	st->sz = ofs[LDMB_FSP_OFS];
 	emit_ldmb_fast_path(st, rg, sreg, mode, sz, imm, ofs);
 	emit_ldmb_slow_path(st, rg, sz);
-	emit_ldmb_fin(st, rg[EBPF_REG_0], opsz, sz);
+	emit_ldmb_fin(st, rg[BPF_REG_0], opsz, sz);
 }
 
 static void
@@ -1228,21 +1228,21 @@ emit_prolog(struct bpf_jit_state *st, int32_t stack_size)
 		return;
 
 
-	emit_alu_imm(st, EBPF_ALU64 | BPF_SUB | BPF_K, RSP,
+	emit_alu_imm(st, BPF_ALU64 | BPF_SUB | BPF_K, RSP,
 		spil * sizeof(uint64_t));
 
 	ofs = 0;
 	for (i = 0; i != RTE_DIM(save_regs); i++) {
 		if (INUSE(st->reguse, save_regs[i]) != 0) {
-			emit_st_reg(st, BPF_STX | BPF_MEM | EBPF_DW,
+			emit_st_reg(st, BPF_STX | BPF_MEM | BPF_DW,
 				save_regs[i], RSP, ofs);
 			ofs += sizeof(uint64_t);
 		}
 	}
 
 	if (INUSE(st->reguse, RBP) != 0) {
-		emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X, RSP, RBP);
-		emit_alu_imm(st, EBPF_ALU64 | BPF_SUB | BPF_K, RSP, stack_size);
+		emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X, RSP, RBP);
+		emit_alu_imm(st, BPF_ALU64 | BPF_SUB | BPF_K, RSP, stack_size);
 
 		/*
 		 * Align stack pointer appropriately for function calls.
@@ -1251,7 +1251,7 @@ emit_prolog(struct bpf_jit_state *st, int32_t stack_size)
 		 * but hopefully `alignof(max_align_t)` will always be greater.
 		 * Original stack pointer will be restored from rbp.
 		 */
-		emit_alu_imm(st, EBPF_ALU64 | BPF_AND | BPF_K, RSP,
+		emit_alu_imm(st, BPF_ALU64 | BPF_AND | BPF_K, RSP,
 			-(uint32_t)alignof(max_align_t));
 	}
 }
@@ -1289,19 +1289,19 @@ emit_epilog(struct bpf_jit_state *st)
 	if (spil != 0) {
 
 		if (INUSE(st->reguse, RBP) != 0)
-			emit_mov_reg(st, EBPF_ALU64 | EBPF_MOV | BPF_X,
+			emit_mov_reg(st, BPF_ALU64 | BPF_MOV | BPF_X,
 				RBP, RSP);
 
 		ofs = 0;
 		for (i = 0; i != RTE_DIM(save_regs); i++) {
 			if (INUSE(st->reguse, save_regs[i]) != 0) {
-				emit_ld_reg(st, BPF_LDX | BPF_MEM | EBPF_DW,
+				emit_ld_reg(st, BPF_LDX | BPF_MEM | BPF_DW,
 					RSP, save_regs[i], ofs);
 				ofs += sizeof(uint64_t);
 			}
 		}
 
-		emit_alu_imm(st, EBPF_ALU64 | BPF_ADD | BPF_K, RSP,
+		emit_alu_imm(st, BPF_ALU64 | BPF_ADD | BPF_K, RSP,
 			spil * sizeof(uint64_t));
 	}
 
@@ -1348,7 +1348,7 @@ emit(struct bpf_jit_state *st, const struct rte_bpf *bpf)
 		case (BPF_ALU | BPF_RSH | BPF_K):
 			emit_shift_imm(st, op, dr, ins->imm);
 			break;
-		case (BPF_ALU | EBPF_MOV | BPF_K):
+		case (BPF_ALU | BPF_MOV | BPF_K):
 			emit_mov_imm(st, op, dr, ins->imm);
 			break;
 		/* 32 bit ALU REG operations */
@@ -1363,58 +1363,58 @@ emit(struct bpf_jit_state *st, const struct rte_bpf *bpf)
 		case (BPF_ALU | BPF_RSH | BPF_X):
 			emit_shift_reg(st, op, sr, dr);
 			break;
-		case (BPF_ALU | EBPF_MOV | BPF_X):
+		case (BPF_ALU | BPF_MOV | BPF_X):
 			emit_mov_reg(st, op, sr, dr);
 			break;
 		case (BPF_ALU | BPF_NEG):
 			emit_neg(st, op, dr);
 			break;
-		case (BPF_ALU | EBPF_END | EBPF_TO_BE):
+		case (BPF_ALU | BPF_END | BPF_TO_BE):
 			emit_be2le(st, dr, ins->imm);
 			break;
-		case (BPF_ALU | EBPF_END | EBPF_TO_LE):
+		case (BPF_ALU | BPF_END | BPF_TO_LE):
 			emit_le2be(st, dr, ins->imm);
 			break;
 		/* 64 bit ALU IMM operations */
-		case (EBPF_ALU64 | BPF_ADD | BPF_K):
-		case (EBPF_ALU64 | BPF_SUB | BPF_K):
-		case (EBPF_ALU64 | BPF_AND | BPF_K):
-		case (EBPF_ALU64 | BPF_OR | BPF_K):
-		case (EBPF_ALU64 | BPF_XOR | BPF_K):
+		case (BPF_ALU64 | BPF_ADD | BPF_K):
+		case (BPF_ALU64 | BPF_SUB | BPF_K):
+		case (BPF_ALU64 | BPF_AND | BPF_K):
+		case (BPF_ALU64 | BPF_OR | BPF_K):
+		case (BPF_ALU64 | BPF_XOR | BPF_K):
 			emit_alu_imm(st, op, dr, ins->imm);
 			break;
-		case (EBPF_ALU64 | BPF_LSH | BPF_K):
-		case (EBPF_ALU64 | BPF_RSH | BPF_K):
-		case (EBPF_ALU64 | EBPF_ARSH | BPF_K):
+		case (BPF_ALU64 | BPF_LSH | BPF_K):
+		case (BPF_ALU64 | BPF_RSH | BPF_K):
+		case (BPF_ALU64 | BPF_ARSH | BPF_K):
 			emit_shift_imm(st, op, dr, ins->imm);
 			break;
-		case (EBPF_ALU64 | EBPF_MOV | BPF_K):
+		case (BPF_ALU64 | BPF_MOV | BPF_K):
 			emit_mov_imm(st, op, dr, ins->imm);
 			break;
 		/* 64 bit ALU REG operations */
-		case (EBPF_ALU64 | BPF_ADD | BPF_X):
-		case (EBPF_ALU64 | BPF_SUB | BPF_X):
-		case (EBPF_ALU64 | BPF_AND | BPF_X):
-		case (EBPF_ALU64 | BPF_OR | BPF_X):
-		case (EBPF_ALU64 | BPF_XOR | BPF_X):
+		case (BPF_ALU64 | BPF_ADD | BPF_X):
+		case (BPF_ALU64 | BPF_SUB | BPF_X):
+		case (BPF_ALU64 | BPF_AND | BPF_X):
+		case (BPF_ALU64 | BPF_OR | BPF_X):
+		case (BPF_ALU64 | BPF_XOR | BPF_X):
 			emit_alu_reg(st, op, sr, dr);
 			break;
-		case (EBPF_ALU64 | BPF_LSH | BPF_X):
-		case (EBPF_ALU64 | BPF_RSH | BPF_X):
-		case (EBPF_ALU64 | EBPF_ARSH | BPF_X):
+		case (BPF_ALU64 | BPF_LSH | BPF_X):
+		case (BPF_ALU64 | BPF_RSH | BPF_X):
+		case (BPF_ALU64 | BPF_ARSH | BPF_X):
 			emit_shift_reg(st, op, sr, dr);
 			break;
-		case (EBPF_ALU64 | EBPF_MOV | BPF_X):
+		case (BPF_ALU64 | BPF_MOV | BPF_X):
 			emit_mov_reg(st, op, sr, dr);
 			break;
-		case (EBPF_ALU64 | BPF_NEG):
+		case (BPF_ALU64 | BPF_NEG):
 			emit_neg(st, op, dr);
 			break;
 		/* multiply instructions */
 		case (BPF_ALU | BPF_MUL | BPF_K):
 		case (BPF_ALU | BPF_MUL | BPF_X):
-		case (EBPF_ALU64 | BPF_MUL | BPF_K):
-		case (EBPF_ALU64 | BPF_MUL | BPF_X):
+		case (BPF_ALU64 | BPF_MUL | BPF_K):
+		case (BPF_ALU64 | BPF_MUL | BPF_X):
 			emit_mul(st, op, sr, dr, ins->imm);
 			break;
 		/* divide instructions */
@@ -1422,21 +1422,21 @@ emit(struct bpf_jit_state *st, const struct rte_bpf *bpf)
 		case (BPF_ALU | BPF_MOD | BPF_K):
 		case (BPF_ALU | BPF_DIV | BPF_X):
 		case (BPF_ALU | BPF_MOD | BPF_X):
-		case (EBPF_ALU64 | BPF_DIV | BPF_K):
-		case (EBPF_ALU64 | BPF_MOD | BPF_K):
-		case (EBPF_ALU64 | BPF_DIV | BPF_X):
-		case (EBPF_ALU64 | BPF_MOD | BPF_X):
+		case (BPF_ALU64 | BPF_DIV | BPF_K):
+		case (BPF_ALU64 | BPF_MOD | BPF_K):
+		case (BPF_ALU64 | BPF_DIV | BPF_X):
+		case (BPF_ALU64 | BPF_MOD | BPF_X):
 			emit_div(st, op, sr, dr, ins->imm);
 			break;
 		/* load instructions */
 		case (BPF_LDX | BPF_MEM | BPF_B):
 		case (BPF_LDX | BPF_MEM | BPF_H):
 		case (BPF_LDX | BPF_MEM | BPF_W):
-		case (BPF_LDX | BPF_MEM | EBPF_DW):
+		case (BPF_LDX | BPF_MEM | BPF_DW):
 			emit_ld_reg(st, op, sr, dr, ins->off);
 			break;
 		/* load 64 bit immediate value */
-		case (BPF_LD | BPF_IMM | EBPF_DW):
+		case (BPF_LD | BPF_IMM | BPF_DW):
 			emit_ld_imm64(st, dr, ins[0].imm, ins[1].imm);
 			i++;
 			break;
@@ -1453,18 +1453,18 @@ emit(struct bpf_jit_state *st, const struct rte_bpf *bpf)
 		case (BPF_STX | BPF_MEM | BPF_B):
 		case (BPF_STX | BPF_MEM | BPF_H):
 		case (BPF_STX | BPF_MEM | BPF_W):
-		case (BPF_STX | BPF_MEM | EBPF_DW):
+		case (BPF_STX | BPF_MEM | BPF_DW):
 			emit_st_reg(st, op, sr, dr, ins->off);
 			break;
 		case (BPF_ST | BPF_MEM | BPF_B):
 		case (BPF_ST | BPF_MEM | BPF_H):
 		case (BPF_ST | BPF_MEM | BPF_W):
-		case (BPF_ST | BPF_MEM | EBPF_DW):
+		case (BPF_ST | BPF_MEM | BPF_DW):
 			emit_st_imm(st, op, dr, ins->imm, ins->off);
 			break;
 		/* atomic instructions */
-		case (BPF_STX | EBPF_ATOMIC | BPF_W):
-		case (BPF_STX | EBPF_ATOMIC | EBPF_DW):
+		case (BPF_STX | BPF_ATOMIC | BPF_W):
+		case (BPF_STX | BPF_ATOMIC | BPF_DW):
 			emit_st_atomic(st, op, sr, dr, ins->off, ins->imm);
 			break;
 		/* jump instructions */
@@ -1473,39 +1473,39 @@ emit(struct bpf_jit_state *st, const struct rte_bpf *bpf)
 			break;
 		/* jump IMM instructions */
 		case (BPF_JMP | BPF_JEQ | BPF_K):
-		case (BPF_JMP | EBPF_JNE | BPF_K):
+		case (BPF_JMP | BPF_JNE | BPF_K):
 		case (BPF_JMP | BPF_JGT | BPF_K):
-		case (BPF_JMP | EBPF_JLT | BPF_K):
+		case (BPF_JMP | BPF_JLT | BPF_K):
 		case (BPF_JMP | BPF_JGE | BPF_K):
-		case (BPF_JMP | EBPF_JLE | BPF_K):
-		case (BPF_JMP | EBPF_JSGT | BPF_K):
-		case (BPF_JMP | EBPF_JSLT | BPF_K):
-		case (BPF_JMP | EBPF_JSGE | BPF_K):
-		case (BPF_JMP | EBPF_JSLE | BPF_K):
+		case (BPF_JMP | BPF_JLE | BPF_K):
+		case (BPF_JMP | BPF_JSGT | BPF_K):
+		case (BPF_JMP | BPF_JSLT | BPF_K):
+		case (BPF_JMP | BPF_JSGE | BPF_K):
+		case (BPF_JMP | BPF_JSLE | BPF_K):
 		case (BPF_JMP | BPF_JSET | BPF_K):
 			emit_jcc_imm(st, op, dr, ins->imm, ins->off + 1);
 			break;
 		/* jump REG instructions */
 		case (BPF_JMP | BPF_JEQ | BPF_X):
-		case (BPF_JMP | EBPF_JNE | BPF_X):
+		case (BPF_JMP | BPF_JNE | BPF_X):
 		case (BPF_JMP | BPF_JGT | BPF_X):
-		case (BPF_JMP | EBPF_JLT | BPF_X):
+		case (BPF_JMP | BPF_JLT | BPF_X):
 		case (BPF_JMP | BPF_JGE | BPF_X):
-		case (BPF_JMP | EBPF_JLE | BPF_X):
-		case (BPF_JMP | EBPF_JSGT | BPF_X):
-		case (BPF_JMP | EBPF_JSLT | BPF_X):
-		case (BPF_JMP | EBPF_JSGE | BPF_X):
-		case (BPF_JMP | EBPF_JSLE | BPF_X):
+		case (BPF_JMP | BPF_JLE | BPF_X):
+		case (BPF_JMP | BPF_JSGT | BPF_X):
+		case (BPF_JMP | BPF_JSLT | BPF_X):
+		case (BPF_JMP | BPF_JSGE | BPF_X):
+		case (BPF_JMP | BPF_JSLE | BPF_X):
 		case (BPF_JMP | BPF_JSET | BPF_X):
 			emit_jcc_reg(st, op, sr, dr, ins->off + 1);
 			break;
 		/* call instructions */
-		case (BPF_JMP | EBPF_CALL):
+		case (BPF_JMP | BPF_CALL):
 			emit_call(st,
 				(uintptr_t)bpf->prm.xsym[ins->imm].func.val);
 			break;
 		/* return instruction */
-		case (BPF_JMP | EBPF_EXIT):
+		case (BPF_JMP | BPF_EXIT):
 			emit_epilog(st);
 			break;
 		default:

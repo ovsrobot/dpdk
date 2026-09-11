@@ -67,12 +67,12 @@
 
 #define BPF_ST_ATOMIC_REG(reg, ins, tp)	do { \
 	switch (ins->imm) { \
-	case BPF_ATOMIC_ADD: \
+	case BPF_ADD: \
 		rte_atomic##tp##_add((rte_atomic##tp##_t *) \
 			(uintptr_t)((reg)[(ins)->dst_reg] + (ins)->off), \
 			(reg)[(ins)->src_reg]); \
 		break; \
-	case BPF_ATOMIC_XCHG: \
+	case BPF_XCHG: \
 		(reg)[(ins)->src_reg] = rte_atomic##tp##_exchange((uint##tp##_t *) \
 			(uintptr_t)((reg)[(ins)->dst_reg] + (ins)->off), \
 			(reg)[(ins)->src_reg]); \
@@ -95,7 +95,7 @@
 	const type *p = bpf_ld_mbuf(bpf, reg, ins, (ins)->imm, sizeof(type)); \
 	if (p == NULL)  \
 		return 0; \
-	reg[EBPF_REG_0] = op(p[0]); \
+	reg[BPF_REG_0] = op(p[0]); \
 } while (0)
 
 #define BPF_LD_IND(bpf, reg, ins, type, op) do { \
@@ -103,12 +103,12 @@
 	const type *p = bpf_ld_mbuf(bpf, reg, ins, ofs, sizeof(type)); \
 	if (p == NULL)  \
 		return 0; \
-	reg[EBPF_REG_0] = op(p[0]); \
+	reg[BPF_REG_0] = op(p[0]); \
 } while (0)
 
 
 static inline void
-bpf_alu_be(uint64_t reg[EBPF_REG_NUM], const struct rte_ebpf_insn *ins)
+bpf_alu_be(uint64_t reg[MAX_BPF_REG], const struct rte_ebpf_insn *ins)
 {
 	uint64_t *v;
 
@@ -127,7 +127,7 @@ bpf_alu_be(uint64_t reg[EBPF_REG_NUM], const struct rte_ebpf_insn *ins)
 }
 
 static inline void
-bpf_alu_le(uint64_t reg[EBPF_REG_NUM], const struct rte_ebpf_insn *ins)
+bpf_alu_le(uint64_t reg[MAX_BPF_REG], const struct rte_ebpf_insn *ins)
 {
 	uint64_t *v;
 
@@ -146,14 +146,14 @@ bpf_alu_le(uint64_t reg[EBPF_REG_NUM], const struct rte_ebpf_insn *ins)
 }
 
 static inline const void *
-bpf_ld_mbuf(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM],
+bpf_ld_mbuf(const struct rte_bpf *bpf, uint64_t reg[MAX_BPF_REG],
 	const struct rte_ebpf_insn *ins, uint32_t off, uint32_t len)
 {
 	const struct rte_mbuf *mb;
 	const void *p;
 
-	mb = (const struct rte_mbuf *)(uintptr_t)reg[EBPF_REG_6];
-	p = rte_pktmbuf_read(mb, off, len, reg + EBPF_REG_0);
+	mb = (const struct rte_mbuf *)(uintptr_t)reg[BPF_REG_6];
+	p = rte_pktmbuf_read(mb, off, len, reg + BPF_REG_0);
 	if (p == NULL)
 		RTE_BPF_LOG_LINE(DEBUG, "%s(bpf=%p, mbuf=%p, ofs=%u, len=%u): "
 			"load beyond packet boundary at pc: %#zx;",
@@ -163,7 +163,7 @@ bpf_ld_mbuf(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM],
 }
 
 static inline uint64_t
-bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
+bpf_exec(const struct rte_bpf *bpf, uint64_t reg[MAX_BPF_REG])
 {
 	const struct rte_ebpf_insn *ins;
 
@@ -200,7 +200,7 @@ bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
 		case (BPF_ALU | BPF_MOD | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, %, uint32_t);
 			break;
-		case (BPF_ALU | EBPF_MOV | BPF_K):
+		case (BPF_ALU | BPF_MOV | BPF_K):
 			EBPF_MOV_ALU_IMM(reg, ins, uint32_t);
 			break;
 		/* 32 bit ALU REG operations */
@@ -236,95 +236,95 @@ bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
 			BPF_DIV_ZERO_CHECK(bpf, reg, ins, uint32_t);
 			BPF_OP_ALU_REG(reg, ins, %, uint32_t);
 			break;
-		case (BPF_ALU | EBPF_MOV | BPF_X):
+		case (BPF_ALU | BPF_MOV | BPF_X):
 			EBPF_MOV_ALU_REG(reg, ins, uint32_t);
 			break;
 		case (BPF_ALU | BPF_NEG):
 			BPF_NEG_ALU(reg, ins, uint32_t);
 			break;
-		case (BPF_ALU | EBPF_END | EBPF_TO_BE):
+		case (BPF_ALU | BPF_END | BPF_TO_BE):
 			bpf_alu_be(reg, ins);
 			break;
-		case (BPF_ALU | EBPF_END | EBPF_TO_LE):
+		case (BPF_ALU | BPF_END | BPF_TO_LE):
 			bpf_alu_le(reg, ins);
 			break;
 		/* 64 bit ALU IMM operations */
-		case (EBPF_ALU64 | BPF_ADD | BPF_K):
+		case (BPF_ALU64 | BPF_ADD | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, +, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_SUB | BPF_K):
+		case (BPF_ALU64 | BPF_SUB | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, -, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_AND | BPF_K):
+		case (BPF_ALU64 | BPF_AND | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, &, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_OR | BPF_K):
+		case (BPF_ALU64 | BPF_OR | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, |, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_LSH | BPF_K):
+		case (BPF_ALU64 | BPF_LSH | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, <<, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_RSH | BPF_K):
+		case (BPF_ALU64 | BPF_RSH | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, >>, uint64_t);
 			break;
-		case (EBPF_ALU64 | EBPF_ARSH | BPF_K):
+		case (BPF_ALU64 | BPF_ARSH | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, >>, int64_t);
 			break;
-		case (EBPF_ALU64 | BPF_XOR | BPF_K):
+		case (BPF_ALU64 | BPF_XOR | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, ^, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_MUL | BPF_K):
+		case (BPF_ALU64 | BPF_MUL | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, *, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_DIV | BPF_K):
+		case (BPF_ALU64 | BPF_DIV | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, /, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_MOD | BPF_K):
+		case (BPF_ALU64 | BPF_MOD | BPF_K):
 			BPF_OP_ALU_IMM(reg, ins, %, uint64_t);
 			break;
-		case (EBPF_ALU64 | EBPF_MOV | BPF_K):
+		case (BPF_ALU64 | BPF_MOV | BPF_K):
 			EBPF_MOV_ALU_IMM(reg, ins, uint64_t);
 			break;
 		/* 64 bit ALU REG operations */
-		case (EBPF_ALU64 | BPF_ADD | BPF_X):
+		case (BPF_ALU64 | BPF_ADD | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, +, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_SUB | BPF_X):
+		case (BPF_ALU64 | BPF_SUB | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, -, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_AND | BPF_X):
+		case (BPF_ALU64 | BPF_AND | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, &, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_OR | BPF_X):
+		case (BPF_ALU64 | BPF_OR | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, |, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_LSH | BPF_X):
+		case (BPF_ALU64 | BPF_LSH | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, <<, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_RSH | BPF_X):
+		case (BPF_ALU64 | BPF_RSH | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, >>, uint64_t);
 			break;
-		case (EBPF_ALU64 | EBPF_ARSH | BPF_X):
+		case (BPF_ALU64 | BPF_ARSH | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, >>, int64_t);
 			break;
-		case (EBPF_ALU64 | BPF_XOR | BPF_X):
+		case (BPF_ALU64 | BPF_XOR | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, ^, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_MUL | BPF_X):
+		case (BPF_ALU64 | BPF_MUL | BPF_X):
 			BPF_OP_ALU_REG(reg, ins, *, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_DIV | BPF_X):
+		case (BPF_ALU64 | BPF_DIV | BPF_X):
 			BPF_DIV_ZERO_CHECK(bpf, reg, ins, uint64_t);
 			BPF_OP_ALU_REG(reg, ins, /, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_MOD | BPF_X):
+		case (BPF_ALU64 | BPF_MOD | BPF_X):
 			BPF_DIV_ZERO_CHECK(bpf, reg, ins, uint64_t);
 			BPF_OP_ALU_REG(reg, ins, %, uint64_t);
 			break;
-		case (EBPF_ALU64 | EBPF_MOV | BPF_X):
+		case (BPF_ALU64 | BPF_MOV | BPF_X):
 			EBPF_MOV_ALU_REG(reg, ins, uint64_t);
 			break;
-		case (EBPF_ALU64 | BPF_NEG):
+		case (BPF_ALU64 | BPF_NEG):
 			BPF_NEG_ALU(reg, ins, uint64_t);
 			break;
 		/* load instructions */
@@ -337,11 +337,11 @@ bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
 		case (BPF_LDX | BPF_MEM | BPF_W):
 			BPF_LD_REG(reg, ins, uint32_t);
 			break;
-		case (BPF_LDX | BPF_MEM | EBPF_DW):
+		case (BPF_LDX | BPF_MEM | BPF_DW):
 			BPF_LD_REG(reg, ins, uint64_t);
 			break;
 		/* load 64 bit immediate value */
-		case (BPF_LD | BPF_IMM | EBPF_DW):
+		case (BPF_LD | BPF_IMM | BPF_DW):
 			reg[ins->dst_reg] = (uint32_t)ins[0].imm |
 				(uint64_t)(uint32_t)ins[1].imm << 32;
 			ins++;
@@ -376,7 +376,7 @@ bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
 		case (BPF_STX | BPF_MEM | BPF_W):
 			BPF_ST_REG(reg, ins, uint32_t);
 			break;
-		case (BPF_STX | BPF_MEM | EBPF_DW):
+		case (BPF_STX | BPF_MEM | BPF_DW):
 			BPF_ST_REG(reg, ins, uint64_t);
 			break;
 		case (BPF_ST | BPF_MEM | BPF_B):
@@ -388,14 +388,14 @@ bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
 		case (BPF_ST | BPF_MEM | BPF_W):
 			BPF_ST_IMM(reg, ins, uint32_t);
 			break;
-		case (BPF_ST | BPF_MEM | EBPF_DW):
+		case (BPF_ST | BPF_MEM | BPF_DW):
 			BPF_ST_IMM(reg, ins, uint64_t);
 			break;
 		/* atomic instructions */
-		case (BPF_STX | EBPF_ATOMIC | BPF_W):
+		case (BPF_STX | BPF_ATOMIC | BPF_W):
 			BPF_ST_ATOMIC_REG(reg, ins, 32);
 			break;
-		case (BPF_STX | EBPF_ATOMIC | EBPF_DW):
+		case (BPF_STX | BPF_ATOMIC | BPF_DW):
 			BPF_ST_ATOMIC_REG(reg, ins, 64);
 			break;
 		/* jump instructions */
@@ -406,31 +406,31 @@ bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
 		case (BPF_JMP | BPF_JEQ | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, ==, uint64_t);
 			break;
-		case (BPF_JMP | EBPF_JNE | BPF_K):
+		case (BPF_JMP | BPF_JNE | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, !=, uint64_t);
 			break;
 		case (BPF_JMP | BPF_JGT | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, >, uint64_t);
 			break;
-		case (BPF_JMP | EBPF_JLT | BPF_K):
+		case (BPF_JMP | BPF_JLT | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, <, uint64_t);
 			break;
 		case (BPF_JMP | BPF_JGE | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, >=, uint64_t);
 			break;
-		case (BPF_JMP | EBPF_JLE | BPF_K):
+		case (BPF_JMP | BPF_JLE | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, <=, uint64_t);
 			break;
-		case (BPF_JMP | EBPF_JSGT | BPF_K):
+		case (BPF_JMP | BPF_JSGT | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, >, int64_t);
 			break;
-		case (BPF_JMP | EBPF_JSLT | BPF_K):
+		case (BPF_JMP | BPF_JSLT | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, <, int64_t);
 			break;
-		case (BPF_JMP | EBPF_JSGE | BPF_K):
+		case (BPF_JMP | BPF_JSGE | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, >=, int64_t);
 			break;
-		case (BPF_JMP | EBPF_JSLE | BPF_K):
+		case (BPF_JMP | BPF_JSLE | BPF_K):
 			BPF_JMP_CND_IMM(reg, ins, <=, int64_t);
 			break;
 		case (BPF_JMP | BPF_JSET | BPF_K):
@@ -440,46 +440,46 @@ bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
 		case (BPF_JMP | BPF_JEQ | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, ==, uint64_t);
 			break;
-		case (BPF_JMP | EBPF_JNE | BPF_X):
+		case (BPF_JMP | BPF_JNE | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, !=, uint64_t);
 			break;
 		case (BPF_JMP | BPF_JGT | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, >, uint64_t);
 			break;
-		case (BPF_JMP | EBPF_JLT | BPF_X):
+		case (BPF_JMP | BPF_JLT | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, <, uint64_t);
 			break;
 		case (BPF_JMP | BPF_JGE | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, >=, uint64_t);
 			break;
-		case (BPF_JMP | EBPF_JLE | BPF_X):
+		case (BPF_JMP | BPF_JLE | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, <=, uint64_t);
 			break;
-		case (BPF_JMP | EBPF_JSGT | BPF_X):
+		case (BPF_JMP | BPF_JSGT | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, >, int64_t);
 			break;
-		case (BPF_JMP | EBPF_JSLT | BPF_X):
+		case (BPF_JMP | BPF_JSLT | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, <, int64_t);
 			break;
-		case (BPF_JMP | EBPF_JSGE | BPF_X):
+		case (BPF_JMP | BPF_JSGE | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, >=, int64_t);
 			break;
-		case (BPF_JMP | EBPF_JSLE | BPF_X):
+		case (BPF_JMP | BPF_JSLE | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, <=, int64_t);
 			break;
 		case (BPF_JMP | BPF_JSET | BPF_X):
 			BPF_JMP_CND_REG(reg, ins, &, uint64_t);
 			break;
 		/* call instructions */
-		case (BPF_JMP | EBPF_CALL):
-			reg[EBPF_REG_0] = bpf->prm.xsym[ins->imm].func.val(
-				reg[EBPF_REG_1], reg[EBPF_REG_2],
-				reg[EBPF_REG_3], reg[EBPF_REG_4],
-				reg[EBPF_REG_5]);
+		case (BPF_JMP | BPF_CALL):
+			reg[BPF_REG_0] = bpf->prm.xsym[ins->imm].func.val(
+				reg[BPF_REG_1], reg[BPF_REG_2],
+				reg[BPF_REG_3], reg[BPF_REG_4],
+				reg[BPF_REG_5]);
 			break;
 		/* return instruction */
-		case (BPF_JMP | EBPF_EXIT):
-			return reg[EBPF_REG_0];
+		case (BPF_JMP | BPF_EXIT):
+			return reg[BPF_REG_0];
 		default:
 			RTE_BPF_LOG_LINE(ERR,
 				"%s(%p): invalid opcode %#x at pc: %#zx;",
@@ -500,7 +500,7 @@ rte_bpf_exec_burst(const struct rte_bpf *bpf, void *ctx[], uint64_t rc[],
 	uint32_t num)
 {
 	uint32_t i;
-	uint64_t reg[EBPF_REG_NUM];
+	uint64_t reg[MAX_BPF_REG];
 	uint64_t stack[MAX_BPF_STACK_SIZE / sizeof(uint64_t)];
 
 	if (bpf->prm.nb_prog_arg != 1) {
@@ -511,8 +511,8 @@ rte_bpf_exec_burst(const struct rte_bpf *bpf, void *ctx[], uint64_t rc[],
 
 	for (i = 0; i != num; i++) {
 
-		reg[EBPF_REG_1] = (uintptr_t)ctx[i];
-		reg[EBPF_REG_10] = (uintptr_t)(stack + RTE_DIM(stack));
+		reg[BPF_REG_1] = (uintptr_t)ctx[i];
+		reg[BPF_REG_10] = (uintptr_t)(stack + RTE_DIM(stack));
 
 		rc[i] = bpf_exec(bpf, reg);
 	}
@@ -525,32 +525,32 @@ exec_vm_burst_ex(const struct rte_bpf *bpf, const struct rte_bpf_prog_ctx *ctx,
 	uint64_t rc[], uint32_t num)
 {
 	uint32_t i;
-	uint64_t reg[EBPF_REG_NUM];
+	uint64_t reg[MAX_BPF_REG];
 	uint64_t stack[MAX_BPF_STACK_SIZE / sizeof(uint64_t)];
 
 	for (i = 0; i != num; i++) {
 
 		switch (bpf->prm.nb_prog_arg) {
 		case 5:
-			reg[EBPF_REG_5] = ctx[i].arg[4].u64;
+			reg[BPF_REG_5] = ctx[i].arg[4].u64;
 			/* FALLTHROUGH */
 		case 4:
-			reg[EBPF_REG_4] = ctx[i].arg[3].u64;
+			reg[BPF_REG_4] = ctx[i].arg[3].u64;
 			/* FALLTHROUGH */
 		case 3:
-			reg[EBPF_REG_3] = ctx[i].arg[2].u64;
+			reg[BPF_REG_3] = ctx[i].arg[2].u64;
 			/* FALLTHROUGH */
 		case 2:
-			reg[EBPF_REG_2] = ctx[i].arg[1].u64;
+			reg[BPF_REG_2] = ctx[i].arg[1].u64;
 			/* FALLTHROUGH */
 		case 1:
-			reg[EBPF_REG_1] = ctx[i].arg[0].u64;
+			reg[BPF_REG_1] = ctx[i].arg[0].u64;
 			/* FALLTHROUGH */
 		case 0:
 			break;
 		}
 
-		reg[EBPF_REG_10] = (uintptr_t)(stack + RTE_DIM(stack));
+		reg[BPF_REG_10] = (uintptr_t)(stack + RTE_DIM(stack));
 
 		rc[i] = bpf_exec(bpf, reg);
 	}

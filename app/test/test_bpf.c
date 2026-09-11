@@ -103,7 +103,7 @@ test_exit_only(void)
 {
 	static const struct rte_ebpf_insn ins[] = {
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
@@ -121,9 +121,9 @@ test_no_exit(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set return value to the program argument. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-			.src_reg = EBPF_REG_1,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+			.src_reg = BPF_REG_1,
+			.dst_reg = BPF_REG_0,
 		},
 	};
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
@@ -140,12 +140,12 @@ test_minimal_working(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set return value to the program argument. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-			.src_reg = EBPF_REG_1,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+			.src_reg = BPF_REG_1,
+			.dst_reg = BPF_REG_0,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	return bpf_load_test(RTE_DIM(ins), ins, 0);
@@ -162,18 +162,18 @@ test_add_one(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set return value to one. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+			.dst_reg = BPF_REG_0,
 			.imm = 1,
 		},
 		{
 			/* Add program argument to the return value. */
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-			.src_reg = EBPF_REG_1,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+			.src_reg = BPF_REG_1,
+			.dst_reg = BPF_REG_0,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	return bpf_load_test(RTE_DIM(ins), ins, 0);
@@ -190,18 +190,18 @@ test_subtract_one(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Subtract one from the program argument. */
-			.code = (EBPF_ALU64 | BPF_SUB | BPF_K),
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_ALU64 | BPF_SUB | BPF_K),
+			.dst_reg = BPF_REG_1,
 			.imm = 1,
 		},
 		{
 			/* Set return value to the result. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-			.src_reg = EBPF_REG_1,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+			.src_reg = BPF_REG_1,
+			.dst_reg = BPF_REG_0,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	return bpf_load_test(RTE_DIM(ins), ins, 0);
@@ -219,25 +219,25 @@ test_jump_over_invalid_first(void)
 		{
 			/* Jump over the next instruction for some r1. */
 			.code = (BPF_JMP | BPF_JEQ | BPF_K),
-			.dst_reg = EBPF_REG_1,
+			.dst_reg = BPF_REG_1,
 			.imm = 42,
 			.off = 1,
 		},
 		{
 			/* Write 0xDEADBEEF to [r1 + INT16_MIN]. */
-			.code = (BPF_ST | BPF_MEM | EBPF_DW),
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_ST | BPF_MEM | BPF_DW),
+			.dst_reg = BPF_REG_1,
 			.off = INT16_MIN,
 			.imm = 0xDEADBEEF,
 		},
 		{
 			/* Set return value to the program argument. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-			.src_reg = EBPF_REG_1,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+			.src_reg = BPF_REG_1,
+			.dst_reg = BPF_REG_0,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
@@ -255,32 +255,32 @@ test_jump_over_invalid_non_first(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set return value to the program argument. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-			.src_reg = EBPF_REG_1,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+			.src_reg = BPF_REG_1,
+			.dst_reg = BPF_REG_0,
 		},
 		{
 			/* Jump over the next instruction for some r1. */
 			.code = (BPF_JMP | BPF_JEQ | BPF_K),
-			.dst_reg = EBPF_REG_1,
+			.dst_reg = BPF_REG_1,
 			.imm = 42,
 			.off = 1,
 		},
 		{
 			/* Write 0xDEADBEEF to [r1 + INT16_MIN]. */
-			.code = (BPF_ST | BPF_MEM | EBPF_DW),
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_ST | BPF_MEM | BPF_DW),
+			.dst_reg = BPF_REG_1,
 			.off = INT16_MIN,
 			.imm = 0xDEADBEEF,
 		},
 		{
 			/* Set return value to the program argument. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-			.src_reg = EBPF_REG_1,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+			.src_reg = BPF_REG_1,
+			.dst_reg = BPF_REG_0,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	return bpf_load_test(RTE_DIM(ins), ins, EINVAL);
@@ -405,36 +405,36 @@ dummy_prepare(void *arg)
 static const struct rte_ebpf_insn test_store1_prog[] = {
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u8),
 		.imm = TEST_FILL_1,
 	},
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u16),
 		.imm = TEST_FILL_1,
 	},
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u32),
 		.imm = TEST_FILL_1,
 	},
 	{
-		.code = (BPF_ST | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ST | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u64),
 		.imm = TEST_FILL_1,
 	},
 	/* return 1 */
 	{
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -468,42 +468,42 @@ test_store1_check(uint64_t rc, const void *arg)
 static const struct rte_ebpf_insn test_store2_prog[] = {
 
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = TEST_FILL_1,
 	},
 	{
 		.code = (BPF_STX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_offset, u8),
 	},
 	{
 		.code = (BPF_STX | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_offset, u16),
 	},
 	{
 		.code = (BPF_STX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	/* return 1 */
 	{
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -512,46 +512,46 @@ static const struct rte_ebpf_insn test_load1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u8),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u16),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	/* return sum */
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_4,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_3,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -588,40 +588,40 @@ test_load1_check(uint64_t rc, const void *arg)
 static const struct rte_ebpf_insn test_ldimm1_prog[] = {
 
 	{
-		.code = (BPF_LD | BPF_IMM | EBPF_DW),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_LD | BPF_IMM | BPF_DW),
+		.dst_reg = BPF_REG_0,
 		.imm = (uint32_t)TEST_IMM_1,
 	},
 	{
 		.imm = TEST_IMM_1 >> 32,
 	},
 	{
-		.code = (BPF_LD | BPF_IMM | EBPF_DW),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_LD | BPF_IMM | BPF_DW),
+		.dst_reg = BPF_REG_3,
 		.imm = (uint32_t)TEST_IMM_2,
 	},
 	{
 		.imm = TEST_IMM_2 >> 32,
 	},
 	{
-		.code = (BPF_LD | BPF_IMM | EBPF_DW),
-		.dst_reg = EBPF_REG_5,
+		.code = (BPF_LD | BPF_IMM | BPF_DW),
+		.dst_reg = BPF_REG_5,
 		.imm = (uint32_t)TEST_IMM_3,
 	},
 	{
 		.imm = TEST_IMM_3 >> 32,
 	},
 	{
-		.code = (BPF_LD | BPF_IMM | EBPF_DW),
-		.dst_reg = EBPF_REG_7,
+		.code = (BPF_LD | BPF_IMM | BPF_DW),
+		.dst_reg = BPF_REG_7,
 		.imm = (uint32_t)TEST_IMM_4,
 	},
 	{
 		.imm = TEST_IMM_4 >> 32,
 	},
 	{
-		.code = (BPF_LD | BPF_IMM | EBPF_DW),
-		.dst_reg = EBPF_REG_9,
+		.code = (BPF_LD | BPF_IMM | BPF_DW),
+		.dst_reg = BPF_REG_9,
 		.imm = (uint32_t)TEST_IMM_5,
 	},
 	{
@@ -629,27 +629,27 @@ static const struct rte_ebpf_insn test_ldimm1_prog[] = {
 	},
 	/* return sum */
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_3,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_5,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_5,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_7,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_7,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_9,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_9,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -677,68 +677,68 @@ static const struct rte_ebpf_insn test_mul1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[1].u64),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[2].u32),
 	},
 	{
 		.code = (BPF_ALU | BPF_MUL | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = TEST_MUL_1,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_MUL | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_MUL | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = TEST_MUL_2,
 	},
 	{
 		.code = (BPF_ALU | BPF_MUL | BPF_X),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_MUL | BPF_X),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_MUL | BPF_X),
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_3,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_vect8, out[0].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[1].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_vect8, out[2].u64),
 	},
 	/* return 1 */
 	{
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -789,134 +789,134 @@ static const struct rte_ebpf_insn test_shift1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[1].u64),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[2].u32),
 	},
 	{
 		.code = (BPF_ALU | BPF_LSH | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = TEST_SHIFT_1,
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_ARSH | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_ARSH | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = TEST_SHIFT_2,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_vect8, out[0].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[1].u64),
 	},
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_4,
+		.dst_reg = BPF_REG_4,
 		.imm = TEST_SHIFT64_MASK,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_LSH | BPF_X),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_ALU64 | BPF_LSH | BPF_X),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_4,
 	},
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_4,
+		.dst_reg = BPF_REG_4,
 		.imm = TEST_SHIFT32_MASK,
 	},
 	{
 		.code = (BPF_ALU | BPF_RSH | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_4,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_4,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_vect8, out[2].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[3].u64),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[1].u64),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[2].u32),
 	},
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = TEST_SHIFT64_MASK,
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_ARSH | BPF_X),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_ARSH | BPF_X),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_2,
 	},
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = TEST_SHIFT32_MASK,
 	},
 	{
 		.code = (BPF_ALU | BPF_LSH | BPF_X),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_vect8, out[4].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[5].u64),
 	},
 	/* return 1 */
 	{
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -983,88 +983,88 @@ test_shift1_check(uint64_t rc, const void *arg)
 static const struct rte_ebpf_insn test_jump1_prog[] = {
 
 	[0] = {
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0,
 	},
 	[1] = {
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u32),
 	},
 	[2] = {
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u64),
 	},
 	[3] = {
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[1].u32),
 	},
 	[4] = {
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_5,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_5,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[1].u64),
 	},
 	[5] = {
 		.code = (BPF_JMP | BPF_JEQ | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = TEST_JCC_1,
 		.off = 8,
 	},
 	[6] = {
-		.code = (BPF_JMP | EBPF_JSLE | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_JMP | BPF_JSLE | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = TEST_JCC_2,
 		.off = 9,
 	},
 	[7] = {
 		.code = (BPF_JMP | BPF_JGT | BPF_K),
-		.dst_reg = EBPF_REG_4,
+		.dst_reg = BPF_REG_4,
 		.imm = TEST_JCC_3,
 		.off = 10,
 	},
 	[8] = {
 		.code = (BPF_JMP | BPF_JSET | BPF_K),
-		.dst_reg = EBPF_REG_5,
+		.dst_reg = BPF_REG_5,
 		.imm = TEST_JCC_4,
 		.off = 11,
 	},
 	[9] = {
-		.code = (BPF_JMP | EBPF_JNE | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_JMP | BPF_JNE | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_3,
 		.off = 12,
 	},
 	[10] = {
-		.code = (BPF_JMP | EBPF_JSGT | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_JMP | BPF_JSGT | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_4,
 		.off = 13,
 	},
 	[11] = {
-		.code = (BPF_JMP | EBPF_JLE | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_5,
+		.code = (BPF_JMP | BPF_JLE | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_5,
 		.off = 14,
 	},
 	[12] = {
 		.code = (BPF_JMP | BPF_JSET | BPF_X),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_5,
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_5,
 		.off = 15,
 	},
 	[13] = {
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 	[14] = {
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0x1,
 	},
 	[15] = {
@@ -1072,8 +1072,8 @@ static const struct rte_ebpf_insn test_jump1_prog[] = {
 		.off = -10,
 	},
 	[16] = {
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0x2,
 	},
 	[17] = {
@@ -1081,8 +1081,8 @@ static const struct rte_ebpf_insn test_jump1_prog[] = {
 		.off = -11,
 	},
 	[18] = {
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0x4,
 	},
 	[19] = {
@@ -1090,8 +1090,8 @@ static const struct rte_ebpf_insn test_jump1_prog[] = {
 		.off = -12,
 	},
 	[20] = {
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0x8,
 	},
 	[21] = {
@@ -1099,8 +1099,8 @@ static const struct rte_ebpf_insn test_jump1_prog[] = {
 		.off = -13,
 	},
 	[22] = {
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0x10,
 	},
 	[23] = {
@@ -1108,8 +1108,8 @@ static const struct rte_ebpf_insn test_jump1_prog[] = {
 		.off = -14,
 	},
 	[24] = {
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0x20,
 	},
 	[25] = {
@@ -1117,8 +1117,8 @@ static const struct rte_ebpf_insn test_jump1_prog[] = {
 		.off = -15,
 	},
 	[26] = {
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0x40,
 	},
 	[27] = {
@@ -1126,8 +1126,8 @@ static const struct rte_ebpf_insn test_jump1_prog[] = {
 		.off = -16,
 	},
 	[28] = {
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0x80,
 	},
 	[29] = {
@@ -1192,98 +1192,98 @@ test_jump1_check(uint64_t rc, const void *arg)
 static const struct rte_ebpf_insn test_jump2_prog[] = {
 
 	[0] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = 0xe,
 	},
 	[1] = {
 		.code = (BPF_LDX | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = 12,
 	},
 	[2] = {
-		.code = (BPF_JMP | EBPF_JNE | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_JMP | BPF_JNE | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.off = 2,
 		.imm = 0x81,
 	},
 	[3] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = 0x12,
 	},
 	[4] = {
 		.code = (BPF_LDX | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = 16,
 	},
 	[5] = {
-		.code = (EBPF_ALU64 | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_AND | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = 0xffff,
 	},
 	[6] = {
-		.code = (BPF_JMP | EBPF_JNE | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_JMP | BPF_JNE | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.off = 9,
 		.imm = 0x8,
 	},
 	[7] = {
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 	},
 	[8] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0,
 	},
 	[9] = {
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_1,
 		.off = 16,
 	},
 	[10] = {
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = TEST_NETMASK,
 	},
 	[11] = {
-		.code = (BPF_ALU | EBPF_END | EBPF_TO_BE),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU | BPF_END | BPF_TO_BE),
+		.dst_reg = BPF_REG_3,
 		.imm = sizeof(uint32_t) * CHAR_BIT,
 	},
 	[12] = {
 		.code = (BPF_ALU | BPF_AND | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 	},
 	[13] = {
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = TEST_SUBNET,
 	},
 	[14] = {
-		.code = (BPF_ALU | EBPF_END | EBPF_TO_BE),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU | BPF_END | BPF_TO_BE),
+		.dst_reg = BPF_REG_3,
 		.imm = sizeof(uint32_t) * CHAR_BIT,
 	},
 	[15] = {
 		.code = (BPF_JMP | BPF_JEQ | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = 1,
 	},
 	[16] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = -1,
 	},
 	[17] = {
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -1358,137 +1358,137 @@ static const struct rte_ebpf_insn test_alu1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u64),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[1].u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_5,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_5,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[1].u64),
 	},
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = TEST_FILL_1,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = TEST_FILL_1,
 	},
 	{
 		.code = (BPF_ALU | BPF_XOR | BPF_K),
-		.dst_reg = EBPF_REG_4,
+		.dst_reg = BPF_REG_4,
 		.imm = TEST_FILL_1,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_K),
-		.dst_reg = EBPF_REG_5,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_K),
+		.dst_reg = BPF_REG_5,
 		.imm = TEST_FILL_1,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_vect8, out[0].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[1].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_vect8, out[2].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_5,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_5,
 		.off = offsetof(struct dummy_vect8, out[3].u64),
 	},
 	{
 		.code = (BPF_ALU | BPF_OR | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_3,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_3,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_XOR | BPF_X),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_ALU64 | BPF_XOR | BPF_X),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_4,
 	},
 	{
 		.code = (BPF_ALU | BPF_SUB | BPF_X),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_5,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_5,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_AND | BPF_X),
-		.dst_reg = EBPF_REG_5,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_AND | BPF_X),
+		.dst_reg = BPF_REG_5,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_vect8, out[4].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[5].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_vect8, out[6].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_5,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_5,
 		.off = offsetof(struct dummy_vect8, out[7].u64),
 	},
 	/* return (-r2 + (-r3)) */
 	{
 		.code = (BPF_ALU | BPF_NEG),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_NEG),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_NEG),
+		.dst_reg = BPF_REG_3,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_3,
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -1540,114 +1540,114 @@ static const struct rte_ebpf_insn test_bele1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u16),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u64),
 	},
 	{
-		.code = (BPF_ALU | EBPF_END | EBPF_TO_BE),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU | BPF_END | BPF_TO_BE),
+		.dst_reg = BPF_REG_2,
 		.imm = sizeof(uint16_t) * CHAR_BIT,
 	},
 	{
-		.code = (BPF_ALU | EBPF_END | EBPF_TO_BE),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU | BPF_END | BPF_TO_BE),
+		.dst_reg = BPF_REG_3,
 		.imm = sizeof(uint32_t) * CHAR_BIT,
 	},
 	{
-		.code = (BPF_ALU | EBPF_END | EBPF_TO_BE),
-		.dst_reg = EBPF_REG_4,
+		.code = (BPF_ALU | BPF_END | BPF_TO_BE),
+		.dst_reg = BPF_REG_4,
 		.imm = sizeof(uint64_t) * CHAR_BIT,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_vect8, out[0].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[1].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_vect8, out[2].u64),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u16),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u64),
 	},
 	{
-		.code = (BPF_ALU | EBPF_END | EBPF_TO_LE),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU | BPF_END | BPF_TO_LE),
+		.dst_reg = BPF_REG_2,
 		.imm = sizeof(uint16_t) * CHAR_BIT,
 	},
 	{
-		.code = (BPF_ALU | EBPF_END | EBPF_TO_LE),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU | BPF_END | BPF_TO_LE),
+		.dst_reg = BPF_REG_3,
 		.imm = sizeof(uint32_t) * CHAR_BIT,
 	},
 	{
-		.code = (BPF_ALU | EBPF_END | EBPF_TO_LE),
-		.dst_reg = EBPF_REG_4,
+		.code = (BPF_ALU | BPF_END | BPF_TO_LE),
+		.dst_reg = BPF_REG_4,
 		.imm = sizeof(uint64_t) * CHAR_BIT,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_vect8, out[3].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[4].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_vect8, out[5].u64),
 	},
 	/* return 1 */
 	{
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -1705,132 +1705,132 @@ test_bele1_check(uint64_t rc, const void *arg)
 static const struct rte_ebpf_insn test_xadd1_prog[] = {
 
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = 1,
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_XADD | BPF_W),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_XADD | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = -1,
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_XADD | BPF_W),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_XADD | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_4,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_4,
 		.imm = TEST_FILL_1,
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_XADD | BPF_W),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_XADD | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_5,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_5,
 		.imm = TEST_MUL_1,
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_5,
+		.code = (BPF_STX | BPF_XADD | BPF_W),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_5,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_5,
+		.code = (BPF_STX | BPF_XADD | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_5,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_6,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_6,
 		.imm = TEST_MUL_2,
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_6,
+		.code = (BPF_STX | BPF_XADD | BPF_W),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_6,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_6,
+		.code = (BPF_STX | BPF_XADD | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_6,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_7,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_7,
 		.imm = TEST_JCC_2,
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_7,
+		.code = (BPF_STX | BPF_XADD | BPF_W),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_7,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_7,
+		.code = (BPF_STX | BPF_XADD | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_7,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_8,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_8,
 		.imm = TEST_JCC_3,
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_8,
+		.code = (BPF_STX | BPF_XADD | BPF_W),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_8,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_STX | EBPF_XADD | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_8,
+		.code = (BPF_STX | BPF_XADD | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_8,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	/* return 1 */
 	{
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -1894,90 +1894,90 @@ static const struct rte_ebpf_insn test_div1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[0].u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[1].u64),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[2].u32),
 	},
 	{
 		.code = (BPF_ALU | BPF_DIV | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = TEST_MUL_1,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_MOD | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_MOD | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = TEST_MUL_2,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = 1,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_OR | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_OR | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = 1,
 	},
 	{
 		.code = (BPF_ALU | BPF_MOD | BPF_X),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_DIV | BPF_X),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_DIV | BPF_X),
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_3,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 		.off = offsetof(struct dummy_vect8, out[0].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_3,
 		.off = offsetof(struct dummy_vect8, out[1].u64),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_4,
 		.off = offsetof(struct dummy_vect8, out[2].u64),
 	},
 	/* check that we can handle division by zero gracefully. */
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_vect8, in[3].u32),
 	},
 	{
 		.code = (BPF_ALU | BPF_DIV | BPF_X),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_2,
 	},
 	/* return 1 */
 	{
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -2018,71 +2018,71 @@ static const struct rte_ebpf_insn test_call1_prog[] = {
 
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_1,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	{
 		.code = (BPF_STX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_2,
 		.off = -4,
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_3,
 		.off = -16,
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_10,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_SUB | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_SUB | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = 4,
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_10,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_SUB | BPF_K),
-		.dst_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_SUB | BPF_K),
+		.dst_reg = BPF_REG_3,
 		.imm = 16,
 	},
 	{
-		.code = (BPF_JMP | EBPF_CALL),
+		.code = (BPF_JMP | BPF_CALL),
 		.imm = 0,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_10,
 		.off = -4,
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_10,
 		.off = -16
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -2142,74 +2142,74 @@ static const struct rte_bpf_xsym test_call1_xsym[] = {
 static const struct rte_ebpf_insn test_call2_prog[] = {
 
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = -(int32_t)sizeof(struct dummy_offset),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_10,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = -2 * (int32_t)sizeof(struct dummy_offset),
 	},
 	{
-		.code = (BPF_JMP | EBPF_CALL),
+		.code = (BPF_JMP | BPF_CALL),
 		.imm = 0,
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 		.off = -(int32_t)(sizeof(struct dummy_offset) -
 			offsetof(struct dummy_offset, u64)),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_10,
 		.off = -(int32_t)(sizeof(struct dummy_offset) -
 			offsetof(struct dummy_offset, u32)),
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_1,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 		.off = -(int32_t)(2 * sizeof(struct dummy_offset) -
 			offsetof(struct dummy_offset, u16)),
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_1,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 		.off = -(int32_t)(2 * sizeof(struct dummy_offset) -
 			offsetof(struct dummy_offset, u8)),
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 
 };
@@ -2268,51 +2268,51 @@ static const struct rte_bpf_xsym test_call2_xsym[] = {
 static const struct rte_ebpf_insn test_call3_prog[] = {
 
 	{
-		.code = (BPF_JMP | EBPF_CALL),
+		.code = (BPF_JMP | BPF_CALL),
 		.imm = 0,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_0,
 		.off = offsetof(struct dummy_offset, u8),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_H),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_0,
 		.off = offsetof(struct dummy_offset, u16),
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_0,
 		.off = offsetof(struct dummy_offset, u32),
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_0,
 		.off = offsetof(struct dummy_offset, u64),
 	},
 	/* return sum */
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_4,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_4,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_3,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_3,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -2381,82 +2381,82 @@ static const struct rte_bpf_xsym test_call3_xsym[] = {
 static const struct rte_ebpf_insn test_call4_prog[] = {
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_10,
 		.off = -4,
 		.imm = 1,
 	},
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_10,
 		.off = -3,
 		.imm = 2,
 	},
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_10,
 		.off = -2,
 		.imm = 3,
 	},
 	{
 		.code = (BPF_ST | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_10,
 		.off = -1,
 		.imm = 4,
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = 4,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_SUB | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_SUB | BPF_X),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_2,
 	},
 	{
-		.code = (BPF_JMP | EBPF_CALL),
+		.code = (BPF_JMP | BPF_CALL),
 		.imm = 0,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 		.off = -4,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_10,
 		.off = -3,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_3,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_3,
+		.src_reg = BPF_REG_10,
 		.off = -2,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_4,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_4,
+		.src_reg = BPF_REG_10,
 		.off = -1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_CALL),
+		.code = (BPF_JMP | BPF_CALL),
 		.imm = 1,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_XOR | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_XOR | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = TEST_MEMFROB,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -2554,146 +2554,146 @@ static const struct rte_bpf_xsym test_call4_xsym[] = {
 static const struct rte_ebpf_insn test_call5_prog[] = {
 
 	[0] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = STRING_GEEK,
 	},
 	[1] = {
 		.code = (BPF_STX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_1,
 		.off = -8,
 	},
 	[2] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_6,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_6,
 		.imm = 0,
 	},
 	[3] = {
 		.code = (BPF_STX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_6,
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_6,
 		.off = -4,
 	},
 	[4] = {
 		.code = (BPF_STX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_6,
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_6,
 		.off = -12,
 	},
 	[5] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = STRING_WEEK,
 	},
 	[6] = {
 		.code = (BPF_STX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_1,
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_1,
 		.off = -16,
 	},
 	[7] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 	},
 	[8] = {
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = -8,
 	},
 	[9] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_1,
 	},
 	[10] = {
-		.code = (BPF_JMP | EBPF_CALL),
+		.code = (BPF_JMP | BPF_CALL),
 		.imm = 0,
 	},
 	[11] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_0,
 	},
 	[12] = {
-		.code = (BPF_ALU | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = -1,
 	},
 	[13] = {
-		.code = (EBPF_ALU64 | BPF_LSH | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_LSH | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = 0x20,
 	},
 	[14] = {
-		.code = (EBPF_ALU64 | BPF_RSH | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_RSH | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = 0x20,
 	},
 	[15] = {
-		.code = (BPF_JMP | EBPF_JNE | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_JMP | BPF_JNE | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.off = 11,
 		.imm = 0,
 	},
 	[16] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 	},
 	[17] = {
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = -8,
 	},
 	[18] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_10,
 	},
 	[19] = {
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_K),
+		.dst_reg = BPF_REG_2,
 		.imm = -16,
 	},
 	[20] = {
-		.code = (BPF_JMP | EBPF_CALL),
+		.code = (BPF_JMP | BPF_CALL),
 		.imm = 0,
 	},
 	[21] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_0,
 	},
 	[22] = {
-		.code = (EBPF_ALU64 | BPF_LSH | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_LSH | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = 0x20,
 	},
 	[23] = {
-		.code = (EBPF_ALU64 | BPF_RSH | BPF_K),
-		.dst_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_RSH | BPF_K),
+		.dst_reg = BPF_REG_1,
 		.imm = 0x20,
 	},
 	[24] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_1,
 	},
 	[25] = {
 		.code = (BPF_JMP | BPF_JEQ | BPF_X),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_6,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_6,
 		.off = 1,
 	},
 	[26] = {
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = 0,
 	},
 	[27] = {
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -2763,9 +2763,9 @@ static const struct rte_ebpf_insn test_ld_mbuf1_prog[] = {
 
 	/* BPF_ABS/BPF_IND implicitly expect mbuf ptr in R6 */
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_6,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_6,
+		.src_reg = BPF_REG_1,
 	},
 	/* load IPv4 version and IHL */
 	{
@@ -2774,50 +2774,50 @@ static const struct rte_ebpf_insn test_ld_mbuf1_prog[] = {
 	},
 	/* check IP version */
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_0,
 	},
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = 0xf0,
 	},
 	{
 		.code = (BPF_JMP | BPF_JEQ | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = IPVERSION << 4,
 		.off = 2,
 	},
 	/* invalid IP version, return 0 */
 	{
-		.code = (EBPF_ALU64 | BPF_XOR | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_XOR | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_0,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 	/* load 3-rd byte of IP data */
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_0,
 		.imm = RTE_IPV4_HDR_IHL_MASK,
 	},
 	{
 		.code = (BPF_ALU | BPF_LSH | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_0,
 		.imm = 2,
 	},
 	{
 		.code = (BPF_LD | BPF_IND | BPF_B),
-		.src_reg = EBPF_REG_0,
+		.src_reg = BPF_REG_0,
 		.imm = 3,
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_7,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_7,
+		.src_reg = BPF_REG_0,
 	},
 	/* load IPv4 src addr */
 	{
@@ -2825,9 +2825,9 @@ static const struct rte_ebpf_insn test_ld_mbuf1_prog[] = {
 		.imm = offsetof(struct rte_ipv4_hdr, src_addr),
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_7,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_7,
+		.src_reg = BPF_REG_0,
 	},
 	/* load IPv4 total length */
 	{
@@ -2835,38 +2835,38 @@ static const struct rte_ebpf_insn test_ld_mbuf1_prog[] = {
 		.imm = offsetof(struct rte_ipv4_hdr, total_length),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_8,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_8,
+		.src_reg = BPF_REG_0,
 	},
 	/* load last 4 bytes of IP data */
 	{
 		.code = (BPF_LD | BPF_IND | BPF_W),
-		.src_reg = EBPF_REG_8,
+		.src_reg = BPF_REG_8,
 		.imm = -(int32_t)sizeof(uint32_t),
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_7,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_7,
+		.src_reg = BPF_REG_0,
 	},
 	/* load 2 bytes from the middle of IP data */
 	{
-		.code = (EBPF_ALU64 | BPF_RSH | BPF_K),
-		.dst_reg = EBPF_REG_8,
+		.code = (BPF_ALU64 | BPF_RSH | BPF_K),
+		.dst_reg = BPF_REG_8,
 		.imm = 1,
 	},
 	{
 		.code = (BPF_LD | BPF_IND | BPF_H),
-		.src_reg = EBPF_REG_8,
+		.src_reg = BPF_REG_8,
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_7,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_7,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -3021,9 +3021,9 @@ static const struct rte_ebpf_insn test_ld_mbuf3_prog[] = {
 
 	/* BPF_ABS/BPF_IND implicitly expect mbuf ptr in R6 */
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_6,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_6,
+		.src_reg = BPF_REG_1,
 	},
 	/* load IPv4 version and IHL */
 	{
@@ -3032,50 +3032,50 @@ static const struct rte_ebpf_insn test_ld_mbuf3_prog[] = {
 	},
 	/* check IP version */
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_2,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_2,
+		.src_reg = BPF_REG_0,
 	},
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = 0xf0,
 	},
 	{
 		.code = (BPF_JMP | BPF_JEQ | BPF_K),
-		.dst_reg = EBPF_REG_2,
+		.dst_reg = BPF_REG_2,
 		.imm = IPVERSION << 4,
 		.off = 2,
 	},
 	/* invalid IP version, return 0 */
 	{
-		.code = (EBPF_ALU64 | BPF_XOR | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_XOR | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_0,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 	/* load 3-rd byte of IP data */
 	{
 		.code = (BPF_ALU | BPF_AND | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_0,
 		.imm = RTE_IPV4_HDR_IHL_MASK,
 	},
 	{
 		.code = (BPF_ALU | BPF_LSH | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_0,
 		.imm = 2,
 	},
 	{
 		.code = (BPF_LD | BPF_IND | BPF_B),
-		.src_reg = EBPF_REG_0,
+		.src_reg = BPF_REG_0,
 		.imm = 3,
 	},
 	{
 		.code = (BPF_STX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_0,
 		.off = (int16_t)(offsetof(struct dummy_offset, u8) -
 			sizeof(struct dummy_offset)),
 	},
@@ -3086,8 +3086,8 @@ static const struct rte_ebpf_insn test_ld_mbuf3_prog[] = {
 	},
 	{
 		.code = (BPF_STX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_0,
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_0,
 		.off = (int16_t)(offsetof(struct dummy_offset, u32) -
 			sizeof(struct dummy_offset)),
 	},
@@ -3097,71 +3097,71 @@ static const struct rte_ebpf_insn test_ld_mbuf3_prog[] = {
 		.imm = offsetof(struct rte_ipv4_hdr, total_length),
 	},
 	{
-		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-		.dst_reg = EBPF_REG_8,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+		.dst_reg = BPF_REG_8,
+		.src_reg = BPF_REG_0,
 	},
 	/* load last 4 bytes of IP data */
 	{
 		.code = (BPF_LD | BPF_IND | BPF_W),
-		.src_reg = EBPF_REG_8,
+		.src_reg = BPF_REG_8,
 		.imm = -(int32_t)sizeof(uint32_t),
 	},
 	{
-		.code = (BPF_STX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_10,
-		.src_reg = EBPF_REG_0,
+		.code = (BPF_STX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_10,
+		.src_reg = BPF_REG_0,
 		.off = (int16_t)(offsetof(struct dummy_offset, u64) -
 			sizeof(struct dummy_offset)),
 	},
 	/* load 2 bytes from the middle of IP data */
 	{
-		.code = (EBPF_ALU64 | BPF_RSH | BPF_K),
-		.dst_reg = EBPF_REG_8,
+		.code = (BPF_ALU64 | BPF_RSH | BPF_K),
+		.dst_reg = BPF_REG_8,
 		.imm = 1,
 	},
 	{
 		.code = (BPF_LD | BPF_IND | BPF_H),
-		.src_reg = EBPF_REG_8,
+		.src_reg = BPF_REG_8,
 	},
 	{
-		.code = (BPF_LDX | BPF_MEM | EBPF_DW),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.code = (BPF_LDX | BPF_MEM | BPF_DW),
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 		.off = (int16_t)(offsetof(struct dummy_offset, u64) -
 			sizeof(struct dummy_offset)),
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_1,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_W),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 		.off = (int16_t)(offsetof(struct dummy_offset, u32) -
 			sizeof(struct dummy_offset)),
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_1,
 	},
 	{
 		.code = (BPF_LDX | BPF_MEM | BPF_B),
-		.dst_reg = EBPF_REG_1,
-		.src_reg = EBPF_REG_10,
+		.dst_reg = BPF_REG_1,
+		.src_reg = BPF_REG_10,
 		.off = (int16_t)(offsetof(struct dummy_offset, u8) -
 			sizeof(struct dummy_offset)),
 	},
 	{
-		.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-		.dst_reg = EBPF_REG_0,
-		.src_reg = EBPF_REG_1,
+		.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+		.dst_reg = BPF_REG_0,
+		.src_reg = BPF_REG_1,
 	},
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -3169,8 +3169,8 @@ static const struct rte_ebpf_insn test_ld_mbuf3_prog[] = {
 static const struct rte_ebpf_insn test_int64min_udiv_uint64max_prog[] = {
 	/* Load INT64_MIN into r0 */
 	{
-		.code = (BPF_LD | BPF_IMM | EBPF_DW),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_LD | BPF_IMM | BPF_DW),
+		.dst_reg = BPF_REG_0,
 		.imm = (int32_t)INT64_MIN,
 	},
 	{
@@ -3178,13 +3178,13 @@ static const struct rte_ebpf_insn test_int64min_udiv_uint64max_prog[] = {
 	},
 	/* Divide r0 by immediate -1 */
 	{
-		.code = (EBPF_ALU64 | BPF_DIV | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_DIV | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = -1,
 	},
 	/* Exit for correctness otherwise */
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -3201,8 +3201,8 @@ test_int64min_udiv_uint64max_check(uint64_t rc, const void *arg)
 static const struct rte_ebpf_insn test_int64min_umod_uint64max_prog[] = {
 	/* Load INT64_MIN into r0 */
 	{
-		.code = (BPF_LD | BPF_IMM | EBPF_DW),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_LD | BPF_IMM | BPF_DW),
+		.dst_reg = BPF_REG_0,
 		.imm = (int32_t)INT64_MIN,
 	},
 	{
@@ -3210,13 +3210,13 @@ static const struct rte_ebpf_insn test_int64min_umod_uint64max_prog[] = {
 	},
 	/* Modulo r0 by immediate -1 */
 	{
-		.code = (EBPF_ALU64 | BPF_MOD | BPF_K),
-		.dst_reg = EBPF_REG_0,
+		.code = (BPF_ALU64 | BPF_MOD | BPF_K),
+		.dst_reg = BPF_REG_0,
 		.imm = -1,
 	},
 	/* Exit for correctness otherwise */
 	{
-		.code = (BPF_JMP | EBPF_EXIT),
+		.code = (BPF_JMP | BPF_EXIT),
 	},
 };
 
@@ -3654,8 +3654,8 @@ static int
 test_bpf_exec_wrong_nb_prog_arg(void)
 {
 	static const struct rte_ebpf_insn ins[] = {
-		{ .code = (EBPF_ALU64 | EBPF_MOV | BPF_K), .dst_reg = EBPF_REG_0, .imm = 0 },
-		{ .code = (BPF_JMP | EBPF_EXIT), }
+		{ .code = (BPF_ALU64 | BPF_MOV | BPF_K), .dst_reg = BPF_REG_0, .imm = 0 },
+		{ .code = (BPF_JMP | BPF_EXIT), }
 	};
 	static const struct rte_bpf_prm_ex prm = {
 		.sz = sizeof(struct rte_bpf_prm_ex),
@@ -3696,8 +3696,8 @@ static int
 test_bpf_exec_wrong_flags(void)
 {
 	static const struct rte_ebpf_insn ins[] = {
-		{ .code = (EBPF_ALU64 | EBPF_MOV | BPF_K), .dst_reg = EBPF_REG_0, .imm = 0 },
-		{ .code = (BPF_JMP | EBPF_EXIT), }
+		{ .code = (BPF_ALU64 | BPF_MOV | BPF_K), .dst_reg = BPF_REG_0, .imm = 0 },
+		{ .code = (BPF_JMP | BPF_EXIT), }
 	};
 	static const struct rte_bpf_prm_ex prm = {
 		.sz = sizeof(struct rte_bpf_prm_ex),
@@ -3760,11 +3760,11 @@ call_from_bpf_test(text_xfunc_t xfunc)
 {
 	static const struct rte_ebpf_insn ins[] = {
 		{
-			.code = (BPF_JMP | EBPF_CALL),
+			.code = (BPF_JMP | BPF_CALL),
 			.imm = 0,  /* xsym #0 */
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	const struct rte_bpf_xsym xsym[] = {
@@ -5006,8 +5006,8 @@ test_xadd32(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r0 to return value. */
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
+			.dst_reg = BPF_REG_0,
 			.imm = (uint32_t)XCHG_RETURN_VALUE,
 		},
 		{
@@ -5016,8 +5016,8 @@ test_xadd32(void)
 		},
 		{
 			/* Set r2 to XADD operand. */
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
-			.dst_reg = EBPF_REG_2,
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
+			.dst_reg = BPF_REG_2,
 			.imm = (uint32_t)XADD_OPERAND,
 		},
 		{
@@ -5026,27 +5026,27 @@ test_xadd32(void)
 		},
 		{
 			/* Atomically add r2 to value0, 32-bit. */
-			.code = (BPF_STX | EBPF_ATOMIC | BPF_W),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_W),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value0),
-			.imm = BPF_ATOMIC_ADD,
+			.imm = BPF_ADD,
 		},
 		{
 			/* Negate r2. */
-			.code = (EBPF_ALU64 | BPF_NEG | BPF_K),
-			.dst_reg = EBPF_REG_2,
+			.code = (BPF_ALU64 | BPF_NEG | BPF_K),
+			.dst_reg = BPF_REG_2,
 		},
 		{
 			/* Atomically add r2 to value1, 32-bit. */
-			.code = (BPF_STX | EBPF_ATOMIC | BPF_W),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_W),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value1),
-			.imm = BPF_ATOMIC_ADD,
+			.imm = BPF_ADD,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	const struct xchg_arg expected = {
@@ -5086,8 +5086,8 @@ test_xadd64(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r0 to return value. */
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
+			.dst_reg = BPF_REG_0,
 			.imm = (uint32_t)XCHG_RETURN_VALUE,
 		},
 		{
@@ -5096,8 +5096,8 @@ test_xadd64(void)
 		},
 		{
 			/* Set r2 to XADD operand. */
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
-			.dst_reg = EBPF_REG_2,
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
+			.dst_reg = BPF_REG_2,
 			.imm = (uint32_t)XADD_OPERAND,
 		},
 		{
@@ -5106,27 +5106,27 @@ test_xadd64(void)
 		},
 		{
 			/* Atomically add r2 to value0. */
-			.code = (BPF_STX | EBPF_ATOMIC | EBPF_DW),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_DW),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value0),
-			.imm = BPF_ATOMIC_ADD,
+			.imm = BPF_ADD,
 		},
 		{
 			/* Negate r2. */
-			.code = (EBPF_ALU64 | BPF_NEG | BPF_K),
-			.dst_reg = EBPF_REG_2,
+			.code = (BPF_ALU64 | BPF_NEG | BPF_K),
+			.dst_reg = BPF_REG_2,
 		},
 		{
 			/* Atomically add r2 to value1. */
-			.code = (BPF_STX | EBPF_ATOMIC | EBPF_DW),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_DW),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value1),
-			.imm = BPF_ATOMIC_ADD,
+			.imm = BPF_ADD,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	const struct xchg_arg expected = {
@@ -5152,8 +5152,8 @@ test_xchg32(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r2 to return value. */
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
-			.dst_reg = EBPF_REG_2,
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
+			.dst_reg = BPF_REG_2,
 			.imm = (uint32_t)XCHG_RETURN_VALUE,
 		},
 		{
@@ -5162,32 +5162,32 @@ test_xchg32(void)
 		},
 		{
 			/* Atomically exchange r2 with value0, 32-bit. */
-			.code = (BPF_STX | EBPF_ATOMIC | BPF_W),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_W),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value0),
-			.imm = BPF_ATOMIC_XCHG,
+			.imm = BPF_XCHG,
 		},
 		{
 			/* Atomically exchange r2 with value1, 32-bit. */
-			.code = (BPF_STX | EBPF_ATOMIC | BPF_W),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_W),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value1),
-			.imm = BPF_ATOMIC_XCHG,
+			.imm = BPF_XCHG,
 		},
 		{
 			/* Atomically exchange r2 with value0, 32-bit. */
-			.code = (BPF_STX | EBPF_ATOMIC | BPF_W),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_W),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value0),
-			.imm = BPF_ATOMIC_XCHG,
+			.imm = BPF_XCHG,
 		},
 		{
 			/* Set upper half of r0 to return value. */
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
+			.dst_reg = BPF_REG_0,
 			.imm = 0,
 		},
 		{
@@ -5199,12 +5199,12 @@ test_xchg32(void)
 			 * Add r2 (should have upper half cleared by this time)
 			 * to r0 to use as a return value.
 			 */
-			.code = (EBPF_ALU64 | BPF_ADD | BPF_X),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_ADD | BPF_X),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_0,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	struct xchg_arg expected = {
@@ -5247,8 +5247,8 @@ test_xchg64(void)
 	static const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r2 to return value. */
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
-			.dst_reg = EBPF_REG_2,
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
+			.dst_reg = BPF_REG_2,
 			.imm = (uint32_t)XCHG_RETURN_VALUE,
 		},
 		{
@@ -5257,36 +5257,36 @@ test_xchg64(void)
 		},
 		{
 			/* Atomically exchange r2 with value0. */
-			.code = (BPF_STX | EBPF_ATOMIC | EBPF_DW),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_DW),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value0),
-			.imm = BPF_ATOMIC_XCHG,
+			.imm = BPF_XCHG,
 		},
 		{
 			/* Atomically exchange r2 with value1. */
-			.code = (BPF_STX | EBPF_ATOMIC | EBPF_DW),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_DW),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value1),
-			.imm = BPF_ATOMIC_XCHG,
+			.imm = BPF_XCHG,
 		},
 		{
 			/* Atomically exchange r2 with value0. */
-			.code = (BPF_STX | EBPF_ATOMIC | EBPF_DW),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_DW),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value0),
-			.imm = BPF_ATOMIC_XCHG,
+			.imm = BPF_XCHG,
 		},
 		{
 			/* Copy r2 to r0 to use as a return value. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_0,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	const struct xchg_arg expected = {
@@ -5310,8 +5310,8 @@ test_atomic_imm(int32_t imm, bool is_valid)
 	const struct rte_ebpf_insn ins[] = {
 		{
 			/* Set r2 to return value. */
-			.code = (BPF_LD | BPF_IMM | EBPF_DW),
-			.dst_reg = EBPF_REG_2,
+			.code = (BPF_LD | BPF_IMM | BPF_DW),
+			.dst_reg = BPF_REG_2,
 			.imm = (uint32_t)XCHG_RETURN_VALUE,
 		},
 		{
@@ -5320,20 +5320,20 @@ test_atomic_imm(int32_t imm, bool is_valid)
 		},
 		{
 			/* Atomically exchange r2 with value0. */
-			.code = (BPF_STX | EBPF_ATOMIC | EBPF_DW),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_1,
+			.code = (BPF_STX | BPF_ATOMIC | BPF_DW),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_1,
 			.off = offsetof(struct xchg_arg, value0),
 			.imm = imm,
 		},
 		{
 			/* Copy r2 to r0 to use as a return value. */
-			.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
-			.src_reg = EBPF_REG_2,
-			.dst_reg = EBPF_REG_0,
+			.code = (BPF_ALU64 | BPF_MOV | BPF_X),
+			.src_reg = BPF_REG_2,
+			.dst_reg = BPF_REG_0,
 		},
 		{
-			.code = (BPF_JMP | EBPF_EXIT),
+			.code = (BPF_JMP | BPF_EXIT),
 		},
 	};
 	const struct rte_bpf_prm prm = {
@@ -5360,8 +5360,8 @@ static int
 test_atomic_imms(void)
 {
 	RTE_TEST_ASSERT_SUCCESS(test_atomic_imm(INT32_MIN, false), "expect success");
-	for (int32_t imm = BPF_ATOMIC_ADD - 1; imm <= BPF_ATOMIC_XCHG + 1; ++imm) {
-		const bool is_valid = imm == BPF_ATOMIC_ADD || imm == BPF_ATOMIC_XCHG;
+	for (int32_t imm = BPF_ADD - 1; imm <= BPF_XCHG + 1; ++imm) {
+		const bool is_valid = imm == BPF_ADD || imm == BPF_XCHG;
 		RTE_TEST_ASSERT_SUCCESS(test_atomic_imm(imm, is_valid), "expect success");
 	}
 	RTE_TEST_ASSERT_SUCCESS(test_atomic_imm(INT32_MAX, false), "expect success");

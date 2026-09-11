@@ -68,9 +68,9 @@ resolve_xsym(const char *sn, size_t ofs, struct rte_ebpf_insn *ins, size_t ins_s
 		return -EINVAL;
 
 	idx = ofs / sizeof(ins[0]);
-	if (ins[idx].code == (BPF_JMP | EBPF_CALL))
+	if (ins[idx].code == (BPF_JMP | BPF_CALL))
 		type = RTE_BPF_XTYPE_FUNC;
-	else if (ins[idx].code == (BPF_LD | BPF_IMM | EBPF_DW) &&
+	else if (ins[idx].code == (BPF_LD | BPF_IMM | BPF_DW) &&
 			ofs < ins_sz - sizeof(ins[idx]))
 		type = RTE_BPF_XTYPE_VAR;
 	else
@@ -84,14 +84,14 @@ resolve_xsym(const char *sn, size_t ofs, struct rte_ebpf_insn *ins, size_t ins_s
 	if (type == RTE_BPF_XTYPE_FUNC) {
 
 		/* we don't support multiple functions per BPF module,
-		 * so treat EBPF_PSEUDO_CALL to external function
-		 * as an ordinary EBPF_CALL.
+		 * so treat BPF_PSEUDO_CALL to external function
+		 * as an ordinary BPF_CALL.
 		 */
-		if (ins[idx].src_reg == EBPF_PSEUDO_CALL) {
+		if (ins[idx].src_reg == BPF_PSEUDO_CALL) {
 			RTE_BPF_LOG_LINE(INFO, "%s(%u): "
-				"EBPF_PSEUDO_CALL to external function: %s",
+				"BPF_PSEUDO_CALL to external function: %s",
 				__func__, idx, sn);
-			ins[idx].src_reg = EBPF_REG_0;
+			ins[idx].src_reg = BPF_REG_0;
 		}
 		ins[idx].imm = fidx;
 	/* for variable we need to store its absolute address */

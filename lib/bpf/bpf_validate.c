@@ -37,7 +37,7 @@ struct bpf_reg_val {
 
 struct bpf_eval_state {
 	SLIST_ENTRY(bpf_eval_state) next; /* for @safe list traversal */
-	struct bpf_reg_val rv[EBPF_REG_NUM];
+	struct bpf_reg_val rv[MAX_BPF_REG];
 	struct bpf_reg_val sv[MAX_BPF_STACK_SIZE / sizeof(uint64_t)];
 	/* flag set for branches determined to be dynamically unreachable */
 	bool unreachable;
@@ -121,12 +121,12 @@ struct bpf_ins_check {
 	const char * (*eval)(struct bpf_verifier *bpf, const struct rte_ebpf_insn *ins);
 };
 
-#define	ALL_REGS	RTE_LEN2MASK(EBPF_REG_NUM, uint16_t)
-#define	WRT_REGS	RTE_LEN2MASK(EBPF_REG_10, uint16_t)
-#define	ZERO_REG	RTE_LEN2MASK(EBPF_REG_1, uint16_t)
+#define	ALL_REGS	RTE_LEN2MASK(MAX_BPF_REG, uint16_t)
+#define	WRT_REGS	RTE_LEN2MASK(BPF_REG_10, uint16_t)
+#define	ZERO_REG	RTE_LEN2MASK(BPF_REG_1, uint16_t)
 
 /* For LD_IND R6 is an implicit CTX register. */
-#define	IND_SRC_REGS	(WRT_REGS ^ 1 << EBPF_REG_6)
+#define	IND_SRC_REGS	(WRT_REGS ^ 1 << BPF_REG_6)
 
 /*
  * Debugging internal interface and helpers.
@@ -223,13 +223,13 @@ may_jump_code_is_supported(uint8_t code)
 	case BPF_JEQ:
 	case BPF_JGT:
 	case BPF_JGE:
-	case EBPF_JNE:
-	case EBPF_JSGT:
-	case EBPF_JSGE:
-	case EBPF_JLT:
-	case EBPF_JLE:
-	case EBPF_JSLT:
-	case EBPF_JSLE:
+	case BPF_JNE:
+	case BPF_JSGT:
+	case BPF_JSGE:
+	case BPF_JLT:
+	case BPF_JLE:
+	case BPF_JSLT:
+	case BPF_JSLE:
 		return true;
 	default:
 		return false;
@@ -241,10 +241,10 @@ static bool
 may_jump_code_is_signed(uint8_t code)
 {
 	switch (BPF_OP(code)) {
-	case EBPF_JSGT:
-	case EBPF_JSGE:
-	case EBPF_JSLT:
-	case EBPF_JSLE:
+	case BPF_JSGT:
+	case BPF_JSGE:
+	case BPF_JSLT:
+	case BPF_JSLE:
 		return true;
 	default:
 		return false;
@@ -259,20 +259,20 @@ may_jump(uint8_t code, const struct value_set *origin,
 	switch (BPF_OP(code)) {
 	case BPF_JEQ:
 		return value_sets_intersect(dst_set, src_set);
-	case EBPF_JNE:
+	case BPF_JNE:
 		return !(value_set_is_singleton(dst_set) &&
 			value_sets_equal(dst_set, src_set));
 	case BPF_JGT:
-	case EBPF_JSGT:
+	case BPF_JSGT:
 		return !value_sets_based_less_or_equal(origin, dst_set, src_set);
 	case BPF_JGE:
-	case EBPF_JSGE:
+	case BPF_JSGE:
 		return !value_sets_based_less(origin, dst_set, src_set);
-	case EBPF_JLT:
-	case EBPF_JSLT:
+	case BPF_JLT:
+	case BPF_JSLT:
 		return !value_sets_based_less_or_equal(origin, src_set, dst_set);
-	case EBPF_JSLE:
-	case EBPF_JLE:
+	case BPF_JSLE:
+	case BPF_JLE:
 		return !value_sets_based_less(origin, src_set, dst_set);
 	}
 	/* may_jump_code_is_supported should have caught this */
@@ -286,20 +286,20 @@ may_jump_code_complement(uint8_t code)
 {
 	switch (BPF_OP(code)) {
 	case BPF_JEQ:
-	case EBPF_JNE:
-		return code ^ BPF_JEQ ^ EBPF_JNE;
+	case BPF_JNE:
+		return code ^ BPF_JEQ ^ BPF_JNE;
 	case BPF_JGT:
-	case EBPF_JLE:
-		return code ^ BPF_JGT ^ EBPF_JLE;
+	case BPF_JLE:
+		return code ^ BPF_JGT ^ BPF_JLE;
 	case BPF_JGE:
-	case EBPF_JLT:
-		return code ^ BPF_JGE ^ EBPF_JLT;
-	case EBPF_JSGT:
-	case EBPF_JSLE:
-		return code ^ EBPF_JSGT ^ EBPF_JSLE;
-	case EBPF_JSGE:
-	case EBPF_JSLT:
-		return code ^ EBPF_JSGE ^ EBPF_JSLT;
+	case BPF_JLT:
+		return code ^ BPF_JGE ^ BPF_JLT;
+	case BPF_JSGT:
+	case BPF_JSLE:
+		return code ^ BPF_JSGT ^ BPF_JSLE;
+	case BPF_JSGE:
+	case BPF_JSLT:
+		return code ^ BPF_JSGE ^ BPF_JSLT;
 	}
 	/* may_jump_code_is_supported should have caught this */
 	RTE_ASSERT(false);
@@ -507,7 +507,7 @@ int
 __rte_bpf_validate_format_register_info(const struct bpf_verifier *verifier,
 	char *buffer, size_t bufsz, uint8_t reg)
 {
-	if (reg >= EBPF_REG_NUM)
+	if (reg >= MAX_BPF_REG)
 		return -EINVAL;
 
 	return format_reg_val(buffer, bufsz, &verifier->evst->rv[reg]);
@@ -554,7 +554,7 @@ static const char *
 eval_exit(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 {
 	RTE_SET_USED(ins);
-	if (bvf->evst->rv[EBPF_REG_0].v.type == RTE_BPF_ARG_UNDEF)
+	if (bvf->evst->rv[BPF_REG_0].v.type == RTE_BPF_ARG_UNDEF)
 		return "undefined return value";
 	return NULL;
 }
@@ -1059,7 +1059,7 @@ eval_ld_mbuf(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 	mode = BPF_MODE(ins->code);
 
 	/* R6 is an implicit input that must contain pointer to mbuf */
-	if (bvf->evst->rv[EBPF_REG_6].v.type != RTE_BPF_ARG_PTR_MBUF)
+	if (bvf->evst->rv[BPF_REG_6].v.type != RTE_BPF_ARG_PTR_MBUF)
 		return "invalid type for implicit ctx register";
 
 	if (mode == BPF_IND) {
@@ -1075,11 +1075,11 @@ eval_ld_mbuf(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 	}
 
 	/* R1-R5 scratch registers */
-	for (i = EBPF_REG_1; i != EBPF_REG_6; i++)
+	for (i = BPF_REG_1; i != BPF_REG_6; i++)
 		bvf->evst->rv[i].v.type = RTE_BPF_ARG_UNDEF;
 
 	/* R0 is an implicit output, contains data fetched from the packet */
-	rv = bvf->evst->rv + EBPF_REG_0;
+	rv = bvf->evst->rv + BPF_REG_0;
 	rv->v.size = bpf_size(BPF_SIZE(ins->code));
 	eval_fill_max_bound(rv, RTE_LEN2MASK(rv->v.size * CHAR_BIT, uint64_t));
 
@@ -1136,7 +1136,7 @@ eval_alu(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 		eval_fill_imm(rd, UINT64_MAX, 0);
 	}
 
-	err = eval_defined((op != EBPF_MOV) ? rd : NULL,
+	err = eval_defined((op != BPF_MOV) ? rd : NULL,
 			   (op != BPF_NEG) ? &rs : NULL);
 	if (err != NULL)
 		return err;
@@ -1149,7 +1149,7 @@ eval_alu(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 		eval_lsh(rd, &rs, opsz, msk);
 	else if (op == BPF_RSH)
 		eval_rsh(rd, &rs, opsz, msk);
-	else if (op == EBPF_ARSH)
+	else if (op == BPF_ARSH)
 		eval_arsh(rd, &rs, opsz, msk);
 	else if (op == BPF_AND)
 		eval_and(rd, &rs, opsz, msk);
@@ -1163,7 +1163,7 @@ eval_alu(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 		err = eval_divmod(op, rd, &rs, msk);
 	else if (op == BPF_NEG)
 		eval_neg(rd, opsz, msk);
-	else if (op == EBPF_MOV)
+	else if (op == BPF_MOV)
 		*rd = rs;
 	else
 		eval_max_bound(rd, msk);
@@ -1189,12 +1189,12 @@ eval_bele(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 		return err;
 
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
-	if (ins->code == (BPF_ALU | EBPF_END | EBPF_TO_BE))
+	if (ins->code == (BPF_ALU | BPF_END | BPF_TO_BE))
 		eval_max_bound(rd, msk);
 	else
 		eval_apply_mask(rd, msk);
 #else
-	if (ins->code == (BPF_ALU | EBPF_END | EBPF_TO_LE))
+	if (ins->code == (BPF_ALU | BPF_END | BPF_TO_LE))
 		eval_max_bound(rd, msk);
 	else
 		eval_apply_mask(rd, msk);
@@ -1365,11 +1365,11 @@ eval_store(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 
 	if (BPF_CLASS(ins->code) == BPF_STX) {
 		rs = st->rv[ins->src_reg];
-		if (BPF_MODE(ins->code) == EBPF_ATOMIC)
+		if (BPF_MODE(ins->code) == BPF_ATOMIC)
 			switch (ins->imm) {
-			case BPF_ATOMIC_ADD:
+			case BPF_ADD:
 				break;
-			case BPF_ATOMIC_XCHG:
+			case BPF_XCHG:
 				eval_max_bound(&st->rv[ins->src_reg], msk);
 				break;
 			default:
@@ -1391,7 +1391,7 @@ eval_store(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 
 		sv = st->sv + rd.u.max / sizeof(uint64_t);
 		if (BPF_CLASS(ins->code) == BPF_STX &&
-				BPF_MODE(ins->code) == EBPF_ATOMIC)
+				BPF_MODE(ins->code) == BPF_ATOMIC)
 			eval_max_bound(sv, msk);
 		else
 			*sv = rs;
@@ -1482,16 +1482,16 @@ eval_call(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 	err = NULL;
 	for (i = 0; i != xsym->func.nb_args && err == NULL; i++) {
 		err = eval_func_arg(bvf, xsym->func.args + i,
-			bvf->evst->rv + EBPF_REG_1 + i);
+			bvf->evst->rv + BPF_REG_1 + i);
 	}
 
 	/* R1-R5 argument/scratch registers */
-	for (i = EBPF_REG_1; i != EBPF_REG_6; i++)
+	for (i = BPF_REG_1; i != BPF_REG_6; i++)
 		bvf->evst->rv[i].v.type = RTE_BPF_ARG_UNDEF;
 
 	/* update return value */
 
-	rv = bvf->evst->rv + EBPF_REG_0;
+	rv = bvf->evst->rv + BPF_REG_0;
 	rv->v = xsym->func.ret;
 	if (rv->v.type == RTE_BPF_ARG_RAW)
 		eval_fill_max_bound(rv,
@@ -1631,23 +1631,23 @@ eval_jcc(struct bpf_verifier *bvf, const struct rte_ebpf_insn *ins)
 
 	if (op == BPF_JEQ)
 		eval_jeq_jne(trd, trs);
-	else if (op == EBPF_JNE)
+	else if (op == BPF_JNE)
 		eval_jeq_jne(frd, frs);
 	else if (op == BPF_JGT)
 		eval_jgt_jle(trd, trs, frd, frs);
-	else if (op == EBPF_JLE)
+	else if (op == BPF_JLE)
 		eval_jgt_jle(frd, frs, trd, trs);
-	else if (op == EBPF_JLT)
+	else if (op == BPF_JLT)
 		eval_jlt_jge(trd, trs, frd, frs);
 	else if (op == BPF_JGE)
 		eval_jlt_jge(frd, frs, trd, trs);
-	else if (op == EBPF_JSGT)
+	else if (op == BPF_JSGT)
 		eval_jsgt_jsle(trd, trs, frd, frs);
-	else if (op == EBPF_JSLE)
+	else if (op == BPF_JSLE)
 		eval_jsgt_jsle(frd, frs, trd, trs);
-	else if (op == EBPF_JSLT)
+	else if (op == BPF_JSLT)
 		eval_jslt_jsge(trd, trs, frd, frs);
-	else if (op == EBPF_JSGE)
+	else if (op == BPF_JSGE)
 		eval_jslt_jsge(frd, frs, trd, trs);
 
 	if (trd->v.type == BPF_ARG_UNINHABITED ||
@@ -1714,7 +1714,7 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(BPF_ALU | EBPF_MOV | BPF_K)] = {
+	[(BPF_ALU | BPF_MOV | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
@@ -1733,73 +1733,73 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.eval = eval_alu,
 	},
 	/* ALU IMM 64-bit instructions */
-	[(EBPF_ALU64 | BPF_ADD | BPF_K)] = {
+	[(BPF_ALU64 | BPF_ADD | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_SUB | BPF_K)] = {
+	[(BPF_ALU64 | BPF_SUB | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_AND | BPF_K)] = {
+	[(BPF_ALU64 | BPF_AND | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_OR | BPF_K)] = {
+	[(BPF_ALU64 | BPF_OR | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_LSH | BPF_K)] = {
+	[(BPF_ALU64 | BPF_LSH | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_RSH | BPF_K)] = {
+	[(BPF_ALU64 | BPF_RSH | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | EBPF_ARSH | BPF_K)] = {
+	[(BPF_ALU64 | BPF_ARSH | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_XOR | BPF_K)] = {
+	[(BPF_ALU64 | BPF_XOR | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_MUL | BPF_K)] = {
+	[(BPF_ALU64 | BPF_MUL | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | EBPF_MOV | BPF_K)] = {
+	[(BPF_ALU64 | BPF_MOV | BPF_K)] = {
 		.mask = {.dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX,},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_DIV | BPF_K)] = {
+	[(BPF_ALU64 | BPF_DIV | BPF_K)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 1, .max = UINT32_MAX},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_MOD | BPF_K)] = {
+	[(BPF_ALU64 | BPF_MOD | BPF_K)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 1, .max = UINT32_MAX},
@@ -1866,7 +1866,7 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(BPF_ALU | EBPF_MOV | BPF_X)] = {
+	[(BPF_ALU | BPF_MOV | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
@@ -1878,14 +1878,14 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(BPF_ALU | EBPF_END | EBPF_TO_BE)] = {
+	[(BPF_ALU | BPF_END | BPF_TO_BE)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 16, .max = 64},
 		.check = check_alu_bele,
 		.eval = eval_bele,
 	},
-	[(BPF_ALU | EBPF_END | EBPF_TO_LE)] = {
+	[(BPF_ALU | BPF_END | BPF_TO_LE)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 16, .max = 64},
@@ -1893,79 +1893,79 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.eval = eval_bele,
 	},
 	/* ALU REG 64-bit instructions */
-	[(EBPF_ALU64 | BPF_ADD | BPF_X)] = {
+	[(BPF_ALU64 | BPF_ADD | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_SUB | BPF_X)] = {
+	[(BPF_ALU64 | BPF_SUB | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_AND | BPF_X)] = {
+	[(BPF_ALU64 | BPF_AND | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_OR | BPF_X)] = {
+	[(BPF_ALU64 | BPF_OR | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_LSH | BPF_X)] = {
+	[(BPF_ALU64 | BPF_LSH | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_RSH | BPF_X)] = {
+	[(BPF_ALU64 | BPF_RSH | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | EBPF_ARSH | BPF_X)] = {
+	[(BPF_ALU64 | BPF_ARSH | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_XOR | BPF_X)] = {
+	[(BPF_ALU64 | BPF_XOR | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_MUL | BPF_X)] = {
+	[(BPF_ALU64 | BPF_MUL | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_DIV | BPF_X)] = {
+	[(BPF_ALU64 | BPF_DIV | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_MOD | BPF_X)] = {
+	[(BPF_ALU64 | BPF_MOD | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | EBPF_MOV | BPF_X)] = {
+	[(BPF_ALU64 | BPF_MOV | BPF_X)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_alu,
 	},
-	[(EBPF_ALU64 | BPF_NEG)] = {
+	[(BPF_ALU64 | BPF_NEG)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
@@ -1990,14 +1990,14 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_load,
 	},
-	[(BPF_LDX | BPF_MEM | EBPF_DW)] = {
+	[(BPF_LDX | BPF_MEM | BPF_DW)] = {
 		.mask = {. dreg = WRT_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_load,
 	},
 	/* load 64 bit immediate value */
-	[(BPF_LD | BPF_IMM | EBPF_DW)] = {
+	[(BPF_LD | BPF_IMM | BPF_DW)] = {
 		.mask = { .dreg = WRT_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX},
@@ -2060,23 +2060,23 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_store,
 	},
-	[(BPF_STX | BPF_MEM | EBPF_DW)] = {
+	[(BPF_STX | BPF_MEM | BPF_DW)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_store,
 	},
 	/* atomic instructions */
-	[(BPF_STX | EBPF_ATOMIC | BPF_W)] = {
+	[(BPF_STX | BPF_ATOMIC | BPF_W)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
-		.imm = { .min = BPF_ATOMIC_ADD, .max = BPF_ATOMIC_XCHG},
+		.imm = { .min = BPF_ADD, .max = BPF_XCHG},
 		.eval = eval_store,
 	},
-	[(BPF_STX | EBPF_ATOMIC | EBPF_DW)] = {
+	[(BPF_STX | BPF_ATOMIC | BPF_DW)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
-		.imm = { .min = BPF_ATOMIC_ADD, .max = BPF_ATOMIC_XCHG},
+		.imm = { .min = BPF_ADD, .max = BPF_XCHG},
 		.eval = eval_store,
 	},
 	/* store IMM instructions */
@@ -2098,7 +2098,7 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_store,
 	},
-	[(BPF_ST | BPF_MEM | EBPF_DW)] = {
+	[(BPF_ST | BPF_MEM | BPF_DW)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = UINT32_MAX},
@@ -2118,7 +2118,7 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JNE | BPF_K)] = {
+	[(BPF_JMP | BPF_JNE | BPF_K)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = UINT32_MAX},
@@ -2130,7 +2130,7 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JLT | BPF_K)] = {
+	[(BPF_JMP | BPF_JLT | BPF_K)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = UINT32_MAX},
@@ -2142,31 +2142,31 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JLE | BPF_K)] = {
+	[(BPF_JMP | BPF_JLE | BPF_K)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JSGT | BPF_K)] = {
+	[(BPF_JMP | BPF_JSGT | BPF_K)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JSLT | BPF_K)] = {
+	[(BPF_JMP | BPF_JSLT | BPF_K)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JSGE | BPF_K)] = {
+	[(BPF_JMP | BPF_JSGE | BPF_K)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JSLE | BPF_K)] = {
+	[(BPF_JMP | BPF_JSLE | BPF_K)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = UINT32_MAX},
@@ -2185,7 +2185,7 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JNE | BPF_X)] = {
+	[(BPF_JMP | BPF_JNE | BPF_X)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
@@ -2197,7 +2197,7 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JLT | BPF_X)] = {
+	[(BPF_JMP | BPF_JLT | BPF_X)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
@@ -2209,31 +2209,31 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JLE | BPF_X)] = {
+	[(BPF_JMP | BPF_JLE | BPF_X)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JSGT | BPF_X)] = {
+	[(BPF_JMP | BPF_JSGT | BPF_X)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JSLT | BPF_X)] = {
+	[(BPF_JMP | BPF_JSLT | BPF_X)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JSGE | BPF_X)] = {
+	[(BPF_JMP | BPF_JSGE | BPF_X)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
 		.eval = eval_jcc,
 	},
-	[(BPF_JMP | EBPF_JSLE | BPF_X)] = {
+	[(BPF_JMP | BPF_JSLE | BPF_X)] = {
 		.mask = { .dreg = ALL_REGS, .sreg = ALL_REGS},
 		.off = { .min = 0, .max = UINT16_MAX},
 		.imm = { .min = 0, .max = 0},
@@ -2246,14 +2246,14 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 		.eval = eval_jcc,
 	},
 	/* call instruction */
-	[(BPF_JMP | EBPF_CALL)] = {
+	[(BPF_JMP | BPF_CALL)] = {
 		.mask = { .dreg = ZERO_REG, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = UINT32_MAX},
 		.eval = eval_call,
 	},
 	/* ret instruction */
-	[(BPF_JMP | EBPF_EXIT)] = {
+	[(BPF_JMP | BPF_EXIT)] = {
 		.mask = { .dreg = ZERO_REG, .sreg = ZERO_REG},
 		.off = { .min = 0, .max = 0},
 		.imm = { .min = 0, .max = 0},
@@ -2461,7 +2461,7 @@ log_unreachable(const struct bpf_verifier *bvf)
 		ins = bvf->prm->raw.ins + i;
 
 		if (node->colour == WHITE &&
-				ins->code != (BPF_LD | BPF_IMM | EBPF_DW))
+				ins->code != (BPF_LD | BPF_IMM | BPF_DW))
 			RTE_BPF_LOG_LINE(ERR, "unreachable code at pc: %u;", i);
 	}
 }
@@ -2524,29 +2524,29 @@ validate(struct bpf_verifier *bvf)
 		 * outgoing edge.
 		 */
 		switch (ins->code) {
-		case (BPF_JMP | EBPF_EXIT):
+		case (BPF_JMP | BPF_EXIT):
 			break;
 		case (BPF_JMP | BPF_JEQ | BPF_K):
-		case (BPF_JMP | EBPF_JNE | BPF_K):
+		case (BPF_JMP | BPF_JNE | BPF_K):
 		case (BPF_JMP | BPF_JGT | BPF_K):
-		case (BPF_JMP | EBPF_JLT | BPF_K):
+		case (BPF_JMP | BPF_JLT | BPF_K):
 		case (BPF_JMP | BPF_JGE | BPF_K):
-		case (BPF_JMP | EBPF_JLE | BPF_K):
-		case (BPF_JMP | EBPF_JSGT | BPF_K):
-		case (BPF_JMP | EBPF_JSLT | BPF_K):
-		case (BPF_JMP | EBPF_JSGE | BPF_K):
-		case (BPF_JMP | EBPF_JSLE | BPF_K):
+		case (BPF_JMP | BPF_JLE | BPF_K):
+		case (BPF_JMP | BPF_JSGT | BPF_K):
+		case (BPF_JMP | BPF_JSLT | BPF_K):
+		case (BPF_JMP | BPF_JSGE | BPF_K):
+		case (BPF_JMP | BPF_JSLE | BPF_K):
 		case (BPF_JMP | BPF_JSET | BPF_K):
 		case (BPF_JMP | BPF_JEQ | BPF_X):
-		case (BPF_JMP | EBPF_JNE | BPF_X):
+		case (BPF_JMP | BPF_JNE | BPF_X):
 		case (BPF_JMP | BPF_JGT | BPF_X):
-		case (BPF_JMP | EBPF_JLT | BPF_X):
+		case (BPF_JMP | BPF_JLT | BPF_X):
 		case (BPF_JMP | BPF_JGE | BPF_X):
-		case (BPF_JMP | EBPF_JLE | BPF_X):
-		case (BPF_JMP | EBPF_JSGT | BPF_X):
-		case (BPF_JMP | EBPF_JSLT | BPF_X):
-		case (BPF_JMP | EBPF_JSGE | BPF_X):
-		case (BPF_JMP | EBPF_JSLE | BPF_X):
+		case (BPF_JMP | BPF_JLE | BPF_X):
+		case (BPF_JMP | BPF_JSGT | BPF_X):
+		case (BPF_JMP | BPF_JSLT | BPF_X):
+		case (BPF_JMP | BPF_JSGE | BPF_X):
+		case (BPF_JMP | BPF_JSLE | BPF_X):
 		case (BPF_JMP | BPF_JSET | BPF_X):
 			rc |= add_edge(bvf, node, i + ins->off + 1);
 			rc |= add_edge(bvf, node, i + 1);
@@ -2556,7 +2556,7 @@ validate(struct bpf_verifier *bvf)
 			rc |= add_edge(bvf, node, i + ins->off + 1);
 			break;
 		/* load 64 bit immediate value */
-		case (BPF_LD | BPF_IMM | EBPF_DW):
+		case (BPF_LD | BPF_IMM | BPF_DW):
 			rc |= add_edge(bvf, node, i + 2);
 			i++;
 			break;
@@ -2843,7 +2843,7 @@ cmp_eval_state(const struct bpf_eval_state *lv, const struct bpf_eval_state *rv)
 	/* for stack expect identical values */
 	rc = memcmp(lv->sv, rv->sv, sizeof(lv->sv));
 	if (rc != 0)
-		return -(2 * EBPF_REG_NUM);
+		return -(2 * MAX_BPF_REG);
 
 	k = 0;
 	/* check register values */
@@ -2941,7 +2941,7 @@ evaluate(struct bpf_verifier *bvf)
 	};
 
 	for (uint32_t pai = 0; pai != bvf->prm->nb_prog_arg; ++pai) {
-		struct bpf_reg_val *reg = &bvf->evst->rv[EBPF_REG_1 + pai];
+		struct bpf_reg_val *reg = &bvf->evst->rv[BPF_REG_1 + pai];
 
 		reg->v = bvf->prm->prog_arg[pai];
 		reg->mask = UINT64_MAX;
@@ -2949,7 +2949,7 @@ evaluate(struct bpf_verifier *bvf)
 			eval_max_bound(reg, UINT64_MAX);
 	}
 
-	bvf->evst->rv[EBPF_REG_10] = rvfp;
+	bvf->evst->rv[BPF_REG_10] = rvfp;
 
 	ins = bvf->prm->raw.ins;
 	node = bvf->in;
@@ -3127,7 +3127,7 @@ __rte_bpf_validate(const struct rte_bpf_prm_ex *prm, uint32_t *stack_sz)
 		if (!prog_arg_is_valid(&prm->prog_arg[pai])) {
 			RTE_BPF_LOG_FUNC_LINE(ERR,
 				"unsupported argument %d (r%d) type",
-				pai, EBPF_REG_1 + pai);
+				pai, BPF_REG_1 + pai);
 			return -ENOTSUP;
 		}
 
