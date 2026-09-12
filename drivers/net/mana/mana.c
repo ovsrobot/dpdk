@@ -14,6 +14,7 @@
 #include <rte_kvargs.h>
 #include <rte_eal_paging.h>
 #include <rte_pci.h>
+#include <rte_sysfs.h>
 
 #include <infiniband/verbs.h>
 #include <infiniband/manadv.h>
@@ -1282,6 +1283,7 @@ get_port_mac(struct ibv_device *device, unsigned int port,
 	DIR *dir;
 	struct dirent *dent;
 	unsigned int dev_port;
+	unsigned long val;
 
 	MANA_MKSTR(path, "%s/device/net", device->ibdev_path);
 
@@ -1293,23 +1295,15 @@ get_port_mac(struct ibv_device *device, unsigned int port,
 		char *name = dent->d_name;
 		char *mac = NULL;
 
-		MANA_MKSTR(port_path, "%s/%s/dev_port", path, name);
-
 		/* Ignore . and .. */
 		if ((name[0] == '.') &&
 		    ((name[1] == '\0') ||
 		     ((name[1] == '.') && (name[2] == '\0'))))
 			continue;
 
-		file = fopen(port_path, "r");
-		if (!file)
+		if (rte_sysfs_parse_uint(&val, "%s/%s/dev_port", path, name) != 0)
 			continue;
-
-		ret = fscanf(file, "%u", &dev_port);
-		fclose(file);
-
-		if (ret != 1)
-			continue;
+		dev_port = val;
 
 		/* Ethernet ports start at 0, IB port start at 1 */
 		if (dev_port == port - 1) {
