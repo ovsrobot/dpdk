@@ -20,9 +20,11 @@ extern "C" {
 /**
  * Seed the pseudo-random generator.
  *
- * The generator is automatically seeded by the EAL init with a timer
- * value. It may need to be re-seeded by the user with a real random
- * value.
+ * The generator is automatically seeded by the EAL init with
+ * a system provided random entropy source. But for testing
+ * it can be useful to force a repeatable starting point by
+ * setting the initial seed. This can be done by setting
+ * the `DPDK_RANDOM_SEED` environment variable.
  *
  * This function is not multi-thread safe in regards to other
  * rte_srand() calls, nor is it in relation to concurrent rte_rand(),
