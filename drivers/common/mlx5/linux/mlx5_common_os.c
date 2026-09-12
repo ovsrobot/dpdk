@@ -16,6 +16,7 @@
 #include <eal_export.h>
 #include <rte_errno.h>
 #include <rte_string_fns.h>
+#include <rte_sysfs.h>
 #include <bus_pci_driver.h>
 #include <bus_auxiliary_driver.h>
 
@@ -658,45 +659,33 @@ close:
 	return ret;
 }
 
+#define MLX5_ROCE_ENABLE_PATH "/sys/bus/pci/devices/%s/roce_enable"
+
 /* Try to disable ROCE by sysfs. */
 static int
 mlx5_sys_roce_disable(const char *addr)
 {
-	FILE *file_o;
-	int enable;
+	unsigned long enable;
 	int ret;
 
-	MKSTR(file_p, "/sys/bus/pci/devices/%s/roce_enable", addr);
-	file_o = fopen(file_p, "rb");
-	if (!file_o) {
+	if (rte_sysfs_parse_uint(&enable, MLX5_ROCE_ENABLE_PATH, addr) != 0) {
 		rte_errno = ENOTSUP;
 		return -ENOTSUP;
 	}
-	ret = fscanf(file_o, "%d", &enable);
-	if (ret != 1) {
-		rte_errno = EINVAL;
-		ret = EINVAL;
-		goto close;
-	} else if (!enable) {
-		ret = 0;
+	if (enable == 0) {
 		DRV_LOG(INFO, "ROCE has already disabled(sysfs).");
-		goto close;
+		return 0;
 	}
-	fclose(file_o);
-	file_o = fopen(file_p, "wb");
-	if (!file_o) {
+
+	ret = rte_sysfs_write_string("0\n", MLX5_ROCE_ENABLE_PATH, addr);
+	if (ret != 0) {
 		rte_errno = ENOTSUP;
+		DRV_LOG(DEBUG, "Failed to disable ROCE by sysfs.");
 		return -ENOTSUP;
 	}
-	fprintf(file_o, "0\n");
-	ret = 0;
-close:
-	if (ret)
-		DRV_LOG(DEBUG, "Failed to disable ROCE by sysfs: %d.", ret);
-	else
-		DRV_LOG(INFO, "ROCE is disabled by sysfs successfully.");
-	fclose(file_o);
-	return ret;
+
+	DRV_LOG(INFO, "ROCE is disabled by sysfs successfully.");
+	return 0;
 }
 
 static int
