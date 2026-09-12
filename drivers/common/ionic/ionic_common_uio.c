@@ -22,6 +22,16 @@
 
 #include "ionic_common.h"
 
+/*
+ * The mnic and mcrypt devices are found by walking /sys/class/uio,
+ * so this only ever does anything on Linux. The stubs at the end of
+ * the file keep the vdev probe in net/ionic and crypto/ionic linking
+ * on other systems, where the scan would have found nothing anyway.
+ */
+#ifdef RTE_EXEC_ENV_LINUX
+
+#include <rte_sysfs.h>
+
 #define IONIC_MDEV_UNK      "mdev_unknown"
 #define IONIC_MNIC          "cpu_mnic"
 #define IONIC_MCRYPT        "cpu_mcrypt"
@@ -63,29 +73,16 @@ struct uio_name {
 static void
 uio_fill_name_cache(struct uio_name *name_cache, const char *pfx)
 {
-	char file[64];
-	FILE *fp;
-	char *ret;
 	int name_idx = 0;
 	int i;
 
 	for (i = 0; i < IONIC_UIO_MAX_TRIES &&
 			name_idx < IONIC_MAX_DEVICES; i++) {
-		sprintf(file, "/sys/class/uio/uio%d/name", i);
-
-		fp = fopen(file, "r");
-		if (fp == NULL)
+		if (rte_sysfs_parse_string(name_cache[name_idx].name, IONIC_MAX_NAME_LEN,
+				"/sys/class/uio/uio%d/name", i) < 0)
 			continue;
-
-		ret = fgets(name_cache[name_idx].name, IONIC_MAX_NAME_LEN, fp);
-		if (ret == NULL) {
-			fclose(fp);
-			continue;
-		}
 
 		name_cache[name_idx].idx = i;
-
-		fclose(fp);
 
 		if (strncmp(name_cache[name_idx].name, pfx, strlen(pfx)) == 0)
 			name_idx++;
@@ -215,20 +212,11 @@ static unsigned long
 uio_get_res_size(int uio_idx, int res_idx)
 {
 	unsigned long size;
-	char file[64];
-	FILE *fp;
 
-	sprintf(file, "/sys/class/uio/uio%d/maps/map%d/size",
-		uio_idx, res_idx);
-
-	fp = fopen(file, "r");
-	if (fp == NULL)
+	/* zero is the error value for all of these */
+	if (rte_sysfs_parse_uint(&size, "/sys/class/uio/uio%d/maps/map%d/size",
+			uio_idx, res_idx) < 0)
 		return 0;
-
-	if (fscanf(fp, "0x%lx", &size) != 1)
-		size = 0;
-
-	fclose(fp);
 
 	return size;
 }
@@ -237,20 +225,11 @@ static unsigned long
 uio_get_res_phy_addr_offs(int uio_idx, int res_idx)
 {
 	unsigned long offset;
-	char file[64];
-	FILE *fp;
 
-	sprintf(file, "/sys/class/uio/uio%d/maps/map%d/offset",
-		uio_idx, res_idx);
-
-	fp = fopen(file, "r");
-	if (fp == NULL)
+	/* zero is the error value for all of these */
+	if (rte_sysfs_parse_uint(&offset, "/sys/class/uio/uio%d/maps/map%d/offset",
+			uio_idx, res_idx) < 0)
 		return 0;
-
-	if (fscanf(fp, "0x%lx", &offset) != 1)
-		offset = 0;
-
-	fclose(fp);
 
 	return offset;
 }
@@ -259,20 +238,11 @@ static unsigned long
 uio_get_res_phy_addr(int uio_idx, int res_idx)
 {
 	unsigned long addr;
-	char file[64];
-	FILE *fp;
 
-	sprintf(file, "/sys/class/uio/uio%d/maps/map%d/addr",
-		uio_idx, res_idx);
-
-	fp = fopen(file, "r");
-	if (fp == NULL)
+	/* zero is the error value for all of these */
+	if (rte_sysfs_parse_uint(&addr, "/sys/class/uio/uio%d/maps/map%d/addr",
+			uio_idx, res_idx) < 0)
 		return 0;
-
-	if (fscanf(fp, "0x%lx", &addr) != 1)
-		addr = 0;
-
-	fclose(fp);
 
 	return addr;
 }
@@ -338,3 +308,33 @@ ionic_uio_rel_rsrc(const char *name, int idx, struct ionic_dev_bar *bar)
 	offs = uio_get_res_phy_addr_offs(num, idx);
 	munmap(((char *)bar->vaddr) - offs, bar->len);
 }
+
+#else /* !RTE_EXEC_ENV_LINUX */
+
+RTE_EXPORT_INTERNAL_SYMBOL(ionic_uio_scan_mnet_devices)
+void
+ionic_uio_scan_mnet_devices(void)
+{
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(ionic_uio_scan_mcrypt_devices)
+void
+ionic_uio_scan_mcrypt_devices(void)
+{
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(ionic_uio_get_rsrc)
+void
+ionic_uio_get_rsrc(const char *name __rte_unused, int idx __rte_unused,
+		struct ionic_dev_bar *bar __rte_unused)
+{
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(ionic_uio_rel_rsrc)
+void
+ionic_uio_rel_rsrc(const char *name __rte_unused, int idx __rte_unused,
+		struct ionic_dev_bar *bar __rte_unused)
+{
+}
+
+#endif /* RTE_EXEC_ENV_LINUX */
