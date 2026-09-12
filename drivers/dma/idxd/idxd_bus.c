@@ -16,6 +16,7 @@
 #include <rte_log.h>
 #include <rte_dmadev_pmd.h>
 #include <rte_string_fns.h>
+#include <rte_sysfs.h>
 
 #include "idxd_internal.h"
 
@@ -121,82 +122,24 @@ static int
 read_wq_string(const struct rte_dsa_device *dev, const char *filename,
 		char *value, size_t valuelen)
 {
-	char sysfs_node[PATH_MAX];
-	int len;
-	int fd;
-
-	snprintf(sysfs_node, sizeof(sysfs_node), "%s/%s/%s",
+	return rte_sysfs_parse_string(value, valuelen, "%s/%s/%s",
 			dsa_get_sysfs_path(), dev->wq_name, filename);
-	fd = open(sysfs_node, O_RDONLY);
-	if (fd < 0) {
-		IDXD_PMD_ERR("%s(): opening file '%s' failed: %s",
-				__func__, sysfs_node, strerror(errno));
-		return -1;
-	}
-
-	len = read(fd, value, valuelen - 1);
-	close(fd);
-	if (len < 0) {
-		IDXD_PMD_ERR("%s(): error reading file '%s': %s",
-				__func__, sysfs_node, strerror(errno));
-		return -1;
-	}
-	value[len] = '\0';
-	return 0;
 }
 
 static int
 read_wq_int(struct rte_dsa_device *dev, const char *filename,
-		int *value)
+		long *value)
 {
-	char sysfs_node[PATH_MAX];
-	FILE *f;
-	int ret = 0;
-
-	snprintf(sysfs_node, sizeof(sysfs_node), "%s/%s/%s",
+	return rte_sysfs_parse_int(value, "%s/%s/%s",
 			dsa_get_sysfs_path(), dev->wq_name, filename);
-	f = fopen(sysfs_node, "r");
-	if (f == NULL) {
-		IDXD_PMD_ERR("%s(): opening file '%s' failed: %s",
-				__func__, sysfs_node, strerror(errno));
-		return -1;
-	}
-
-	if (fscanf(f, "%d", value) != 1) {
-		IDXD_PMD_ERR("%s(): error reading file '%s': %s",
-				__func__, sysfs_node, strerror(errno));
-		ret = -1;
-	}
-
-	fclose(f);
-	return ret;
 }
 
 static int
 read_device_int(struct rte_dsa_device *dev, const char *filename,
-		int *value)
+		long *value)
 {
-	char sysfs_node[PATH_MAX];
-	FILE *f;
-	int ret = 0;
-
-	snprintf(sysfs_node, sizeof(sysfs_node), "%s/dsa%d/%s",
+	return rte_sysfs_parse_int(value, "%s/dsa%d/%s",
 			dsa_get_sysfs_path(), dev->addr.device_id, filename);
-	f = fopen(sysfs_node, "r");
-	if (f == NULL) {
-		IDXD_PMD_ERR("%s(): opening file '%s' failed: %s",
-				__func__, sysfs_node, strerror(errno));
-		return -1;
-	}
-
-	if (fscanf(f, "%d", value) != 1) {
-		IDXD_PMD_ERR("%s(): error reading file '%s': %s",
-				__func__, sysfs_node, strerror(errno));
-		ret = -1;
-	}
-
-	fclose(f);
-	return ret;
 }
 
 static int
@@ -205,15 +148,16 @@ dsa_probe_device(__rte_unused struct rte_driver *drv, struct rte_device *dev)
 	struct rte_dsa_device *dsa_dev = RTE_BUS_DEVICE(dev, *dsa_dev);
 	struct idxd_dmadev idxd = {0};
 	int ret = 0;
+	long val;
 
 	IDXD_PMD_INFO("Probing device %s on numa node %d",
 			dsa_dev->wq_name, dsa_dev->device.numa_node);
-	if (read_wq_int(dsa_dev, "size", &ret) < 0)
+	if (read_wq_int(dsa_dev, "size", &val) < 0)
 		return -1;
-	idxd.max_batches = ret;
-	if (read_wq_int(dsa_dev, "max_batch_size", &ret) < 0)
+	idxd.max_batches = val;
+	if (read_wq_int(dsa_dev, "max_batch_size", &val) < 0)
 		return -1;
-	idxd.max_batch_size = ret;
+	idxd.max_batch_size = val;
 	idxd.qid = dsa_dev->addr.wq_id;
 	idxd.u.bus.dsa_id = dsa_dev->addr.device_id;
 	idxd.sva_support = 1;
@@ -286,7 +230,7 @@ dsa_scan(void)
 
 	while ((wq = readdir(dev_dir)) != NULL) {
 		struct rte_dsa_device *dev;
-		int numa_node = SOCKET_ID_ANY;
+		long numa_node = SOCKET_ID_ANY;
 
 		if (strncmp(wq->d_name, "wq", 2) != 0)
 			continue;
