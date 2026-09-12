@@ -9,6 +9,7 @@
 #include <rte_malloc.h>
 #include <rte_devargs.h>
 #include <rte_memcpy.h>
+#include <rte_sysfs.h>
 #include <eal_filesystem.h>
 
 #include "../private.h"
@@ -21,8 +22,7 @@ auxiliary_scan_one(const char *dirname, const char *name)
 {
 	struct rte_auxiliary_device *dev;
 	struct rte_auxiliary_device *dev2;
-	char filename[PATH_MAX];
-	unsigned long tmp;
+	long num;
 	int ret;
 
 	dev = malloc(sizeof(*dev));
@@ -36,12 +36,9 @@ auxiliary_scan_one(const char *dirname, const char *name)
 	}
 	dev->device.name = dev->name;
 
-	/* Get NUMA node, default to 0 if not present */
-	snprintf(filename, sizeof(filename), "%s/%s/numa_node",
-		 dirname, name);
-	if (access(filename, F_OK) == 0 &&
-	    eal_parse_sysfs_value(filename, &tmp) == 0)
-		dev->device.numa_node = tmp;
+	/* Get NUMA node, default to SOCKET_ID_ANY if not present */
+	if (rte_sysfs_parse_int(&num, "%s/%s/numa_node", dirname, name) == 0)
+		dev->device.numa_node = num;
 	else
 		dev->device.numa_node = SOCKET_ID_ANY;
 

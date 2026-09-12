@@ -24,6 +24,7 @@
 #include <rte_memory.h>
 #include <rte_string_fns.h>
 #include <rte_vfio.h>
+#include <rte_sysfs.h>
 
 #include "private.h"
 
@@ -49,8 +50,7 @@ static int
 dev_add(const char *dev_name)
 {
 	struct rte_platform_device *pdev, *tmp;
-	char path[PATH_MAX];
-	unsigned long val;
+	long val;
 
 	pdev = calloc(1, sizeof(*pdev));
 	if (pdev == NULL)
@@ -59,8 +59,10 @@ dev_add(const char *dev_name)
 	rte_strscpy(pdev->name, dev_name, sizeof(pdev->name));
 	pdev->device.name = pdev->name;
 	pdev->device.devargs = rte_bus_find_devargs(&platform_bus, dev_name);
-	snprintf(path, sizeof(path), PLATFORM_BUS_DEVICES_PATH "/%s/numa_node", dev_name);
-	pdev->device.numa_node = eal_parse_sysfs_value(path, &val) ? rte_socket_id() : val;
+	if (rte_sysfs_parse_int(&val, PLATFORM_BUS_DEVICES_PATH "/%s/numa_node", dev_name) == 0)
+		pdev->device.numa_node = val;
+	else
+		pdev->device.numa_node = rte_socket_id();
 
 	RTE_BUS_FOREACH_DEV(tmp, &platform_bus) {
 		if (!strcmp(tmp->name, pdev->name)) {

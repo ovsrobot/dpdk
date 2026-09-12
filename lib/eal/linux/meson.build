@@ -13,6 +13,7 @@ sources += files(
         'eal_lcore.c',
         'eal_memalloc.c',
         'eal_memory.c',
+        'eal_sysfs.c',
         'eal_thread.c',
         'eal_timer.c',
         'eal_vfio.c',

@@ -6,6 +6,7 @@
 #include <limits.h>
 
 #include <rte_log.h>
+#include <rte_sysfs.h>
 
 #include "eal_private.h"
 #include "eal_filesystem.h"
@@ -57,18 +58,13 @@ eal_cpu_socket_id(unsigned lcore_id)
 unsigned
 eal_cpu_core_id(unsigned lcore_id)
 {
-	char path[PATH_MAX];
 	unsigned long id;
 
-	int len = snprintf(path, sizeof(path), SYS_CPU_DIR "/%s", lcore_id, CORE_ID_FILE);
-	if (len <= 0 || (unsigned)len >= sizeof(path))
-		goto err;
-	if (eal_parse_sysfs_value(path, &id) != 0)
-		goto err;
-	return (unsigned)id;
+	if (rte_sysfs_parse_uint(&id, SYS_CPU_DIR "/%s", lcore_id, CORE_ID_FILE) != 0) {
+		EAL_LOG(ERR, "Error reading core id value from %s "
+				"for lcore %u - assuming core 0", SYS_CPU_DIR, lcore_id);
+		return 0;
+	}
 
-err:
-	EAL_LOG(ERR, "Error reading core id value from %s "
-			"for lcore %u - assuming core 0", SYS_CPU_DIR, lcore_id);
-	return 0;
+	return (unsigned int)id;
 }

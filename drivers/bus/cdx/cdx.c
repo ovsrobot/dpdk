@@ -74,6 +74,7 @@
 #include <rte_kvargs.h>
 #include <rte_malloc.h>
 #include <rte_vfio.h>
+#include <rte_sysfs.h>
 
 #include <eal_export.h>
 #include <eal_filesystem.h>
@@ -179,16 +180,14 @@ cdx_scan_one(const char *dirname, const char *dev_name)
 	}
 
 	/* get vendor id */
-	snprintf(filename, sizeof(filename), "%s/vendor", dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) < 0) {
+	if (rte_sysfs_parse_uint(&tmp, "%s/vendor", dirname) < 0) {
 		ret = -1;
 		goto err;
 	}
 	dev->id.vendor_id = (uint16_t)tmp;
 
 	/* get device id */
-	snprintf(filename, sizeof(filename), "%s/device", dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) < 0) {
+	if (rte_sysfs_parse_uint(&tmp, "%s/device", dirname) < 0) {
 		ret = -1;
 		goto err;
 	}
