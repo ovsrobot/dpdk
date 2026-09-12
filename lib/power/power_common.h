@@ -8,6 +8,7 @@
 #include <rte_common.h>
 #include <rte_compat.h>
 #include <rte_log.h>
+#include <stdint.h>
 
 #define RTE_POWER_INVALID_FREQ_INDEX (~0)
 
@@ -47,6 +48,11 @@ int open_core_sysfs_file(FILE **f, const char *mode, const char *format, ...)
 
 __rte_internal
 int read_core_sysfs_u32(FILE *f, uint32_t *val);
+
+/* read a 32 bit value from a sysfs file given by a printf style path */
+__rte_internal
+int power_sysfs_read_u32(uint32_t *val, const char *format, ...)
+		__rte_format_printf(2, 3);
 
 __rte_internal
 int read_core_sysfs_s(FILE *f, char *buf, unsigned int len);

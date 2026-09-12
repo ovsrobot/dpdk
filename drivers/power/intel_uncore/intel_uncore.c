@@ -111,20 +111,14 @@ set_uncore_freq_internal(struct uncore_power_info *ui, uint32_t idx)
 static int
 power_init_for_setting_uncore_freq(struct uncore_power_info *ui)
 {
-	FILE *f_base_min = NULL, *f_base_max = NULL, *f_min = NULL, *f_max = NULL;
+	FILE *f_min = NULL, *f_max = NULL;
 	uint32_t base_min_freq = 0, base_max_freq = 0, min_freq = 0, max_freq = 0;
 	int ret;
 
 	/* open and read all uncore sys files */
 	/* Base max */
-	open_core_sysfs_file(&f_base_max, "r", POWER_INTEL_UNCORE_SYSFILE_BASE_MAX_FREQ,
+	ret = power_sysfs_read_u32(&base_max_freq, POWER_INTEL_UNCORE_SYSFILE_BASE_MAX_FREQ,
 			ui->pkg, ui->die);
-	if (f_base_max == NULL) {
-		POWER_LOG(DEBUG, "failed to open %s",
-				POWER_INTEL_UNCORE_SYSFILE_BASE_MAX_FREQ);
-		goto err;
-	}
-	ret = read_core_sysfs_u32(f_base_max, &base_max_freq);
 	if (ret < 0) {
 		POWER_LOG(DEBUG, "Failed to read %s",
 				POWER_INTEL_UNCORE_SYSFILE_BASE_MAX_FREQ);
@@ -132,20 +126,12 @@ power_init_for_setting_uncore_freq(struct uncore_power_info *ui)
 	}
 
 	/* Base min */
-	open_core_sysfs_file(&f_base_min, "r", POWER_INTEL_UNCORE_SYSFILE_BASE_MIN_FREQ,
-		ui->pkg, ui->die);
-	if (f_base_min == NULL) {
-		POWER_LOG(DEBUG, "failed to open %s",
+	ret = power_sysfs_read_u32(&base_min_freq, POWER_INTEL_UNCORE_SYSFILE_BASE_MIN_FREQ,
+			ui->pkg, ui->die);
+	if (ret < 0) {
+		POWER_LOG(DEBUG, "Failed to read %s",
 				POWER_INTEL_UNCORE_SYSFILE_BASE_MIN_FREQ);
 		goto err;
-	}
-	if (f_base_min != NULL) {
-		ret = read_core_sysfs_u32(f_base_min, &base_min_freq);
-		if (ret < 0) {
-			POWER_LOG(DEBUG, "Failed to read %s",
-					POWER_INTEL_UNCORE_SYSFILE_BASE_MIN_FREQ);
-			goto err;
-		}
 	}
 
 	/* Curr min */
@@ -191,17 +177,11 @@ power_init_for_setting_uncore_freq(struct uncore_power_info *ui)
 	ui->init_max_freq = base_max_freq;
 	ui->init_min_freq = base_min_freq;
 
-	fclose(f_base_min);
-	fclose(f_base_max);
 	/* f_min and f_max are stored, no need to close */
 
 	return 0;
 
 err:
-	if (f_base_min != NULL)
-		fclose(f_base_min);
-	if (f_base_max != NULL)
-		fclose(f_base_max);
 	if (f_min != NULL)
 		fclose(f_min);
 	if (f_max != NULL)

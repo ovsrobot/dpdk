@@ -9,6 +9,7 @@
 #include <eal_export.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
+#include <rte_sysfs.h>
 
 #include "power_common.h"
 #include "rte_power_qos.h"
@@ -24,7 +25,6 @@ rte_power_qos_set_cpu_resume_latency(uint16_t lcore_id, int latency)
 {
 	char buf[PM_QOS_CPU_RESUME_LATENCY_BUF_LEN];
 	uint32_t cpu_id;
-	FILE *f;
 	int ret;
 
 	RTE_POWER_VALID_LCOREID_OR_ERR_RET(lcore_id, -EINVAL);
@@ -35,13 +35,6 @@ rte_power_qos_set_cpu_resume_latency(uint16_t lcore_id, int latency)
 	if (latency < 0) {
 		POWER_LOG(ERR, "latency should be greater than and equal to 0");
 		return -EINVAL;
-	}
-
-	ret = open_core_sysfs_file(&f, "w", PM_QOS_SYSFILE_RESUME_LATENCY_US, cpu_id);
-	if (ret != 0) {
-		POWER_LOG(ERR, "Failed to open "PM_QOS_SYSFILE_RESUME_LATENCY_US" : %s",
-			  cpu_id, strerror(errno));
-		return ret;
 	}
 
 	/*
@@ -59,12 +52,10 @@ rte_power_qos_set_cpu_resume_latency(uint16_t lcore_id, int latency)
 	else
 		snprintf(buf, sizeof(buf), "%u", latency);
 
-	ret = write_core_sysfs_s(f, buf);
+	ret = rte_sysfs_write_string(buf, PM_QOS_SYSFILE_RESUME_LATENCY_US, cpu_id);
 	if (ret != 0)
 		POWER_LOG(ERR, "Failed to write "PM_QOS_SYSFILE_RESUME_LATENCY_US" : %s",
 			  cpu_id, strerror(errno));
-
-	fclose(f);
 
 	return ret;
 }
@@ -76,7 +67,6 @@ rte_power_qos_get_cpu_resume_latency(uint16_t lcore_id)
 	char buf[PM_QOS_CPU_RESUME_LATENCY_BUF_LEN];
 	int latency = -1;
 	uint32_t cpu_id;
-	FILE *f;
 	int ret;
 
 	RTE_POWER_VALID_LCOREID_OR_ERR_RET(lcore_id, -EINVAL);
@@ -84,18 +74,12 @@ rte_power_qos_get_cpu_resume_latency(uint16_t lcore_id)
 	if (ret != 0)
 		return ret;
 
-	ret = open_core_sysfs_file(&f, "r", PM_QOS_SYSFILE_RESUME_LATENCY_US, cpu_id);
-	if (ret != 0) {
-		POWER_LOG(ERR, "Failed to open "PM_QOS_SYSFILE_RESUME_LATENCY_US" : %s",
-			  cpu_id, strerror(errno));
-		return ret;
-	}
-
-	ret = read_core_sysfs_s(f, buf, sizeof(buf));
+	ret = rte_sysfs_parse_string(buf, sizeof(buf), PM_QOS_SYSFILE_RESUME_LATENCY_US,
+			cpu_id);
 	if (ret != 0) {
 		POWER_LOG(ERR, "Failed to read "PM_QOS_SYSFILE_RESUME_LATENCY_US" : %s",
 			  cpu_id, strerror(errno));
-		goto out;
+		return ret;
 	}
 
 	/*
@@ -112,9 +96,6 @@ rte_power_qos_get_cpu_resume_latency(uint16_t lcore_id)
 		latency = strtoul(buf, NULL, POWER_CONVERT_TO_DECIMAL);
 		latency = latency == 0 ? RTE_POWER_QOS_RESUME_LATENCY_NO_CONSTRAINT : latency;
 	}
-
-out:
-	fclose(f);
 
 	return latency != -1 ? latency : ret;
 }
