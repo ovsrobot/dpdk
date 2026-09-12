@@ -25,6 +25,7 @@
 #include <rte_debug.h>
 #include <rte_log.h>
 #include <rte_common.h>
+#include <rte_sysfs.h>
 #include "rte_string_fns.h"
 
 #include "eal_private.h"
@@ -68,18 +69,6 @@ create_shared_memory(const char *filename, const size_t mem_size)
 	return map_shared_memory(filename, mem_size, O_RDWR | O_CREAT);
 }
 
-static int get_hp_sysfs_value(const char *subdir, const char *file, unsigned long *val)
-{
-	char *path = NULL;
-	int ret;
-
-	if (asprintf(&path, "%s/%s/%s", sys_dir_path, subdir, file) < 0)
-		return -1;
-	ret = eal_parse_sysfs_value(path, val);
-	free(path);
-	return ret;
-}
-
 /* this function is only called from eal_hugepage_info_init which itself
  * is only called from a primary process */
 static uint32_t
@@ -92,16 +81,16 @@ get_num_hugepages(const char *subdir, size_t sz, unsigned int reusable_pages)
 	const char *nr_splus_file = "surplus_hugepages";
 
 	/* first, check how many reserved pages kernel reports */
-	if (get_hp_sysfs_value(subdir, nr_rsvd_file, &resv_pages) < 0)
+	if (rte_sysfs_parse_uint(&resv_pages, "%s/%s/%s", sys_dir_path, subdir, nr_rsvd_file) < 0)
 		return 0;
 
-	if (get_hp_sysfs_value(subdir, nr_hp_file, &num_pages) < 0)
+	if (rte_sysfs_parse_uint(&num_pages, "%s/%s/%s", sys_dir_path, subdir, nr_hp_file) < 0)
 		return 0;
 
-	if (get_hp_sysfs_value(subdir, nr_over_file, &over_pages) < 0)
+	if (rte_sysfs_parse_uint(&over_pages, "%s/%s/%s", sys_dir_path, subdir, nr_over_file) < 0)
 		over_pages = 0;
 
-	if (get_hp_sysfs_value(subdir, nr_splus_file, &surplus_pages) < 0)
+	if (rte_sysfs_parse_uint(&surplus_pages, "%s/%s/%s", sys_dir_path, subdir, nr_splus_file) < 0)
 		surplus_pages = 0;
 
 	/* adjust num_pages */
@@ -138,7 +127,7 @@ get_num_hugepages(const char *subdir, size_t sz, unsigned int reusable_pages)
 static uint32_t
 get_num_hugepages_on_node(const char *subdir, unsigned int socket, size_t sz)
 {
-	char *path = NULL, *socketpath = NULL;
+	char *socketpath = NULL;
 	DIR *socketdir;
 	unsigned long num_pages = 0;
 	const char *nr_hp_file = "free_hugepages";
@@ -158,13 +147,7 @@ get_num_hugepages_on_node(const char *subdir, unsigned int socket, size_t sz)
 		goto nopages;
 	}
 
-	if (asprintf(&path, "%s/%s/%s", socketpath, subdir, nr_hp_file) < 0) {
-		EAL_LOG(ERR, "Can not format free hugepages path");
-		path = NULL;
-		goto nopages;
-	}
-
-	if (eal_parse_sysfs_value(path, &num_pages) < 0)
+	if (rte_sysfs_parse_uint(&num_pages, "%s/%s/%s", socketpath, subdir, nr_hp_file) < 0)
 		goto nopages;
 
 	if (num_pages == 0)
@@ -179,7 +162,6 @@ get_num_hugepages_on_node(const char *subdir, unsigned int socket, size_t sz)
 		num_pages = UINT32_MAX;
 
 nopages:
-	free(path);
 	free(socketpath);
 
 	return num_pages;

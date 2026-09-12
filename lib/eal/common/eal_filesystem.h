@@ -128,8 +128,6 @@ eal_get_hugefile_list_seg_path(char *buffer, size_t buflen,
 /** define the default filename prefix for the %s values above */
 #define HUGEFILE_PREFIX_DEFAULT "rte"
 
-/** Function to read a single numeric value from a file on the filesystem.
- * Used to read information from files on /sys */
-int eal_parse_sysfs_value(const char *filename, unsigned long *val);
+/* Reading and writing of sysfs values is in <rte_sysfs.h> */
 
 #endif /* EAL_FILESYSTEM_H */

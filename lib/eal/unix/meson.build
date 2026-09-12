@@ -7,6 +7,7 @@ sources += files(
         'eal_filesystem.c',
         'eal_firmware.c',
         'eal_unix_memory.c',
+        'eal_unix_sysfs.c',
         'eal_unix_thread.c',
         'eal_unix_timer.c',
         'rte_basename.c',
