@@ -18,6 +18,7 @@
 #include <rte_malloc.h>
 #include <rte_bus_vmbus.h>
 #include <rte_string_fns.h>
+#include <rte_sysfs.h>
 
 #include "private.h"
 
@@ -334,27 +335,12 @@ int vmbus_uio_map_rings(struct vmbus_channel *chan)
 static int vmbus_uio_sysfs_read(const char *dir, const char *name,
 				unsigned long *val, unsigned long max_range)
 {
-	char path[PATH_MAX];
-	FILE *f;
-	int ret;
-
-	snprintf(path, sizeof(path), "%s/%s", dir, name);
-	f = fopen(path, "r");
-	if (!f) {
-		VMBUS_LOG(ERR, "can't open %s:%s",
-			  path, strerror(errno));
-		return -errno;
+	if (rte_sysfs_parse_uint(val, "%s/%s", dir, name) < 0) {
+		VMBUS_LOG(ERR, "can't read %s/%s", dir, name);
+		return -EIO;
 	}
 
-	if (fscanf(f, "%lu", val) != 1)
-		ret = -EIO;
-	else if (*val > max_range)
-		ret = -ERANGE;
-	else
-		ret = 0;
-	fclose(f);
-
-	return ret;
+	return *val > max_range ? -ERANGE : 0;
 }
 
 static bool vmbus_uio_ring_present(const struct rte_vmbus_device *dev,
