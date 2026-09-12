@@ -36,6 +36,7 @@
 #include <rte_string_fns.h>
 #include <rte_rwlock.h>
 #include <rte_cycles.h>
+#include <rte_sysfs.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_devx_cmds.h>
@@ -1192,27 +1193,19 @@ mlx5_sysfs_bond_info(unsigned int pf_ifindex, unsigned int *ifindex,
 		     char *ifname)
 {
 	char name[IF_NAMESIZE];
-	FILE *file;
 	unsigned int index;
-	int ret;
+	unsigned long val;
 
 	if (!if_indextoname(pf_ifindex, name) || !strlen(name)) {
 		rte_errno = errno;
 		return -rte_errno;
 	}
-	MKSTR(bond_if, "/sys/class/net/%s/master/ifindex", name);
 	/* read bond ifindex */
-	file = fopen(bond_if, "rb");
-	if (file == NULL) {
-		rte_errno = errno;
+	if (rte_sysfs_parse_uint(&val, "/sys/class/net/%s/master/ifindex", name) != 0) {
+		rte_errno = ENODEV;
 		return -rte_errno;
 	}
-	ret = fscanf(file, "%u", &index);
-	fclose(file);
-	if (ret <= 0) {
-		rte_errno = errno;
-		return -rte_errno;
-	}
+	index = val;
 	if (ifindex)
 		*ifindex = index;
 
