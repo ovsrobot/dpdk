@@ -738,7 +738,12 @@ npa_aura_pool_pair_alloc(struct npa_lf *lf, const uint32_t block_size,
 	pool->ptr_end = ~0;
 	pool->stack_caching = 1;
 	pool->err_int_ena = BIT(NPA_POOL_ERR_INT_OVFLS);
-	pool->err_int_ena |= BIT(NPA_POOL_ERR_INT_RANGE);
+	/* NPA_POOL_ERR_INT_RANGE omitted: ptr_start/ptr_end are initialized to
+	 * 0/~0 and the actual IOVA range is set later via roc_npa_pool_op_range_set().
+	 * On CN10K the RANGE interrupt fires spuriously in the window between pool
+	 * creation and the range update, causing pool stack drain.  Mask it here
+	 * and rely on the range being set correctly before any alloc/free.
+	 */
 	pool->err_int_ena |= BIT(NPA_POOL_ERR_INT_PERR);
 	pool->avg_con = 0;
 
@@ -1168,6 +1173,45 @@ roc_npa_aura_destroy(uint64_t aura_handle)
 
 	/* Release the reference of npa */
 	rc |= npa_lf_fini();
+	return rc;
+}
+
+int
+roc_npa_pool_range_int_enable(uint64_t aura_handle)
+{
+	struct npa_cn20k_aq_enq_req *pool_req_cn20k;
+	struct npa_aq_enq_req *pool_req;
+	struct npa_lf *lf;
+	struct mbox *mbox;
+	int rc;
+
+	lf = idev_npa_obj_get();
+	if (lf == NULL)
+		return NPA_ERR_DEVICE_NOT_BOUNDED;
+
+	mbox = mbox_get(lf->mbox);
+	if (roc_model_is_cn20k()) {
+		pool_req_cn20k = mbox_alloc_msg_npa_cn20k_aq_enq(mbox);
+		pool_req = (struct npa_aq_enq_req *)pool_req_cn20k;
+	} else {
+		pool_req = mbox_alloc_msg_npa_aq_enq(mbox);
+	}
+	if (pool_req == NULL) {
+		rc = -ENOMEM;
+		goto exit;
+	}
+
+	pool_req->aura_id = roc_npa_aura_handle_to_aura(aura_handle);
+	pool_req->ctype = NPA_AQ_CTYPE_POOL;
+	pool_req->op = NPA_AQ_INSTOP_WRITE;
+	pool_req->pool.err_int_ena = BIT(NPA_POOL_ERR_INT_OVFLS) |
+				     BIT(NPA_POOL_ERR_INT_RANGE) |
+				     BIT(NPA_POOL_ERR_INT_PERR);
+	pool_req->pool_mask.err_int_ena = ~pool_req->pool_mask.err_int_ena;
+
+	rc = mbox_process(mbox);
+exit:
+	mbox_put(mbox);
 	return rc;
 }
 
