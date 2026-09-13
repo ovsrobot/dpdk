@@ -852,6 +852,7 @@ int __roc_api roc_npa_aura_limit_modify(uint64_t aura_handle,
 					uint16_t aura_limit);
 int __roc_api roc_npa_pool_destroy(uint64_t aura_handle);
 int __roc_api roc_npa_pool_range_update_check(uint64_t aura_handle);
+int __roc_api roc_npa_pool_range_int_enable(uint64_t aura_handle);
 void __roc_api roc_npa_aura_op_range_set(uint64_t aura_handle,
 					 uint64_t start_iova,
 					 uint64_t end_iova);

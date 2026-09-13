@@ -1666,6 +1666,11 @@ sqb_pool_populate(struct roc_nix *roc_nix, struct roc_nix_sq *sq)
 	}
 
 	roc_npa_pool_op_range_set(sq->aura_handle, (uint64_t)sq->sqe_mem, iova);
+
+	rc = roc_npa_pool_range_int_enable(sq->aura_handle);
+	if (rc)
+		goto npa_fail;
+
 	roc_npa_aura_limit_modify(sq->aura_handle, nb_sqb_bufs);
 	sq->aura_sqb_bufs = nb_sqb_bufs;
 

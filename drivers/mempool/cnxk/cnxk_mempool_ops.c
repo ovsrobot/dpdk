@@ -2,6 +2,7 @@
  * Copyright(C) 2021 Marvell.
  */
 
+#include <rte_eal.h>
 #include <rte_mbuf_pool_ops.h>
 #include <rte_mempool.h>
 
@@ -178,6 +179,10 @@ cnxk_mempool_populate(struct rte_mempool *mp, unsigned int max_objs,
 				  iova + num_elts * total_elt_sz);
 
 	if (roc_npa_pool_range_update_check(mp->pool_id) < 0)
+		return -EBUSY;
+
+	if (rte_eal_iova_mode() == RTE_IOVA_VA &&
+	    roc_npa_pool_range_int_enable(mp->pool_id) < 0)
 		return -EBUSY;
 
 	return rte_mempool_op_populate_helper(
