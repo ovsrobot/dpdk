@@ -73,9 +73,13 @@ New Features
   * ``rte_kvargs_handle_bool``, accepting ``1``, ``y``, ``yes``, ``on``,
     ``true`` and their negative counterparts. A bare ``key`` means true;
     an empty ``key=`` is rejected.
+  * ``rte_kvargs_handle_hex32`` and ``rte_kvargs_handle_hex64``, for the
+    arguments documented as a bare hexadecimal mask, where the value is
+    always read as hexadecimal whether or not it carries a ``0x`` prefix
 
-  Added ``rte_kvargs_to_uint`` and ``rte_kvargs_to_int`` for the cases where
-  a driver needs a narrower range than the target type allows.
+  Added ``rte_kvargs_to_uint``, ``rte_kvargs_to_int`` and
+  ``rte_kvargs_to_hex`` for the cases where a driver needs a narrower range
+  than the target type allows.
 
 
 Removed Items

@@ -324,6 +324,35 @@ rte_kvargs_parse_delim(const char *args, const char * const valid_keys[],
 }
 
 /*
+ * Skip over a "0x" prefix if there is one.
+ *
+ * Returns true if a prefix was consumed, and advances *str past it. Only one
+ * prefix is ever consumed: a second one is left in place so that the caller
+ * rejects it, since strtoull() would otherwise strip it itself and read
+ * "0x0x10" as sixteen rather than as the garbage it is.
+ */
+static bool
+kvargs_skip_hex_prefix(const char **str)
+{
+	const char *s = *str;
+
+	if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X') &&
+	    isxdigit((unsigned char)s[2])) {
+		*str = s + 2;
+		return true;
+	}
+
+	return false;
+}
+
+/* Tell whether a "0x" prefix is present, without consuming it. */
+static bool
+kvargs_has_hex_prefix(const char *str)
+{
+	return str[0] == '0' && (str[1] == 'x' || str[1] == 'X');
+}
+
+/*
  * Determine the base of a numeric value and skip over its prefix.
  *
  * Only decimal and 0x/0X hexadecimal are recognized. Octal is deliberately
@@ -331,24 +360,15 @@ rte_kvargs_parse_delim(const char *args, const char * const valid_keys[],
  * has been a recurring source of surprise.
  *
  * Returns the base, and advances *str past the "0x" prefix if there is one.
- * Returns 0 if what follows the prefix is a second one: strtoull() would
- * strip that itself, making "0x0x10" sixteen rather than the garbage it is.
+ * Returns 0 if what follows the prefix is a second one, which is not a number.
  */
 static int
 kvargs_get_base(const char **str)
 {
-	const char *s = *str;
+	if (!kvargs_skip_hex_prefix(str))
+		return 10;
 
-	if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X') &&
-	    isxdigit((unsigned char)s[2])) {
-		s += 2;
-		if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X'))
-			return 0;
-		*str = s;
-		return 16;
-	}
-
-	return 10;
+	return kvargs_has_hex_prefix(*str) ? 0 : 16;
 }
 
 /* Skip trailing white space, and tell whether anything else is left. */
@@ -481,6 +501,46 @@ rte_kvargs_to_int(const char *value, int64_t min, int64_t max, int64_t *result)
 	}
 
 	if (val < min || val > max)
+		return -ERANGE;
+
+	*result = val;
+	return 0;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_to_hex, 26.11)
+int
+rte_kvargs_to_hex(const char *value, uint64_t max, uint64_t *result)
+{
+	const char *str = value;
+	unsigned long long val;
+	char *endptr;
+
+	if (str == NULL || result == NULL)
+		return -EINVAL;
+
+	/* A mask has no sign; "-1" must not wrap around to UINT64_MAX. */
+	if (kvargs_get_sign(&str))
+		return -EINVAL;
+
+	/* The 0x prefix is optional here, but still accepted. */
+	if (kvargs_skip_hex_prefix(&str) && kvargs_has_hex_prefix(str))
+		return -EINVAL;	/* doubled 0x prefix */
+
+	if (!isxdigit((unsigned char)*str))
+		return -EINVAL;
+
+	errno = 0;
+	val = strtoull(str, &endptr, 16);
+	if (endptr == str)
+		return -EINVAL;
+	if (errno == ERANGE)
+		return -ERANGE;
+	if (errno != 0)
+		return -EINVAL;
+	if (!kvargs_at_end(endptr))
+		return -EINVAL;	/* trailing garbage */
+
+	if (val > max)
 		return -ERANGE;
 
 	*result = val;
@@ -705,6 +765,51 @@ rte_kvargs_handle_ulong(const char *key, const char *value, void *opaque)
 	ret = kvargs_store_uint(key, value, opaque, ULONG_MAX, &val);
 	if (ret == 0)
 		*(unsigned long *)opaque = (unsigned long)val;
+
+	return ret;
+}
+
+static int
+kvargs_store_hex(const char *key, const char *value, void *opaque,
+		 uint64_t max, uint64_t *val)
+{
+	int ret;
+
+	if (opaque == NULL)
+		return -EINVAL;
+
+	ret = rte_kvargs_to_hex(value, max, val);
+	if (ret < 0)
+		KVARGS_LOG(ERR, "invalid value \"%s\" for key \"%s\", expected 0..%" PRIx64 " in hex",
+			   value != NULL ? value : "", key != NULL ? key : "", max);
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_hex32, 26.11)
+int
+rte_kvargs_handle_hex32(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_hex(key, value, opaque, UINT32_MAX, &val);
+	if (ret == 0)
+		*(uint32_t *)opaque = (uint32_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_hex64, 26.11)
+int
+rte_kvargs_handle_hex64(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_hex(key, value, opaque, UINT64_MAX, &val);
+	if (ret == 0)
+		*(uint64_t *)opaque = val;
 
 	return ret;
 }
