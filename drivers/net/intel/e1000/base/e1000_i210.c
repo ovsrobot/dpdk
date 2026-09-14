@@ -824,13 +824,16 @@ out:
  **/
 STATIC s32 e1000_pll_workaround_i210(struct e1000_hw *hw)
 {
-	s32 ret_val;
+	s32 ret_val, page_ret_val;
 	u32 wuc, mdicnfg, ctrl, ctrl_ext, reg_val;
 	u16 nvm_word, phy_word, pci_word, tmp_nvm;
 	int i;
 
 	/* Get PHY semaphore */
-	hw->phy.ops.acquire(hw);
+	ret_val = hw->phy.ops.acquire(hw);
+	if (ret_val)
+		return ret_val;
+
 	/* Get and set needed register values */
 	wuc = E1000_READ_REG(hw, E1000_WUC);
 	mdicnfg = E1000_READ_REG(hw, E1000_MDICNFG);
@@ -846,11 +849,22 @@ STATIC s32 e1000_pll_workaround_i210(struct e1000_hw *hw)
 	phy_word = E1000_PHY_PLL_UNCONF;
 	for (i = 0; i < E1000_MAX_PLL_TRIES; i++) {
 		/* check current state directly from internal PHY */
-		e1000_write_phy_reg_mdic(hw, GS40G_PAGE_SELECT, 0xFC);
+		ret_val = e1000_write_phy_reg_mdic(hw, GS40G_PAGE_SELECT, 0xFC);
+		if (ret_val)
+			goto restore_page;
+
 		usec_delay(20);
-		e1000_read_phy_reg_mdic(hw, E1000_PHY_PLL_FREQ_REG, &phy_word);
+		ret_val = e1000_read_phy_reg_mdic(hw, E1000_PHY_PLL_FREQ_REG,
+						  &phy_word);
 		usec_delay(20);
-		e1000_write_phy_reg_mdic(hw, GS40G_PAGE_SELECT, 0);
+
+restore_page:
+		page_ret_val = e1000_write_phy_reg_mdic(hw, GS40G_PAGE_SELECT, 0);
+		if (page_ret_val && ret_val == E1000_SUCCESS)
+			ret_val = page_ret_val;
+		if (ret_val)
+			goto out;
+
 		if ((phy_word & E1000_PHY_PLL_UNCONF)
 		    != E1000_PHY_PLL_UNCONF) {
 			ret_val = E1000_SUCCESS;
@@ -882,6 +896,7 @@ STATIC s32 e1000_pll_workaround_i210(struct e1000_hw *hw)
 		/* restore WUC register */
 		E1000_WRITE_REG(hw, E1000_WUC, wuc);
 	}
+out:
 	/* restore MDICNFG setting */
 	E1000_WRITE_REG(hw, E1000_MDICNFG, mdicnfg);
 	/* Release PHY semaphore */
