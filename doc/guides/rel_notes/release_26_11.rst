@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* stack: Introduced "pile", a lock-free, stack-like implementation,
+  optimized for bulk operations.
+  The pile is only LIFO on bulk level, not on object level; i.e. arrays of bulks are
+  pushed and popped in LIFO manner, but objects within each bulk are not ordered
+  as expected by a stack.
+  Furthermore, it is not strictly bounded by its size, but might hold more objects.
 
 Removed Items
 -------------
