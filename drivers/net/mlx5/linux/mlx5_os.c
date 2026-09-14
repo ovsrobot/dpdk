@@ -29,6 +29,7 @@
 #include <rte_string_fns.h>
 #include <rte_alarm.h>
 #include <rte_eal_paging.h>
+#include <rte_sysfs.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_devx_cmds.h>
@@ -2103,6 +2104,7 @@ mlx5_device_bond_pci_match(const struct ibv_device *ibdev,
 		char tmp_str[IF_NAMESIZE + 32];
 		struct rte_pci_addr pci_addr;
 		struct mlx5_switch_info	info;
+		unsigned long val;
 		int ret;
 
 		/* Process slave interface names in the loop. */
@@ -2140,15 +2142,10 @@ mlx5_device_bond_pci_match(const struct ibv_device *ibdev,
 			break;
 		}
 		/* Get ifindex. */
-		snprintf(tmp_str, sizeof(tmp_str),
-			 "/sys/class/net/%s/ifindex", ifname);
-		file = fopen(tmp_str, "rb");
-		if (!file)
+		if (rte_sysfs_parse_uint(&val, "/sys/class/net/%s/ifindex",
+				ifname) != 0)
 			break;
-		ret = fscanf(file, "%u", &ifindex);
-		fclose(file);
-		if (ret != 1)
-			break;
+		ifindex = val;
 		/* Save bonding info. */
 		snprintf(bond_info->ports[info.port_name].ifname,
 			 sizeof(bond_info->ports[0].ifname), "%s", ifname);
