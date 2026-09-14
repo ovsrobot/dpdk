@@ -363,6 +363,33 @@ int rte_kvargs_handle_bool(const char *key, const char *value, void *opaque);
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
+ * Convert a key/value pair to a NUMA socket id.
+ *
+ * Accepts -1, which is SOCKET_ID_ANY, through RTE_MAX_NUMA_NODES - 1.
+ * The bound is the compile time maximum rather than the set of sockets
+ * present on the running system, matching what drivers checked before
+ * this helper existed.
+ *
+ * @param key
+ *   The key, used for error reporting only. May be NULL.
+ * @param value
+ *   The value to convert.
+ * @param opaque
+ *   Pointer to an ``int`` to store the result into. On error it is left
+ *   unmodified.
+ *
+ * @return
+ *   - 0 on success.
+ *   - -EINVAL if the value is malformed, or if @p opaque is NULL.
+ *   - -ERANGE if the value is not a valid socket id.
+ */
+__rte_experimental
+int rte_kvargs_handle_socket_id(const char *key, const char *value, void *opaque);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
  * Convert a string to an unsigned integer, checking it against a range.
  *
  * This is the underlying conversion used by the rte_kvargs_handle_*()

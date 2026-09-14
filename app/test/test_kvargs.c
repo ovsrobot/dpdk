@@ -516,6 +516,36 @@ test_handle_bool(void)
 }
 
 static int
+test_handle_socket_id(void)
+{
+	char buf[32];
+
+	/* SOCKET_ID_ANY is a valid socket id, anything below it is not. */
+	CHECK_GOOD(rte_kvargs_handle_socket_id, int, "-1", -1);
+	CHECK_GOOD(rte_kvargs_handle_socket_id, int, "0", 0);
+	CHECK_BAD(rte_kvargs_handle_socket_id, int, "-2");
+	CHECK_BAD(rte_kvargs_handle_socket_id, int, "");
+	CHECK_BAD(rte_kvargs_handle_socket_id, int, "1x");
+
+	/* The last valid value, and the first one past it. */
+	{
+		int socket = 0x5a;
+
+		snprintf(buf, sizeof(buf), "%d", RTE_MAX_NUMA_NODES - 1);
+		TEST_ASSERT_SUCCESS(handle_one(rte_kvargs_handle_socket_id, buf,
+					       &socket), "socket id %s rejected", buf);
+		TEST_ASSERT_EQUAL(socket, RTE_MAX_NUMA_NODES - 1, "wrong socket id");
+
+		snprintf(buf, sizeof(buf), "%d", RTE_MAX_NUMA_NODES);
+		TEST_ASSERT_FAIL(handle_one(rte_kvargs_handle_socket_id, buf,
+					    &socket), "socket id %s accepted", buf);
+		TEST_ASSERT_EQUAL(socket, RTE_MAX_NUMA_NODES - 1, "target clobbered");
+	}
+
+	return TEST_SUCCESS;
+}
+
+static int
 test_kvargs_to_range(void)
 {
 	uint64_t u = 0x5a;
@@ -574,6 +604,7 @@ static struct unit_test_suite kvargs_test_suite  = {
 		TEST_CASE(test_handle_unsigned),
 		TEST_CASE(test_handle_signed),
 		TEST_CASE(test_handle_bool),
+		TEST_CASE(test_handle_socket_id),
 		TEST_CASE(test_kvargs_to_range),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
