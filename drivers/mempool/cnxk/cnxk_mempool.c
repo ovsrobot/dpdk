@@ -2,6 +2,7 @@
  * Copyright(C) 2021 Marvell.
  */
 
+#include <limits.h>
 #include <rte_atomic.h>
 #include <bus_pci_driver.h>
 #include <rte_common.h>
@@ -34,10 +35,14 @@ npa_aura_size_to_u32(uint8_t val)
 static int
 parse_max_pools_handler(const char *key, const char *value, void *extra_args)
 {
-	RTE_SET_USED(key);
-	uint32_t val;
+	uint64_t val;
 
-	val = rte_align32pow2(atoi(value));
+	RTE_SET_USED(key);
+
+	if (rte_kvargs_to_uint(value, 0, INT_MAX, &val) < 0)
+		return -EINVAL;
+
+	val = rte_align32pow2(val);
 	if (val < npa_aura_size_to_u32(NPA_AURA_SZ_128))
 		val = 128;
 	if (val > npa_aura_size_to_u32(NPA_AURA_SZ_1M))
@@ -48,26 +53,13 @@ parse_max_pools_handler(const char *key, const char *value, void *extra_args)
 }
 
 static int
-parse_halo_ena_handler(const char *key, const char *value, void *extra_args)
-{
-	RTE_SET_USED(key);
-	uint8_t val;
-
-	val = atoi(value);
-	if (val != 0 && val != 1)
-		return -EINVAL;
-
-	*(uint8_t *)extra_args = val;
-	return 0;
-}
-
-static int
 cnxk_mempool_plt_parse_devargs(struct rte_pci_device *pci_dev)
 {
 	uint32_t max_pools = npa_aura_size_to_u32(NPA_AURA_SZ_128);
 	struct rte_devargs *devargs = pci_dev->device.devargs;
 	struct rte_kvargs *kvlist;
-	uint32_t halo_ena = 0;
+	bool halo_ena = false;
+	int ret;
 
 	if (devargs == NULL)
 		goto null_devargs;
@@ -75,11 +67,14 @@ cnxk_mempool_plt_parse_devargs(struct rte_pci_device *pci_dev)
 	if (kvlist == NULL)
 		goto exit;
 
-	rte_kvargs_process(kvlist, CNXK_NPA_MAX_POOLS_PARAM,
-			   &parse_max_pools_handler, &max_pools);
-	rte_kvargs_process(kvlist, CNXK_NPA_HALO_ENA_PARAM,
-			   &parse_halo_ena_handler, &halo_ena);
+	ret = rte_kvargs_process(kvlist, CNXK_NPA_MAX_POOLS_PARAM,
+				 &parse_max_pools_handler, &max_pools);
+	ret |= rte_kvargs_process_opt(kvlist, CNXK_NPA_HALO_ENA_PARAM,
+				      rte_kvargs_handle_bool, &halo_ena);
 	rte_kvargs_free(kvlist);
+
+	if (ret != 0)
+		goto exit;
 
 null_devargs:
 	roc_idev_npa_maxpools_set(max_pools);
