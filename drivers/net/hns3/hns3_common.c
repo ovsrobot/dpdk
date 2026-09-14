@@ -206,22 +206,6 @@ hns3_get_io_hint_func_name(uint32_t hint)
 }
 
 static int
-hns3_parse_dev_caps_mask(const char *key, const char *value, void *extra_args)
-{
-	uint64_t val;
-
-	RTE_SET_USED(key);
-
-	if (value == NULL || extra_args == NULL)
-		return 0;
-
-	val = strtoull(value, NULL, HNS3_CONVERT_TO_HEXADECIMAL);
-	*(uint64_t *)extra_args = val;
-
-	return 0;
-}
-
-static int
 hns3_parse_mbx_time_limit(const char *key, const char *value, void *extra_args)
 {
 	uint64_t val;
@@ -341,7 +325,7 @@ hns3_parse_devargs(struct rte_eth_dev *dev)
 	(void)rte_kvargs_process(kvlist, HNS3_DEVARG_TX_FUNC_HINT,
 			   &hns3_parse_io_hint_func, &tx_func_hint);
 	(void)rte_kvargs_process(kvlist, HNS3_DEVARG_DEV_CAPS_MASK,
-			   &hns3_parse_dev_caps_mask, &dev_caps_mask);
+			   rte_kvargs_handle_hex64, &dev_caps_mask);
 	(void)rte_kvargs_process(kvlist, HNS3_DEVARG_MBX_TIME_LIMIT_MS,
 			   &hns3_parse_mbx_time_limit, &mbx_time_limit_ms);
 	if (!hns->is_vf) {
