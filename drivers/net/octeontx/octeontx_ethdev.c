@@ -65,22 +65,6 @@ RTE_LOG_REGISTER_SUFFIX(otx_net_logtype_mbox, mbox, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(otx_net_logtype_init, init, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(otx_net_logtype_driver, driver, NOTICE);
 
-/* Parse integer from integer argument */
-static int
-parse_integer_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	int *i = (int *)extra_args;
-
-	*i = atoi(value);
-	if (*i < 0) {
-		octeontx_log_err("argument has to be positive.");
-		return -1;
-	}
-
-	return 0;
-}
-
 static int
 octeontx_parse_vdev_init_params(struct octeontx_vdev_init_params *params,
 				struct rte_vdev_device *dev)
@@ -106,7 +90,7 @@ octeontx_parse_vdev_init_params(struct octeontx_vdev_init_params *params,
 
 		ret = rte_kvargs_process(kvlist,
 					OCTEONTX_VDEV_NR_PORT_ARG,
-					&parse_integer_arg,
+					rte_kvargs_handle_u8,
 					&params->nr_port);
 		if (ret < 0)
 			goto free_kvlist;
