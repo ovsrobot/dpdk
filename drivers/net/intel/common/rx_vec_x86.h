@@ -33,7 +33,7 @@ _ci_rxq_rearm_get_bufs(struct ci_rx_queue *rxq)
 			const __m128i zero = _mm_setzero_si128();
 
 			for (i = 0; i < CI_VPMD_DESCS_PER_LOOP; i++) {
-				rxp[i] = &rxq->fake_mbuf;
+				rxq->sw_ring[rxq->rxrearm_start + i].mbuf = &rxq->fake_mbuf;
 				_mm_store_si128(RTE_CAST_PTR(__m128i *, &rxdp[i]), zero);
 			}
 		}
