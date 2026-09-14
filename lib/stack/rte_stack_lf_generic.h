@@ -9,25 +9,10 @@
 #include <rte_prefetch.h>
 
 static __rte_always_inline unsigned int
-__rte_stack_lf_count(struct rte_stack *s)
+__rte_stack_lf_elems_count(struct rte_stack_lf_list *list)
 {
-	/* stack_lf_push() and stack_lf_pop() do not update the list's contents
-	 * and stack_lf->len atomically, which can cause the list to appear
-	 * shorter than it actually is if this function is called while other
-	 * threads are modifying the list.
-	 *
-	 * However, given the inherently approximate nature of the get_count
-	 * callback -- even if the list and its size were updated atomically,
-	 * the size could change between when get_count executes and when the
-	 * value is returned to the caller -- this is acceptable.
-	 *
-	 * The stack_lf->len updates are placed such that the list may appear to
-	 * have fewer elements than it does, but will never appear to have more
-	 * elements. If the mempool is near-empty to the point that this is a
-	 * concern, the user should consider increasing the mempool size.
-	 */
 	/* NOTE: review for potential ordering optimization */
-	return rte_atomic_load_explicit(&s->stack_lf.used.len, rte_memory_order_seq_cst);
+	return (unsigned int)rte_atomic_load_explicit(&list->len, rte_memory_order_seq_cst);
 }
 
 static __rte_always_inline void
