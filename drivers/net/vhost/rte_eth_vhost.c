@@ -1585,17 +1585,18 @@ open_iface(const char *key __rte_unused, const char *value, void *extra_args)
 	return 0;
 }
 
-static inline int
-open_int(const char *key __rte_unused, const char *value, void *extra_args)
+static int
+open_queues(const char *key, const char *value, void *extra_args)
 {
-	uint16_t *n = extra_args;
+	uint64_t queues;
 
-	if (value == NULL || extra_args == NULL)
+	if (rte_kvargs_to_uint(value, 1, RTE_MAX_QUEUES_PER_PORT, &queues) < 0) {
+		VHOST_LOG_LINE(ERR, "invalid %s, must be 1..%u", key,
+			       RTE_MAX_QUEUES_PER_PORT);
 		return -EINVAL;
+	}
 
-	*n = (uint16_t)strtoul(value, NULL, 0);
-	if (*n == USHRT_MAX && errno == ERANGE)
-		return -1;
+	*(uint16_t *)extra_args = queues;
 
 	return 0;
 }
@@ -1609,13 +1610,13 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 	uint16_t queues;
 	uint64_t flags = RTE_VHOST_USER_NET_STATS_ENABLE;
 	uint64_t disable_flags = 0;
-	int client_mode = 0;
-	int iommu_support = 0;
-	int postcopy_support = 0;
-	int tso = 0;
-	int linear_buf = 0;
-	int ext_buf = 0;
-	int legacy_ol_flags = 0;
+	bool client_mode = false;
+	bool iommu_support = false;
+	bool postcopy_support = false;
+	bool tso = false;
+	bool linear_buf = false;
+	bool ext_buf = false;
+	bool legacy_ol_flags = false;
 	struct rte_eth_dev *eth_dev;
 	const char *name = rte_vdev_device_name(dev);
 
@@ -1653,16 +1654,16 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 
 	if (rte_kvargs_count(kvlist, ETH_VHOST_QUEUES_ARG) == 1) {
 		ret = rte_kvargs_process(kvlist, ETH_VHOST_QUEUES_ARG,
-					 &open_int, &queues);
-		if (ret < 0 || queues > RTE_MAX_QUEUES_PER_PORT)
+					 &open_queues, &queues);
+		if (ret < 0)
 			goto out_free;
 
 	} else
 		queues = 1;
 
 	if (rte_kvargs_count(kvlist, ETH_VHOST_CLIENT_ARG) == 1) {
-		ret = rte_kvargs_process(kvlist, ETH_VHOST_CLIENT_ARG,
-					 &open_int, &client_mode);
+		ret = rte_kvargs_process_opt(kvlist, ETH_VHOST_CLIENT_ARG,
+					     rte_kvargs_handle_bool, &client_mode);
 		if (ret < 0)
 			goto out_free;
 
@@ -1671,8 +1672,8 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 	}
 
 	if (rte_kvargs_count(kvlist, ETH_VHOST_IOMMU_SUPPORT) == 1) {
-		ret = rte_kvargs_process(kvlist, ETH_VHOST_IOMMU_SUPPORT,
-					 &open_int, &iommu_support);
+		ret = rte_kvargs_process_opt(kvlist, ETH_VHOST_IOMMU_SUPPORT,
+					     rte_kvargs_handle_bool, &iommu_support);
 		if (ret < 0)
 			goto out_free;
 
@@ -1681,8 +1682,8 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 	}
 
 	if (rte_kvargs_count(kvlist, ETH_VHOST_POSTCOPY_SUPPORT) == 1) {
-		ret = rte_kvargs_process(kvlist, ETH_VHOST_POSTCOPY_SUPPORT,
-					 &open_int, &postcopy_support);
+		ret = rte_kvargs_process_opt(kvlist, ETH_VHOST_POSTCOPY_SUPPORT,
+					     rte_kvargs_handle_bool, &postcopy_support);
 		if (ret < 0)
 			goto out_free;
 
@@ -1691,49 +1692,49 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 	}
 
 	if (rte_kvargs_count(kvlist, ETH_VHOST_VIRTIO_NET_F_HOST_TSO) == 1) {
-		ret = rte_kvargs_process(kvlist,
+		ret = rte_kvargs_process_opt(kvlist,
 				ETH_VHOST_VIRTIO_NET_F_HOST_TSO,
-				&open_int, &tso);
+				rte_kvargs_handle_bool, &tso);
 		if (ret < 0)
 			goto out_free;
 	}
 
-	if (tso == 0) {
+	if (!tso) {
 		disable_flags |= (1ULL << VIRTIO_NET_F_HOST_TSO4);
 		disable_flags |= (1ULL << VIRTIO_NET_F_HOST_TSO6);
 	}
 
 	if (rte_kvargs_count(kvlist, ETH_VHOST_LINEAR_BUF) == 1) {
-		ret = rte_kvargs_process(kvlist,
+		ret = rte_kvargs_process_opt(kvlist,
 				ETH_VHOST_LINEAR_BUF,
-				&open_int, &linear_buf);
+				rte_kvargs_handle_bool, &linear_buf);
 		if (ret < 0)
 			goto out_free;
 
-		if (linear_buf == 1)
+		if (linear_buf)
 			flags |= RTE_VHOST_USER_LINEARBUF_SUPPORT;
 	}
 
 	if (rte_kvargs_count(kvlist, ETH_VHOST_EXT_BUF) == 1) {
-		ret = rte_kvargs_process(kvlist,
+		ret = rte_kvargs_process_opt(kvlist,
 				ETH_VHOST_EXT_BUF,
-				&open_int, &ext_buf);
+				rte_kvargs_handle_bool, &ext_buf);
 		if (ret < 0)
 			goto out_free;
 
-		if (ext_buf == 1)
+		if (ext_buf)
 			flags |= RTE_VHOST_USER_EXTBUF_SUPPORT;
 	}
 
 	if (rte_kvargs_count(kvlist, ETH_VHOST_LEGACY_OL_FLAGS) == 1) {
-		ret = rte_kvargs_process(kvlist,
+		ret = rte_kvargs_process_opt(kvlist,
 				ETH_VHOST_LEGACY_OL_FLAGS,
-				&open_int, &legacy_ol_flags);
+				rte_kvargs_handle_bool, &legacy_ol_flags);
 		if (ret < 0)
 			goto out_free;
 	}
 
-	if (legacy_ol_flags == 0)
+	if (!legacy_ol_flags)
 		flags |= RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS;
 
 	if (dev->device.numa_node == SOCKET_ID_ANY)
