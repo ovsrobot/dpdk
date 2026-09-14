@@ -3,6 +3,7 @@
  */
 
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -2161,9 +2162,17 @@ nicvf_set_first_skip(struct rte_eth_dev *dev)
 
 	for (i = 0; i != kvlist->count; ++i) {
 		const struct rte_kvargs_pair *pair = &kvlist->pairs[i];
+		uint64_t val;
 
-		if (!strcmp(pair->key, SKIP_DATA_BYTES))
-			bytes_to_skip = atoi(pair->value);
+		if (strcmp(pair->key, SKIP_DATA_BYTES))
+			continue;
+
+		if (rte_kvargs_to_uint(pair->value, 0, INT_MAX, &val) < 0) {
+			PMD_INIT_LOG(ERR, "skip_data_bytes is not a valid number");
+			ret = -EINVAL;
+			goto exit;
+		}
+		bytes_to_skip = val;
 	}
 
 	/*128 bytes amounts to one cache line*/
