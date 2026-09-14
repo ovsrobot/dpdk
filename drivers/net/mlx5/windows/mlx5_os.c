@@ -699,8 +699,8 @@ mlx5_os_mac_addr_flush(struct rte_eth_dev *dev)
 	int i;
 
 	for (i = MLX5_MAX_MAC_ADDRESSES - 1; i >= 0; --i) {
-		if (BITFIELD_ISSET(priv->mac_own, i))
-			BITFIELD_RESET(priv->mac_own, i);
+		if (rte_bitset_test(priv->mac_own, i))
+			rte_bitset_clear(priv->mac_own, i);
 	}
 }
 
@@ -719,7 +719,7 @@ mlx5_os_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
 	struct mlx5_priv *priv = dev->data->dev_private;
 
 	if (index < MLX5_MAX_MAC_ADDRESSES)
-		BITFIELD_RESET(priv->mac_own, index);
+		rte_bitset_clear(priv->mac_own, index);
 }
 
 /**
@@ -757,7 +757,7 @@ mlx5_os_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac,
 		return -ENOTSUP;
 	}
 	/* Mark this MAC address as owned by the PMD */
-	BITFIELD_SET(priv->mac_own, index);
+	rte_bitset_set(priv->mac_own, index);
 	return 0;
 }
 
