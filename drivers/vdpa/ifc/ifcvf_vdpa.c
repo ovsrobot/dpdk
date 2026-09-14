@@ -1480,21 +1480,6 @@ static struct rte_vdpa_dev_ops ifcvf_net_ops = {
 	.get_dev_type = ifcvf_get_device_type,
 };
 
-static inline int
-open_int(const char *key __rte_unused, const char *value, void *extra_args)
-{
-	uint16_t *n = extra_args;
-
-	if (value == NULL || extra_args == NULL)
-		return -EINVAL;
-
-	*n = (uint16_t)strtoul(value, NULL, 0);
-	if (*n == USHRT_MAX && errno == ERANGE)
-		return -1;
-
-	return 0;
-}
-
 static int16_t
 ifcvf_pci_get_device_type(struct rte_pci_device *pci_dev)
 {
@@ -1635,8 +1620,8 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	uint64_t features;
 	struct ifcvf_internal *internal = NULL;
 	struct internal_list *list = NULL;
-	int vdpa_mode = 0;
-	int sw_fallback_lm = 0;
+	bool vdpa_mode = false;
+	bool sw_fallback_lm = false;
 	struct rte_kvargs *kvlist = NULL;
 	int ret = 0;
 	int16_t device_id;
@@ -1662,9 +1647,9 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		return 1;
 	}
 
-	ret = rte_kvargs_process(kvlist, IFCVF_VDPA_MODE, &open_int,
-			&vdpa_mode);
-	if (ret < 0 || vdpa_mode == 0) {
+	ret = rte_kvargs_process_opt(kvlist, IFCVF_VDPA_MODE,
+			rte_kvargs_handle_bool, &vdpa_mode);
+	if (ret < 0 || !vdpa_mode) {
 		rte_kvargs_free(kvlist);
 		return 1;
 	}
@@ -1756,8 +1741,8 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	list->internal = internal;
 
 	if (rte_kvargs_count(kvlist, IFCVF_SW_FALLBACK_LM)) {
-		ret = rte_kvargs_process(kvlist, IFCVF_SW_FALLBACK_LM,
-				&open_int, &sw_fallback_lm);
+		ret = rte_kvargs_process_opt(kvlist, IFCVF_SW_FALLBACK_LM,
+				rte_kvargs_handle_bool, &sw_fallback_lm);
 		if (ret < 0)
 			goto error;
 	}
