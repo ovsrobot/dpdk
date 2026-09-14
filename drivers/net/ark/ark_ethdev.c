@@ -896,7 +896,9 @@ process_pktdir_arg(const char *key, const char *value,
 	struct ark_adapter *ark =
 		(struct ark_adapter *)extra_args;
 
-	ark->pkt_dir_v = strtol(value, NULL, 16);
+	if (rte_kvargs_handle_hex32(key, value, &ark->pkt_dir_v) < 0)
+		return -EINVAL;
+
 	ARK_PMD_LOG(DEBUG, "pkt_dir_v = 0x%x\n", ark->pkt_dir_v);
 	return 0;
 }
