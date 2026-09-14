@@ -5866,8 +5866,7 @@ bnxt_parse_devarg_flow_xstat(__rte_unused const char *key,
 			     const char *value, void *opaque_arg)
 {
 	struct bnxt *bp = opaque_arg;
-	unsigned long flow_xstat;
-	char *end = NULL;
+	uint64_t flow_xstat;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -5875,9 +5874,7 @@ bnxt_parse_devarg_flow_xstat(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	flow_xstat = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (flow_xstat == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &flow_xstat) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to flow_xstat devarg.");
 		return -EINVAL;
@@ -5901,8 +5898,7 @@ bnxt_parse_devarg_max_num_kflows(__rte_unused const char *key,
 					const char *value, void *opaque_arg)
 {
 	struct bnxt *bp = opaque_arg;
-	unsigned long max_num_kflows;
-	char *end = NULL;
+	uint64_t max_num_kflows;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -5910,9 +5906,7 @@ bnxt_parse_devarg_max_num_kflows(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	max_num_kflows = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-		(max_num_kflows == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &max_num_kflows) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Invalid parameter passed to max_num_kflows devarg.");
 		return -EINVAL;
@@ -5926,8 +5920,8 @@ bnxt_parse_devarg_max_num_kflows(__rte_unused const char *key,
 
 	bp->max_num_kflows = max_num_kflows;
 	if (bp->max_num_kflows)
-		PMD_DRV_LOG_LINE(INFO, "max_num_kflows set as %ldK.",
-				max_num_kflows);
+		PMD_DRV_LOG_LINE(INFO, "max_num_kflows set as %uK.",
+				(unsigned int)max_num_kflows);
 
 	return 0;
 }
@@ -5937,8 +5931,7 @@ bnxt_parse_devarg_cqe_mode(__rte_unused const char *key,
 			   const char *value, void *opaque_arg)
 {
 	struct bnxt *bp = opaque_arg;
-	unsigned long cqe_mode;
-	char *end = NULL;
+	uint64_t cqe_mode;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -5947,9 +5940,7 @@ bnxt_parse_devarg_cqe_mode(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	cqe_mode = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (cqe_mode == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &cqe_mode) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to cqe-mode "
 			    "devargs.");
@@ -5974,8 +5965,7 @@ bnxt_parse_devarg_app_instance_id(__rte_unused const char *key,
 				  const char *value, void *opaque_arg)
 {
 	struct bnxt *bp = opaque_arg;
-	unsigned long app_instance_id;
-	char *end = NULL;
+	uint64_t app_instance_id;
 
 	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -5983,9 +5973,7 @@ bnxt_parse_devarg_app_instance_id(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	app_instance_id = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (app_instance_id == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &app_instance_id) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 				 "Invalid parameter passed to instance devargs");
 		return -EINVAL;
@@ -6008,8 +5996,7 @@ bnxt_parse_devarg_app_id(__rte_unused const char *key,
 				 const char *value, void *opaque_arg)
 {
 	struct bnxt *bp = opaque_arg;
-	unsigned long app_id;
-	char *end = NULL;
+	uint64_t app_id;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6018,9 +6005,7 @@ bnxt_parse_devarg_app_id(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	app_id = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (app_id == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &app_id) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to app_id "
 			    "devargs.");
@@ -6044,8 +6029,7 @@ bnxt_parse_devarg_ieee_1588(__rte_unused const char *key,
 			    const char *value, void *opaque_arg)
 {
 	struct bnxt *bp = opaque_arg;
-	unsigned long ieee_1588;
-	char *end = NULL;
+	uint64_t ieee_1588;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6054,9 +6038,7 @@ bnxt_parse_devarg_ieee_1588(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	ieee_1588 = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (ieee_1588 == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &ieee_1588) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to ieee_1588 "
 			    "devargs.");
@@ -6088,8 +6070,7 @@ bnxt_parse_devarg_rep_is_pf(__rte_unused const char *key,
 			    const char *value, void *opaque_arg)
 {
 	struct bnxt_representor *vfr_bp = opaque_arg;
-	unsigned long rep_is_pf;
-	char *end = NULL;
+	uint64_t rep_is_pf;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6097,9 +6078,7 @@ bnxt_parse_devarg_rep_is_pf(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	rep_is_pf = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (rep_is_pf == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &rep_is_pf) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_is_pf devargs.");
 		return -EINVAL;
@@ -6125,8 +6104,7 @@ bnxt_parse_devarg_rep_based_pf(__rte_unused const char *key,
 			       const char *value, void *opaque_arg)
 {
 	struct bnxt_representor *vfr_bp = opaque_arg;
-	unsigned long rep_based_pf;
-	char *end = NULL;
+	uint64_t rep_based_pf;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6135,9 +6113,7 @@ bnxt_parse_devarg_rep_based_pf(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	rep_based_pf = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (rep_based_pf == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &rep_based_pf) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_based_pf "
 			    "devargs.");
@@ -6163,8 +6139,7 @@ bnxt_parse_devarg_rep_q_r2f(__rte_unused const char *key,
 			    const char *value, void *opaque_arg)
 {
 	struct bnxt_representor *vfr_bp = opaque_arg;
-	unsigned long rep_q_r2f;
-	char *end = NULL;
+	uint64_t rep_q_r2f;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6173,9 +6148,7 @@ bnxt_parse_devarg_rep_q_r2f(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	rep_q_r2f = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (rep_q_r2f == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &rep_q_r2f) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_q_r2f "
 			    "devargs.");
@@ -6200,8 +6173,7 @@ bnxt_parse_devarg_rep_q_f2r(__rte_unused const char *key,
 			    const char *value, void *opaque_arg)
 {
 	struct bnxt_representor *vfr_bp = opaque_arg;
-	unsigned long rep_q_f2r;
-	char *end = NULL;
+	uint64_t rep_q_f2r;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6210,9 +6182,7 @@ bnxt_parse_devarg_rep_q_f2r(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	rep_q_f2r = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (rep_q_f2r == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &rep_q_f2r) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_q_f2r "
 			    "devargs.");
@@ -6237,8 +6207,7 @@ bnxt_parse_devarg_rep_fc_r2f(__rte_unused const char *key,
 			     const char *value, void *opaque_arg)
 {
 	struct bnxt_representor *vfr_bp = opaque_arg;
-	unsigned long rep_fc_r2f;
-	char *end = NULL;
+	uint64_t rep_fc_r2f;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6247,9 +6216,7 @@ bnxt_parse_devarg_rep_fc_r2f(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	rep_fc_r2f = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (rep_fc_r2f == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &rep_fc_r2f) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_fc_r2f "
 			    "devargs.");
@@ -6264,7 +6231,7 @@ bnxt_parse_devarg_rep_fc_r2f(__rte_unused const char *key,
 
 	vfr_bp->flags |= BNXT_REP_FC_R2F_VALID;
 	vfr_bp->rep_fc_r2f = rep_fc_r2f;
-	PMD_DRV_LOG_LINE(INFO, "rep-fc-r2f = %lu", rep_fc_r2f);
+	PMD_DRV_LOG_LINE(INFO, "rep-fc-r2f = %u", (unsigned int)rep_fc_r2f);
 
 	return 0;
 }
@@ -6274,8 +6241,7 @@ bnxt_parse_devarg_rep_fc_f2r(__rte_unused const char *key,
 			     const char *value, void *opaque_arg)
 {
 	struct bnxt_representor *vfr_bp = opaque_arg;
-	unsigned long rep_fc_f2r;
-	char *end = NULL;
+	uint64_t rep_fc_f2r;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6284,9 +6250,7 @@ bnxt_parse_devarg_rep_fc_f2r(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	rep_fc_f2r = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (rep_fc_f2r == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &rep_fc_f2r) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_fc_f2r "
 			    "devargs.");
@@ -6301,7 +6265,7 @@ bnxt_parse_devarg_rep_fc_f2r(__rte_unused const char *key,
 
 	vfr_bp->flags |= BNXT_REP_FC_F2R_VALID;
 	vfr_bp->rep_fc_f2r = rep_fc_f2r;
-	PMD_DRV_LOG_LINE(INFO, "rep-fc-f2r = %lu", rep_fc_f2r);
+	PMD_DRV_LOG_LINE(INFO, "rep-fc-f2r = %u", (unsigned int)rep_fc_f2r);
 
 	return 0;
 }
@@ -6311,8 +6275,7 @@ bnxt_parse_devarg_representor_mode(__rte_unused const char *key,
 				   const char *value, void *opaque_arg)
 {
 	struct bnxt *bp = opaque_arg;
-	unsigned long rep;
-	char *end = NULL;
+	uint64_t rep;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6320,9 +6283,7 @@ bnxt_parse_devarg_representor_mode(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	rep = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (rep == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &rep) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 				 "Invalid param passed to rep mode in devargs");
 		return -EINVAL;
@@ -6340,8 +6301,7 @@ bnxt_parse_devarg_scalar_mode(__rte_unused const char *key,
 			      const char *value, void *opaque_arg)
 {
 	struct bnxt *bp = opaque_arg;
-	unsigned long rep;
-	char *end = NULL;
+	uint64_t rep;
 
 	if (!value || !opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
@@ -6349,9 +6309,7 @@ bnxt_parse_devarg_scalar_mode(__rte_unused const char *key,
 		return -EINVAL;
 	}
 
-	rep = strtoul(value, &end, 10);
-	if (end == NULL || *end != '\0' ||
-	    (rep == ULONG_MAX && errno == ERANGE)) {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &rep) < 0) {
 		PMD_DRV_LOG_LINE(ERR,
 				 "Invalid param passed to scalar mode in devargs");
 		return -EINVAL;
