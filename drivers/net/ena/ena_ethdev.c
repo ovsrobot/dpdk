@@ -48,8 +48,6 @@
 
 #define BITS_PER_TYPE(type) (sizeof(type) * BITS_PER_BYTE)
 
-#define DECIMAL_BASE 10
-
 #define MAX_WIDE_LLQ_DEPTH_UNSUPPORTED 0
 
 #define ENA_TS_OFFSET_UNSET -1
@@ -321,9 +319,6 @@ static int ena_xstats_get_by_id(struct rte_eth_dev *dev,
 static int ena_process_llq_policy_devarg(const char *key,
 			const char *value,
 			void *opaque);
-static int ena_process_bool_devarg(const char *key,
-				   const char *value,
-				   void *opaque);
 static int ena_parse_devargs(struct ena_adapter *adapter,
 			     struct rte_devargs *devargs);
 static void ena_copy_customer_metrics(struct ena_adapter *adapter,
@@ -3841,11 +3836,9 @@ static int ena_process_uint_devarg(const char *key,
 				  void *opaque)
 {
 	struct ena_adapter *adapter = opaque;
-	char *str_end;
 	uint64_t uint64_value;
 
-	uint64_value = strtoull(value, &str_end, DECIMAL_BASE);
-	if (value == str_end) {
+	if (rte_kvargs_to_uint(value, 0, UINT64_MAX, &uint64_value) < 0) {
 		PMD_INIT_LOG_LINE(ERR,
 			"Invalid value for key '%s'. Only uint values are accepted.",
 			key);
@@ -3890,44 +3883,18 @@ static int ena_process_uint_devarg(const char *key,
 static int ena_process_llq_policy_devarg(const char *key, const char *value, void *opaque)
 {
 	struct ena_adapter *adapter = opaque;
-	uint32_t policy;
+	uint64_t policy;
 
-	policy = strtoul(value, NULL, DECIMAL_BASE);
-	if (policy < ENA_LLQ_POLICY_LAST) {
-		adapter->llq_header_policy = policy;
-	} else {
+	if (rte_kvargs_to_uint(value, 0, ENA_LLQ_POLICY_LAST - 1, &policy) < 0) {
 		PMD_INIT_LOG_LINE(ERR,
 			"Invalid value: '%s' for key '%s'. valid [0-3]",
 			value, key);
 		return -EINVAL;
 	}
+	adapter->llq_header_policy = policy;
 	PMD_INIT_LOG_LINE(INFO,
 		"LLQ policy is %u [0 - disabled, 1 - device recommended, 2 - normal, 3 - large]",
 		adapter->llq_header_policy);
-
-	return 0;
-}
-
-static int ena_process_bool_devarg(const char *key, const char *value, void *opaque)
-{
-	struct ena_adapter *adapter = opaque;
-	bool bool_value;
-
-	/* Parse the value. */
-	if (strcmp(value, "1") == 0) {
-		bool_value = true;
-	} else if (strcmp(value, "0") == 0) {
-		bool_value = false;
-	} else {
-		PMD_INIT_LOG_LINE(ERR,
-			"Invalid value: '%s' for key '%s'. Accepted: '0' or '1'",
-			value, key);
-		return -EINVAL;
-	}
-
-	/* Now, assign it to the proper adapter field. */
-	if (strcmp(key, ENA_DEVARG_ENABLE_FRAG_BYPASS) == 0)
-		adapter->enable_frag_bypass = bool_value;
 
 	return 0;
 }
@@ -3965,8 +3932,8 @@ static int ena_parse_devargs(struct ena_adapter *adapter, struct rte_devargs *de
 		ena_process_uint_devarg, adapter);
 	if (rc != 0)
 		goto exit;
-	rc = rte_kvargs_process(kvlist, ENA_DEVARG_ENABLE_FRAG_BYPASS,
-		ena_process_bool_devarg, adapter);
+	rc = rte_kvargs_process_opt(kvlist, ENA_DEVARG_ENABLE_FRAG_BYPASS,
+		rte_kvargs_handle_bool, &adapter->enable_frag_bypass);
 	if (rc != 0)
 		goto exit;
 
