@@ -3,14 +3,27 @@
  * Copyright(c) 2014 6WIND S.A.
  */
 
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <limits.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <eal_export.h>
+#include <rte_common.h>
+#include <rte_log.h>
 #include <rte_os_shim.h>
 
 #include "rte_kvargs.h"
+
+RTE_LOG_REGISTER_DEFAULT(kvargs_logtype, INFO);
+#define RTE_LOGTYPE_KVARGS kvargs_logtype
+
+#define KVARGS_LOG(level, ...) \
+	RTE_LOG_LINE(level, KVARGS, __VA_ARGS__)
 
 /*
  * Receive a string with a list of arguments following the pattern
@@ -308,4 +321,431 @@ rte_kvargs_parse_delim(const char *args, const char * const valid_keys[],
 
 	free(copy);
 	return kvlist;
+}
+
+/*
+ * Determine the base of a numeric value and skip over its prefix.
+ *
+ * Only decimal and 0x/0X hexadecimal are recognized. Octal is deliberately
+ * not supported: no driver documents it, and silently reading "010" as eight
+ * has been a recurring source of surprise.
+ *
+ * Returns the base, and advances *str past the "0x" prefix if there is one.
+ * Returns 0 if what follows the prefix is a second one: strtoull() would
+ * strip that itself, making "0x0x10" sixteen rather than the garbage it is.
+ */
+static int
+kvargs_get_base(const char **str)
+{
+	const char *s = *str;
+
+	if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X') &&
+	    isxdigit((unsigned char)s[2])) {
+		s += 2;
+		if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X'))
+			return 0;
+		*str = s;
+		return 16;
+	}
+
+	return 10;
+}
+
+/* Skip trailing white space, and tell whether anything else is left. */
+static bool
+kvargs_at_end(const char *str)
+{
+	while (isspace((unsigned char)*str))
+		str++;
+
+	return *str == '\0';
+}
+
+/*
+ * Consume an optional sign, and report whether it was negative.
+ *
+ * strtoull() skips white space and a sign of its own, and negates on '-',
+ * so the sign has to be taken away from it: it is handled here and anything
+ * that follows must be a digit or an 0x prefix. That rejects "+-1" and
+ * "- 1", which strtoull() would otherwise accept.
+ */
+static bool
+kvargs_get_sign(const char **str)
+{
+	const char *s = *str;
+	bool negative;
+
+	while (isspace((unsigned char)*s))
+		s++;
+
+	negative = (*s == '-');
+	if (*s == '-' || *s == '+')
+		s++;
+
+	*str = s;
+	return negative;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_to_uint, 26.11)
+int
+rte_kvargs_to_uint(const char *value, uint64_t min, uint64_t max,
+		   uint64_t *result)
+{
+	const char *str = value;
+	unsigned long long val;
+	char *endptr;
+	int base;
+
+	if (str == NULL || result == NULL)
+		return -EINVAL;
+
+	/* "-1" would otherwise be silently wrapped around to UINT64_MAX. */
+	if (kvargs_get_sign(&str))
+		return -EINVAL;
+
+	base = kvargs_get_base(&str);
+	if (base == 0)
+		return -EINVAL;	/* doubled 0x prefix */
+
+	/* Nothing may sit between the sign and the digits. */
+	if (!isxdigit((unsigned char)*str))
+		return -EINVAL;
+
+	errno = 0;
+	val = strtoull(str, &endptr, base);
+	if (endptr == str)
+		return -EINVAL;	/* no digits in this base */
+	if (errno == ERANGE)
+		return -ERANGE;
+	if (errno != 0)
+		return -EINVAL;
+	if (!kvargs_at_end(endptr))
+		return -EINVAL;	/* trailing garbage */
+
+	if (val < min || val > max)
+		return -ERANGE;
+
+	*result = val;
+	return 0;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_to_int, 26.11)
+int
+rte_kvargs_to_int(const char *value, int64_t min, int64_t max, int64_t *result)
+{
+	const char *str = value;
+	unsigned long long mag;
+	char *endptr;
+	bool negative;
+	int64_t val;
+	int base;
+
+	if (str == NULL || result == NULL)
+		return -EINVAL;
+
+	negative = kvargs_get_sign(&str);
+	base = kvargs_get_base(&str);
+	if (base == 0)
+		return -EINVAL;	/* doubled 0x prefix */
+
+	/* Nothing may sit between the sign and the digits. */
+	if (!isxdigit((unsigned char)*str))
+		return -EINVAL;
+
+	/*
+	 * The sign is consumed above, so that the 0x prefix can be found
+	 * behind it, and the magnitude is parsed unsigned. Letting strtoll()
+	 * do the whole job instead would reject INT64_MIN, whose magnitude is
+	 * one past INT64_MAX.
+	 */
+	errno = 0;
+	mag = strtoull(str, &endptr, base);
+	if (endptr == str)
+		return -EINVAL;
+	if (errno == ERANGE)
+		return -ERANGE;
+	if (errno != 0)
+		return -EINVAL;
+	if (!kvargs_at_end(endptr))
+		return -EINVAL;
+
+	if (negative) {
+		if (mag > (unsigned long long)INT64_MAX + 1)
+			return -ERANGE;
+		/* Negate in unsigned space; -INT64_MIN would overflow. */
+		val = (int64_t)(-(uint64_t)mag);
+	} else {
+		if (mag > INT64_MAX)
+			return -ERANGE;
+		val = (int64_t)mag;
+	}
+
+	if (val < min || val > max)
+		return -ERANGE;
+
+	*result = val;
+	return 0;
+}
+
+/*
+ * The typed handlers below share this shape: convert with a range matching
+ * the target type, then store. The target is written only on success, so a
+ * caller-supplied default survives a bad argument.
+ */
+static int
+kvargs_store_uint(const char *key, const char *value, void *opaque,
+		  uint64_t max, uint64_t *val)
+{
+	int ret;
+
+	if (opaque == NULL)
+		return -EINVAL;
+
+	ret = rte_kvargs_to_uint(value, 0, max, val);
+	if (ret < 0)
+		KVARGS_LOG(ERR, "invalid value \"%s\" for key \"%s\", expected 0..%" PRIu64,
+			   value != NULL ? value : "", key != NULL ? key : "", max);
+
+	return ret;
+}
+
+static int
+kvargs_store_int(const char *key, const char *value, void *opaque,
+		 int64_t min, int64_t max, int64_t *val)
+{
+	int ret;
+
+	if (opaque == NULL)
+		return -EINVAL;
+
+	ret = rte_kvargs_to_int(value, min, max, val);
+	if (ret < 0)
+		KVARGS_LOG(ERR, "invalid value \"%s\" for key \"%s\", expected %" PRId64 "..%" PRId64,
+			   value != NULL ? value : "", key != NULL ? key : "",
+			   min, max);
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_u8, 26.11)
+int
+rte_kvargs_handle_u8(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_uint(key, value, opaque, UINT8_MAX, &val);
+	if (ret == 0)
+		*(uint8_t *)opaque = (uint8_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_u16, 26.11)
+int
+rte_kvargs_handle_u16(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_uint(key, value, opaque, UINT16_MAX, &val);
+	if (ret == 0)
+		*(uint16_t *)opaque = (uint16_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_u32, 26.11)
+int
+rte_kvargs_handle_u32(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_uint(key, value, opaque, UINT32_MAX, &val);
+	if (ret == 0)
+		*(uint32_t *)opaque = (uint32_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_u64, 26.11)
+int
+rte_kvargs_handle_u64(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_uint(key, value, opaque, UINT64_MAX, &val);
+	if (ret == 0)
+		*(uint64_t *)opaque = (uint64_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_uint, 26.11)
+int
+rte_kvargs_handle_uint(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_uint(key, value, opaque, UINT_MAX, &val);
+	if (ret == 0)
+		*(unsigned int *)opaque = (unsigned int)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_size, 26.11)
+int
+rte_kvargs_handle_size(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_uint(key, value, opaque, SIZE_MAX, &val);
+	if (ret == 0)
+		*(size_t *)opaque = (size_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_i8, 26.11)
+int
+rte_kvargs_handle_i8(const char *key, const char *value, void *opaque)
+{
+	int64_t val;
+	int ret;
+
+	ret = kvargs_store_int(key, value, opaque, INT8_MIN, INT8_MAX, &val);
+	if (ret == 0)
+		*(int8_t *)opaque = (int8_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_i16, 26.11)
+int
+rte_kvargs_handle_i16(const char *key, const char *value, void *opaque)
+{
+	int64_t val;
+	int ret;
+
+	ret = kvargs_store_int(key, value, opaque, INT16_MIN, INT16_MAX, &val);
+	if (ret == 0)
+		*(int16_t *)opaque = (int16_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_i32, 26.11)
+int
+rte_kvargs_handle_i32(const char *key, const char *value, void *opaque)
+{
+	int64_t val;
+	int ret;
+
+	ret = kvargs_store_int(key, value, opaque, INT32_MIN, INT32_MAX, &val);
+	if (ret == 0)
+		*(int32_t *)opaque = (int32_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_i64, 26.11)
+int
+rte_kvargs_handle_i64(const char *key, const char *value, void *opaque)
+{
+	int64_t val;
+	int ret;
+
+	ret = kvargs_store_int(key, value, opaque, INT64_MIN, INT64_MAX, &val);
+	if (ret == 0)
+		*(int64_t *)opaque = (int64_t)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_int, 26.11)
+int
+rte_kvargs_handle_int(const char *key, const char *value, void *opaque)
+{
+	int64_t val;
+	int ret;
+
+	ret = kvargs_store_int(key, value, opaque, INT_MIN, INT_MAX, &val);
+	if (ret == 0)
+		*(int *)opaque = (int)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_long, 26.11)
+int
+rte_kvargs_handle_long(const char *key, const char *value, void *opaque)
+{
+	int64_t val;
+	int ret;
+
+	ret = kvargs_store_int(key, value, opaque, LONG_MIN, LONG_MAX, &val);
+	if (ret == 0)
+		*(long *)opaque = (long)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_ulong, 26.11)
+int
+rte_kvargs_handle_ulong(const char *key, const char *value, void *opaque)
+{
+	uint64_t val;
+	int ret;
+
+	ret = kvargs_store_uint(key, value, opaque, ULONG_MAX, &val);
+	if (ret == 0)
+		*(unsigned long *)opaque = (unsigned long)val;
+
+	return ret;
+}
+
+static const char * const kvargs_true[] = { "1", "y", "yes", "on", "true" };
+static const char * const kvargs_false[] = { "0", "n", "no", "off", "false" };
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_bool, 26.11)
+int
+rte_kvargs_handle_bool(const char *key, const char *value, void *opaque)
+{
+	unsigned int i;
+
+	if (opaque == NULL)
+		return -EINVAL;
+
+	/* A bare key means true; only rte_kvargs_process_opt() allows it.
+	 * An empty value is a blank value, not a missing one, so it is
+	 * rejected below.
+	 */
+	if (value == NULL) {
+		*(bool *)opaque = true;
+		return 0;
+	}
+
+	for (i = 0; i < RTE_DIM(kvargs_true); i++) {
+		if (strcasecmp(value, kvargs_true[i]) == 0) {
+			*(bool *)opaque = true;
+			return 0;
+		}
+	}
+
+	for (i = 0; i < RTE_DIM(kvargs_false); i++) {
+		if (strcasecmp(value, kvargs_false[i]) == 0) {
+			*(bool *)opaque = false;
+			return 0;
+		}
+	}
+
+	KVARGS_LOG(ERR, "invalid value \"%s\" for key \"%s\", expected a boolean",
+		   value, key != NULL ? key : "");
+
+	return -EINVAL;
 }
