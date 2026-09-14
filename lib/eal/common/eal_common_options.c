@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <errno.h>
+#include <stdint.h>
 #include <getopt.h>
 #include <sys/queue.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
@@ -29,6 +30,7 @@
 #include <rte_tailq.h>
 #include <rte_version.h>
 #include <rte_devargs.h>
+#include <rte_kvargs.h>
 #include <rte_memcpy.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <rte_telemetry.h>
@@ -2210,23 +2212,34 @@ eal_parse_args(void)
 
 	/* memory options */
 	if (args.memory_size != NULL) {
-		int_cfg->memory = atoi(args.memory_size);
-		int_cfg->memory *= 1024ULL;
-		int_cfg->memory *= 1024ULL;
+		uint64_t mem;
+
+		/* value is in megabytes, and must not overflow when scaled */
+		if (rte_kvargs_to_uint(args.memory_size, 0,
+				       SIZE_MAX / (1024 * 1024), &mem) < 0) {
+			EAL_LOG(ERR, "invalid memory size parameter");
+			return -1;
+		}
+		int_cfg->memory = (size_t)mem * 1024 * 1024;
 	}
 	if (args.memory_channels != NULL) {
-		int_cfg->force_nchannel = atoi(args.memory_channels);
-		if (int_cfg->force_nchannel == 0) {
+		uint64_t channels;
+
+		if (rte_kvargs_to_uint(args.memory_channels, 1, UINT_MAX,
+				       &channels) < 0) {
 			EAL_LOG(ERR, "invalid memory channel parameter");
 			return -1;
 		}
+		int_cfg->force_nchannel = channels;
 	}
 	if (args.memory_ranks != NULL) {
-		int_cfg->force_nrank = atoi(args.memory_ranks);
-		if (int_cfg->force_nrank == 0 || int_cfg->force_nrank > 16) {
+		uint64_t ranks;
+
+		if (rte_kvargs_to_uint(args.memory_ranks, 1, 16, &ranks) < 0) {
 			EAL_LOG(ERR, "invalid memory rank parameter");
 			return -1;
 		}
+		int_cfg->force_nrank = ranks;
 	}
 	if (args.no_huge) {
 		int_cfg->no_hugetlbfs = 1;
