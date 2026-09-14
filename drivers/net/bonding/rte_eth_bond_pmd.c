@@ -3869,7 +3869,7 @@ bond_probe(struct rte_vdev_device *dev)
 	arg_count = rte_kvargs_count(kvlist, PMD_BOND_SOCKET_ID_KVARG);
 	if (arg_count == 1) {
 		if (rte_kvargs_process(kvlist, PMD_BOND_SOCKET_ID_KVARG,
-				&bond_ethdev_parse_socket_id_kvarg, &socket_id)
+				rte_kvargs_handle_socket_id, &socket_id)
 				!= 0) {
 			RTE_BOND_LOG(ERR, "Invalid socket Id specified for "
 					"bonding device %s", name);
@@ -4207,7 +4207,7 @@ bond_ethdev_configure(struct rte_eth_dev *dev)
 
 		if (rte_kvargs_process(kvlist,
 				       PMD_BOND_LSC_POLL_PERIOD_KVARG,
-				       &bond_ethdev_parse_time_ms_kvarg,
+				       rte_kvargs_handle_u32,
 				       &lsc_poll_interval_ms) < 0) {
 			RTE_BOND_LOG(INFO,
 				     "Invalid lsc polling interval value specified for bonding"
@@ -4236,7 +4236,7 @@ bond_ethdev_configure(struct rte_eth_dev *dev)
 
 		if (rte_kvargs_process(kvlist,
 				       PMD_BOND_LINK_UP_PROP_DELAY_KVARG,
-				       &bond_ethdev_parse_time_ms_kvarg,
+				       rte_kvargs_handle_u32,
 				       &link_up_delay_ms) < 0) {
 			RTE_BOND_LOG(INFO,
 				     "Invalid link up propagation delay value specified for"
@@ -4266,7 +4266,7 @@ bond_ethdev_configure(struct rte_eth_dev *dev)
 
 		if (rte_kvargs_process(kvlist,
 				       PMD_BOND_LINK_DOWN_PROP_DELAY_KVARG,
-				       &bond_ethdev_parse_time_ms_kvarg,
+				       rte_kvargs_handle_u32,
 				       &link_down_delay_ms) < 0) {
 			RTE_BOND_LOG(INFO,
 				     "Invalid link down propagation delay value specified for"
