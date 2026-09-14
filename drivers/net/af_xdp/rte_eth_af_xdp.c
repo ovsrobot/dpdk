@@ -3,6 +3,8 @@
  */
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
@@ -2002,16 +2004,20 @@ static int
 parse_budget_arg(const char *key __rte_unused,
 		  const char *value, void *extra_args)
 {
-	int *i = (int *)extra_args;
-	char *end;
+	int64_t val;
+	int ret;
 
-	*i = strtol(value, &end, 10);
-	if (*i < 0 || *i > UINT16_MAX) {
-		AF_XDP_LOG_LINE(ERR, "Invalid busy_budget %i, must be >= 0 and <= %u",
-				*i, UINT16_MAX);
+	if (extra_args == NULL)
 		return -EINVAL;
+
+	ret = rte_kvargs_to_int(value, 0, UINT16_MAX, &val);
+	if (ret < 0) {
+		AF_XDP_LOG_LINE(ERR, "Invalid busy_budget %s, must be >= 0 and <= %u",
+				value == NULL ? "" : value, UINT16_MAX);
+		return ret;
 	}
 
+	*(int *)extra_args = val;
 	return 0;
 }
 
@@ -2020,15 +2026,19 @@ static int
 parse_integer_arg(const char *key __rte_unused,
 		  const char *value, void *extra_args)
 {
-	int *i = (int *)extra_args;
-	char *end;
+	int64_t val;
+	int ret;
 
-	*i = strtol(value, &end, 10);
-	if (*i < 0) {
-		AF_XDP_LOG_LINE(ERR, "Argument has to be positive.");
+	if (extra_args == NULL)
 		return -EINVAL;
+
+	ret = rte_kvargs_to_int(value, 0, INT_MAX, &val);
+	if (ret < 0) {
+		AF_XDP_LOG_LINE(ERR, "Argument has to be positive.");
+		return ret;
 	}
 
+	*(int *)extra_args = val;
 	return 0;
 }
 
@@ -2144,9 +2154,9 @@ xdp_get_channels_info(const char *if_name, int *max_queues,
 
 static int
 parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
-		 int *queue_cnt, int *shared_umem, char *prog_path,
-		 int *busy_budget, int *force_copy, int *use_cni,
-		 int *use_pinned_map, char *dp_path, uint32_t *xdp_mode)
+		 int *queue_cnt, bool *shared_umem, char *prog_path,
+		 int *busy_budget, bool *force_copy, bool *use_cni,
+		 bool *use_pinned_map, char *dp_path, uint32_t *xdp_mode)
 {
 	int ret;
 
@@ -2167,8 +2177,8 @@ parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
 		goto free_kvlist;
 	}
 
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_SHARED_UMEM_ARG,
-				&parse_integer_arg, shared_umem);
+	ret = rte_kvargs_process_opt(kvlist, ETH_AF_XDP_SHARED_UMEM_ARG,
+				rte_kvargs_handle_bool, shared_umem);
 	if (ret < 0)
 		goto free_kvlist;
 
@@ -2182,18 +2192,18 @@ parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
 	if (ret < 0)
 		goto free_kvlist;
 
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_FORCE_COPY_ARG,
-				&parse_integer_arg, force_copy);
+	ret = rte_kvargs_process_opt(kvlist, ETH_AF_XDP_FORCE_COPY_ARG,
+				rte_kvargs_handle_bool, force_copy);
 	if (ret < 0)
 		goto free_kvlist;
 
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_USE_CNI_ARG,
-				 &parse_integer_arg, use_cni);
+	ret = rte_kvargs_process_opt(kvlist, ETH_AF_XDP_USE_CNI_ARG,
+				     rte_kvargs_handle_bool, use_cni);
 	if (ret < 0)
 		goto free_kvlist;
 
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_USE_PINNED_MAP_ARG,
-				 &parse_integer_arg, use_pinned_map);
+	ret = rte_kvargs_process_opt(kvlist, ETH_AF_XDP_USE_PINNED_MAP_ARG,
+				     rte_kvargs_handle_bool, use_pinned_map);
 	if (ret < 0)
 		goto free_kvlist;
 
@@ -2246,9 +2256,9 @@ error:
 
 static struct rte_eth_dev *
 init_internals(struct rte_vdev_device *dev, const char *if_name,
-	       int start_queue_idx, int queue_cnt, int shared_umem,
-	       const char *prog_path, int busy_budget, int force_copy,
-	       int use_cni, int use_pinned_map, const char *dp_path, uint32_t xdp_mode)
+	       int start_queue_idx, int queue_cnt, bool shared_umem,
+	       const char *prog_path, int busy_budget, bool force_copy,
+	       bool use_cni, bool use_pinned_map, const char *dp_path, uint32_t xdp_mode)
 {
 	const char *name = rte_vdev_device_name(dev);
 	const unsigned int numa_node = dev->device.numa_node;
@@ -2466,12 +2476,12 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 	char if_name[IFNAMSIZ] = {'\0'};
 	int xsk_start_queue_idx = ETH_AF_XDP_DFLT_START_QUEUE_IDX;
 	int xsk_queue_cnt = ETH_AF_XDP_DFLT_QUEUE_COUNT;
-	int shared_umem = 0;
+	bool shared_umem = false;
 	char prog_path[PATH_MAX] = {'\0'};
 	int busy_budget = -1, ret;
-	int force_copy = 0;
-	int use_cni = 0;
-	int use_pinned_map = 0;
+	bool force_copy = false;
+	bool use_cni = false;
+	bool use_pinned_map = false;
 	uint32_t xdp_mode = 0;
 	char dp_path[PATH_MAX] = {'\0'};
 	struct rte_eth_dev *eth_dev = NULL;
