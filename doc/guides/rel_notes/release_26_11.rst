@@ -61,6 +61,7 @@ New Features
   pushed and popped in LIFO manner, but objects within each bulk are not ordered
   as expected by a stack.
   Furthermore, it is not strictly bounded by its size, but might hold more objects.
+* mempool: Added "pile" driver, using the lock-free "pile" stack-like implementation.
 
 Removed Items
 -------------
