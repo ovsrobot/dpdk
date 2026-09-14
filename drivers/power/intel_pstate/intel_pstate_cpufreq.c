@@ -108,29 +108,12 @@ out:	close(fd);
 static int
 power_init_for_setting_freq(struct pstate_power_info *pi)
 {
-	FILE *f_base = NULL, *f_base_min = NULL, *f_base_max = NULL,
-	     *f_min = NULL, *f_max = NULL;
+	FILE *f_min = NULL, *f_max = NULL;
 	uint32_t base_ratio, base_min_ratio, base_max_ratio;
 	uint64_t max_non_turbo = 0;
 	int ret;
 
-	/* open all files we expect to have open */
-	open_core_sysfs_file(&f_base_max, "r", POWER_SYSFILE_BASE_MAX_FREQ,
-			pi->lcore_id);
-	if (f_base_max == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_BASE_MAX_FREQ);
-		goto err;
-	}
-
-	open_core_sysfs_file(&f_base_min, "r", POWER_SYSFILE_BASE_MIN_FREQ,
-			pi->lcore_id);
-	if (f_base_min == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_BASE_MIN_FREQ);
-		goto err;
-	}
-
+	/* open the files that are kept open for setting the frequency */
 	open_core_sysfs_file(&f_min, "rw+", POWER_SYSFILE_MIN_FREQ,
 			pi->lcore_id);
 	if (f_min == NULL) {
@@ -147,12 +130,9 @@ power_init_for_setting_freq(struct pstate_power_info *pi)
 		goto err;
 	}
 
-	open_core_sysfs_file(&f_base, "r", POWER_SYSFILE_BASE_FREQ,
-			pi->lcore_id);
-	/* base ratio file may not exist in some kernels, so no error check */
-
 	/* read base max ratio */
-	ret = read_core_sysfs_u32(f_base_max, &base_max_ratio);
+	ret = power_sysfs_read_u32(&base_max_ratio, POWER_SYSFILE_BASE_MAX_FREQ,
+			pi->lcore_id);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_BASE_MAX_FREQ);
@@ -160,24 +140,18 @@ power_init_for_setting_freq(struct pstate_power_info *pi)
 	}
 
 	/* read base min ratio */
-	ret = read_core_sysfs_u32(f_base_min, &base_min_ratio);
+	ret = power_sysfs_read_u32(&base_min_ratio, POWER_SYSFILE_BASE_MIN_FREQ,
+			pi->lcore_id);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_BASE_MIN_FREQ);
 		goto err;
 	}
 
-	/* base ratio may not exist */
-	if (f_base != NULL) {
-		ret = read_core_sysfs_u32(f_base, &base_ratio);
-		if (ret < 0) {
-			POWER_LOG(ERR, "Failed to read %s",
-					POWER_SYSFILE_BASE_FREQ);
-			goto err;
-		}
-	} else {
+	/* base ratio file may not exist in some kernels, so no error check */
+	if (power_sysfs_read_u32(&base_ratio, POWER_SYSFILE_BASE_FREQ,
+			pi->lcore_id) < 0)
 		base_ratio = 0;
-	}
 
 	/* convert ratios to bins */
 	base_max_ratio /= BUS_FREQ;
@@ -222,20 +196,10 @@ power_init_for_setting_freq(struct pstate_power_info *pi)
 	pi->core_base_freq = base_ratio * BUS_FREQ;
 
 out:
-	if (f_base != NULL)
-		fclose(f_base);
-	fclose(f_base_max);
-	fclose(f_base_min);
 	/* f_min and f_max are stored, no need to close */
 	return 0;
 
 err:
-	if (f_base != NULL)
-		fclose(f_base);
-	if (f_base_min != NULL)
-		fclose(f_base_min);
-	if (f_base_max != NULL)
-		fclose(f_base_max);
 	if (f_min != NULL)
 		fclose(f_min);
 	if (f_max != NULL)
@@ -366,38 +330,22 @@ power_set_governor_original(struct pstate_power_info *pi)
 static int
 power_get_available_freqs(struct pstate_power_info *pi)
 {
-	FILE *f_min = NULL, *f_max = NULL;
-	int ret = -1;
 	uint32_t sys_min_freq = 0, sys_max_freq = 0, base_max_freq = 0;
 	int config_min_freq, config_max_freq;
 	uint32_t i, num_freqs = 0;
-
-	/* open all files */
-	open_core_sysfs_file(&f_max, "r", POWER_SYSFILE_BASE_MAX_FREQ,
-			pi->lcore_id);
-	if (f_max == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_BASE_MAX_FREQ);
-		goto out;
-	}
-
-	open_core_sysfs_file(&f_min, "r", POWER_SYSFILE_BASE_MIN_FREQ,
-			pi->lcore_id);
-	if (f_min == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_BASE_MIN_FREQ);
-		goto out;
-	}
+	int ret = -1;
 
 	/* read base ratios */
-	ret = read_core_sysfs_u32(f_max, &sys_max_freq);
+	ret = power_sysfs_read_u32(&sys_max_freq, POWER_SYSFILE_BASE_MAX_FREQ,
+			pi->lcore_id);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_BASE_MAX_FREQ);
 		goto out;
 	}
 
-	ret = read_core_sysfs_u32(f_min, &sys_min_freq);
+	ret = power_sysfs_read_u32(&sys_min_freq, POWER_SYSFILE_BASE_MIN_FREQ,
+			pi->lcore_id);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_BASE_MIN_FREQ);
@@ -467,31 +415,18 @@ power_get_available_freqs(struct pstate_power_info *pi)
 			num_freqs, pi->lcore_id);
 
 out:
-	if (f_min != NULL)
-		fclose(f_min);
-	if (f_max != NULL)
-		fclose(f_max);
-
 	return ret;
 }
 
 static int
 power_get_cur_idx(struct pstate_power_info *pi)
 {
-	FILE *f_cur;
-	int ret = -1;
 	uint32_t sys_cur_freq = 0;
 	unsigned int i;
+	int ret = -1;
 
-	open_core_sysfs_file(&f_cur, "r", POWER_SYSFILE_CUR_FREQ,
+	ret = power_sysfs_read_u32(&sys_cur_freq, POWER_SYSFILE_CUR_FREQ,
 			pi->lcore_id);
-	if (f_cur == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_CUR_FREQ);
-		goto fail;
-	}
-
-	ret = read_core_sysfs_u32(f_cur, &sys_cur_freq);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_CUR_FREQ);
@@ -517,8 +452,6 @@ power_get_cur_idx(struct pstate_power_info *pi)
 
 	ret = 0;
 fail:
-	if (f_cur != NULL)
-		fclose(f_cur);
 	return ret;
 }
 

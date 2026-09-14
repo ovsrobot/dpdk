@@ -3,14 +3,17 @@
  */
 
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include <eal_export.h>
 #include <rte_log.h>
 #include <rte_string_fns.h>
 #include <rte_lcore.h>
+#include <rte_sysfs.h>
 
 #include "power_common.h"
 
@@ -28,33 +31,15 @@ cpufreq_check_scaling_driver(const char *driver_name)
 {
 	unsigned int lcore_id = 0; /* always check core 0 */
 	char readbuf[PATH_MAX];
-	size_t end_idx;
-	char *s;
-	FILE *f;
 
 	/*
 	 * Check if scaling driver matches what we expect.
+	 * If there is no driver at all, or it can't be read,
+	 * consider the system unsupported.
 	 */
-	open_core_sysfs_file(&f, "r", POWER_SYSFILE_SCALING_DRIVER,
-			lcore_id);
-	/* if there's no driver at all, bail out */
-	if (f == NULL)
+	if (rte_sysfs_parse_string(readbuf, sizeof(readbuf),
+			POWER_SYSFILE_SCALING_DRIVER, lcore_id) < 0)
 		return 0;
-
-	s = fgets(readbuf, sizeof(readbuf), f);
-	/* don't need it any more */
-	fclose(f);
-
-	/* if we can't read it, consider unsupported */
-	if (s == NULL)
-		return 0;
-
-	/* when read from sysfs, driver name has an extra newline at the end */
-	end_idx = strnlen(readbuf, sizeof(readbuf));
-	if (end_idx > 0 && readbuf[end_idx - 1] == '\n') {
-		end_idx--;
-		readbuf[end_idx] = '\0';
-	}
 
 	/* does the driver name match? */
 	if (strncmp(readbuf, driver_name, sizeof(readbuf)) != 0)
@@ -84,6 +69,29 @@ open_core_sysfs_file(FILE **f, const char *mode, const char *format, ...)
 	if (tmpf == NULL)
 		return -1;
 
+	return 0;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(power_sysfs_read_u32)
+int
+power_sysfs_read_u32(uint32_t *val, const char *format, ...)
+{
+	unsigned long tmp;
+	va_list ap;
+	int ret;
+
+	va_start(ap, format);
+	ret = rte_sysfs_vparse_uint(&tmp, format, ap);
+	va_end(ap);
+	if (ret < 0)
+		return -1;
+
+	if (tmp > UINT32_MAX) {
+		POWER_LOG(ERR, "sysfs value does not fit in 32 bits");
+		return -1;
+	}
+
+	*val = tmp;
 	return 0;
 }
 

@@ -106,49 +106,27 @@ power_set_governor_userspace(struct cppc_power_info *pi)
 static int
 power_check_turbo(struct cppc_power_info *pi)
 {
-	FILE *f_nom = NULL, *f_max = NULL, *f_cmax = NULL;
-	int ret = -1;
 	uint32_t nominal_perf = 0, highest_perf = 0, cpuinfo_max_freq = 0;
+	int ret = -1;
 
-	open_core_sysfs_file(&f_max, "r", POWER_SYSFILE_HIGHEST_PERF,
+	ret = power_sysfs_read_u32(&highest_perf, POWER_SYSFILE_HIGHEST_PERF,
 			pi->lcore_id);
-	if (f_max == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_HIGHEST_PERF);
-		goto err;
-	}
-
-	open_core_sysfs_file(&f_nom, "r", POWER_SYSFILE_NOMINAL_PERF,
-			pi->lcore_id);
-	if (f_nom == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_NOMINAL_PERF);
-		goto err;
-	}
-
-	open_core_sysfs_file(&f_cmax, "r", POWER_SYSFILE_SYS_MAX,
-			pi->lcore_id);
-	if (f_cmax == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_SYS_MAX);
-		goto err;
-	}
-
-	ret = read_core_sysfs_u32(f_max, &highest_perf);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_HIGHEST_PERF);
 		goto err;
 	}
 
-	ret = read_core_sysfs_u32(f_nom, &nominal_perf);
+	ret = power_sysfs_read_u32(&nominal_perf, POWER_SYSFILE_NOMINAL_PERF,
+			pi->lcore_id);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_NOMINAL_PERF);
 		goto err;
 	}
 
-	ret = read_core_sysfs_u32(f_cmax, &cpuinfo_max_freq);
+	ret = power_sysfs_read_u32(&cpuinfo_max_freq, POWER_SYSFILE_SYS_MAX,
+			pi->lcore_id);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_SYS_MAX);
@@ -175,13 +153,6 @@ power_check_turbo(struct cppc_power_info *pi)
 	}
 
 err:
-	if (f_max != NULL)
-		fclose(f_max);
-	if (f_nom != NULL)
-		fclose(f_nom);
-	if (f_cmax != NULL)
-		fclose(f_cmax);
-
 	return ret;
 }
 
@@ -192,35 +163,20 @@ err:
 static int
 power_get_available_freqs(struct cppc_power_info *pi)
 {
-	FILE *f_min = NULL, *f_max = NULL;
-	int ret = -1;
 	uint32_t scaling_min_freq = 0, scaling_max_freq = 0, nominal_perf = 0;
 	uint32_t i, num_freqs = 0;
+	int ret = -1;
 
-	open_core_sysfs_file(&f_max, "r", POWER_SYSFILE_SCALING_MAX_FREQ,
+	ret = power_sysfs_read_u32(&scaling_max_freq, POWER_SYSFILE_SCALING_MAX_FREQ,
 			pi->lcore_id);
-	if (f_max == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_SCALING_MAX_FREQ);
-		goto out;
-	}
-
-	open_core_sysfs_file(&f_min, "r", POWER_SYSFILE_SCALING_MIN_FREQ,
-			pi->lcore_id);
-	if (f_min == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_SCALING_MIN_FREQ);
-		goto out;
-	}
-
-	ret = read_core_sysfs_u32(f_max, &scaling_max_freq);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_SCALING_MAX_FREQ);
 		goto out;
 	}
 
-	ret = read_core_sysfs_u32(f_min, &scaling_min_freq);
+	ret = power_sysfs_read_u32(&scaling_min_freq, POWER_SYSFILE_SCALING_MIN_FREQ,
+			pi->lcore_id);
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_SCALING_MIN_FREQ);
@@ -260,11 +216,6 @@ power_get_available_freqs(struct cppc_power_info *pi)
 			num_freqs, pi->lcore_id);
 
 out:
-	if (f_min != NULL)
-		fclose(f_min);
-	if (f_max != NULL)
-		fclose(f_max);
-
 	return ret;
 }
 

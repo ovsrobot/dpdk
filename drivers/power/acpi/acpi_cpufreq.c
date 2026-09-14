@@ -9,6 +9,7 @@
 #include <rte_memcpy.h>
 #include <rte_stdatomic.h>
 #include <rte_string_fns.h>
+#include <rte_sysfs.h>
 
 #include "acpi_cpufreq.h"
 #include "power_common.h"
@@ -111,21 +112,14 @@ power_set_governor_original(struct acpi_power_info *pi)
 static int
 power_get_available_freqs(struct acpi_power_info *pi)
 {
-	FILE *f;
-	int ret = -1, i, count;
-	char *p;
-	char buf[BUFSIZ];
 	char *freqs[RTE_MAX_LCORE_FREQS];
+	int ret = -1, i, count;
+	char buf[BUFSIZ];
+	char *p;
 
-	open_core_sysfs_file(&f, "r", POWER_SYSFILE_AVAIL_FREQ, pi->lcore_id);
-	if (f == NULL) {
-		POWER_LOG(ERR, "failed to open %s",
-				POWER_SYSFILE_AVAIL_FREQ);
-		goto out;
-	}
-
-	ret = read_core_sysfs_s(f, buf, sizeof(buf));
-	if ((ret) < 0) {
+	ret = rte_sysfs_parse_string(buf, sizeof(buf), POWER_SYSFILE_AVAIL_FREQ,
+			pi->lcore_id);
+	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
 				POWER_SYSFILE_AVAIL_FREQ);
 		goto out;
@@ -169,9 +163,6 @@ power_get_available_freqs(struct acpi_power_info *pi)
 	POWER_DEBUG_LOG("%d frequency(s) of lcore %u are available",
 			count, pi->lcore_id);
 out:
-	if (f != NULL)
-		fclose(f);
-
 	return ret;
 }
 
