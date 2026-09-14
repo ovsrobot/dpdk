@@ -253,7 +253,9 @@ STATIC s32 e1000_reset_hw_vf(struct e1000_hw *hw)
 		mbx->timeout = E1000_VF_MBX_INIT_TIMEOUT;
 
 		msgbuf[0] = E1000_VF_RESET;
-		mbx->ops.write_posted(hw, msgbuf, 1, 0);
+		ret_val = mbx->ops.write_posted(hw, msgbuf, 1, 0);
+		if (ret_val)
+			return ret_val;
 
 		msec_delay(10);
 
