@@ -3,6 +3,7 @@
  */
 
 #include <ctype.h>
+#include <limits.h>
 #include <sys/queue.h>
 #include <stdalign.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@
 #include <stdarg.h>
 #include <inttypes.h>
 #include <rte_byteorder.h>
+#include <rte_kvargs.h>
 #include <rte_common.h>
 #include <rte_os_shim.h>
 
@@ -2352,11 +2354,10 @@ static int
 parse_u16(__rte_unused const char *key, const char *value, void *args)
 {
 	u16 *num = (u16 *)args;
-	u16 tmp;
+	uint64_t tmp;
 
-	errno = 0;
-	tmp = strtoull(value, NULL, 10);
-	if (errno || !tmp) {
+	/* zero is not accepted, it is the "unset" marker for this argument */
+	if (rte_kvargs_to_uint(value, 1, UINT16_MAX, &tmp) < 0) {
 		PMD_DRV_LOG(WARNING, "%s: \"%s\" is not a valid u16",
 			    key, value);
 		return -1;
@@ -2368,34 +2369,12 @@ parse_u16(__rte_unused const char *key, const char *value, void *args)
 }
 
 static int
-parse_bool(const char *key, const char *value, void *args)
-{
-	int *i = (int *)args;
-	char *end;
-	int num;
-
-	num = strtoul(value, &end, 10);
-
-	if (num != 0 && num != 1) {
-		PMD_DRV_LOG(WARNING, "invalid value:\"%s\" for key:\"%s\", "
-			"value must be 0 or 1",
-			value, key);
-		return -1;
-	}
-
-	*i = num;
-	return 0;
-}
-
-static int
 iavf_parse_watchdog_period(__rte_unused const char *key, const char *value, void *args)
 {
 	int *num = (int *)args;
-	int tmp;
+	uint64_t tmp;
 
-	errno = 0;
-	tmp = atoi(value);
-	if (tmp < 0) {
+	if (rte_kvargs_to_uint(value, 0, INT_MAX, &tmp) < 0) {
 		PMD_DRV_LOG(WARNING, "%s: \"%s\" is not greater than or equal to zero",
 				key, value);
 		return -1;
@@ -2466,9 +2445,9 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 	int ret;
 	int watchdog_period = -1;
 
-	ad->devargs.auto_reset = 1;
-	ad->devargs.no_poll_on_link_down = 1;
-	ad->devargs.auto_reconfig = 1;
+	ad->devargs.auto_reset = true;
+	ad->devargs.no_poll_on_link_down = true;
+	ad->devargs.auto_reconfig = true;
 
 	if (!devargs)
 		return 0;
@@ -2502,8 +2481,8 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 	else
 		ad->devargs.watchdog_period = watchdog_period;
 
-	ret = rte_kvargs_process(kvlist, IAVF_NO_POLL_ON_LINK_DOWN_ARG,
-				 &parse_bool, &ad->devargs.no_poll_on_link_down);
+	ret = rte_kvargs_process_opt(kvlist, IAVF_NO_POLL_ON_LINK_DOWN_ARG,
+				 rte_kvargs_handle_bool, &ad->devargs.no_poll_on_link_down);
 	if (ret)
 		goto bail;
 
@@ -2520,24 +2499,24 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 	if (ret)
 		goto bail;
 
-	ret = rte_kvargs_process(kvlist, IAVF_ENABLE_AUTO_RESET_ARG,
-				 &parse_bool, &ad->devargs.auto_reset);
+	ret = rte_kvargs_process_opt(kvlist, IAVF_ENABLE_AUTO_RESET_ARG,
+				 rte_kvargs_handle_bool, &ad->devargs.auto_reset);
 	if (ret)
 		goto bail;
 
-	if (ad->devargs.auto_reset != 0 && ad->devargs.no_poll_on_link_down == 0) {
+	if (ad->devargs.auto_reset && !ad->devargs.no_poll_on_link_down) {
 		PMD_INIT_LOG(WARNING,
 			"no-poll-on-link-down=0 is incompatible with auto_reset=1, ignoring");
-		ad->devargs.no_poll_on_link_down = 1;
+		ad->devargs.no_poll_on_link_down = true;
 	}
 
-	ret = rte_kvargs_process(kvlist, IAVF_ENABLE_AUTO_RECONFIG_ARG,
-				 &parse_bool, &ad->devargs.auto_reconfig);
+	ret = rte_kvargs_process_opt(kvlist, IAVF_ENABLE_AUTO_RECONFIG_ARG,
+				 rte_kvargs_handle_bool, &ad->devargs.auto_reconfig);
 	if (ret)
 		goto bail;
 
-	ret = rte_kvargs_process(kvlist, IAVF_ENABLE_PTYPE_LLDP_ARG,
-				 &parse_bool, &ad->devargs.enable_ptype_lldp);
+	ret = rte_kvargs_process_opt(kvlist, IAVF_ENABLE_PTYPE_LLDP_ARG,
+				 rte_kvargs_handle_bool, &ad->devargs.enable_ptype_lldp);
 	if (ret)
 		goto bail;
 
