@@ -496,13 +496,13 @@ struct ixgbe_adapter {
 	uint8_t rss_reta_updated;
 
 	/* Used for limiting SDP3 TX_DISABLE checks */
-	uint8_t sdp3_no_tx_disable;
+	bool sdp3_no_tx_disable;
 	uint16_t max_vfs;
 
 	/* Used for VF link sync with PF's physical and logical (by checking
 	 * mailbox status) link status.
 	 */
-	uint8_t pflink_fullchk;
+	bool pflink_fullchk;
 	uint8_t mac_ctrl_frame_fwd;
 	RTE_ATOMIC(bool) link_thread_running;
 	rte_thread_t link_thread_tid;

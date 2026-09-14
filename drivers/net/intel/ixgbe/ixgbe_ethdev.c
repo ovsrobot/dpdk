@@ -355,8 +355,6 @@ static int ixgbe_dev_udp_tunnel_port_del(struct rte_eth_dev *dev,
 static int ixgbe_filter_restore(struct rte_eth_dev *dev);
 static void ixgbe_l2_tunnel_conf(struct rte_eth_dev *dev);
 static int ixgbe_wait_for_link_up(struct ixgbe_hw *hw);
-static int devarg_handle_int(__rte_unused const char *key, const char *value,
-			     void *extra_args);
 
 /*
  * Define VF Stats MACRO for Non "cleared on read" register
@@ -1059,7 +1057,6 @@ ixgbe_parse_devargs(struct ixgbe_adapter *adapter,
 		      struct rte_devargs *devargs)
 {
 	struct rte_kvargs *kvlist;
-	uint16_t sdp3_no_tx_disable;
 
 	if (devargs == NULL)
 		return;
@@ -1068,11 +1065,10 @@ ixgbe_parse_devargs(struct ixgbe_adapter *adapter,
 	if (kvlist == NULL)
 		return;
 
-	if (rte_kvargs_count(kvlist, IXGBE_DEVARG_FIBER_SDP3_NOT_TX_DISABLE) == 1 &&
-	    rte_kvargs_process(kvlist, IXGBE_DEVARG_FIBER_SDP3_NOT_TX_DISABLE,
-			       devarg_handle_int, &sdp3_no_tx_disable) == 0 &&
-	    sdp3_no_tx_disable == 1)
-		adapter->sdp3_no_tx_disable = 1;
+	if (rte_kvargs_count(kvlist, IXGBE_DEVARG_FIBER_SDP3_NOT_TX_DISABLE) == 1)
+		(void)rte_kvargs_process_opt(kvlist, IXGBE_DEVARG_FIBER_SDP3_NOT_TX_DISABLE,
+					     rte_kvargs_handle_bool,
+					     &adapter->sdp3_no_tx_disable);
 
 	rte_kvargs_free(kvlist);
 }
@@ -1555,28 +1551,11 @@ generate_random_mac_addr(struct rte_ether_addr *mac_addr)
 	memcpy(&mac_addr->addr_bytes[3], &random, 3);
 }
 
-static int
-devarg_handle_int(__rte_unused const char *key, const char *value,
-		  void *extra_args)
-{
-	uint16_t *n = extra_args;
-
-	if (value == NULL || extra_args == NULL)
-		return -EINVAL;
-
-	*n = (uint16_t)strtoul(value, NULL, 0);
-	if (*n == USHRT_MAX && errno == ERANGE)
-		return -1;
-
-	return 0;
-}
-
 static void
 ixgbevf_parse_devargs(struct ixgbe_adapter *adapter,
 		      struct rte_devargs *devargs)
 {
 	struct rte_kvargs *kvlist;
-	uint16_t pflink_fullchk;
 
 	if (devargs == NULL)
 		return;
@@ -1585,11 +1564,10 @@ ixgbevf_parse_devargs(struct ixgbe_adapter *adapter,
 	if (kvlist == NULL)
 		return;
 
-	if (rte_kvargs_count(kvlist, IXGBEVF_DEVARG_PFLINK_FULLCHK) == 1 &&
-	    rte_kvargs_process(kvlist, IXGBEVF_DEVARG_PFLINK_FULLCHK,
-			       devarg_handle_int, &pflink_fullchk) == 0 &&
-	    pflink_fullchk == 1)
-		adapter->pflink_fullchk = 1;
+	if (rte_kvargs_count(kvlist, IXGBEVF_DEVARG_PFLINK_FULLCHK) == 1)
+		(void)rte_kvargs_process_opt(kvlist, IXGBEVF_DEVARG_PFLINK_FULLCHK,
+					     rte_kvargs_handle_bool,
+					     &adapter->pflink_fullchk);
 
 	rte_kvargs_free(kvlist);
 }
@@ -4231,7 +4209,7 @@ ixgbevf_check_link(struct ixgbe_hw *hw, ixgbe_link_speed *speed,
 		*speed = IXGBE_LINK_SPEED_UNKNOWN;
 	}
 
-	if (wait_to_complete == 0 && adapter->pflink_fullchk == 0) {
+	if (wait_to_complete == 0 && !adapter->pflink_fullchk) {
 		if (*speed == IXGBE_LINK_SPEED_UNKNOWN)
 			mac->get_link_status = true;
 		else
