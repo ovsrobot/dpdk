@@ -501,22 +501,6 @@ txgbe_swfw_lock_reset(struct txgbe_hw *hw)
 }
 
 static int
-txgbe_handle_devarg(__rte_unused const char *key, const char *value,
-		  void *extra_args)
-{
-	uint16_t *n = extra_args;
-
-	if (value == NULL || extra_args == NULL)
-		return -EINVAL;
-
-	*n = (uint16_t)strtoul(value, NULL, 10);
-	if (*n == USHRT_MAX && errno == ERANGE)
-		return -1;
-
-	return 0;
-}
-
-static void
 txgbe_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct rte_eth_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
@@ -524,10 +508,10 @@ txgbe_parse_devargs(struct rte_eth_dev *dev)
 	struct rte_devargs *devargs = pci_dev->device.devargs;
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	struct rte_kvargs *kvlist;
-	u16 auto_neg = 1;
-	u16 poll = 0;
-	u16 present = 0;
-	u16 sgmii = 0;
+	bool auto_neg = true;
+	bool poll = false;
+	bool present = false;
+	bool sgmii = false;
 	u16 ffe_set = 0;
 	u16 ffe_main = 27;
 	u16 ffe_pre = 8;
@@ -536,9 +520,10 @@ txgbe_parse_devargs(struct rte_eth_dev *dev)
 	u16 pballoc = 0;
 	u16 drop_queue = 127;
 	/* New devargs for amberlite config */
-	u16 tx_headwb = 1;
+	bool tx_headwb = true;
 	u16 tx_headwb_size = 16;
-	u16 rx_desc_merge = 1;
+	bool rx_desc_merge = true;
+	int ret;
 
 	if (devargs == NULL)
 		goto null;
@@ -547,33 +532,36 @@ txgbe_parse_devargs(struct rte_eth_dev *dev)
 	if (kvlist == NULL)
 		goto null;
 
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_BP_AUTO,
-			   &txgbe_handle_devarg, &auto_neg);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_KR_POLL,
-			   &txgbe_handle_devarg, &poll);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_KR_PRESENT,
-			   &txgbe_handle_devarg, &present);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_KX_SGMII,
-			   &txgbe_handle_devarg, &sgmii);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_SET,
-			   &txgbe_handle_devarg, &ffe_set);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_MAIN,
-			   &txgbe_handle_devarg, &ffe_main);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_PRE,
-			   &txgbe_handle_devarg, &ffe_pre);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_POST,
-			   &txgbe_handle_devarg, &ffe_post);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_FDIR_PBALLOC,
-			   &txgbe_handle_devarg, &pballoc);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_FDIR_DROP_QUEUE,
-			   &txgbe_handle_devarg, &drop_queue);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_TX_HEAD_WB,
-			   &txgbe_handle_devarg, &tx_headwb);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_TX_HEAD_WB_SIZE,
-			   &txgbe_handle_devarg, &tx_headwb_size);
-	rte_kvargs_process(kvlist, TXGBE_DEVARG_RX_DESC_MERGE,
-			   &txgbe_handle_devarg, &rx_desc_merge);
+	ret = rte_kvargs_process_opt(kvlist, TXGBE_DEVARG_BP_AUTO,
+				     rte_kvargs_handle_bool, &auto_neg);
+	ret |= rte_kvargs_process_opt(kvlist, TXGBE_DEVARG_KR_POLL,
+				      rte_kvargs_handle_bool, &poll);
+	ret |= rte_kvargs_process_opt(kvlist, TXGBE_DEVARG_KR_PRESENT,
+				      rte_kvargs_handle_bool, &present);
+	ret |= rte_kvargs_process_opt(kvlist, TXGBE_DEVARG_KX_SGMII,
+				      rte_kvargs_handle_bool, &sgmii);
+	ret |= rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_SET,
+				  rte_kvargs_handle_u16, &ffe_set);
+	ret |= rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_MAIN,
+				  rte_kvargs_handle_u16, &ffe_main);
+	ret |= rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_PRE,
+				  rte_kvargs_handle_u16, &ffe_pre);
+	ret |= rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_POST,
+				  rte_kvargs_handle_u16, &ffe_post);
+	ret |= rte_kvargs_process(kvlist, TXGBE_DEVARG_FDIR_PBALLOC,
+				  rte_kvargs_handle_u16, &pballoc);
+	ret |= rte_kvargs_process(kvlist, TXGBE_DEVARG_FDIR_DROP_QUEUE,
+				  rte_kvargs_handle_u16, &drop_queue);
+	ret |= rte_kvargs_process_opt(kvlist, TXGBE_DEVARG_TX_HEAD_WB,
+				      rte_kvargs_handle_bool, &tx_headwb);
+	ret |= rte_kvargs_process(kvlist, TXGBE_DEVARG_TX_HEAD_WB_SIZE,
+				  rte_kvargs_handle_u16, &tx_headwb_size);
+	ret |= rte_kvargs_process_opt(kvlist, TXGBE_DEVARG_RX_DESC_MERGE,
+				      rte_kvargs_handle_bool, &rx_desc_merge);
 	rte_kvargs_free(kvlist);
+
+	if (ret != 0)
+		return -EINVAL;
 
 null:
 	hw->devarg.auto_neg = auto_neg;
@@ -590,6 +578,8 @@ null:
 
 	fdir_conf->pballoc = pballoc;
 	fdir_conf->drop_queue = drop_queue;
+
+	return 0;
 }
 
 static void
@@ -690,7 +680,10 @@ eth_txgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	hw->isb_dma = TMZ_PADDR(mz);
 	hw->isb_mem = TMZ_VADDR(mz);
 
-	txgbe_parse_devargs(eth_dev);
+	err = txgbe_parse_devargs(eth_dev);
+	if (err != 0)
+		return err;
+
 	/* Initialize the shared code (base driver) */
 	err = txgbe_init_shared_code(hw);
 	if (err != 0) {
