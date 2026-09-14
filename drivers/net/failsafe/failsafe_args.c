@@ -346,24 +346,6 @@ out:
 }
 
 static int
-fs_get_u64_arg(const char *key __rte_unused,
-		const char *value, void *out)
-{
-	uint64_t *u64 = out;
-	char *endptr = NULL;
-
-	if ((value == NULL) || (out == NULL))
-		return -EINVAL;
-	errno = 0;
-	*u64 = strtoull(value, &endptr, 0);
-	if (errno != 0)
-		return -errno;
-	if (endptr == value)
-		return -1;
-	return 0;
-}
-
-static int
 fs_get_mac_addr_arg(const char *key __rte_unused,
 		const char *value, void *out)
 {
@@ -416,7 +398,7 @@ failsafe_args_parse(struct rte_eth_dev *dev, const char *params)
 		if (arg_count == 1) {
 			ret = rte_kvargs_process(kvlist,
 					PMD_FAILSAFE_HOTPLUG_POLL_KVARG,
-					&fs_get_u64_arg, &failsafe_hotplug_poll);
+					rte_kvargs_handle_u64, &failsafe_hotplug_poll);
 			if (ret < 0)
 				goto free_kvlist;
 		}
