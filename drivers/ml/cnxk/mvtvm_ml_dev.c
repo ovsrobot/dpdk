@@ -21,36 +21,6 @@
 static const char *const valid_args[] = {MVTVM_ML_DEV_MAX_QPS, MVTVM_ML_DEV_CACHE_MODEL_DATA, NULL};
 
 static int
-parse_integer_arg(const char *key __rte_unused, const char *value, void *extra_args)
-{
-	int *i = (int *)extra_args;
-
-	*i = atoi(value);
-	if (*i < 0) {
-		plt_err("Argument has to be positive.");
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int
-parse_uint_arg(const char *key __rte_unused, const char *value, void *extra_args)
-{
-	int i;
-	char *end;
-	errno = 0;
-
-	i = strtol(value, &end, 10);
-	if (*end != 0 || errno != 0 || i < 0)
-		return -EINVAL;
-
-	*((uint32_t *)extra_args) = i;
-
-	return 0;
-}
-
-static int
 mvtvm_mldev_parse_devargs(const char *args, struct mvtvm_ml_dev *mvtvm_mldev)
 {
 	bool cache_model_data_set = false;
@@ -68,7 +38,7 @@ mvtvm_mldev_parse_devargs(const char *args, struct mvtvm_ml_dev *mvtvm_mldev)
 	}
 
 	if (rte_kvargs_count(kvlist, MVTVM_ML_DEV_MAX_QPS) == 1) {
-		ret = rte_kvargs_process(kvlist, MVTVM_ML_DEV_MAX_QPS, &parse_uint_arg,
+		ret = rte_kvargs_process(kvlist, MVTVM_ML_DEV_MAX_QPS, rte_kvargs_handle_u16,
 					 &mvtvm_mldev->max_nb_qpairs);
 		if (ret < 0) {
 			plt_err("Error processing arguments, key = %s", MVTVM_ML_DEV_MAX_QPS);
@@ -79,8 +49,9 @@ mvtvm_mldev_parse_devargs(const char *args, struct mvtvm_ml_dev *mvtvm_mldev)
 	}
 
 	if (rte_kvargs_count(kvlist, MVTVM_ML_DEV_CACHE_MODEL_DATA) == 1) {
-		ret = rte_kvargs_process(kvlist, MVTVM_ML_DEV_CACHE_MODEL_DATA, &parse_integer_arg,
-					 &mvtvm_mldev->cache_model_data);
+		ret = rte_kvargs_process_opt(kvlist, MVTVM_ML_DEV_CACHE_MODEL_DATA,
+					     rte_kvargs_handle_bool,
+					     &mvtvm_mldev->cache_model_data);
 		if (ret < 0) {
 			plt_err("Error processing arguments, key = %s",
 				MVTVM_ML_DEV_CACHE_MODEL_DATA);
@@ -95,16 +66,8 @@ check_args:
 		mvtvm_mldev->max_nb_qpairs = MVTVM_ML_DEV_MAX_QPS_DEFAULT;
 	plt_ml_dbg("ML: %s = %u", MVTVM_ML_DEV_MAX_QPS, mvtvm_mldev->max_nb_qpairs);
 
-	if (!cache_model_data_set) {
+	if (!cache_model_data_set)
 		mvtvm_mldev->cache_model_data = CN10K_ML_DEV_CACHE_MODEL_DATA_DEFAULT;
-	} else {
-		if ((mvtvm_mldev->cache_model_data < 0) || (mvtvm_mldev->cache_model_data > 1)) {
-			plt_err("Invalid argument, %s = %d", MVTVM_ML_DEV_CACHE_MODEL_DATA,
-				mvtvm_mldev->cache_model_data);
-			ret = -EINVAL;
-			goto exit;
-		}
-	}
 	plt_ml_dbg("ML: %s = %d", MVTVM_ML_DEV_CACHE_MODEL_DATA, mvtvm_mldev->cache_model_data);
 
 exit:
