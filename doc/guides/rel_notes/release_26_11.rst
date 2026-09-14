@@ -95,6 +95,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eal: Added ``rte_cpu_socket_id()`` to map an OS logical CPU ID to
+  the NUMA socket containing that CPU.
+
 
 ABI Changes
 -----------

@@ -161,6 +161,20 @@ unsigned int
 rte_lcore_to_socket_id(unsigned int lcore_id);
 
 /**
+ * Get the ID of the NUMA node for a CPU.
+ *
+ * This function maps an OS logical CPU ID to the NUMA node containing
+ * that CPU.
+ *
+ * @param cpu_id
+ *   The OS logical CPU ID.
+ * @return
+ *   The ID of cpu_id's NUMA node, or 0 if unavailable.
+ */
+unsigned int
+rte_cpu_socket_id(unsigned int cpu_id);
+
+/**
  * Return the id of the lcore on a socket starting from zero.
  *
  * @param lcore_id
