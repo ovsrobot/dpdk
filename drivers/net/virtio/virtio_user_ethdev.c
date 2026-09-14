@@ -387,23 +387,6 @@ get_string_arg(const char *key __rte_unused,
 	return 0;
 }
 
-static int
-get_integer_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	uint64_t integer = 0;
-	if (!value || !extra_args)
-		return -EINVAL;
-	errno = 0;
-	integer = strtoull(value, NULL, 0);
-	/* extra_args keeps default value, it should be replaced
-	 * only in case of successful parsing of the 'value' arg
-	 */
-	if (errno == 0)
-		*(uint64_t *)extra_args = integer;
-	return -errno;
-}
-
 static uint32_t
 vdpa_dynamic_major_num(void)
 {
@@ -508,13 +491,13 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	struct virtio_user_dev *dev;
 	enum virtio_user_backend_type backend_type = VIRTIO_USER_BACKEND_UNKNOWN;
 	uint64_t queues = VIRTIO_USER_DEF_Q_NUM;
-	uint64_t cq = VIRTIO_USER_DEF_CQ_EN;
+	bool cq = VIRTIO_USER_DEF_CQ_EN;
 	uint64_t queue_size = VIRTIO_USER_DEF_Q_SZ;
-	uint64_t server_mode = VIRTIO_USER_DEF_SERVER_MODE;
-	uint64_t mrg_rxbuf = 1;
-	uint64_t in_order = 1;
-	uint64_t packed_vq = 0;
-	uint64_t vectorized = 0;
+	bool server_mode = VIRTIO_USER_DEF_SERVER_MODE;
+	bool mrg_rxbuf = true;
+	bool in_order = true;
+	bool packed_vq = false;
+	bool vectorized = false;
 	char *path = NULL;
 	char *ifname = NULL;
 	char *mac_addr = NULL;
@@ -602,7 +585,7 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 
 	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_QUEUE_SIZE) == 1) {
 		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_QUEUE_SIZE,
-				       &get_integer_arg, &queue_size) < 0) {
+				       rte_kvargs_handle_u64, &queue_size) < 0) {
 			PMD_INIT_LOG(ERR, "error to parse %s",
 				     VIRTIO_USER_ARG_QUEUE_SIZE);
 			goto end;
@@ -611,7 +594,7 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 
 	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_QUEUES_NUM) == 1) {
 		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_QUEUES_NUM,
-				       &get_integer_arg, &queues) < 0) {
+				       rte_kvargs_handle_u64, &queues) < 0) {
 			PMD_INIT_LOG(ERR, "error to parse %s",
 				     VIRTIO_USER_ARG_QUEUES_NUM);
 			goto end;
@@ -619,8 +602,8 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	}
 
 	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_SERVER_MODE) == 1) {
-		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_SERVER_MODE,
-				       &get_integer_arg, &server_mode) < 0) {
+		if (rte_kvargs_process_opt(kvlist, VIRTIO_USER_ARG_SERVER_MODE,
+				       rte_kvargs_handle_bool, &server_mode) < 0) {
 			PMD_INIT_LOG(ERR, "error to parse %s",
 				     VIRTIO_USER_ARG_SERVER_MODE);
 			goto end;
@@ -628,8 +611,8 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	}
 
 	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_CQ_NUM) == 1) {
-		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_CQ_NUM,
-				       &get_integer_arg, &cq) < 0) {
+		if (rte_kvargs_process_opt(kvlist, VIRTIO_USER_ARG_CQ_NUM,
+				       rte_kvargs_handle_bool, &cq) < 0) {
 			PMD_INIT_LOG(ERR, "error to parse %s",
 				     VIRTIO_USER_ARG_CQ_NUM);
 			goto end;
@@ -637,8 +620,8 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	}
 
 	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_PACKED_VQ) == 1) {
-		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_PACKED_VQ,
-				       &get_integer_arg, &packed_vq) < 0) {
+		if (rte_kvargs_process_opt(kvlist, VIRTIO_USER_ARG_PACKED_VQ,
+				       rte_kvargs_handle_bool, &packed_vq) < 0) {
 			PMD_INIT_LOG(ERR, "error to parse %s",
 				     VIRTIO_USER_ARG_PACKED_VQ);
 			goto end;
@@ -646,8 +629,8 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	}
 
 	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_VECTORIZED) == 1) {
-		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_VECTORIZED,
-				       &get_integer_arg, &vectorized) < 0) {
+		if (rte_kvargs_process_opt(kvlist, VIRTIO_USER_ARG_VECTORIZED,
+				       rte_kvargs_handle_bool, &vectorized) < 0) {
 			PMD_INIT_LOG(ERR, "error to parse %s",
 				     VIRTIO_USER_ARG_VECTORIZED);
 			goto end;
@@ -655,8 +638,8 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	}
 
 	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_MRG_RXBUF) == 1) {
-		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_MRG_RXBUF,
-				       &get_integer_arg, &mrg_rxbuf) < 0) {
+		if (rte_kvargs_process_opt(kvlist, VIRTIO_USER_ARG_MRG_RXBUF,
+				       rte_kvargs_handle_bool, &mrg_rxbuf) < 0) {
 			PMD_INIT_LOG(ERR, "error to parse %s",
 				     VIRTIO_USER_ARG_MRG_RXBUF);
 			goto end;
@@ -664,8 +647,8 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	}
 
 	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_IN_ORDER) == 1) {
-		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_IN_ORDER,
-				       &get_integer_arg, &in_order) < 0) {
+		if (rte_kvargs_process_opt(kvlist, VIRTIO_USER_ARG_IN_ORDER,
+				       rte_kvargs_handle_bool, &in_order) < 0) {
 			PMD_INIT_LOG(ERR, "error to parse %s",
 				     VIRTIO_USER_ARG_IN_ORDER);
 			goto end;
@@ -816,7 +799,7 @@ RTE_PMD_REGISTER_ALIAS(net_virtio_user, virtio_user);
 RTE_PMD_REGISTER_PARAM_STRING(net_virtio_user,
 	"path=<path> "
 	"mac=<mac addr> "
-	"cq=<int> "
+	"cq=<0|1> "
 	"queue_size=<int> "
 	"queues=<int> "
 	"iface=<string> "

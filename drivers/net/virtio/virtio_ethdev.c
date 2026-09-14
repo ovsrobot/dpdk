@@ -47,7 +47,7 @@ static int virtio_dev_allmulticast_disable(struct rte_eth_dev *dev);
 static uint32_t virtio_dev_speed_capa_get(uint32_t speed);
 static int virtio_dev_devargs_parse(struct rte_devargs *devargs,
 	uint32_t *speed,
-	int *vectorized);
+	bool *vectorized);
 static int virtio_dev_info_get(struct rte_eth_dev *dev,
 				struct rte_eth_dev_info *dev_info);
 static int virtio_dev_link_update(struct rte_eth_dev *dev,
@@ -2039,7 +2039,7 @@ eth_virtio_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct virtio_hw *hw = eth_dev->data->dev_private;
 	uint32_t speed = RTE_ETH_SPEED_NUM_UNKNOWN;
-	int vectorized = 0;
+	bool vectorized = false;
 	int ret;
 
 	if (sizeof(struct virtio_net_hdr_hash_report) > RTE_PKTMBUF_HEADROOM) {
@@ -2138,20 +2138,6 @@ virtio_dev_speed_capa_get(uint32_t speed)
 	}
 }
 
-static int vectorized_check_handler(__rte_unused const char *key,
-		const char *value, void *ret_val)
-{
-	if (value == NULL || ret_val == NULL)
-		return -EINVAL;
-
-	if (strcmp(value, "1") == 0)
-		*(int *)ret_val = 1;
-	else
-		*(int *)ret_val = 0;
-
-	return 0;
-}
-
 #define VIRTIO_ARG_SPEED      "speed"
 #define VIRTIO_ARG_VECTORIZED "vectorized"
 
@@ -2159,21 +2145,25 @@ static int
 link_speed_handler(const char *key __rte_unused,
 		const char *value, void *ret_val)
 {
-	uint32_t val;
-	if (!value || !ret_val)
+	uint64_t val;
+
+	if (ret_val == NULL)
 		return -EINVAL;
-	val = strtoul(value, NULL, 0);
+
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &val) < 0)
+		return -EINVAL;
+
 	/* validate input */
 	if (virtio_dev_speed_capa_get(val) == 0)
 		return -EINVAL;
-	*(uint32_t *)ret_val = val;
 
+	*(uint32_t *)ret_val = val;
 	return 0;
 }
 
 
 static int
-virtio_dev_devargs_parse(struct rte_devargs *devargs, uint32_t *speed, int *vectorized)
+virtio_dev_devargs_parse(struct rte_devargs *devargs, uint32_t *speed, bool *vectorized)
 {
 	struct rte_kvargs *kvlist;
 	int ret = 0;
@@ -2200,9 +2190,9 @@ virtio_dev_devargs_parse(struct rte_devargs *devargs, uint32_t *speed, int *vect
 
 	if (vectorized &&
 		rte_kvargs_count(kvlist, VIRTIO_ARG_VECTORIZED) == 1) {
-		ret = rte_kvargs_process(kvlist,
+		ret = rte_kvargs_process_opt(kvlist,
 				VIRTIO_ARG_VECTORIZED,
-				vectorized_check_handler, vectorized);
+				rte_kvargs_handle_bool, vectorized);
 		if (ret < 0) {
 			PMD_INIT_LOG(ERR, "Failed to parse %s",
 					VIRTIO_ARG_VECTORIZED);
