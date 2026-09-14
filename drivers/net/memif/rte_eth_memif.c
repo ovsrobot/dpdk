@@ -1808,44 +1808,41 @@ memif_set_zc(const char *key __rte_unused, const char *value, void *extra_args)
 }
 
 static int
-memif_set_id(const char *key __rte_unused, const char *value, void *extra_args)
-{
-	memif_interface_id_t *id = (memif_interface_id_t *)extra_args;
-
-	/* even if parsing fails, 0 is a valid id */
-	*id = strtoul(value, NULL, 10);
-	return 0;
-}
-
-static int
 memif_set_bs(const char *key __rte_unused, const char *value, void *extra_args)
 {
-	unsigned long tmp;
-	uint16_t *pkt_buffer_size = (uint16_t *)extra_args;
+	uint64_t tmp;
+	int ret;
 
-	tmp = strtoul(value, NULL, 10);
-	if (tmp == 0 || tmp > 0xFFFF) {
-		MIF_LOG(ERR, "Invalid buffer size: %s.", value);
+	if (extra_args == NULL)
 		return -EINVAL;
+
+	ret = rte_kvargs_to_uint(value, 1, UINT16_MAX, &tmp);
+	if (ret < 0) {
+		MIF_LOG(ERR, "Invalid buffer size: %s.", value);
+		return ret;
 	}
-	*pkt_buffer_size = tmp;
+
+	*(uint16_t *)extra_args = tmp;
 	return 0;
 }
 
 static int
 memif_set_rs(const char *key __rte_unused, const char *value, void *extra_args)
 {
-	unsigned long tmp;
-	memif_log2_ring_size_t *log2_ring_size =
-	    (memif_log2_ring_size_t *)extra_args;
+	uint64_t tmp;
+	int ret;
 
-	tmp = strtoul(value, NULL, 10);
-	if (tmp == 0 || tmp > ETH_MEMIF_MAX_LOG2_RING_SIZE) {
+	if (extra_args == NULL)
+		return -EINVAL;
+
+	ret = rte_kvargs_to_uint(value, 1, ETH_MEMIF_MAX_LOG2_RING_SIZE, &tmp);
+	if (ret < 0) {
 		MIF_LOG(ERR, "Invalid ring size: %s (max %u).",
 			value, ETH_MEMIF_MAX_LOG2_RING_SIZE);
-		return -EINVAL;
+		return ret;
 	}
-	*log2_ring_size = tmp;
+
+	*(memif_log2_ring_size_t *)extra_args = tmp;
 	return 0;
 }
 
@@ -1917,21 +1914,19 @@ memif_set_owner(const char *key, const char *value, void *extra_args)
 	RTE_ASSERT(sizeof(uid_t) == sizeof(uint32_t));
 	RTE_ASSERT(sizeof(gid_t) == sizeof(uint32_t));
 
-	unsigned long val;
-	char *end = NULL;
-	uint32_t *id = (uint32_t *)extra_args;
+	uint64_t val;
+	int ret;
 
-	val = strtoul(value, &end, 10);
-	if (*value == '\0' || *end != '\0') {
-		MIF_LOG(ERR, "Failed to parse %s: %s.", key, value);
+	if (extra_args == NULL)
 		return -EINVAL;
-	}
-	if (val >= UINT32_MAX) {
-		MIF_LOG(ERR, "Invalid %s: %s.", key, value);
-		return -ERANGE;
+
+	ret = rte_kvargs_to_uint(value, 0, UINT32_MAX, &val);
+	if (ret < 0) {
+		MIF_LOG(ERR, "Failed to parse %s: %s.", key, value);
+		return ret;
 	}
 
-	*id = val;
+	*(uint32_t *)extra_args = val;
 	return 0;
 }
 
@@ -2032,15 +2027,15 @@ rte_pmd_memif_probe(struct rte_vdev_device *vdev)
 		if (ret < 0)
 			goto exit;
 		ret = rte_kvargs_process(kvlist, ETH_MEMIF_ID_ARG,
-					 &memif_set_id, &id);
+					 rte_kvargs_handle_u32, &id);
 		if (ret < 0)
 			goto exit;
 		ret = rte_kvargs_process(kvlist, ETH_MEMIF_PKT_BUFFER_SIZE_ARG,
-					 &memif_set_bs, &pkt_buffer_size);
+					 memif_set_bs, &pkt_buffer_size);
 		if (ret < 0)
 			goto exit;
 		ret = rte_kvargs_process(kvlist, ETH_MEMIF_RING_SIZE_ARG,
-					 &memif_set_rs, &log2_ring_size);
+					 memif_set_rs, &log2_ring_size);
 		if (ret < 0)
 			goto exit;
 		ret = rte_kvargs_process(kvlist, ETH_MEMIF_SOCKET_ARG,
@@ -2053,11 +2048,11 @@ rte_pmd_memif_probe(struct rte_vdev_device *vdev)
 		if (ret < 0)
 			goto exit;
 		ret = rte_kvargs_process(kvlist, ETH_MEMIF_OWNER_UID_ARG,
-					 &memif_set_owner, &owner_uid);
+					 memif_set_owner, &owner_uid);
 		if (ret < 0)
 			goto exit;
 		ret = rte_kvargs_process(kvlist, ETH_MEMIF_OWNER_GID_ARG,
-					 &memif_set_owner, &owner_gid);
+					 memif_set_owner, &owner_gid);
 		if (ret < 0)
 			goto exit;
 		ret = rte_kvargs_process(kvlist, ETH_MEMIF_MAC_ARG,
