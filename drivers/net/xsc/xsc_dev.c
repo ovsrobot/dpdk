@@ -199,34 +199,48 @@ xsc_dev_alloc_vfos_info(struct xsc_dev *xdev)
 	return 0;
 }
 
+/* Parse one optional numeric devarg, leaving the default in place if unset. */
+static void
+xsc_dev_arg_get(struct rte_kvargs *kvlist, const char *key, uint64_t max,
+		int *result)
+{
+	const char *value;
+	uint64_t val;
+
+	value = rte_kvargs_get(kvlist, key);
+	if (value == NULL)
+		return;
+
+	if (rte_kvargs_to_uint(value, 0, max, &val) < 0) {
+		PMD_DRV_LOG(ERR, "Invalid %s \"%s\", using default %d",
+			    key, value, *result);
+		return;
+	}
+
+	*result = val;
+}
+
 static void
 xsc_dev_args_parse(struct xsc_dev *xdev, struct rte_devargs *devargs)
 {
 	struct rte_kvargs *kvlist;
 	struct xsc_devargs *xdevargs = &xdev->devargs;
-	const char *tmp;
+
+	xdevargs->pph_mode = XSC_PPH_NONE;
+	xdevargs->nic_mode = XSC_NIC_MODE_LEGACY;
+	xdevargs->flow_mode = XSC_DEV_DEF_FLOW_MODE;
 
 	kvlist = rte_kvargs_parse(devargs->args, NULL);
 	if (kvlist == NULL)
 		return;
 
-	tmp = rte_kvargs_get(kvlist, XSC_PPH_MODE_ARG);
-	if (tmp != NULL)
-		xdevargs->pph_mode = atoi(tmp);
-	else
-		xdevargs->pph_mode = XSC_PPH_NONE;
-
-	tmp = rte_kvargs_get(kvlist, XSC_NIC_MODE_ARG);
-	if (tmp != NULL)
-		xdevargs->nic_mode = atoi(tmp);
-	else
-		xdevargs->nic_mode = XSC_NIC_MODE_LEGACY;
-
-	tmp = rte_kvargs_get(kvlist, XSC_FLOW_MODE_ARG);
-	if (tmp != NULL)
-		xdevargs->flow_mode = atoi(tmp);
-	else
-		xdevargs->flow_mode = XSC_DEV_DEF_FLOW_MODE;
+	xsc_dev_arg_get(kvlist, XSC_PPH_MODE_ARG,
+			XSC_RX_PPH | XSC_TX_PPH | XSC_VFREP_PPH | XSC_UPLINK_PPH,
+			&xdevargs->pph_mode);
+	xsc_dev_arg_get(kvlist, XSC_NIC_MODE_ARG, XSC_NIC_MODE_SOC,
+			&xdevargs->nic_mode);
+	xsc_dev_arg_get(kvlist, XSC_FLOW_MODE_ARG, INT_MAX,
+			&xdevargs->flow_mode);
 
 	rte_kvargs_free(kvlist);
 }
