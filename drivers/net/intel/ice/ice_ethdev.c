@@ -2141,25 +2141,6 @@ ice_base_queue_get(struct ice_pf *pf)
 }
 
 static int
-parse_u64(const char *key, const char *value, void *args)
-{
-	u64 *num = (u64 *)args;
-	u64 tmp;
-
-	errno = 0;
-	tmp = strtoull(value, NULL, 16);
-	if (errno) {
-		PMD_DRV_LOG(WARNING, "%s: \"%s\" is not a valid u64",
-			    key, value);
-		return -1;
-	}
-
-	*num = tmp;
-
-	return 0;
-}
-
-static int
 parse_tx_sched_levels(const char *key, const char *value, void *args)
 {
 	uint8_t *num = args;
@@ -2423,7 +2404,7 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 		goto bail;
 
 	ret = rte_kvargs_process(kvlist, ICE_HW_DEBUG_MASK_ARG,
-				 &parse_u64, &ad->hw.debug_mask);
+				 rte_kvargs_handle_hex64, &ad->hw.debug_mask);
 	if (ret)
 		goto bail;
 
