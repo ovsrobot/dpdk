@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2015 Intel Corporation
  */
 
+#include <limits.h>
 #include <stdlib.h>
 
 #include <eal_export.h>
@@ -583,18 +584,22 @@ static int parse_kvlist(const char *key __rte_unused,
 			const char *value, void *data)
 {
 	struct node_action_list *info = data;
+	uint64_t node_val;
 	int ret;
-	char *name;
+	char *name = NULL;
 	char *action;
 	char *node;
-	char *end;
-
-	name = strdup(value);
 
 	ret = -EINVAL;
 
-	if (!name) {
+	if (value == NULL) {
 		PMD_LOG(WARNING, "command line parameter is empty for ring pmd!");
+		goto out;
+	}
+
+	name = strdup(value);
+	if (!name) {
+		ret = -ENOMEM;
 		goto out;
 	}
 
@@ -629,14 +634,12 @@ static int parse_kvlist(const char *key __rte_unused,
 	else
 		goto out;
 
-	errno = 0;
-	info->list[info->count].node = strtol(node, &end, 10);
-
-	if ((errno != 0) || (*end != '\0')) {
+	if (rte_kvargs_to_uint(node, 0, UINT_MAX, &node_val) < 0) {
 		PMD_LOG(WARNING,
 			"node value %s is unparseable as a number", node);
 		goto out;
 	}
+	info->list[info->count].node = node_val;
 
 	strlcpy(info->list[info->count].name, name,
 		sizeof(info->list[info->count].name));
