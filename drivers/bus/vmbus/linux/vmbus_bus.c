@@ -85,35 +85,6 @@ parse_sysfs_uuid(const char *filename, rte_uuid_t uu)
 }
 
 static int
-get_sysfs_string(const char *filename, char *buf, size_t buflen)
-{
-	char *cp;
-	FILE *f;
-
-	f = fopen(filename, "r");
-	if (f == NULL) {
-		VMBUS_LOG(ERR, "cannot open sysfs value %s:%s",
-			  filename, strerror(errno));
-		return -1;
-	}
-
-	if (fgets(buf, buflen, f) == NULL) {
-		VMBUS_LOG(ERR, "cannot read sysfs value %s",
-				filename);
-		fclose(f);
-		return -1;
-	}
-	fclose(f);
-
-	/* remove trailing newline */
-	cp = memchr(buf, '\n', buflen);
-	if (cp)
-		*cp = '\0';
-
-	return 0;
-}
-
-static int
 vmbus_get_uio_dev(const struct rte_vmbus_device *dev,
 		  char *dstbuf, size_t buflen)
 {
@@ -169,7 +140,7 @@ RTE_EXPORT_SYMBOL(rte_vmbus_map_device)
 int
 rte_vmbus_map_device(struct rte_vmbus_device *dev)
 {
-	char uioname[PATH_MAX], filename[PATH_MAX];
+	char uioname[PATH_MAX];
 	char dirname[PATH_MAX], mapname[64];
 	int i;
 
@@ -188,11 +159,9 @@ rte_vmbus_map_device(struct rte_vmbus_device *dev)
 		snprintf(dirname, sizeof(dirname),
 			 "%s/maps/map%d", uioname, i);
 
-		snprintf(filename, sizeof(filename),
-			 "%s/name", dirname);
-
-		if (get_sysfs_string(filename, mapname, sizeof(mapname)) < 0) {
-			VMBUS_LOG(ERR, "could not read %s", filename);
+		if (rte_sysfs_parse_string(mapname, sizeof(mapname),
+				"%s/name", dirname) < 0) {
+			VMBUS_LOG(ERR, "could not read name of %s", dirname);
 			return -1;
 		}
 

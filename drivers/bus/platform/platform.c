@@ -187,40 +187,15 @@ device_unmap_resources(struct rte_platform_device *pdev)
 	pdev->num_resource = 0;
 }
 
-static int
-read_sysfs_string(const char *path, char *buf, size_t size)
-{
-	FILE *f;
-	char *p;
-
-	f = fopen(path, "r");
-	if (f == NULL)
-		return -errno;
-
-	if (fgets(buf, size, f) == NULL) {
-		fclose(f);
-		return -ENODATA;
-	}
-
-	fclose(f);
-
-	p = strrchr(buf, '\n');
-	if (p != NULL)
-		*p = '\0';
-
-	return 0;
-}
-
 static char *
 of_resource_name(const char *dev_name, int index)
 {
-	char path[PATH_MAX], buf[BUFSIZ] = { };
-	int num = 0, ret;
+	char buf[BUFSIZ] = { };
+	int num = 0;
 	char *name;
 
-	snprintf(path, sizeof(path), PLATFORM_BUS_DEVICES_PATH "/%s/of_node/reg-names", dev_name);
-	ret = read_sysfs_string(path, buf, sizeof(buf) - 1);
-	if (ret)
+	if (rte_sysfs_parse_string(buf, sizeof(buf) - 1,
+			PLATFORM_BUS_DEVICES_PATH "/%s/of_node/reg-names", dev_name) < 0)
 		return NULL;
 
 	for (name = buf; *name != 0; name += strlen(name) + 1) {
