@@ -1923,8 +1923,10 @@ F: lib/bpf/
 F: examples/bpf/
 F: app/test/test_bpf*
 F: app/test/bpf/
+F: app/validate-bpf/
 F: app/test-pmd/bpf_cmd.*
 F: doc/guides/prog_guide/bpf_lib.rst
+F: doc/guides/tools/validate_bpf.rst
 
 Graph
 M: Jerin Jacob <jerinj@marvell.com>
