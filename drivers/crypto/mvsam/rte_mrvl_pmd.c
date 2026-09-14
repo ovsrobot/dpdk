@@ -1117,22 +1117,6 @@ init_error:
 	return ret;
 }
 
-/** Parse integer from integer argument */
-static int
-parse_integer_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	int *i = (int *) extra_args;
-
-	*i = atoi(value);
-	if (*i < 0) {
-		MRVL_LOG(ERR, "Argument has to be positive!");
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 /** Parse name */
 static int
 parse_name_arg(const char *key __rte_unused,
@@ -1170,14 +1154,14 @@ mrvl_pmd_parse_input_args(struct mrvl_pmd_init_params *params,
 		/* Common VDEV parameters */
 		ret = rte_kvargs_process(kvlist,
 					 RTE_CRYPTODEV_PMD_MAX_NB_QP_ARG,
-					 &parse_integer_arg,
+					 rte_kvargs_handle_uint,
 					 &params->common.max_nb_queue_pairs);
 		if (ret < 0)
 			goto free_kvlist;
 
 		ret = rte_kvargs_process(kvlist,
 					 RTE_CRYPTODEV_PMD_SOCKET_ID_ARG,
-					 &parse_integer_arg,
+					 rte_kvargs_handle_socket_id,
 					 &params->common.socket_id);
 		if (ret < 0)
 			goto free_kvlist;
@@ -1191,7 +1175,7 @@ mrvl_pmd_parse_input_args(struct mrvl_pmd_init_params *params,
 
 		ret = rte_kvargs_process(kvlist,
 					 MRVL_PMD_MAX_NB_SESS_ARG,
-					 &parse_integer_arg,
+					 rte_kvargs_handle_u32,
 					 &params->max_nb_sessions);
 		if (ret < 0)
 			goto free_kvlist;
