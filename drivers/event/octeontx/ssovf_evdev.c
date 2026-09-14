@@ -3,6 +3,7 @@
  */
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include <rte_common.h>
@@ -23,7 +24,7 @@
 #include "timvf_evdev.h"
 #include "otx_cryptodev_hw_access.h"
 
-static uint8_t timvf_enable_stats;
+static bool timvf_enable_stats;
 
 RTE_LOG_REGISTER_DEFAULT(otx_logtype_ssovf, NOTICE);
 
@@ -717,24 +718,6 @@ ssovf_close(struct rte_eventdev *dev)
 }
 
 static int
-ssovf_parsekv(const char *key, const char *value, void *opaque)
-{
-	uint8_t *flag = opaque;
-	uint64_t v;
-	char *end;
-
-	errno = 0;
-	v = strtoul(value, &end, 0);
-	if ((errno != 0) || (value == end) || *end != '\0' || v > 1) {
-		ssovf_log_err("invalid %s value %s", key, value);
-		return -EINVAL;
-	}
-
-	*flag = !!v;
-	return 0;
-}
-
-static int
 ssovf_timvf_caps_get(const struct rte_eventdev *dev, uint64_t flags,
 		     uint32_t *caps, const struct event_timer_adapter_ops **ops)
 {
@@ -879,8 +862,8 @@ ssovf_vdev_probe(struct rte_vdev_device *vdev)
 				"Ignoring unsupported params supplied '%s'",
 				name);
 		} else {
-			ret = rte_kvargs_process(kvlist, TIMVF_ENABLE_STATS_ARG,
-						 ssovf_parsekv,
+			ret = rte_kvargs_process_opt(kvlist, TIMVF_ENABLE_STATS_ARG,
+						     rte_kvargs_handle_bool,
 						 &timvf_enable_stats);
 			if (ret != 0) {
 				ssovf_log_err("%s: Error in timvf stats", name);
