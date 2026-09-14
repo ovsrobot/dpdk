@@ -3,7 +3,8 @@
  *  All rights reserved.
  */
 
-#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
@@ -19,8 +20,8 @@
 #define ETH_NULL_PACKET_NO_RX_ARG	"no-rx"
 
 static unsigned int default_packet_size = 64;
-static unsigned int default_packet_copy;
-static unsigned int default_no_rx;
+static bool default_packet_copy;
+static bool default_no_rx;
 
 static const char *valid_arguments[] = {
 	ETH_NULL_PACKET_SIZE_ARG,
@@ -45,15 +46,15 @@ struct null_queue {
 };
 
 struct pmd_options {
-	unsigned int packet_copy;
+	bool packet_copy;
 	unsigned int packet_size;
-	unsigned int no_rx;
+	bool no_rx;
 };
 
 struct pmd_internals {
 	unsigned int packet_size;
-	unsigned int packet_copy;
-	unsigned int no_rx;
+	bool packet_copy;
+	bool no_rx;
 	uint16_t port_id;
 
 	struct null_queue rx_null_queues[RTE_MAX_QUEUES_PER_PORT];
@@ -606,55 +607,22 @@ eth_dev_null_create(struct rte_vdev_device *dev, struct pmd_options *args)
 	return 0;
 }
 
-static inline int
+/* Packet size is stored in a 16 bit mbuf data length, and must not be zero. */
+static int
 get_packet_size_arg(const char *key __rte_unused,
 		const char *value, void *extra_args)
 {
-	const char *a = value;
-	unsigned int *packet_size = extra_args;
+	uint64_t packet_size;
+	int ret;
 
-	if ((value == NULL) || (extra_args == NULL))
+	if (extra_args == NULL)
 		return -EINVAL;
 
-	*packet_size = (unsigned int)strtoul(a, NULL, 0);
-	if (*packet_size == UINT_MAX)
-		return -1;
+	ret = rte_kvargs_to_uint(value, 1, UINT16_MAX, &packet_size);
+	if (ret < 0)
+		return ret;
 
-	return 0;
-}
-
-static inline int
-get_packet_copy_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	const char *a = value;
-	unsigned int *packet_copy = extra_args;
-
-	if ((value == NULL) || (extra_args == NULL))
-		return -EINVAL;
-
-	*packet_copy = (unsigned int)strtoul(a, NULL, 0);
-	if (*packet_copy == UINT_MAX)
-		return -1;
-
-	return 0;
-}
-
-static int
-get_packet_no_rx_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	const char *a = value;
-	unsigned int no_rx;
-
-	if (value == NULL || extra_args == NULL)
-		return -EINVAL;
-
-	no_rx = (unsigned int)strtoul(a, NULL, 0);
-	if (no_rx != 0 && no_rx != 1)
-		return -1;
-
-	*(unsigned int *)extra_args = no_rx;
+	*(unsigned int *)extra_args = packet_size;
 	return 0;
 }
 
@@ -714,16 +682,15 @@ rte_pmd_null_probe(struct rte_vdev_device *dev)
 		if (ret < 0)
 			goto free_kvlist;
 
-
-		ret = rte_kvargs_process(kvlist,
+		ret = rte_kvargs_process_opt(kvlist,
 				ETH_NULL_PACKET_COPY_ARG,
-				&get_packet_copy_arg, &args.packet_copy);
+				rte_kvargs_handle_bool, &args.packet_copy);
 		if (ret < 0)
 			goto free_kvlist;
 
-		ret = rte_kvargs_process(kvlist,
+		ret = rte_kvargs_process_opt(kvlist,
 				ETH_NULL_PACKET_NO_RX_ARG,
-				&get_packet_no_rx_arg, &args.no_rx);
+				rte_kvargs_handle_bool, &args.no_rx);
 		if (ret < 0)
 			goto free_kvlist;
 
@@ -732,11 +699,12 @@ rte_pmd_null_probe(struct rte_vdev_device *dev)
 				"Both %s and %s arguments at the same time not supported",
 				ETH_NULL_PACKET_COPY_ARG,
 				ETH_NULL_PACKET_NO_RX_ARG);
+			ret = -EINVAL;
 			goto free_kvlist;
 		}
 	}
 
-	PMD_LOG(INFO, "Configure pmd_null: packet size is %d, "
+	PMD_LOG(INFO, "Configure pmd_null: packet size is %u, "
 			"packet copy is %s", args.packet_size,
 			args.packet_copy ? "enabled" : "disabled");
 
