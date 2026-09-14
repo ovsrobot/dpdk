@@ -105,20 +105,17 @@ is_rvu_device(unsigned long val)
 static int
 rvu_device_lookup(const char *dirname, uint32_t *part, uint32_t *pass)
 {
-	char filename[PATH_MAX];
 	unsigned long val;
 
 	/* Check if vendor id is cavium */
-	snprintf(filename, sizeof(filename), "%s/vendor", dirname);
-	if (plt_sysfs_value_parse(filename, &val) < 0)
+	if (plt_sysfs_value_parse(&val, "%s/vendor", dirname) < 0)
 		goto error;
 
 	if (val != PCI_VENDOR_ID_CAVIUM)
 		goto error;
 
 	/* Get device id  */
-	snprintf(filename, sizeof(filename), "%s/device", dirname);
-	if (plt_sysfs_value_parse(filename, &val) < 0)
+	if (plt_sysfs_value_parse(&val, "%s/device", dirname) < 0)
 		goto error;
 
 	/* Check if device ID belongs to any RVU device */
@@ -126,15 +123,13 @@ rvu_device_lookup(const char *dirname, uint32_t *part, uint32_t *pass)
 		goto error;
 
 	/* Get subsystem_device id */
-	snprintf(filename, sizeof(filename), "%s/subsystem_device", dirname);
-	if (plt_sysfs_value_parse(filename, &val) < 0)
+	if (plt_sysfs_value_parse(&val, "%s/subsystem_device", dirname) < 0)
 		goto error;
 
 	*part = val >> MODEL_CN10K_PART_SHIFT;
 
 	/* Get revision for pass value*/
-	snprintf(filename, sizeof(filename), "%s/revision", dirname);
-	if (plt_sysfs_value_parse(filename, &val) < 0)
+	if (plt_sysfs_value_parse(&val, "%s/revision", dirname) < 0)
 		goto error;
 
 	*pass = val & MODEL_CN10K_PASS_MASK;
@@ -230,31 +225,14 @@ not_found:
 static int
 midr_get(unsigned long *val)
 {
-	const char *file =
-		"/sys/devices/system/cpu/cpu0/regs/identification/midr_el1";
-	int rc = UTIL_ERR_FS;
-	char buf[BUFSIZ];
-	char *end = NULL;
-	FILE *f;
-
 	if (val == NULL)
-		goto err;
-	f = fopen(file, "r");
-	if (f == NULL)
-		goto err;
+		return UTIL_ERR_FS;
 
-	if (fgets(buf, sizeof(buf), f) == NULL)
-		goto fclose;
+	if (plt_sysfs_value_parse(val,
+			"/sys/devices/system/cpu/cpu0/regs/identification/midr_el1") < 0)
+		return UTIL_ERR_FS;
 
-	*val = strtoul(buf, &end, 0);
-	if ((buf[0] == '\0') || (end == NULL) || (*end != '\n'))
-		goto fclose;
-
-	rc = 0;
-fclose:
-	fclose(f);
-err:
-	return rc;
+	return 0;
 }
 
 static void

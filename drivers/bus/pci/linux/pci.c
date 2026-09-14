@@ -12,6 +12,7 @@
 #include <rte_devargs.h>
 #include <rte_memcpy.h>
 #include <rte_vfio.h>
+#include <rte_sysfs.h>
 
 #include <eal_export.h>
 #include "eal_filesystem.h"
@@ -205,6 +206,7 @@ pci_scan_one(const char *dirname, const struct rte_pci_addr *addr)
 {
 	char filename[PATH_MAX];
 	unsigned long tmp;
+	long num;
 	struct rte_pci_device_internal *pdev;
 	struct rte_pci_device *dev;
 	char driver[PATH_MAX];
@@ -221,43 +223,35 @@ pci_scan_one(const char *dirname, const struct rte_pci_addr *addr)
 	dev->addr = *addr;
 
 	/* get vendor id */
-	snprintf(filename, sizeof(filename), "%s/vendor", dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) < 0) {
+	if (rte_sysfs_parse_uint(&tmp, "%s/vendor", dirname) < 0) {
 		pci_free(pdev);
 		return -1;
 	}
 	dev->id.vendor_id = (uint16_t)tmp;
 
 	/* get device id */
-	snprintf(filename, sizeof(filename), "%s/device", dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) < 0) {
+	if (rte_sysfs_parse_uint(&tmp, "%s/device", dirname) < 0) {
 		pci_free(pdev);
 		return -1;
 	}
 	dev->id.device_id = (uint16_t)tmp;
 
 	/* get subsystem_vendor id */
-	snprintf(filename, sizeof(filename), "%s/subsystem_vendor",
-		 dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) < 0) {
+	if (rte_sysfs_parse_uint(&tmp, "%s/subsystem_vendor", dirname) < 0) {
 		pci_free(pdev);
 		return -1;
 	}
 	dev->id.subsystem_vendor_id = (uint16_t)tmp;
 
 	/* get subsystem_device id */
-	snprintf(filename, sizeof(filename), "%s/subsystem_device",
-		 dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) < 0) {
+	if (rte_sysfs_parse_uint(&tmp, "%s/subsystem_device", dirname) < 0) {
 		pci_free(pdev);
 		return -1;
 	}
 	dev->id.subsystem_device_id = (uint16_t)tmp;
 
 	/* get class_id */
-	snprintf(filename, sizeof(filename), "%s/class",
-		 dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) < 0) {
+	if (rte_sysfs_parse_uint(&tmp, "%s/class", dirname) < 0) {
 		pci_free(pdev);
 		return -1;
 	}
@@ -266,25 +260,15 @@ pci_scan_one(const char *dirname, const struct rte_pci_addr *addr)
 
 	/* get max_vfs */
 	dev->max_vfs = 0;
-	snprintf(filename, sizeof(filename), "%s/max_vfs", dirname);
-	if (!access(filename, F_OK) &&
-	    eal_parse_sysfs_value(filename, &tmp) == 0)
+	if (rte_sysfs_parse_uint(&tmp, "%s/max_vfs", dirname) == 0)
 		dev->max_vfs = (uint16_t)tmp;
-	else {
-		/* for non igb_uio driver, need kernel version >= 3.8 */
-		snprintf(filename, sizeof(filename),
-			 "%s/sriov_numvfs", dirname);
-		if (!access(filename, F_OK) &&
-		    eal_parse_sysfs_value(filename, &tmp) == 0)
-			dev->max_vfs = (uint16_t)tmp;
-	}
+	/* for non igb_uio driver, need kernel version >= 3.8 */
+	else if (rte_sysfs_parse_uint(&tmp, "%s/sriov_numvfs", dirname) == 0)
+		dev->max_vfs = (uint16_t)tmp;
 
-	/* get numa node, default to 0 if not present */
-	snprintf(filename, sizeof(filename), "%s/numa_node", dirname);
-
-	if (access(filename, F_OK) == 0 &&
-	    eal_parse_sysfs_value(filename, &tmp) == 0)
-		dev->device.numa_node = tmp;
+	/* get numa node, default to SOCKET_ID_ANY if not present */
+	if (rte_sysfs_parse_int(&num, "%s/numa_node", dirname) == 0)
+		dev->device.numa_node = num;
 	else
 		dev->device.numa_node = SOCKET_ID_ANY;
 

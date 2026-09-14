@@ -19,6 +19,7 @@
 #include <rte_malloc.h>
 #include <rte_bus_vmbus.h>
 #include <rte_kvargs.h>
+#include <rte_sysfs.h>
 
 #include <eal_export.h>
 #include "eal_filesystem.h"
@@ -202,11 +203,8 @@ rte_vmbus_map_device(struct rte_vmbus_device *dev)
 			return -1;
 		}
 
-		snprintf(filename, sizeof(filename),
-			 "%s/size", dirname);
-		if (eal_parse_sysfs_value(filename, &len) < 0) {
-			VMBUS_LOG(ERR,
-				"could not read %s", filename);
+		if (rte_sysfs_parse_uint(&len, "%s/size", dirname) < 0) {
+			VMBUS_LOG(ERR, "could not read size of %s", dirname);
 			return -1;
 		}
 		res->len = len;
@@ -280,6 +278,7 @@ vmbus_scan_one(const char *name)
 	char filename[PATH_MAX];
 	char dirname[PATH_MAX];
 	unsigned long tmp;
+	long num;
 
 	dev = calloc(1, sizeof(*dev));
 	if (dev == NULL)
@@ -314,14 +313,12 @@ vmbus_scan_one(const char *name)
 		goto error;
 
 	/* get relid */
-	snprintf(filename, sizeof(filename), "%s/id", dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) < 0)
+	if (rte_sysfs_parse_uint(&tmp, "%s/id", dirname) < 0)
 		goto error;
 	dev->relid = tmp;
 
 	/* get monitor id */
-	snprintf(filename, sizeof(filename), "%s/monitor_id", dirname);
-	if (eal_parse_sysfs_value(filename, &tmp) >= 0) {
+	if (rte_sysfs_parse_uint(&tmp, "%s/monitor_id", dirname) >= 0) {
 		dev->monitor_id = tmp;
 	} else {
 		VMBUS_LOG(NOTICE, "monitor disabled on %s", name);
@@ -333,14 +330,8 @@ vmbus_scan_one(const char *name)
 	dev->device.numa_node = SOCKET_ID_ANY;
 	if (vmbus_use_numa(dev)) {
 		/* get numa node (if present) */
-		snprintf(filename, sizeof(filename), "%s/numa_node",
-			 dirname);
-
-		if (access(filename, R_OK) == 0) {
-			if (eal_parse_sysfs_value(filename, &tmp) < 0)
-				goto error;
-			dev->device.numa_node = tmp;
-		}
+		if (rte_sysfs_parse_int(&num, "%s/numa_node", dirname) == 0)
+			dev->device.numa_node = num;
 	}
 
 	/* device is valid, add in list (sorted) */

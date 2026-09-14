@@ -38,6 +38,7 @@
 #include <rte_ring.h>
 #include <rte_spinlock.h>
 #include <rte_power_intrinsics.h>
+#include <rte_sysfs.h>
 
 #include "compat.h"
 #include "eal_filesystem.h"
@@ -2568,15 +2569,13 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 
 	/* get numa node id from net sysfs */
 	if (dev->device.numa_node == SOCKET_ID_ANY) {
-		unsigned long numa = 0;
-		char numa_path[PATH_MAX];
+		long numa;
 
-		snprintf(numa_path, sizeof(numa_path), "/sys/class/net/%s/device/numa_node",
-			 if_name);
-		if (access(numa_path, R_OK) != 0 || eal_parse_sysfs_value(numa_path, &numa) != 0)
-			dev->device.numa_node = rte_socket_id();
-		else
+		if (rte_sysfs_parse_int(&numa, "/sys/class/net/%s/device/numa_node",
+					if_name) == 0)
 			dev->device.numa_node = numa;
+		else
+			dev->device.numa_node = rte_socket_id();
 	}
 
 	busy_budget = busy_budget == -1 ? ETH_AF_XDP_DFLT_BUSY_BUDGET :

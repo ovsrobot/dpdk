@@ -10,6 +10,7 @@
 #include <rte_errno.h>
 #include <bus_auxiliary_driver.h>
 #include <rte_common.h>
+#include <rte_sysfs.h>
 #include <eal_export.h>
 #include "eal_filesystem.h"
 
@@ -93,16 +94,12 @@ mlx5_auxiliary_get_pci_str(const struct rte_auxiliary_device *dev,
 static int
 mlx5_auxiliary_get_numa(const struct rte_auxiliary_device *dev)
 {
-	unsigned long numa;
-	char numa_path[PATH_MAX];
+	char pci_path[PATH_MAX];
+	long numa;
 
-	if (mlx5_auxiliary_get_pci_path(dev, numa_path, sizeof(numa_path)) != 0)
+	if (mlx5_auxiliary_get_pci_path(dev, pci_path, sizeof(pci_path)) != 0)
 		return SOCKET_ID_ANY;
-	if (strcat(numa_path, "/numa_node") == NULL) {
-		rte_errno = ENAMETOOLONG;
-		return SOCKET_ID_ANY;
-	}
-	if (eal_parse_sysfs_value(numa_path, &numa) != 0) {
+	if (rte_sysfs_parse_int(&numa, "%s/numa_node", pci_path) != 0) {
 		rte_errno = EINVAL;
 		return SOCKET_ID_ANY;
 	}

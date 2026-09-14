@@ -76,34 +76,3 @@ int eal_create_runtime_dir(void)
 
 	return 0;
 }
-
-/* parse a sysfs (or other) file containing one integer value */
-RTE_EXPORT_SYMBOL(eal_parse_sysfs_value)
-int eal_parse_sysfs_value(const char *filename, unsigned long *val)
-{
-	FILE *f;
-	char buf[BUFSIZ];
-	char *end = NULL;
-
-	if ((f = fopen(filename, "r")) == NULL) {
-		EAL_LOG(ERR, "%s(): cannot open sysfs value %s",
-			__func__, filename);
-		return -1;
-	}
-
-	if (fgets(buf, sizeof(buf), f) == NULL) {
-		EAL_LOG(ERR, "%s(): cannot read sysfs value %s",
-			__func__, filename);
-		fclose(f);
-		return -1;
-	}
-	*val = strtoul(buf, &end, 0);
-	if ((buf[0] == '\0') || (end == NULL) || (*end != '\n')) {
-		EAL_LOG(ERR, "%s(): cannot parse sysfs value %s",
-				__func__, filename);
-		fclose(f);
-		return -1;
-	}
-	fclose(f);
-	return 0;
-}
