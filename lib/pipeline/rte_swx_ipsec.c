@@ -1460,7 +1460,8 @@ crypto_xform_get(struct rte_swx_ipsec_sa_params *p,
 		switch (p->crypto.cipher_auth.cipher.alg) {
 		case RTE_CRYPTO_CIPHER_AES_CBC:
 		case RTE_CRYPTO_CIPHER_3DES_CBC:
-			salt = rte_rand();
+			if (rte_random_bytes(&salt, sizeof(salt)) != 0)
+				return NULL;
 			break;
 
 		case RTE_CRYPTO_CIPHER_AES_CTR:
