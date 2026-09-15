@@ -171,7 +171,7 @@ is_valid_ipv4_pkt(struct rte_ipv4_hdr *pkt, uint32_t link_len, uint64_t ol_flags
 
 	/* 2. The IP checksum must be correct. */
 	/* if this is not checked in H/W, check it. */
-	if ((ol_flags & RTE_MBUF_F_RX_IP_CKSUM_MASK) == RTE_MBUF_F_RX_IP_CKSUM_NONE) {
+	if ((ol_flags & RTE_MBUF_F_RX_IP_CKSUM_MASK) == RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN) {
 		uint16_t actual_cksum, expected_cksum;
 		actual_cksum = pkt->hdr_checksum;
 		pkt->hdr_checksum = 0;
