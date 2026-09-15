@@ -407,6 +407,7 @@ Features of the DPAA2 PMD are:
 - Link flow control
 - Scattered and gather for TX and RX
 - Rx queue interrupts
+- Traffic metering and policing
 - :ref:`dpaa2_dptmapi`
 
 

@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated NXP DPAA2 net driver.**
+
+  * Added support for flow classification on more protocol fields.
+  * Added Tx queue based flow control and confirmation queue handling.
+  * Added software parser based packet dump for debugging.
+  * Added support for traffic metering and policing.
 
 Removed Items
 -------------
