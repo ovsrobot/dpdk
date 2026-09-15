@@ -69,6 +69,8 @@ New Features
     64 bits of the value passed to ``rte_srand()`` now affect the state,
     so a given seed produces a different sequence than in previous
     releases.
+  * The test application now accepts a ``DPDK_TEST_SEED`` environment
+    variable to make runs using ``rte_rand()`` repeatable.
 
 
 Removed Items
