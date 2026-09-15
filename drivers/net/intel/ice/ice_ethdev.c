@@ -3778,9 +3778,14 @@ ice_get_default_rss_key(uint8_t *rss_key, uint32_t rss_key_size)
 	}
 
 	if (!default_key_done) {
-		/* Calculate the default hash key */
-		for (i = 0; i < sizeof(default_key); i++)
-			key[i] = (uint8_t)rte_rand();
+		/* Calculate the default hash key. Fall back to rte_rand()
+		 * if the system random generator is not available, this
+		 * function cannot report an error.
+		 */
+		if (rte_random_bytes(key, sizeof(default_key)) != 0) {
+			for (i = 0; i < sizeof(default_key); i++)
+				key[i] = (uint8_t)rte_rand();
+		}
 		default_key_done = true;
 	}
 	memcpy(rss_key, key, RTE_MIN(rss_key_size, sizeof(default_key)));

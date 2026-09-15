@@ -1125,14 +1125,16 @@ ice_dcf_init_rss(struct ice_dcf_hw *hw)
 	 */
 
 	/* configure RSS key */
-	if (!rss_conf->rss_key)
+	if (!rss_conf->rss_key) {
 		/* Calculate the default hash key */
-		for (i = 0; i < hw->vf_res->rss_key_size; i++)
-			hw->rss_key[i] = (uint8_t)rte_rand();
-	else
+		ret = rte_random_bytes(hw->rss_key, hw->vf_res->rss_key_size);
+		if (ret != 0)
+			return ret;
+	} else {
 		memcpy(hw->rss_key, rss_conf->rss_key,
 			   RTE_MIN(rss_conf->rss_key_len,
 				   hw->vf_res->rss_key_size));
+	}
 
 	/* init RSS LUT table */
 	for (i = 0, j = 0; i < hw->vf_res->rss_lut_size; i++, j++) {

@@ -432,8 +432,9 @@ idpf_init_rss(struct idpf_vport *vport)
 	nb_q = dev_data->nb_rx_queues;
 
 	if (rss_conf->rss_key == NULL) {
-		for (i = 0; i < vport->rss_key_size; i++)
-			vport->rss_key[i] = (uint8_t)rte_rand();
+		ret = rte_random_bytes(vport->rss_key, vport->rss_key_size);
+		if (ret != 0)
+			return ret;
 	} else if (rss_conf->rss_key_len != vport->rss_key_size) {
 		PMD_INIT_LOG(ERR, "Invalid RSS key length in RSS configuration, should be %d",
 			     vport->rss_key_size);

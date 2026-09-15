@@ -565,12 +565,14 @@ iavf_init_rss(struct iavf_adapter *adapter)
 	/* configure RSS key */
 	if (!rss_conf->rss_key) {
 		/* Calculate the default hash key */
-		for (i = 0; i < vf->vf_res->rss_key_size; i++)
-			vf->rss_key[i] = (uint8_t)rte_rand();
-	} else
+		ret = rte_random_bytes(vf->rss_key, vf->vf_res->rss_key_size);
+		if (ret != 0)
+			return ret;
+	} else {
 		memcpy(vf->rss_key, rss_conf->rss_key,
 			   RTE_MIN(rss_conf->rss_key_len,
 				   vf->vf_res->rss_key_size));
+	}
 
 	/* init RSS LUT table */
 	for (i = 0, j = 0; i < vf->vf_res->rss_lut_size; i++, j++) {
