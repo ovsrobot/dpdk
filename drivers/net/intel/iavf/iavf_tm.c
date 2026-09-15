@@ -189,7 +189,7 @@ iavf_node_param_check(struct iavf_info *vf, uint32_t node_id,
 	}
 
 	/* for leaf node */
-	if (params->leaf.cman) {
+	if (params->leaf.cman != RTE_TM_CMAN_TAIL_DROP) {
 		error->type = RTE_TM_ERROR_TYPE_NODE_PARAMS_CMAN;
 		error->message = "Congestion management not supported";
 		return -EINVAL;
