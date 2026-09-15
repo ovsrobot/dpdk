@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated random number generation.**
+
+  * The initial seed is now always taken from ``getentropy()``.
+
 
 Removed Items
 -------------
