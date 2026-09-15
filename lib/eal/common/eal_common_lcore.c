@@ -130,6 +130,13 @@ rte_lcore_to_socket_id(unsigned int lcore_id)
 	return lcore_config[lcore_id].numa_id;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cpu_socket_id, 26.11)
+unsigned int
+rte_cpu_socket_id(unsigned int cpu_id)
+{
+	return eal_cpu_socket_id(cpu_id);
+}
+
 static int
 socket_id_cmp(const void *a, const void *b)
 {
