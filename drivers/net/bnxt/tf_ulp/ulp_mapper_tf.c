@@ -404,7 +404,7 @@ ulp_mapper_tf_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 				BNXT_DRV_DBG(DEBUG,
 					     "Fail to insert EM, shall add to wc\n");
 			}
-			ulp_regfile_write(parms->regfile, tbl->tbl_operand,
+			rc = ulp_regfile_write(parms->regfile, tbl->tbl_operand,
 					  tfp_cpu_to_be_64(val));
 		}
 		if (rc)

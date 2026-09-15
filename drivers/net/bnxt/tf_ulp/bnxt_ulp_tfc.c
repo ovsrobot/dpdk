@@ -309,6 +309,8 @@ ulp_tfc_tbl_scope_deinit(struct bnxt *bp)
 		return;
 
 	rc = bnxt_ulp_cntxt_tsid_get(bp->ulp_ctx, &tsid);
+	if (rc)
+		return;
 
 	rc = bnxt_ulp_cntxt_fid_get(bp->ulp_ctx, &fid);
 	if (rc)
