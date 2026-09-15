@@ -39,55 +39,45 @@ static RTE_LCORE_VAR_HANDLE(struct rte_rand_state, rand_state);
 /* instance to be shared by all unregistered non-EAL threads */
 static struct rte_rand_state unregistered_rand_state;
 
-static uint32_t
-__rte_rand_lcg32(uint32_t *seed)
+/* SplitMix64, used to expand the seed into the generator state.
+ * It has a full 64 bit period and good avalanche, so all the bits
+ * of the seed affect every word of the resulting state.
+ *
+ * See "Fast Splittable Pseudorandom Number Generators" by Steele,
+ * Lea and Flood, https://doi.org/10.1145/2714064.2660195
+ */
+static uint64_t
+__rte_rand_splitmix64(uint64_t *state)
 {
-	*seed = 1103515245U * *seed + 12345U;
+	uint64_t z;
 
-	return *seed;
+	z = (*state += 0x9E3779B97F4A7C15ULL);
+	z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+	z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+
+	return z ^ (z >> 31);
 }
 
 static uint64_t
-__rte_rand_lcg64(uint32_t *seed)
+__rte_rand_lfsr258_gen_seed(uint64_t *state, uint64_t min_value)
 {
-	uint64_t low;
-	uint64_t high;
-
-	/* A 64-bit LCG would have been much cleaner, but good
-	 * multiplier/increments for such seem hard to come by.
+	/* LFSR258 degenerates unless each word exceeds its threshold.
+	 * All thresholds are powers of two, so a bitwise or is enough
+	 * and keeps the remaining bits untouched.
 	 */
-
-	low = __rte_rand_lcg32(seed);
-	high = __rte_rand_lcg32(seed);
-
-	return low | (high << 32);
-}
-
-static uint64_t
-__rte_rand_lfsr258_gen_seed(uint32_t *seed, uint64_t min_value)
-{
-	uint64_t res;
-
-	res = __rte_rand_lcg64(seed);
-
-	if (res < min_value)
-		res += min_value;
-
-	return res;
+	return __rte_rand_splitmix64(state) | min_value;
 }
 
 static void
 __rte_srand_lfsr258(uint64_t seed, struct rte_rand_state *state)
 {
-	uint32_t lcg_seed;
+	uint64_t mix_state = seed;
 
-	lcg_seed = (uint32_t)(seed ^ (seed >> 32));
-
-	state->z1 = __rte_rand_lfsr258_gen_seed(&lcg_seed, 2UL);
-	state->z2 = __rte_rand_lfsr258_gen_seed(&lcg_seed, 512UL);
-	state->z3 = __rte_rand_lfsr258_gen_seed(&lcg_seed, 4096UL);
-	state->z4 = __rte_rand_lfsr258_gen_seed(&lcg_seed, 131072UL);
-	state->z5 = __rte_rand_lfsr258_gen_seed(&lcg_seed, 8388608UL);
+	state->z1 = __rte_rand_lfsr258_gen_seed(&mix_state, 2UL);
+	state->z2 = __rte_rand_lfsr258_gen_seed(&mix_state, 512UL);
+	state->z3 = __rte_rand_lfsr258_gen_seed(&mix_state, 4096UL);
+	state->z4 = __rte_rand_lfsr258_gen_seed(&mix_state, 131072UL);
+	state->z5 = __rte_rand_lfsr258_gen_seed(&mix_state, 8388608UL);
 }
 
 RTE_EXPORT_SYMBOL(rte_srand)
@@ -95,16 +85,24 @@ void
 rte_srand(uint64_t seed)
 {
 	unsigned int lcore_id;
+	uint64_t mix_state;
 
-	/* add lcore_id to seed to avoid having the same sequence */
+	/* Mix in the lcore id so that each lcore gets an unrelated
+	 * sequence. Adding it to the seed would leave neighbouring
+	 * lcores with nearly identical generator state.
+	 */
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		struct rte_rand_state *lcore_state =
 			RTE_LCORE_VAR_LCORE(lcore_id, rand_state);
 
-		__rte_srand_lfsr258(seed + lcore_id, lcore_state);
+		mix_state = seed + lcore_id;
+		__rte_srand_lfsr258(__rte_rand_splitmix64(&mix_state),
+				    lcore_state);
 	}
 
-	__rte_srand_lfsr258(seed + lcore_id, &unregistered_rand_state);
+	mix_state = seed + lcore_id;
+	__rte_srand_lfsr258(__rte_rand_splitmix64(&mix_state),
+			    &unregistered_rand_state);
 }
 
 static __rte_always_inline uint64_t

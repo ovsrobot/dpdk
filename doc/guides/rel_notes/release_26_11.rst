@@ -65,6 +65,10 @@ New Features
     values which must not be predictable, such as keys, hash seeds and
     MAC addresses, where the pseudo-random ``rte_rand()`` is not
     suitable.
+  * Improved the expansion of the seed into the generator state. All
+    64 bits of the value passed to ``rte_srand()`` now affect the state,
+    so a given seed produces a different sequence than in previous
+    releases.
 
 
 Removed Items
