@@ -3,6 +3,7 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 
 #include <eal_export.h>
 #include <rte_ether.h>
@@ -12,10 +13,16 @@ RTE_EXPORT_SYMBOL(rte_eth_random_addr)
 void
 rte_eth_random_addr(uint8_t *addr)
 {
-	uint64_t rand = rte_rand();
-	uint8_t *p = (uint8_t *)&rand;
+	/* Prefer the system random generator so that the address can not
+	 * be predicted from other random values. Fall back to rte_rand()
+	 * if it is unavailable, which is what was always used before.
+	 */
+	if (rte_random_bytes(addr, RTE_ETHER_ADDR_LEN) != 0) {
+		uint64_t rand = rte_rand();
 
-	rte_memcpy(addr, p, RTE_ETHER_ADDR_LEN);
+		memcpy(addr, &rand, RTE_ETHER_ADDR_LEN);
+	}
+
 	addr[0] &= (uint8_t)~RTE_ETHER_GROUP_ADDR;	/* clear multicast bit */
 	addr[0] |= RTE_ETHER_LOCAL_ADMIN_ADDR;	/* set local assignment bit */
 }

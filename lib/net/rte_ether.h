@@ -221,6 +221,11 @@ static inline int rte_is_valid_assigned_ether_addr(const struct rte_ether_addr *
 /**
  * Generate a random Ethernet address that is locally administered
  * and not multicast.
+ *
+ * The address is taken from the random source of the operating system
+ * so that it cannot be predicted from other random values. If that
+ * source is unavailable it falls back to the pseudo-random rte_rand().
+ *
  * @param addr
  *   A pointer to Ethernet address.
  */
