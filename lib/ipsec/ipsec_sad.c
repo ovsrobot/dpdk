@@ -300,7 +300,12 @@ rte_ipsec_sad_create(const char *name, const struct rte_ipsec_sad_conf *conf)
 	memcpy(sad->name, sad_name, sizeof(sad_name));
 
 	hash_params.hash_func = DEFAULT_HASH_FUNC;
-	hash_params.hash_func_init_val = rte_rand();
+	if (rte_random_bytes(&hash_params.hash_func_init_val,
+			     sizeof(hash_params.hash_func_init_val)) != 0) {
+		rte_free(sad);
+		rte_errno = EIO;
+		return NULL;
+	}
 	sad->init_val = hash_params.hash_func_init_val;
 	hash_params.socket_id = conf->socket_id;
 	hash_params.name = hash_name;
