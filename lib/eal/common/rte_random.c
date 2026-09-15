@@ -158,6 +158,16 @@ rte_rand(void)
 	return __rte_rand_lfsr258(state);
 }
 
+RTE_EXPORT_SYMBOL(rte_rand32)
+uint32_t
+rte_rand32(void)
+{
+	/* Use the high bits, they are the ones that stay good if the
+	 * underlying generator is ever changed.
+	 */
+	return (uint32_t)(rte_rand() >> 32);
+}
+
 RTE_EXPORT_SYMBOL(rte_rand_max)
 uint64_t
 rte_rand_max(uint64_t upper_bound)

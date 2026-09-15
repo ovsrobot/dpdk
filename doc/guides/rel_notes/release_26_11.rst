@@ -58,6 +58,8 @@ New Features
 * **Updated random number generation.**
 
   * The initial seed is now always taken from ``getentropy()``.
+  * Added ``rte_rand32()`` for callers which only need 32 bits and would
+    otherwise have to truncate the result of ``rte_rand()``.
 
 
 Removed Items

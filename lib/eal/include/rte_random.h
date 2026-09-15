@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include <rte_compat.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,7 +29,7 @@ extern "C" {
  *
  * This function is not multi-thread safe in regards to other
  * rte_srand() calls, nor is it in relation to concurrent rte_rand(),
- * rte_rand_max() or rte_drand() calls.
+ * rte_rand32(), rte_rand_max() or rte_drand() calls.
  *
  * @param seedval
  *   The value of the seed.
@@ -40,9 +42,9 @@ rte_srand(uint64_t seedval);
  *
  * The generator is not cryptographically secure.
  *
- * rte_rand(), rte_rand_max() and rte_drand() are multi-thread safe,
- * with the exception that they may not be called by multiple
- * _unregistered_ non-EAL threads in parallel.
+ * rte_rand(), rte_rand32(), rte_rand_max() and rte_drand() are
+ * multi-thread safe, with the exception that they may not be called
+ * by multiple _unregistered_ non-EAL threads in parallel.
  *
  * @return
  *   A pseudo-random value between 0 and (1<<64)-1.
@@ -51,14 +53,31 @@ uint64_t
 rte_rand(void);
 
 /**
+ * Get a 32 bit pseudo-random value.
+ *
+ * Prefer this over truncating the result of rte_rand() since not
+ * every generator produces equally good values in all bit positions.
+ *
+ * The generator is not cryptographically secure.
+ *
+ * This function is multi-thread safe, with the exception that it may
+ * not be called by multiple _unregistered_ non-EAL threads in parallel.
+ *
+ * @return
+ *   A pseudo-random value between 0 and (1<<32)-1.
+ */
+uint32_t
+rte_rand32(void);
+
+/**
  * Generates a pseudo-random number with an upper bound.
  *
  * This function returns an uniformly distributed (unbiased) random
  * number less than a user-specified maximum value.
  *
- * rte_rand(), rte_rand_max() and rte_drand() are multi-thread safe,
- * with the exception that they may not be called by multiple
- * _unregistered_ non-EAL threads in parallel.
+ * rte_rand(), rte_rand32(), rte_rand_max() and rte_drand() are
+ * multi-thread safe, with the exception that they may not be called
+ * by multiple _unregistered_ non-EAL threads in parallel.
  *
  * @param upper_bound
  *   The upper bound of the generated number.
@@ -76,9 +95,9 @@ rte_rand_max(uint64_t upper_bound);
  *
  * The generator is not cryptographically secure.
  *
- * rte_rand(), rte_rand_max() and rte_drand() are multi-thread safe,
- * with the exception that they may not be called by multiple
- * _unregistered_ non-EAL threads in parallel.
+ * rte_rand(), rte_rand32(), rte_rand_max() and rte_drand() are
+ * multi-thread safe, with the exception that they may not be called
+ * by multiple _unregistered_ non-EAL threads in parallel.
  *
  * @return
  *   A pseudo-random value between 0 and 1.0.
