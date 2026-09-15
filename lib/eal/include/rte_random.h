@@ -8,9 +8,14 @@
 /**
  * @file
  *
- * Pseudo-random Generators in RTE
+ * Random number generation.
+ *
+ * A fast pseudo-random generator for general use, and access to the
+ * random source of the operating system for values which must not be
+ * predictable.
  */
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <rte_compat.h>
@@ -103,6 +108,42 @@ rte_rand_max(uint64_t upper_bound);
  *   A pseudo-random value between 0 and 1.0.
  */
 double rte_drand(void);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Fill a buffer with random bytes from the system random generator.
+ *
+ * The bytes are drawn from the same source as the urandom device and
+ * are suitable for cryptographic purposes such as keys, hash seeds and
+ * MAC addresses. Unlike rte_rand() the generator state is not
+ * recoverable from the output.
+ *
+ * If the system random source has not been initialized yet this call
+ * blocks until enough entropy is available. Once initialized it never
+ * blocks.
+ *
+ * It is several orders of magnitude slower than rte_rand() because it
+ * may enter the kernel on every call, and is not meant to be used on
+ * the datapath.
+ *
+ * This function is multi-thread safe.
+ *
+ * @param buf
+ *   Buffer to fill with random bytes.
+ * @param len
+ *   Number of bytes to write. There is no upper limit, larger requests
+ *   are split internally. A length of zero succeeds without doing
+ *   anything.
+ * @return
+ *   0 on success and the buffer is filled completely.
+ *   A negative errno if the system random generator failed, the
+ *   contents of the buffer are then undefined.
+ */
+__rte_experimental
+int
+rte_random_bytes(void *buf, size_t len);
 
 #ifdef __cplusplus
 }

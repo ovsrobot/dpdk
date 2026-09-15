@@ -10,9 +10,13 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#ifndef RTE_EXEC_ENV_WINDOWS
+#include <sys/random.h>
+#endif
 
 #include <rte_bitops.h>
 #include <rte_branch_prediction.h>
+#include <rte_common.h>
 #include <rte_cycles.h>
 #include <rte_lcore.h>
 #include <rte_lcore_var.h>
@@ -226,6 +230,42 @@ rte_drand(void)
 
 	rand64 &= denom - 1;
 	return (double)rand64 / denom;
+}
+
+/* Requests of at most this size are guaranteed to return in full
+ * once the random source has been initialized. Larger requests are
+ * split so that callers do not have to care about the limit.
+ */
+#define RANDOM_BYTES_CHUNK 256
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_random_bytes, 26.11)
+int
+rte_random_bytes(void *buf, size_t len)
+{
+	uint8_t *ptr = buf;
+
+	while (len > 0) {
+		size_t chunk = RTE_MIN(len, (size_t)RANDOM_BYTES_CHUNK);
+		ssize_t ret;
+
+		ret = getrandom(ptr, chunk, 0);
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+			return -errno;
+		}
+
+		/* Should not happen, a bounded request either blocks
+		 * until it can be satisfied in full or fails.
+		 */
+		if (ret == 0)
+			return -EIO;
+
+		ptr += ret;
+		len -= ret;
+	}
+
+	return 0;
 }
 
 static uint64_t

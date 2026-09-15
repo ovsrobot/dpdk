@@ -60,6 +60,11 @@ New Features
   * The initial seed is now always taken from ``getentropy()``.
   * Added ``rte_rand32()`` for callers which only need 32 bits and would
     otherwise have to truncate the result of ``rte_rand()``.
+  * Added ``rte_random_bytes()`` to fill a buffer from the random
+    generator provided by the operating system. It is intended for
+    values which must not be predictable, such as keys, hash seeds and
+    MAC addresses, where the pseudo-random ``rte_rand()`` is not
+    suitable.
 
 
 Removed Items
