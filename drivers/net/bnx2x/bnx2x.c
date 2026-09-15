@@ -28,6 +28,7 @@
 #include <zlib.h>
 
 #include <rte_bitops.h>
+#include <rte_random.h>
 #include <rte_string_fns.h>
 
 #include "eal_firmware.h"
@@ -6643,7 +6644,7 @@ bnx2x_config_rss_pf(struct bnx2x_softc *sc, struct ecore_rss_config_obj *rss_obj
 		  uint8_t config_hash)
 {
 	struct ecore_config_rss_params params = { NULL };
-	uint32_t i;
+	int rc;
 
 	/*
 	 * Although RSS is meaningless when there is a single HW queue we
@@ -6675,9 +6676,11 @@ bnx2x_config_rss_pf(struct bnx2x_softc *sc, struct ecore_rss_config_obj *rss_obj
 			 sizeof(params.ind_table));
 
 	if (config_hash) {
-/* RSS keys */
-		for (i = 0; i < sizeof(params.rss_key) / 4; i++) {
-			params.rss_key[i] = (uint32_t) rte_rand();
+		/* RSS keys */
+		rc = rte_random_bytes(params.rss_key, sizeof(params.rss_key));
+		if (rc != 0) {
+			PMD_DRV_LOG(ERR, sc, "Error generating RSS hash key");
+			return rc;
 		}
 
 		rte_bit_relaxed_set32(ECORE_RSS_SET_SRCH, &params.rss_flags);

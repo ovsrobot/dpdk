@@ -3,6 +3,8 @@
  *   Copyright(c) 2018 Synopsys, Inc. All rights reserved.
  */
 
+#include <rte_random.h>
+
 #include "axgbe_ethdev.h"
 #include "axgbe_common.h"
 #include "axgbe_phy.h"
@@ -931,13 +933,15 @@ static void axgbe_rss_options(struct axgbe_port *pdata)
 static int axgbe_config_rss(struct axgbe_port *pdata)
 {
 	uint32_t i;
+	int ret;
 
 	if (pdata->rss_enable) {
 		/* Initialize RSS hash key and lookup table */
-		uint32_t *key = (uint32_t *)pdata->rss_key;
-
-		for (i = 0; i < sizeof(pdata->rss_key) / 4; i++)
-			*key++ = (uint32_t)rte_rand();
+		ret = rte_random_bytes(pdata->rss_key, sizeof(pdata->rss_key));
+		if (ret != 0) {
+			PMD_DRV_LOG_LINE(ERR, "Error generating RSS hash key");
+			return ret;
+		}
 		for (i = 0; i < AXGBE_RSS_MAX_TABLE_SIZE; i++)
 			AXGMAC_SET_BITS(pdata->rss_table[i], MAC_RSSDR, DMCH,
 					i % pdata->eth_dev->data->nb_rx_queues);
@@ -1393,7 +1397,9 @@ static int axgbe_init(struct axgbe_port *pdata)
 	axgbe_config_tx_pbl_val(pdata);
 	axgbe_config_rx_pbl_val(pdata);
 	axgbe_config_rx_buffer_size(pdata);
-	axgbe_config_rss(pdata);
+	ret = axgbe_config_rss(pdata);
+	if (ret)
+		return ret;
 	axgbe_config_tso_mode(pdata);
 	wrapper_tx_desc_init(pdata);
 	ret = wrapper_rx_desc_init(pdata);
