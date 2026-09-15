@@ -9,7 +9,6 @@
 #include <rte_thash.h>
 #include <rte_tailq.h>
 #include <rte_random.h>
-#include <rte_memcpy.h>
 #include <rte_errno.h>
 #include <rte_eal_memconfig.h>
 #include <rte_log.h>
@@ -176,7 +175,17 @@ alloc_lfsr(uint32_t poly_degree)
 	lfsr->deg = poly_degree;
 	lfsr->poly = thash_get_rand_poly(lfsr->deg);
 	do {
-		lfsr->state = rte_rand() & ((1 << lfsr->deg) - 1);
+		uint32_t rnd;
+
+		if (rte_random_bytes(&rnd, sizeof(rnd)) != 0) {
+			rte_free(lfsr);
+			return NULL;
+		}
+
+		/* deg can be 32, so the mask must not be computed by
+		 * shifting an int by the degree.
+		 */
+		lfsr->state = rnd & RTE_GENMASK32(lfsr->deg - 1, 0);
 	} while (lfsr->state == 0);
 	/* init reverse order polynomial */
 	lfsr->rev_poly = get_rev_poly(lfsr->poly, lfsr->deg);
@@ -215,11 +224,33 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 	struct rte_thash_ctx *ctx;
 	struct rte_tailq_entry *te;
 	struct rte_thash_list *thash_list;
-	uint32_t i;
+	uint8_t *rand_key = NULL;
 
 	if ((name == NULL) || (key_len == 0) || !RETA_SZ_IN_RANGE(reta_sz)) {
 		rte_errno = EINVAL;
 		return NULL;
+	}
+
+	/* Draw the random key before taking the tailq lock, the system
+	 * random generator can block until it is initialized.
+	 */
+	if (key == NULL) {
+		rand_key = rte_zmalloc(NULL, key_len, 0);
+		if (rand_key == NULL) {
+			HASH_LOG(ERR, "thash ctx %s key allocation failed",
+				name);
+			rte_errno = ENOMEM;
+			return NULL;
+		}
+
+		if (rte_random_bytes(rand_key, key_len) != 0) {
+			HASH_LOG(ERR,
+				"Cannot generate hash key for thash context %s",
+				name);
+			rte_free(rand_key);
+			rte_errno = EIO;
+			return NULL;
+		}
 	}
 
 	thash_list = RTE_TAILQ_CAST(rte_thash_tailq.head, rte_thash_list);
@@ -262,12 +293,7 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 	LIST_INIT(&ctx->head);
 	ctx->flags = flags;
 
-	if (key)
-		rte_memcpy(ctx->hash_key, key, key_len);
-	else {
-		for (i = 0; i < key_len; i++)
-			ctx->hash_key[i] = rte_rand();
-	}
+	memcpy(ctx->hash_key, key ? key : rand_key, key_len);
 
 	if (rte_thash_gfni_supported()) {
 		ctx->matrices = rte_zmalloc(NULL, key_len * sizeof(uint64_t),
@@ -286,6 +312,7 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 	TAILQ_INSERT_TAIL(thash_list, te, next);
 
 	rte_mcfg_tailq_write_unlock();
+	rte_free(rand_key);
 
 	return ctx;
 
@@ -295,6 +322,7 @@ free_te:
 	rte_free(te);
 exit:
 	rte_mcfg_tailq_write_unlock();
+	rte_free(rand_key);
 	return NULL;
 }
 

@@ -295,7 +295,9 @@ struct rte_thash_subtuple_helper;
  *  the reta entry.
  * @param key
  *  Pointer to the key used to init an internal key state.
- *  Could be NULL, in this case internal key will be inited with random.
+ *  Could be NULL, in this case the internal key is generated from the
+ *  random source of the operating system, and context creation fails
+ *  if that source is unavailable.
  * @param flags
  *  Supported flags are:
  *   RTE_THASH_IGNORE_PERIOD_OVERFLOW
