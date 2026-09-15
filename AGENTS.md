@@ -544,6 +544,9 @@ or authentication digests. Stays silent on all other patches.
 - **Insecure RNG for keys/IVs** (Error):
   rte_rand()/rand()/random() are not cryptographically secure;
   do not use them to generate keys, IVs, or nonces in crypto/security code.
+  Use rte_random_bytes(), which draws from the random source of the
+  operating system. The same applies to other values that must not be
+  predictable, such as RSS and hash keys, salts and random MAC addresses.
 
 Do NOT flag:
 - IV/nonce reuse -- a runtime property, not determinable from a patch.
@@ -1680,7 +1683,7 @@ Checked by `devtools/checkpatches.sh` -- not duplicated here.
 - [ ] Memory ordering is the weakest correct choice (`relaxed` for counters, `acquire`/`release` for publish/consume)
 - [ ] Auth tag/digest comparisons use rte_memeq_timingsafe(), not memcmp
 - [ ] Key material zeroed before free (rte_free_sensitive / rte_memzero_explicit)
-- [ ] Keys/IVs/nonces not generated with rte_rand()/rand()/random()
+- [ ] Keys/IVs/nonces not generated with rte_rand()/rand()/random(), use rte_random_bytes()
 
 ### API Tags
 
@@ -1795,6 +1798,7 @@ devtools/get-maintainer.sh <patch-file>
 - Non-constant-time comparison of auth tag/digest/MAC/ICV (timing side channel)
 - Key material or session secrets freed without zeroing (rte_free_sensitive/rte_memzero_explicit)
 - Non-cryptographic RNG (rte_rand/rand/random) used to generate keys, IVs, or nonces
+  instead of rte_random_bytes()
 
 *Process and format errors:*
 - Forbidden tokens in code
