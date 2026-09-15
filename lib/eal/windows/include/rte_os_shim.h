@@ -4,6 +4,7 @@
 #define _RTE_OS_SHIM_
 
 #include <errno.h>
+#include <limits.h>
 #include <time.h>
 
 #include <rte_os.h>
@@ -153,5 +154,38 @@ rte_getentropy(void *buffer, size_t length)
 	return 0;
 }
 #define getentropy(buffer, length) rte_getentropy(buffer, length)
+
+/*
+ * Windows has no getrandom(), use the same system preferred random
+ * generator as the getentropy() shim above.
+ *
+ * BCryptGenRandom() either fills the whole buffer or fails, so unlike
+ * the system call this never returns a short count. The flags argument
+ * is ignored, there is no Windows equivalent of GRND_NONBLOCK and the
+ * system preferred generator does not block.
+ */
+static inline ssize_t
+rte_getrandom(void *buffer, size_t length, unsigned int flags)
+{
+	NTSTATUS status;
+
+	RTE_SET_USED(flags);
+
+	/* The count is a ULONG, a longer request is served short like
+	 * the system call is allowed to do.
+	 */
+	if (length > ULONG_MAX)
+		length = ULONG_MAX;
+
+	status = BCryptGenRandom(NULL, (PUCHAR)buffer, (ULONG)length,
+				 BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+	if (!BCRYPT_SUCCESS(status)) {
+		errno = EIO;
+		return -1;
+	}
+
+	return (ssize_t)length;
+}
+#define getrandom(buffer, length, flags) rte_getrandom(buffer, length, flags)
 
 #endif /* _RTE_OS_SHIM_ */
