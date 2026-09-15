@@ -85,6 +85,12 @@ Removed Items
     ``rte_rib6_is_equal``
   * table: ``RTE_LPM_IPV6_ADDR_SIZE``
 
+* sched: Removed the private random number generator used by RED: the
+  inline function ``rte_fast_rand()`` in ``rte_red.h`` and its global
+  state ``rte_red_rand_seed`` and ``rte_red_rand_val``. Its state was
+  shared by all lcores without synchronisation. RED now uses
+  ``rte_rand32()``, which has per lcore state.
+
 
 API Changes
 -----------
@@ -101,7 +107,6 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-
 ABI Changes
 -----------
 
@@ -116,6 +121,11 @@ ABI Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* sched: Removed the exported variables ``rte_red_rand_seed`` and
+  ``rte_red_rand_val``. They held the state of the private random
+  number generator used by RED, which has been replaced by
+  ``rte_rand32()``.
 
 
 Known Issues
