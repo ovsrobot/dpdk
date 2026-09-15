@@ -637,20 +637,8 @@ pmd_enetfec_probe(struct rte_vdev_device *vdev)
 	*mac = (uint16_t)(tmac >> ENETFEC_MAC_SHIFT);
 	high_mac = (uint16_t)(*mac);
 
-	if ((high_mac | low_mac) == 0 || (high_mac | low_mac) == ENETFEC_MAC_RESET) {
-		uint8_t *first_byte;
-
-		mac = (uint16_t *)addr.addr_bytes;
-		tmac = (uint32_t)rte_rand();
-		first_byte = (uint8_t *)&tmac;
-		*first_byte &= (uint8_t)~RTE_ETHER_GROUP_ADDR; /* clear multicast bit */
-		*first_byte |= RTE_ETHER_LOCAL_ADMIN_ADDR; /* set local assignment bit (IEEE802) */
-		*mac = (uint16_t)tmac;
-		mac++;
-		*mac = (uint16_t)(tmac >> ENETFEC_MAC_SHIFT);
-		mac++;
-		*mac = (uint16_t)rte_rand();
-	}
+	if ((high_mac | low_mac) == 0 || (high_mac | low_mac) == ENETFEC_MAC_RESET)
+		rte_eth_random_addr(addr.addr_bytes);
 
 	enetfec_set_mac_address(dev, &addr);
 

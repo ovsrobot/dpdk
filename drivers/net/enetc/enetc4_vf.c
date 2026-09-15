@@ -4,7 +4,6 @@
 
 #include <stdbool.h>
 #include <rte_kvargs.h>
-#include <rte_random.h>
 #include <dpaax_iova_table.h>
 #include "enetc_logs.h"
 #include "enetc.h"
@@ -1252,18 +1251,19 @@ enetc4_vf_mac_init(struct enetc_eth_hw *hw, struct rte_eth_dev *eth_dev)
 	low_mac = (uint16_t)*mac;
 
 	if ((high_mac | low_mac) == 0) {
-		char *first_byte;
+		const uint8_t *addr = hw->mac.addr;
+
 		ENETC_PMD_NOTICE("MAC is not available for this SI, "
 				 "set random MAC");
-		mac = (uint32_t *)hw->mac.addr;
-		*mac = (uint32_t)rte_rand();
-		first_byte = (char *)mac;
-		*first_byte &= 0xfe;    /* clear multicast bit */
-		*first_byte |= 0x02;    /* set local assignment bit (IEEE802) */
-		enetc4_port_wr(enetc_hw, ENETC4_PMAR0, *mac);
-		mac++;
-		*mac = (uint16_t)rte_rand();
-		enetc4_port_wr(enetc_hw, ENETC4_PMAR1, *mac);
+		rte_eth_random_addr(hw->mac.addr);
+		/* The address is six bytes, read the last two explicitly
+		 * rather than through a wider pointer.
+		 */
+		enetc4_port_wr(enetc_hw, ENETC4_PMAR0,
+			       addr[0] | addr[1] << 8 |
+			       addr[2] << 16 | (uint32_t)addr[3] << 24);
+		enetc4_port_wr(enetc_hw, ENETC4_PMAR1,
+			       addr[4] | addr[5] << 8);
 		enetc_print_ethaddr("New address: ",
 			(const struct rte_ether_addr *)hw->mac.addr);
 	}
