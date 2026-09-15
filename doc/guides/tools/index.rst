@@ -26,3 +26,4 @@ DPDK Tools User Guides
     testmldev
     graph
     dts
+    validate_bpf
