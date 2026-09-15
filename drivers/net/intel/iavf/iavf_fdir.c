@@ -711,7 +711,6 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			ipv4_spec = item->spec;
 			ipv4_last = item->last;
 			ipv4_mask = item->mask;
-			next_type = (item + 1)->type;
 
 			hdr = &hdrs->proto_hdr[layer];
 
