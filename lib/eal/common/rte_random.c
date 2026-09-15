@@ -2,11 +2,6 @@
  * Copyright(c) 2019 Ericsson AB
  */
 
-#ifdef __RDSEED__
-#ifndef RTE_TOOLCHAIN_MSVC
-#include <x86intrin.h>
-#endif
-#endif
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
@@ -276,16 +271,8 @@ __rte_random_initial_seed(void)
 
 	if (ge_rc == 0)
 		return ge_seed;
-#ifdef __RDSEED__
-	unsigned int rdseed_low;
-	unsigned int rdseed_high;
 
-	/* first fallback: rdseed instruction, if available */
-	if (_rdseed32_step(&rdseed_low) == 1 &&
-	    _rdseed32_step(&rdseed_high) == 1)
-		return (uint64_t)rdseed_low | ((uint64_t)rdseed_high << 32);
-#endif
-	/* second fallback: seed using rdtsc */
+	/* fallback: seed using rdtsc */
 	EAL_LOG(ERR, "getentropy() failed (%s), seeding PRNG from TSC: seed has low entropy",
 		strerror(errno));
 	return rte_get_tsc_cycles();
