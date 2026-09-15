@@ -550,7 +550,6 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 	struct rte_ecpri_common_hdr ecpri_common;
 	uint64_t input_set = IAVF_INSET_NONE;
 	enum rte_flow_item_type item_type;
-	enum rte_flow_item_type next_type;
 	uint8_t tun_inner = 0;
 	uint16_t ether_type, flags_version;
 	uint8_t item_num = 0;
@@ -649,13 +648,12 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 		case RTE_FLOW_ITEM_TYPE_ETH:
 			eth_spec = item->spec;
 			eth_mask = item->mask;
-			next_type = (item + 1)->type;
 
 			hdr1 = &hdrs->proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr1, ETH);
 
-			if (next_type == RTE_FLOW_ITEM_TYPE_END &&
+			if (((item + 1)->type == RTE_FLOW_ITEM_TYPE_END) &&
 			    (!eth_spec || !eth_mask)) {
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ITEM,
@@ -705,13 +703,11 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 
 			hdrs->count = ++layer;
 			break;
-
 		case RTE_FLOW_ITEM_TYPE_IPV4:
 			l3 = RTE_FLOW_ITEM_TYPE_IPV4;
 			ipv4_spec = item->spec;
 			ipv4_last = item->last;
 			ipv4_mask = item->mask;
-			next_type = (item + 1)->type;
 
 			hdr = &hdrs->proto_hdr[layer];
 
@@ -897,7 +893,6 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 		case RTE_FLOW_ITEM_TYPE_IPV6_FRAG_EXT:
 			ipv6_frag_spec = item->spec;
 			ipv6_frag_mask = item->mask;
-			next_type = (item + 1)->type;
 
 			hdr = &hdrs->proto_hdr[layer];
 
