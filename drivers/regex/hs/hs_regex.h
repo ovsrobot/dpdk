@@ -16,6 +16,8 @@
 #define HS_REGEX_MAX_RULES 1000000
 #define HS_REGEX_DEFAULT_NB_DESC 1024
 #define HS_REGEX_MAX_NB_DESC 32768
+/* Cap on per-rule lines printed by dev_dump(); large rule counts are summarized. */
+#define HS_REGEX_DUMP_MAX_RULES 32
 /* Sanity cap on imported serialized database size (defense in depth;
  * Hyperscan allocates memory proportional to this size).
  */
