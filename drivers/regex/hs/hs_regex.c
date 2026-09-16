@@ -951,6 +951,161 @@ hs_regex_dequeue_burst(struct rte_regexdev *dev, uint16_t qp_id,
 	return i;
 }
 
+/* xstats: per-QP statistics */
+
+/* 3 stats per QP: enqueued, dequeued, matches */
+#define HS_XSTATS_PER_QP 3
+
+static const char * const hs_xstat_suffixes[HS_XSTATS_PER_QP] = {
+	"enqueued", "dequeued", "matches"
+};
+
+static int
+hs_regex_xstats_names_get(struct rte_regexdev *dev,
+			  struct rte_regexdev_xstats_map *xstats_map)
+{
+	struct hs_regex_priv *priv;
+	uint16_t nqp;
+	int total;
+	int idx = 0;
+	uint16_t q;
+	int s;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	nqp = priv->nb_queue_pairs;
+	total = nqp * HS_XSTATS_PER_QP;
+
+	if (!xstats_map)
+		return total;
+
+	for (q = 0; q < nqp; q++) {
+		for (s = 0; s < HS_XSTATS_PER_QP; s++) {
+			snprintf(xstats_map[idx].name,
+				 sizeof(xstats_map[idx].name),
+				 "qp%u_%s", q, hs_xstat_suffixes[s]);
+			xstats_map[idx].id = idx;
+			idx++;
+		}
+	}
+	return total;
+}
+
+static int
+hs_regex_xstats_get(struct rte_regexdev *dev,
+		    const uint16_t *ids, uint64_t *values,
+		    uint16_t nb_values)
+{
+	struct hs_regex_priv *priv;
+	uint16_t nqp;
+	int total;
+	uint16_t id, qp_idx, stat_idx;
+	uint16_t i;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	nqp = priv->nb_queue_pairs;
+	total = nqp * HS_XSTATS_PER_QP;
+
+	if (!ids || !values)
+		return total;
+
+	if (priv->qps == NULL)
+		total = 0;
+
+	for (i = 0; i < nb_values; i++) {
+		id = ids[i];
+
+		if (id >= (uint16_t)total) {
+			values[i] = 0;
+			continue;
+		}
+
+		qp_idx = id / HS_XSTATS_PER_QP;
+		stat_idx = id % HS_XSTATS_PER_QP;
+
+		switch (stat_idx) {
+		case 0:
+			values[i] = priv->qps[qp_idx].qp_enqueued;
+			break;
+		case 1:
+			values[i] = priv->qps[qp_idx].qp_dequeued;
+			break;
+		case 2:
+			values[i] = priv->qps[qp_idx].qp_matches;
+			break;
+		}
+	}
+	return nb_values;
+}
+
+static int
+hs_regex_xstats_reset(struct rte_regexdev *dev,
+		      const uint16_t *ids, uint16_t nb_ids)
+{
+	struct hs_regex_priv *priv;
+	uint16_t nqp;
+	int total;
+	uint16_t q, i;
+	uint16_t id, qp_idx, stat_idx;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	priv = dev->data->dev_private;
+	if (priv == NULL)
+		return -EINVAL;
+
+	nqp = priv->nb_queue_pairs;
+	total = nqp * HS_XSTATS_PER_QP;
+
+	if (priv->qps == NULL)
+		return 0;
+
+	if (!ids || nb_ids == 0) {
+		/* Reset all stats */
+		for (q = 0; q < nqp; q++) {
+			priv->qps[q].qp_enqueued = 0;
+			priv->qps[q].qp_dequeued = 0;
+			priv->qps[q].qp_matches = 0;
+		}
+	} else {
+		/* Reset specific stats by id */
+		for (i = 0; i < nb_ids; i++) {
+			id = ids[i];
+
+			if (id >= (uint16_t)total)
+				continue;
+
+			qp_idx = id / HS_XSTATS_PER_QP;
+			stat_idx = id % HS_XSTATS_PER_QP;
+
+			switch (stat_idx) {
+			case 0:
+				priv->qps[qp_idx].qp_enqueued = 0;
+				break;
+			case 1:
+				priv->qps[qp_idx].qp_dequeued = 0;
+				break;
+			case 2:
+				priv->qps[qp_idx].qp_matches = 0;
+				break;
+			}
+		}
+	}
+	return 0;
+}
+
 /* Operations table */
 static const struct rte_regexdev_ops hs_regexdev_ops = {
 	.dev_info_get = hs_regex_info_get,
@@ -960,6 +1115,10 @@ static const struct rte_regexdev_ops hs_regexdev_ops = {
 	.dev_rule_db_compile_activate = hs_regex_rule_db_compile_activate,
 	.dev_db_import = hs_regex_rule_db_import,
 	.dev_db_export = hs_regex_rule_db_export,
+	.dev_xstats_names_get = hs_regex_xstats_names_get,
+	.dev_xstats_get = hs_regex_xstats_get,
+	.dev_xstats_by_name_get = NULL,
+	.dev_xstats_reset = hs_regex_xstats_reset,
 };
 
 /* Device Lifecycle */
