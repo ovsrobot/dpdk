@@ -22,6 +22,18 @@
  * Hyperscan allocates memory proportional to this size).
  */
 #define HS_REGEX_MAX_RULE_DB_LEN (512U * 1024 * 1024)
+/* PMD-specific rule flags using bits 32+ to avoid overlap with DPDK flags. */
+
+/** Report at most one match per pattern per scan (maps to HS_FLAG_SINGLEMATCH). */
+#define HS_REGEX_RULE_SINGLEMATCH_F  (1ULL << 32)
+/** Treat pattern as a prefilter approximation (maps to HS_FLAG_PREFILTER). */
+#define HS_REGEX_RULE_PREFILTER_F    (1ULL << 33)
+/** Report leftmost start of match offset (maps to HS_FLAG_SOM_LEFTMOST). */
+#define HS_REGEX_RULE_SOM_LEFTMOST_F (1ULL << 34)
+/** Enable logical combination expressions (maps to HS_FLAG_COMBINATION). */
+#define HS_REGEX_RULE_COMBINATION_F  (1ULL << 35)
+/** Ignore match reporting for this pattern (maps to HS_FLAG_QUIET). */
+#define HS_REGEX_RULE_QUIET_F        (1ULL << 36)
 
 /* Ext params encoded in rule_flags bits 37-63 */
 #define HS_REGEX_EXT_MAX_OFFSET_SHIFT 37
@@ -31,10 +43,10 @@
 
 /* Device lifecycle state machine. */
 enum hs_regex_dev_state {
-	HS_REGEX_DEV_CREATED = 0,
-	HS_REGEX_DEV_CONFIGURED,
-	HS_REGEX_DEV_STARTED,
-	HS_REGEX_DEV_STOPPED,
+	HS_REGEX_DEV_CREATED = 0,   /* after dev_create, before configure */
+	HS_REGEX_DEV_CONFIGURED,    /* after configure */
+	HS_REGEX_DEV_STARTED,       /* after start */
+	HS_REGEX_DEV_STOPPED,       /* after stop (can restart) */
 };
 
 /* Per-rule entry stored before compilation */
@@ -56,6 +68,7 @@ struct hs_regex_qp {
 	uint16_t tail;
 	uint16_t count;
 	hs_scratch_t *scratch;
+	/* Per-QP counters exported via xstats. */
 	uint64_t qp_enqueued;
 	uint64_t qp_dequeued;
 	uint64_t qp_matches;
@@ -77,9 +90,11 @@ struct hs_regex_priv {
 	uint16_t max_matches;
 	uint16_t nb_groups;
 
+	/* Lifecycle state used to validate configure/start/stop. */
 	enum hs_regex_dev_state dev_state;
 };
 
+/* Device lifecycle */
 int hs_regex_dev_create(const char *name, struct rte_device *device);
 void hs_regex_dev_destroy(const char *name);
 
