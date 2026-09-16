@@ -1467,6 +1467,7 @@ static int ixgbe_fdir_filter_init(struct rte_eth_dev *eth_dev)
 	}
 	fdir_info->n_flows = 0;
 	fdir_info->mask_added = FALSE;
+	fdir_info->rx_pb_reduced = false;
 
 	/* drop queue is always fixed */
 	IXGBE_DEV_FDIR_CONF(eth_dev)->drop_queue = IXGBE_FDIR_DROP_QUEUE;
@@ -2636,6 +2637,8 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 		IXGBE_DEV_PRIVATE_TO_TM_CONF(dev->data->dev_private);
 	struct ixgbe_macsec_setting *macsec_setting =
 		IXGBE_DEV_PRIVATE_TO_MACSEC_SETTING(dev->data->dev_private);
+	struct ixgbe_hw_fdir_info *info =
+		IXGBE_DEV_PRIVATE_TO_FDIR_INFO(adapter);
 
 	/*
 	 * This function calls into the base driver, which in turn will use
@@ -2723,9 +2726,9 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 	/* Configure DCB hw */
 	ixgbe_configure_dcb(dev);
 
+	/* reset_hw restored RXPBSIZE; FDIR must subtract again */
+	info->rx_pb_reduced = false;
 	if (fdir_conf->mode != RTE_FDIR_MODE_NONE) {
-		struct ixgbe_hw_fdir_info *info =
-			IXGBE_DEV_PRIVATE_TO_FDIR_INFO(adapter);
 		err = ixgbe_fdir_configure(adapter, fdir_conf, &info->mask);
 		if (err)
 			goto error;

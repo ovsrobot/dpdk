@@ -200,6 +200,7 @@ struct ixgbe_hw_fdir_info {
 	struct rte_hash *hash_handle; /* cuckoo hash handler */
 	uint32_t n_flows;
 	bool mask_added; /* If already got mask from consistent filter */
+	bool rx_pb_reduced; /* RXPBSIZE already reduced for FDIR */
 };
 
 struct ixgbe_rte_flow_rss_conf {

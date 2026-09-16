@@ -560,8 +560,10 @@ ixgbe_fdir_configure(struct ixgbe_adapter *adapter,
 		const struct ixgbe_hw_fdir_mask *fdir_mask)
 {
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(adapter);
+	struct ixgbe_hw_fdir_info *info =
+			IXGBE_DEV_PRIVATE_TO_FDIR_INFO(adapter);
 	int err;
-	uint32_t fdirctrl, pbsize;
+	uint32_t fdirctrl;
 	int i;
 	enum rte_fdir_mode mode = fdir_conf->mode;
 
@@ -591,11 +593,18 @@ ixgbe_fdir_configure(struct ixgbe_adapter *adapter,
 	/*
 	 * Before enabling Flow Director, the Rx Packet Buffer size
 	 * must be reduced.  The new value is the current size minus
-	 * flow director memory usage size.
+	 * flow director memory usage size.  Do this only once; a later
+	 * re-configure (e.g. after a failed filter program) must not
+	 * subtract again.
 	 */
-	pbsize = (1 << (PBALLOC_SIZE_SHIFT + (fdirctrl & FDIRCTRL_PBALLOC_MASK)));
-	IXGBE_WRITE_REG(hw, IXGBE_RXPBSIZE(0),
-	    (IXGBE_READ_REG(hw, IXGBE_RXPBSIZE(0)) - pbsize));
+	if (!info->rx_pb_reduced) {
+		uint32_t pbsize = (1 << (PBALLOC_SIZE_SHIFT +
+					(fdirctrl & FDIRCTRL_PBALLOC_MASK)));
+
+		IXGBE_WRITE_REG(hw, IXGBE_RXPBSIZE(0),
+		    (IXGBE_READ_REG(hw, IXGBE_RXPBSIZE(0)) - pbsize));
+		info->rx_pb_reduced = true;
+	}
 
 	/*
 	 * The defaults in the HW for RX PB 1-7 are not zero and so should be
@@ -1359,7 +1368,6 @@ ixgbe_fdir_filter_restore(struct rte_eth_dev *dev)
 int
 ixgbe_clear_all_fdir_filter(struct rte_eth_dev *dev)
 {
-	struct rte_eth_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
 	struct ixgbe_hw_fdir_info *fdir_info =
 		IXGBE_DEV_PRIVATE_TO_FDIR_INFO(dev->data->dev_private);
 	struct ixgbe_fdir_filter *fdir_filter;
@@ -1384,7 +1392,6 @@ ixgbe_clear_all_fdir_filter(struct rte_eth_dev *dev)
 	fdir_info->mask = (struct ixgbe_hw_fdir_mask){0};
 	fdir_info->flex_bytes_offset = 0;
 	fdir_info->mask_added = FALSE;
-	fdir_conf->mode = RTE_FDIR_MODE_NONE;
 
 	if (had_flows)
 		ret = ixgbe_fdir_flush(dev);
