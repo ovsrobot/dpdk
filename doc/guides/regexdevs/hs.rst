@@ -155,6 +155,24 @@ Alternatively, a pre-compiled serialized database can be loaded
 during ``rte_regexdev_configure()`` via ``cfg.rule_db`` and
 ``cfg.rule_db_len``, or at any time via ``rte_regexdev_rule_db_import()``.
 
+Serialized databases are not portable across CPU platforms or
+Hyperscan library versions: importing a database built for a
+different CPU type or a different Hyperscan version fails with
+``HS_DB_PLATFORM_ERROR`` or ``HS_DB_VERSION_ERROR`` respectively. Only
+import databases exported (via ``rule_db_export()``) from a matching
+CPU platform and Hyperscan version.
+
+``rule_db_export()`` treats its output as an opaque byte buffer with
+no alignment requirement: Hyperscan's serialized format is copied via
+``memcpy()`` and is not accessed through any aligned type.
+
+``rule_db_update()`` processes rules in order and commits each one
+(add or remove) as it succeeds. On failure, it returns the index of
+the first failed rule; rules before that index are already
+committed. Applications must not resubmit the original full array on
+partial failure — only correct the failed rule and resubmit it along
+with any remaining rules from the returned index onward.
+
 Statistics
 ~~~~~~~~~~
 
