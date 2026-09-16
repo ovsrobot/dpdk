@@ -2,6 +2,7 @@
 # Copyright 2020 Mellanox Technologies, Ltd
 
 drivers = [
+        'hs',
         'mlx5',
         'cn9k',
 ]

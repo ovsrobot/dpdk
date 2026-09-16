@@ -1433,6 +1433,12 @@ F: drivers/regex/cn9k/
 F: doc/guides/regexdevs/cn9k.rst
 F: doc/guides/regexdevs/features/cn9k.ini
 
+Intel Hyperscan
+M: Prudvi Deti <prudvi.deti@intel.com>
+F: drivers/regex/hs/
+F: doc/guides/regexdevs/hs.rst
+F: doc/guides/regexdevs/features/hs.ini
+
 NVIDIA mlx5
 M: Ori Kam <orika@nvidia.com>
 F: drivers/regex/mlx5/
