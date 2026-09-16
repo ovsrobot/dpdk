@@ -3388,12 +3388,12 @@ next:
 				 * Only support one global mask,
 				 * all the masks should be the same.
 				 */
-				ret = memcmp(&fdir_info->mask,
+				if (memcmp(&fdir_info->mask,
 					&fdir_rule.mask,
-					sizeof(struct txgbe_hw_fdir_mask));
-				if (ret) {
+					sizeof(struct txgbe_hw_fdir_mask)) != 0) {
 					PMD_DRV_LOG(ERR, "only support one global mask");
 					rte_free(fdir_rule_ptr);
+					ret = -EINVAL;
 					goto out;
 				}
 
@@ -3402,6 +3402,7 @@ next:
 				    fdir_info->flex_relative !=
 				    fdir_rule.flex_relative) {
 					rte_free(fdir_rule_ptr);
+					ret = -EINVAL;
 					goto out;
 				}
 			}
@@ -3431,6 +3432,7 @@ next:
 		}
 
 		rte_free(fdir_rule_ptr);
+		ret = -EINVAL;
 		goto out;
 	}
 
