@@ -2035,6 +2035,11 @@ M: Gowrishankar Muthukrishnan <gmuthukrishn@marvell.com>
 F: examples/fips_validation/
 F: doc/guides/sample_app_ug/fips_validation.rst
 
+Wycheproof validation example
+M: Kai Ji <kai.ji@intel.com>
+F: examples/wycheproof_validation/
+F: doc/guides/sample_app_ug/wycheproof_validation.rst
+
 Flow filtering example
 M: Ori Kam <orika@nvidia.com>
 F: examples/flow_filtering/
