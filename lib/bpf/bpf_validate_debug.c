@@ -10,18 +10,11 @@
 #include <rte_bpf_validate_debug.h>
 #include <rte_errno.h>
 #include <rte_per_lcore.h>
+#include <rte_queue.h>
 
 #include <errno.h>
 #include <stddef.h>
 #include <stdlib.h>
-
-#ifndef LIST_FOREACH_SAFE
-/* We need this macro which neither Linux nor EAL for Linux include yet. */
-#define	LIST_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = LIST_FIRST((head));				\
-	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
-	    (var) = (tvar))
-#endif
 
 #define EVENT_ARRAY_LENGTH RTE_BPF_VALIDATE_DEBUG_EVENT_END
 

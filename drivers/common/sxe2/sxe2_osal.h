@@ -12,6 +12,7 @@
 #include <stdbool.h>
 
 #include <rte_common.h>
+#include <rte_queue.h>
 #include <rte_cycles.h>
 #include <rte_malloc.h>
 #include <rte_ether.h>
@@ -23,13 +24,6 @@
 #endif
 #define BIT_WORD(nr)      ((nr) / __BITS_PER_LONG)
 #define BIT_MASK(nr)      (1UL << ((nr) % __BITS_PER_LONG))
-
-#ifndef TAILQ_FOREACH_SAFE
-#define TAILQ_FOREACH_SAFE(var, head, field, tvar) \
-	for ((var) = TAILQ_FIRST((head)); \
-		(var) && ((tvar) = TAILQ_NEXT((var), field), 1); \
-		(var) = (tvar))
-#endif
 
 #define upper_32_bits(n) ((uint32_t)(((n) >> 16) >> 16))
 #define lower_32_bits(n) ((uint32_t)((n) & 0xffffffff))

@@ -18,13 +18,6 @@
 #include "bnxt_vnic.h"
 #include "hsi_struct_def_dpdk.h"
 
-#ifndef STAILQ_FOREACH_SAFE
-#define	STAILQ_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = STAILQ_FIRST((head));				\
-	    (var) && ((tvar) = STAILQ_NEXT((var), field), 1);		\
-	    (var) = (tvar))
-#endif
-
 /*
  * Filter Functions
  */

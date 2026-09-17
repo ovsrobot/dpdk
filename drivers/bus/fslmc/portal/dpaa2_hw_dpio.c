@@ -41,13 +41,6 @@
 #include "dpaa2_hw_dpio.h"
 #include <mc/fsl_dpmng.h>
 
-#ifndef TAILQ_FOREACH_SAFE
-#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = TAILQ_FIRST((head));				\
-	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
-	    (var) = (tvar))
-#endif
-
 #define NUM_HOST_CPUS RTE_MAX_LCORE
 
 RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_io_portal)

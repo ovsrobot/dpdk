@@ -17,6 +17,7 @@
 
 #include <rte_ethdev.h>
 #include <rte_memcpy.h>
+#include <rte_queue.h>
 #include <rte_string_fns.h>
 #include <rte_memzone.h>
 #include <rte_devargs.h>
@@ -40,13 +41,6 @@
 #include "hn_rndis.h"
 #include "hn_nvs.h"
 #include "ndis.h"
-
-#ifndef LIST_FOREACH_SAFE
-#define LIST_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = LIST_FIRST((head));				\
-	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
-	    (var) = (tvar))
-#endif
 
 /* Spinlock for netvsc_shared_data */
 static rte_spinlock_t netvsc_shared_data_lock = RTE_SPINLOCK_INITIALIZER;
