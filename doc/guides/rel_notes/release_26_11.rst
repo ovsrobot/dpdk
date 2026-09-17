@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added rte_queue.h with the full set of list macros.**
+
+  Added ``rte_queue.h``, providing the complete set of BSD queue(3) list
+  macros on all platforms, including the ``_FOREACH_SAFE`` variants which
+  are not available in the system header on Linux.
+  Use it instead of ``<sys/queue.h>``.
+
 
 Removed Items
 -------------
