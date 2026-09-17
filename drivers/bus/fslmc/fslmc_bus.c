@@ -341,23 +341,20 @@ rte_fslmc_scan(void)
 
 	/* Scan the DPRC container object */
 	ret = scan_one_fslmc_device(group_name);
-	if (ret != 0) {
-		/* Error in parsing directory - exit gracefully */
-		goto scan_fail_cleanup;
-	}
+	if (ret == 0) {
+		while ((entry = readdir(dir)) != NULL) {
+			if (entry->d_name[0] == '.' || entry->d_type != DT_DIR)
+				continue;
 
-	while ((entry = readdir(dir)) != NULL) {
-		if (entry->d_name[0] == '.' || entry->d_type != DT_DIR)
-			continue;
-
-		ret = scan_one_fslmc_device(entry->d_name);
-		if (ret != 0) {
-			/* Error in parsing directory - exit gracefully */
-			goto scan_fail_cleanup;
+			ret = scan_one_fslmc_device(entry->d_name);
+			if (ret != 0)
+				break;
 		}
 	}
 
 	closedir(dir);
+	if (ret != 0)
+		goto scan_fail;
 
 	DPAA2_BUS_INFO("FSLMC Bus scan completed");
 	/* If debugging is enabled, device list is dumped to log output */
@@ -375,13 +372,13 @@ rte_fslmc_scan(void)
 			rte_mbuf_dynfield_register(&dpaa2_seqn_dynfield_desc);
 		if (dpaa2_seqn_dynfield_offset < 0) {
 			DPAA2_BUS_ERR("Failed to register mbuf field for dpaa sequence number");
-			return 0;
+			goto scan_fail;
 		}
 
 		ret = fslmc_vfio_setup_group();
 		if (ret) {
 			DPAA2_BUS_ERR("Unable to setup VFIO %d", ret);
-			return 0;
+			goto scan_fail;
 		}
 
 		/* Map existing segments as well as, in case of hotpluggable memory,
@@ -392,14 +389,14 @@ rte_fslmc_scan(void)
 			if (ret) {
 				DPAA2_BUS_ERR("Unable to DMA map existing VAs: (%d)", ret);
 				DPAA2_BUS_ERR("FSLMC VFIO Mapping failed");
-				return 0;
+				goto vfio_close_group;
 			}
 		}
 
 		ret = fslmc_vfio_process_group();
 		if (ret) {
 			DPAA2_BUS_ERR("Unable to setup devices %d", ret);
-			return 0;
+			goto vfio_dma_unmap;
 		}
 	}
 
@@ -407,13 +404,16 @@ rte_fslmc_scan(void)
 
 	return 0;
 
-scan_fail_cleanup:
-	closedir(dir);
+vfio_dma_unmap:
+	fslmc_vfio_dmaunmap();
+vfio_close_group:
+	fslmc_vfio_close_group();
 
+scan_fail:
 	/* Remove all devices in the list */
 	RTE_BUS_FOREACH_DEV(dev, &rte_fslmc_bus)
 		fslmc_bus_remove_device(dev);
-scan_fail:
+
 	DPAA2_BUS_DEBUG("FSLMC Bus Not Available. Skipping (%d)", ret);
 	/* Irrespective of failure, scan only return success */
 	return 0;
