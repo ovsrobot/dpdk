@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added BPF validation application.**
+
+  Added ``dpdk-validate-bpf`` tool to pre-validate eBPF programs for
+  compatibility with the ``lib/bpf`` execution context.
+
 
 Removed Items
 -------------
