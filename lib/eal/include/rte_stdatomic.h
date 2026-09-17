@@ -102,12 +102,6 @@ static_assert(rte_memory_order_seq_cst == __ATOMIC_SEQ_CST,
 #define rte_atomic_fetch_nand_explicit(ptr, val, memorder) \
 	atomic_fetch_nand_explicit(ptr, val, memorder)
 
-#define rte_atomic_flag_test_and_set_explicit(ptr, memorder) \
-	atomic_flag_test_and_set_explicit(ptr, memorder)
-
-#define rte_atomic_flag_clear_explicit(ptr, memorder) \
-	atomic_flag_clear_explicit(ptr, memorder)
-
 /* We provide internal macro here to allow conditional expansion
  * in the body of the per-arch rte_atomic_thread_fence inline functions.
  */
@@ -168,12 +162,6 @@ typedef int rte_memory_order;
 
 #define rte_atomic_fetch_nand_explicit(ptr, val, memorder) \
 	__atomic_fetch_nand(ptr, val, memorder)
-
-#define rte_atomic_flag_test_and_set_explicit(ptr, memorder) \
-	__atomic_test_and_set(ptr, memorder)
-
-#define rte_atomic_flag_clear_explicit(ptr, memorder) \
-	__atomic_clear(ptr, memorder)
 
 /* We provide internal macro here to allow conditional expansion
  * in the body of the per-arch rte_atomic_thread_fence inline functions.

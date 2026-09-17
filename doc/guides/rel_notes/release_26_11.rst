@@ -79,6 +79,16 @@ Removed Items
     ``rte_rib6_is_equal``
   * table: ``RTE_LPM_IPV6_ADDR_SIZE``
 
+* eal: Removed the atomic flag macros ``rte_atomic_flag_test_and_set_explicit``
+  and ``rte_atomic_flag_clear_explicit``.
+  They had no in-tree users and could not be used portably:
+  only test-and-set and clear were wrapped,
+  so there was no portable way to read or initialize the flag.
+  The operand type also differed between the C11 and compiler builtin
+  implementations, with no single type accepted by both.
+  Use ``rte_atomic_exchange_explicit``, ``rte_atomic_load_explicit``
+  and ``rte_atomic_store_explicit`` on an ``RTE_ATOMIC(bool)`` instead.
+
 
 API Changes
 -----------
