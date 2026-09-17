@@ -1126,7 +1126,7 @@ emit_branch(struct a64_jit_ctx *ctx, uint8_t op, uint32_t i, int16_t off)
 static void
 check_program_has_call(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 {
-	const struct ebpf_insn *ins;
+	const struct rte_ebpf_insn *ins;
 	uint8_t op;
 	uint32_t i;
 
@@ -1150,7 +1150,7 @@ static int
 emit(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 {
 	uint8_t op, dst, src, tmp1, tmp2, tmp3;
-	const struct ebpf_insn *ins;
+	const struct rte_ebpf_insn *ins;
 	uint64_t u64;
 	int16_t off;
 	int32_t imm;
