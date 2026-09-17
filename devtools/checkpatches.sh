@@ -105,6 +105,15 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# include rte_queue.h, the system header has fewer macros
+	awk -v FOLDERS="lib drivers app examples" \
+		-v SKIP_FILES='lib/eal/include/rte_queue.h' \
+		-v EXPRESSIONS='include.*<sys/queue.h>' \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Using <sys/queue.h>, prefer <rte_queue.h>' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# check %l or %ll format specifier
 	awk -v FOLDERS='lib drivers app examples' \
 		-v EXPRESSIONS='%ll*[xud]' \
