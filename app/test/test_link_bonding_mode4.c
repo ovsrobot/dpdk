@@ -10,7 +10,7 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <rte_cycles.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_byteorder.h>
 #include <rte_common.h>

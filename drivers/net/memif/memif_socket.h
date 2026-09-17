@@ -5,7 +5,7 @@
 #ifndef _MEMIF_SOCKET_H_
 #define _MEMIF_SOCKET_H_
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <sys/un.h>
 
 /**

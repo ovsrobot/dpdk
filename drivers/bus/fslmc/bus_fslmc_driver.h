@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <stdint.h>
 #include <inttypes.h>
 

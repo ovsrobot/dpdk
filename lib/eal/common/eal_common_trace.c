@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <fnmatch.h>
 #include <pthread.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <regex.h>
 
 #include <rte_common.h>

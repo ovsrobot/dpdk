@@ -2,7 +2,7 @@
  * Copyright (C), 2025, Wuxi Stars Micro System Technologies Co., Ltd.
  */
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <unistd.h>
 #include "sxe2_ethdev.h"
 #include "sxe2_flow.h"

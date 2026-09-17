@@ -8,7 +8,7 @@
 
 #include <net/if.h>
 #include <stdint.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 /* Verbs headers do not support -pedantic. */
 #ifdef PEDANTIC

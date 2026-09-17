@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>

@@ -6,7 +6,7 @@
 #ifndef _BCMFS_DEVICE_H_
 #define _BCMFS_DEVICE_H_
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_spinlock.h>
 #include <bus_vdev_driver.h>

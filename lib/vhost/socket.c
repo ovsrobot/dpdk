@@ -10,7 +10,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <errno.h>
 #include <fcntl.h>
 

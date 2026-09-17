@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <errno.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <eal_export.h>
 #include <rte_common.h>

@@ -11,7 +11,7 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <pthread.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <sys/time.h>
 
 #include <rte_cycles.h>

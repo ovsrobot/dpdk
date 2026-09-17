@@ -6,7 +6,7 @@
 #define _FD_MAN_H_
 #include <pthread.h>
 #include <poll.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 struct fdset;
 

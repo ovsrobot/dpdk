@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/event.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <unistd.h>
 
 #include <eal_export.h>

@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_errno.h>
 #include <rte_memcpy.h>

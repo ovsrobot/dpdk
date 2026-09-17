@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_os_shim.h>
 #include <eal_export.h>

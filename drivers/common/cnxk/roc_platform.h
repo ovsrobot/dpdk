@@ -20,6 +20,7 @@
 #include <rte_malloc.h>
 #include <rte_memzone.h>
 #include <rte_pci.h>
+#include <rte_queue.h>
 #include <rte_seqcount.h>
 #include <rte_spinlock.h>
 #include <rte_string_fns.h>

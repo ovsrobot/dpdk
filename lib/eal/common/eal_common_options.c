@@ -10,7 +10,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <getopt.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <dlfcn.h>
 #include <libgen.h>

@@ -3,7 +3,7 @@
  */
 
 #include <stdlib.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <dev_driver.h>
 #include <eal_export.h>

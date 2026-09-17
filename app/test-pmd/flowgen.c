@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <sys/stat.h>
 
 #include <rte_common.h>

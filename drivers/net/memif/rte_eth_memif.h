@@ -5,7 +5,7 @@
 #ifndef _RTE_ETH_MEMIF_H_
 #define _RTE_ETH_MEMIF_H_
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <ethdev_driver.h>
 #include <rte_ether.h>

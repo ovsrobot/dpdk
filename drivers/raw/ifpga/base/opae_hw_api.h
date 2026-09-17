@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include "opae_osdep.h"
 #include "opae_intel_max10.h"

@@ -8,7 +8,7 @@
  * Device specific vhost lib
  */
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <dev_driver.h>
 #include <eal_export.h>

@@ -9,7 +9,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_pci.h>
 #include <bus_pci_driver.h>

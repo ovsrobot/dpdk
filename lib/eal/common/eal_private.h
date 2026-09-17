@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <dev_driver.h>
 #include <rte_bitset.h>

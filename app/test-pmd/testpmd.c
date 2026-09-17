@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <stdbool.h>
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <sys/stat.h>
 
 #include <stdint.h>

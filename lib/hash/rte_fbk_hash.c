@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <eal_export.h>
 #include <rte_cpuflags.h>

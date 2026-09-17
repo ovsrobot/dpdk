@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <sched.h>
 #include <pthread_np.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <sys/thr.h>
 
 #include <rte_debug.h>

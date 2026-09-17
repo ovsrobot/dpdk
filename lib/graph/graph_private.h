@@ -6,7 +6,7 @@
 #define _RTE_GRAPH_PRIVATE_H_
 
 #include <inttypes.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_common.h>
 #include <rte_eal.h>

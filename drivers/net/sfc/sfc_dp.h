@@ -11,7 +11,7 @@
 #define _SFC_DP_H
 
 #include <stdbool.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_pci.h>
 

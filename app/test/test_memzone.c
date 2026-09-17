@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <inttypes.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_random.h>
 #include <rte_cycles.h>

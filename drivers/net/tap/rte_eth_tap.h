@@ -6,7 +6,7 @@
 #ifndef _RTE_ETH_TAP_H_
 #define _RTE_ETH_TAP_H_
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <sys/uio.h>
 #include <inttypes.h>
 #include <limits.h>

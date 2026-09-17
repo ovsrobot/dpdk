@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include "base/ixgbe_type.h"
 #include "base/ixgbe_dcb.h"

@@ -3,7 +3,7 @@
  */
 
 #include <stdalign.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <stdint.h>
 #include <limits.h>
 

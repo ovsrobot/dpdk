@@ -2,7 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <stdio.h>
 #include <string.h>
 

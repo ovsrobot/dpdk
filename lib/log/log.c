@@ -11,7 +11,7 @@
 #include <errno.h>
 #include <regex.h>
 #include <fnmatch.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <unistd.h>
 
 #include <eal_export.h>

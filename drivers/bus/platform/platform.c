@@ -10,7 +10,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <unistd.h>
 
 #include <bus_driver.h>

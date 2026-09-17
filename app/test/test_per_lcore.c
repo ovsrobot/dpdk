@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_common.h>
 #include <rte_memory.h>

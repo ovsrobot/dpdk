@@ -6,7 +6,7 @@
 
 #include <inttypes.h>
 #include <string.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_bitops.h>
 #include <rte_byteorder.h>

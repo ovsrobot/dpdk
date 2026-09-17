@@ -5,7 +5,7 @@
 #include <stdalign.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <string.h>
 #include <eal_export.h>
 #include <rte_mbuf.h>

@@ -5,7 +5,7 @@
 #ifndef _ETH_PRIVATE_H_
 #define _ETH_PRIVATE_H_
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_eal_memconfig.h>
 #include <rte_malloc.h>

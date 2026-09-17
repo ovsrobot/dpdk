@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <inttypes.h>

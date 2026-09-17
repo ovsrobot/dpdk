@@ -5,7 +5,7 @@
 #ifndef _IP_FRAG_COMMON_H_
 #define _IP_FRAG_COMMON_H_
 
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <rte_common.h>
 #include <rte_tailq.h>

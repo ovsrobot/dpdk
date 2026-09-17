@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 /*
  * Common defines.

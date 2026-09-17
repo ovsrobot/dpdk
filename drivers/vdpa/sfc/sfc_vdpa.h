@@ -6,7 +6,7 @@
 #define _SFC_VDPA_H
 
 #include <stdint.h>
-#include <sys/queue.h>
+#include <rte_queue.h>
 
 #include <bus_pci_driver.h>
 
