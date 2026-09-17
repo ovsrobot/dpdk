@@ -18,6 +18,13 @@
 #include "bnxt_vnic.h"
 #include "hsi_struct_def_dpdk.h"
 
+#ifndef STAILQ_FOREACH_SAFE
+#define	STAILQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = STAILQ_FIRST((head));				\
+	    (var) && ((tvar) = STAILQ_NEXT((var), field), 1);		\
+	    (var) = (tvar))
+#endif
+
 /*
  * Filter Functions
  */
@@ -110,7 +117,7 @@ void bnxt_free_all_filters(struct bnxt *bp)
 
 void bnxt_free_filter_mem(struct bnxt *bp)
 {
-	struct bnxt_filter_info *filter;
+	struct bnxt_filter_info *filter, *temp_filter;
 	uint16_t max_filters, i;
 	int rc = 0;
 
@@ -151,10 +158,11 @@ void bnxt_free_filter_mem(struct bnxt *bp)
 	bp->filter_info = NULL;
 
 	for (i = 0; i < bp->pf->max_vfs; i++) {
-		STAILQ_FOREACH(filter, &bp->pf->vf_info[i].filter, next) {
-			rte_free(filter);
+		STAILQ_FOREACH_SAFE(filter, &bp->pf->vf_info[i].filter, next,
+				    temp_filter) {
 			STAILQ_REMOVE(&bp->pf->vf_info[i].filter, filter,
 				      bnxt_filter_info, next);
+			rte_free(filter);
 		}
 	}
 }
