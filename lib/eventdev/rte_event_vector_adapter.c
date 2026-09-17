@@ -506,7 +506,7 @@ struct sw_vector_adapter_data {
 	struct rte_event_vector_adapter *adapter;
 	struct rte_event_vector_adapter_stats stats;
 	struct sw_vector_adapter_service_data *service_data;
-	RTE_TAILQ_ENTRY(sw_vector_adapter_data) next;
+	TAILQ_ENTRY(sw_vector_adapter_data) next;
 };
 
 struct sw_vector_adapter_service_data {

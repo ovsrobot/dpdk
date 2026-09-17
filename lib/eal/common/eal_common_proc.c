@@ -1266,7 +1266,7 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 	if (ret != 0 && reply->nb_sent > 0) {
 		struct pending_request *r, *tmp;
 
-		RTE_TAILQ_FOREACH_SAFE(r, &pending_requests.requests, next, tmp) {
+		TAILQ_FOREACH_SAFE(r, &pending_requests.requests, next, tmp) {
 			if (r->type == REQUEST_TYPE_ASYNC && r->async.param == param) {
 				TAILQ_REMOVE(&pending_requests.requests, r, next);
 				free(r->reply);

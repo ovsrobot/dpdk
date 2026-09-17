@@ -25,13 +25,13 @@ extern "C" {
 #endif
 
 /** Double linked list of classes */
-RTE_TAILQ_HEAD(rte_class_list, rte_class);
+TAILQ_HEAD(rte_class_list, rte_class);
 
 /**
  * A structure describing a generic device class.
  */
 struct rte_class {
-	RTE_TAILQ_ENTRY(rte_class) next; /**< Next device class in linked list */
+	TAILQ_ENTRY(rte_class) next; /**< Next device class in linked list */
 	const char *name; /**< Name of the class */
 	rte_dev_iterate_t dev_iterate; /**< Device iterator. */
 };

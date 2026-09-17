@@ -12,7 +12,7 @@
  * A structure describing a device driver.
  */
 struct rte_driver {
-	RTE_TAILQ_ENTRY(rte_driver) next; /**< Next in list. */
+	TAILQ_ENTRY(rte_driver) next; /**< Next in list. */
 	const char *name;                   /**< Driver name. */
 	const char *alias;              /**< Driver alias. */
 	const struct rte_bus *bus;      /**< Bus reference. */
@@ -22,7 +22,7 @@ struct rte_driver {
  * A structure describing a generic device.
  */
 struct rte_device {
-	RTE_TAILQ_ENTRY(rte_device) next; /**< Next device */
+	TAILQ_ENTRY(rte_device) next; /**< Next device */
 	const char *name;             /**< Device name */
 	const char *bus_info;         /**< Device bus specific information */
 	const struct rte_driver *driver; /**< Driver assigned after probing */

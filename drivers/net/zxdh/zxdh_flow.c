@@ -288,7 +288,7 @@ static struct dh_flow_engine *zxdh_get_flow_engine(struct rte_eth_dev *dev __rte
 	struct dh_flow_engine *engine = NULL;
 	void *temp;
 
-	RTE_TAILQ_FOREACH_SAFE(engine, &flow_engine_list, node, temp) {
+	TAILQ_FOREACH_SAFE(engine, &flow_engine_list, node, temp) {
 		if (engine->type  == FLOW_TYPE_FD_TCAM)
 			break;
 	}

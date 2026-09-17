@@ -1230,7 +1230,7 @@ ipn3ke_flow_flush(struct rte_eth_dev *dev,
 	struct ipn3ke_hw *hw = IPN3KE_DEV_PRIVATE_TO_HW(dev);
 	struct rte_flow *flow, *temp;
 
-	RTE_TAILQ_FOREACH_SAFE(flow, &hw->flow_list, next, temp) {
+	TAILQ_FOREACH_SAFE(flow, &hw->flow_list, next, temp) {
 		TAILQ_REMOVE(&hw->flow_list, flow, next);
 		rte_free(flow);
 	}

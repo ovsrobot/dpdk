@@ -14,7 +14,7 @@ static enum rte_uncore_power_mgmt_env global_uncore_env = RTE_UNCORE_PM_ENV_NOT_
 static struct rte_power_uncore_ops *global_uncore_ops;
 
 static rte_spinlock_t global_env_cfg_lock = RTE_SPINLOCK_INITIALIZER;
-static RTE_TAILQ_HEAD(, rte_power_uncore_ops) uncore_ops_list =
+static TAILQ_HEAD(, rte_power_uncore_ops) uncore_ops_list =
 			TAILQ_HEAD_INITIALIZER(uncore_ops_list);
 
 const char *uncore_env_str[] = {
@@ -68,7 +68,7 @@ rte_power_set_uncore_env(enum rte_uncore_power_mgmt_env env)
 		env = RTE_UNCORE_PM_ENV_INTEL_UNCORE;
 
 	if (env < RTE_DIM(uncore_env_str)) {
-		RTE_TAILQ_FOREACH(ops, &uncore_ops_list, next)
+		TAILQ_FOREACH(ops, &uncore_ops_list, next)
 			if (strncmp(ops->name, uncore_env_str[env],
 				RTE_POWER_UNCORE_DRIVER_NAMESZ) == 0) {
 				global_uncore_env = env;
@@ -115,7 +115,7 @@ rte_power_uncore_init(unsigned int pkg, unsigned int die)
 		return global_uncore_ops->init(pkg, die);
 
 	/* Auto Detect Environment */
-	RTE_TAILQ_FOREACH(ops, &uncore_ops_list, next)
+	TAILQ_FOREACH(ops, &uncore_ops_list, next)
 		if (ops) {
 			POWER_LOG(INFO,
 				"Attempting to initialise %s power management...",

@@ -132,7 +132,7 @@ static void sxe2_dump_filter_info(FILE *file, struct rte_eth_dev *dev)
 	if (adapter->filter_ctxt.uc_num > 0) {
 		fprintf(file,
 			"\t  -- Unicast entry:\n");
-		RTE_TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.uc_list, next,
+		TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.uc_list, next,
 				       next_mac_entry) {
 			fprintf(file,
 				"\t  -- addr: %02x:%02x:%02x:%02x:%02x:%02x hw status:%u "
@@ -151,7 +151,7 @@ static void sxe2_dump_filter_info(FILE *file, struct rte_eth_dev *dev)
 	if (adapter->filter_ctxt.mc_num > 0) {
 		fprintf(file,
 			"\t  -- Multicast entry:\n");
-		RTE_TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.mc_list,
+		TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.mc_list,
 				       next, next_mac_entry) {
 			fprintf(file,
 				"\t  -- addr: %02x:%02x:%02x:%02x:%02x:%02x "
@@ -170,7 +170,7 @@ static void sxe2_dump_filter_info(FILE *file, struct rte_eth_dev *dev)
 	if (adapter->filter_ctxt.vlan_num > 0) {
 		fprintf(file,
 			"\t  -- Vlan entry:\n");
-		RTE_TAILQ_FOREACH_SAFE(vlan_entry, &adapter->filter_ctxt.vlan_list,
+		TAILQ_FOREACH_SAFE(vlan_entry, &adapter->filter_ctxt.vlan_list,
 			next, next_vlan_entry) {
 			fprintf(file,
 				"\t  -- vlan tpid:0x%04x vid:0x%04x prio:%d "

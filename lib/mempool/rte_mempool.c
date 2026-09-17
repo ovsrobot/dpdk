@@ -1437,7 +1437,7 @@ void rte_mempool_walk(void (*func)(struct rte_mempool *, void *),
 
 	rte_mcfg_mempool_read_lock();
 
-	RTE_TAILQ_FOREACH_SAFE(te, mempool_list, next, tmp_te) {
+	TAILQ_FOREACH_SAFE(te, mempool_list, next, tmp_te) {
 		(*func)((struct rte_mempool *) te->data, arg);
 	}
 
@@ -1505,7 +1505,7 @@ mempool_event_callback_invoke(enum rte_mempool_event event,
 	void *tmp_te;
 
 	rte_mcfg_tailq_read_lock();
-	RTE_TAILQ_FOREACH_SAFE(cb, &callback_tailq, callbacks, tmp_te) {
+	TAILQ_FOREACH_SAFE(cb, &callback_tailq, callbacks, tmp_te) {
 		rte_mcfg_tailq_read_unlock();
 		cb->func(event, mp, cb->user_data);
 		rte_mcfg_tailq_read_lock();

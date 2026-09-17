@@ -2666,7 +2666,7 @@ sfc_flow_flush(struct rte_eth_dev *dev,
 
 	sfc_adapter_lock(sa);
 
-	RTE_TAILQ_FOREACH_SAFE(flow, &sa->flow_list, entries, tmp) {
+	TAILQ_FOREACH_SAFE(flow, &sa->flow_list, entries, tmp) {
 		if (flow->internal)
 			continue;
 
@@ -2962,7 +2962,7 @@ sfc_flow_fini(struct sfc_adapter *sa)
 
 	SFC_ASSERT(sfc_adapter_is_locked(sa));
 
-	RTE_TAILQ_FOREACH_SAFE(flow, &sa->flow_list, entries, tmp) {
+	TAILQ_FOREACH_SAFE(flow, &sa->flow_list, entries, tmp) {
 		if (flow->internal)
 			continue;
 

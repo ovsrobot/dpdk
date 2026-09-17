@@ -1817,7 +1817,7 @@ iavf_flow_init(struct iavf_adapter *ad)
 	TAILQ_INIT(&vf->ipsec_crypto_parser_list);
 	rte_spinlock_init(&vf->flow_ops_lock);
 
-	RTE_TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
+	TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
 		if (engine->init == NULL) {
 			PMD_INIT_LOG(ERR, "Invalid engine type (%d)",
 				     engine->type);
@@ -1843,7 +1843,7 @@ iavf_flow_uninit(struct iavf_adapter *ad)
 	struct iavf_flow_parser_node *p_parser;
 	void *temp;
 
-	RTE_TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
+	TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
 		if (engine->uninit)
 			engine->uninit(ad);
 	}
@@ -1895,7 +1895,7 @@ iavf_register_parser(struct iavf_flow_parser *parser,
 		TAILQ_INSERT_TAIL(list, parser_node, node);
 	} else if (parser->engine->type == IAVF_FLOW_ENGINE_FDIR) {
 		list = &vf->dist_parser_list;
-		RTE_TAILQ_FOREACH_SAFE(existing_node, list, node, temp) {
+		TAILQ_FOREACH_SAFE(existing_node, list, node, temp) {
 			if (existing_node->parser->engine->type ==
 			    IAVF_FLOW_ENGINE_FSUB) {
 				TAILQ_INSERT_AFTER(list, existing_node,
@@ -1939,7 +1939,7 @@ iavf_unregister_parser(struct iavf_flow_parser *parser,
 	if (list == NULL)
 		return;
 
-	RTE_TAILQ_FOREACH_SAFE(p_parser, list, node, temp) {
+	TAILQ_FOREACH_SAFE(p_parser, list, node, temp) {
 		if (p_parser->parser->engine->type == parser->engine->type) {
 			TAILQ_REMOVE(list, p_parser, node);
 			rte_free(p_parser);
@@ -2085,7 +2085,7 @@ iavf_parse_engine_create(struct iavf_adapter *ad,
 	void *temp;
 	void *meta = NULL;
 
-	RTE_TAILQ_FOREACH_SAFE(parser_node, parser_list, node, temp) {
+	TAILQ_FOREACH_SAFE(parser_node, parser_list, node, temp) {
 		if (parser_node->parser->parse_pattern_action(ad,
 				parser_node->parser->array,
 				parser_node->parser->array_len,
@@ -2115,7 +2115,7 @@ iavf_parse_engine_validate(struct iavf_adapter *ad,
 	void *temp;
 	void *meta = NULL;
 
-	RTE_TAILQ_FOREACH_SAFE(parser_node, parser_list, node, temp) {
+	TAILQ_FOREACH_SAFE(parser_node, parser_list, node, temp) {
 		if (parser_node->parser->parse_pattern_action(ad,
 				parser_node->parser->array,
 				parser_node->parser->array_len,
@@ -2261,7 +2261,7 @@ iavf_flow_is_valid(struct rte_flow *flow)
 		return true;
 
 	if (flow->engine) {
-		RTE_TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
+		TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
 			if (engine == flow->engine)
 				return true;
 		}
@@ -2322,7 +2322,7 @@ iavf_flow_flush(struct rte_eth_dev *dev,
 	void *temp;
 	int ret = 0;
 
-	RTE_TAILQ_FOREACH_SAFE(p_flow, &vf->flow_list, node, temp) {
+	TAILQ_FOREACH_SAFE(p_flow, &vf->flow_list, node, temp) {
 		ret = iavf_flow_destroy(dev, p_flow, error);
 		if (ret) {
 			PMD_DRV_LOG(ERR, "Failed to flush flows");

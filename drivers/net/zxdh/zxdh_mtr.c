@@ -1209,13 +1209,13 @@ zxdh_mtr_release(struct rte_eth_dev *dev)
 	struct rte_mtr_error error = {0};
 	struct zxdh_mtr_object *mtr_obj;
 
-	RTE_TAILQ_FOREACH(mtr_obj, &zxdh_shared_data->mtr_list, next) {
+	TAILQ_FOREACH(mtr_obj, &zxdh_shared_data->mtr_list, next) {
 		if (mtr_obj->port_id == priv->port_id)
 			zxdh_mtr_obj_free(dev, mtr_obj);
 	}
 
 
-	RTE_TAILQ_FOREACH(profile, &zxdh_shared_data->meter_profile_list, next) {
+	TAILQ_FOREACH(profile, &zxdh_shared_data->meter_profile_list, next) {
 		if (profile->dpdk_port_id == priv->port_id)
 			zxdh_mtr_profile_res_free(dev,
 				zxdh_shared_data->mtr_profile_mp,
@@ -1226,7 +1226,7 @@ zxdh_mtr_release(struct rte_eth_dev *dev)
 
 	struct zxdh_meter_policy *policy;
 
-	RTE_TAILQ_FOREACH(policy, &zxdh_shared_data->mtr_policy_list, next) {
+	TAILQ_FOREACH(policy, &zxdh_shared_data->mtr_policy_list, next) {
 		if (policy->dpdk_port_id == priv->port_id)
 			zxdh_mtr_policy_res_free(zxdh_shared_data->mtr_policy_mp, policy);
 	}

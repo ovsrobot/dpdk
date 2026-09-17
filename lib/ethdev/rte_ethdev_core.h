@@ -18,7 +18,7 @@
 
 struct rte_eth_dev_callback;
 /** @internal Structure to keep track of registered callbacks */
-RTE_TAILQ_HEAD(rte_eth_dev_cb_list, rte_eth_dev_callback);
+TAILQ_HEAD(rte_eth_dev_cb_list, rte_eth_dev_callback);
 
 struct rte_eth_dev;
 

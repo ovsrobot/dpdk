@@ -48,7 +48,7 @@ struct ip_frag_key {
  * First two entries in the frags[] array are for the last and first fragments.
  */
 struct __rte_cache_aligned ip_frag_pkt {
-	RTE_TAILQ_ENTRY(ip_frag_pkt) lru;      /* LRU list */
+	TAILQ_ENTRY(ip_frag_pkt) lru;      /* LRU list */
 	struct ip_frag_key key;                /* fragmentation key */
 	uint64_t start;                        /* creation timestamp */
 	uint32_t total_size;                   /* expected reassembled size */
@@ -58,7 +58,7 @@ struct __rte_cache_aligned ip_frag_pkt {
 };
 
  /* fragments tailq */
-RTE_TAILQ_HEAD(ip_pkt_list, ip_frag_pkt);
+TAILQ_HEAD(ip_pkt_list, ip_frag_pkt);
 
 /* fragmentation table statistics */
 struct __rte_cache_aligned ip_frag_tbl_stat {

@@ -4195,7 +4195,7 @@ i40e_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 		 * recommended to be used in firmware v8.6.
 		 */
 		/* Remove all existing mac */
-		RTE_TAILQ_FOREACH_SAFE(f, &vsi->mac_list, next, temp) {
+		TAILQ_FOREACH_SAFE(f, &vsi->mac_list, next, temp) {
 			mac_filter[i] = f->mac_info;
 			ret = i40e_vsi_delete_mac(vsi, &f->mac_info.mac_addr);
 			if (ret)
@@ -5570,7 +5570,7 @@ i40e_vsi_release(struct i40e_vsi *vsi)
 
 	/* VSI has child to attach, release child first */
 	if (vsi->veb) {
-		RTE_TAILQ_FOREACH_SAFE(vsi_list, &vsi->veb->head, list, temp) {
+		TAILQ_FOREACH_SAFE(vsi_list, &vsi->veb->head, list, temp) {
 			if (i40e_vsi_release(vsi_list->vsi) != I40E_SUCCESS)
 				return -1;
 		}
@@ -5578,7 +5578,7 @@ i40e_vsi_release(struct i40e_vsi *vsi)
 	}
 
 	if (vsi->floating_veb) {
-		RTE_TAILQ_FOREACH_SAFE(vsi_list, &vsi->floating_veb->head,
+		TAILQ_FOREACH_SAFE(vsi_list, &vsi->floating_veb->head,
 			list, temp) {
 			if (i40e_vsi_release(vsi_list->vsi) != I40E_SUCCESS)
 				return -1;
@@ -5587,7 +5587,7 @@ i40e_vsi_release(struct i40e_vsi *vsi)
 
 	/* Remove all macvlan filters of the VSI */
 	i40e_vsi_remove_all_macvlan_filter(vsi);
-	RTE_TAILQ_FOREACH_SAFE(f, &vsi->mac_list, next, temp)
+	TAILQ_FOREACH_SAFE(f, &vsi->mac_list, next, temp)
 		rte_free(f);
 
 	if (vsi->type != I40E_VSI_MAIN &&
@@ -6230,7 +6230,7 @@ i40e_vsi_config_vlan_filter(struct i40e_vsi *vsi, bool on)
 	i = 0;
 
 	/* Remove all existing mac */
-	RTE_TAILQ_FOREACH_SAFE(f, &vsi->mac_list, next, temp) {
+	TAILQ_FOREACH_SAFE(f, &vsi->mac_list, next, temp) {
 		mac_filter[i] = f->mac_info;
 		ret = i40e_vsi_delete_mac(vsi, &f->mac_info.mac_addr);
 		if (ret) {

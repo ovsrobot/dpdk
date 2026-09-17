@@ -19,7 +19,7 @@ static struct sxe2_mac_filter *sxe2_uc_filter_find(struct sxe2_adapter *adapter,
 	struct sxe2_mac_filter *next_entry  = NULL;
 
 	rte_spinlock_lock(&adapter->filter_ctxt.filter_lock);
-	RTE_TAILQ_FOREACH_SAFE(entry, &adapter->filter_ctxt.uc_list, next, next_entry) {
+	TAILQ_FOREACH_SAFE(entry, &adapter->filter_ctxt.uc_list, next, next_entry) {
 		if (rte_is_same_ether_addr(macaddr, &entry->mac_addr)) {
 			filter = entry;
 			break;
@@ -125,7 +125,7 @@ void sxe2_uc_filter_clear(struct sxe2_adapter *adapter, bool default_config)
 	struct sxe2_mac_filter *entry;
 	struct sxe2_mac_filter *next_entry;
 
-	RTE_TAILQ_FOREACH_SAFE(entry, &adapter->filter_ctxt.uc_list, next, next_entry) {
+	TAILQ_FOREACH_SAFE(entry, &adapter->filter_ctxt.uc_list, next, next_entry) {
 		if (entry->default_config && !default_config)
 			continue;
 
@@ -142,7 +142,7 @@ static struct sxe2_mac_filter *sxe2_mc_filter_find(struct sxe2_adapter *adapter,
 	struct sxe2_mac_filter *next_entry  = NULL;
 
 	rte_spinlock_lock(&adapter->filter_ctxt.filter_lock);
-	RTE_TAILQ_FOREACH_SAFE(entry, &adapter->filter_ctxt.mc_list, next, next_entry) {
+	TAILQ_FOREACH_SAFE(entry, &adapter->filter_ctxt.mc_list, next, next_entry) {
 		if (rte_is_same_ether_addr(macaddr, &entry->mac_addr)) {
 			filter = entry;
 			break;
@@ -249,7 +249,7 @@ void sxe2_mc_filter_clear(struct sxe2_adapter *adapter, bool default_config)
 	struct sxe2_mac_filter *entry;
 	struct sxe2_mac_filter *next_entry;
 
-	RTE_TAILQ_FOREACH_SAFE(entry, &adapter->filter_ctxt.mc_list, next, next_entry) {
+	TAILQ_FOREACH_SAFE(entry, &adapter->filter_ctxt.mc_list, next, next_entry) {
 		if (entry->default_config && !default_config)
 			continue;
 		if (sxe2_mc_filter_del(adapter, &entry->mac_addr))
@@ -388,7 +388,7 @@ void sxe2_vlan_filters_clear(struct sxe2_adapter *adapter, bool default_config)
 	if (adapter->filter_ctxt.vlan_num == 0)
 		return;
 
-	RTE_TAILQ_FOREACH_SAFE(v_f, &adapter->filter_ctxt.vlan_list, next, temp)
+	TAILQ_FOREACH_SAFE(v_f, &adapter->filter_ctxt.vlan_list, next, temp)
 	{
 		if (v_f->default_config && !default_config)
 			continue;
@@ -521,7 +521,7 @@ static int32_t sxe2_all_filter_hw_clear(struct sxe2_adapter *adapter)
 	struct sxe2_vlan_filter *next_vlan_entry;
 
 	if (adapter->filter_ctxt.uc_num > 0) {
-		RTE_TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.uc_list, next,
+		TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.uc_list, next,
 			    next_mac_entry) {
 			if (mac_entry->hw_config) {
 				ret = sxe2_drv_uc_config(adapter, &mac_entry->mac_addr, false);
@@ -536,7 +536,7 @@ static int32_t sxe2_all_filter_hw_clear(struct sxe2_adapter *adapter)
 	}
 
 	if (adapter->filter_ctxt.mc_num > 0) {
-		RTE_TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.mc_list, next,
+		TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.mc_list, next,
 			    next_mac_entry) {
 			if (mac_entry->hw_config) {
 				ret = sxe2_drv_mc_config(adapter, &mac_entry->mac_addr, false);
@@ -551,7 +551,7 @@ static int32_t sxe2_all_filter_hw_clear(struct sxe2_adapter *adapter)
 	}
 
 	if (adapter->filter_ctxt.vlan_num > 0) {
-		RTE_TAILQ_FOREACH_SAFE(vlan_entry, &adapter->filter_ctxt.vlan_list, next,
+		TAILQ_FOREACH_SAFE(vlan_entry, &adapter->filter_ctxt.vlan_list, next,
 			    next_vlan_entry) {
 			if (vlan_entry->hw_config) {
 				ret = sxe2_drv_vlan_filter_id_config(adapter,
@@ -606,7 +606,7 @@ static int32_t sxe2_all_filter_hw_set(struct sxe2_adapter *adapter)
 	struct sxe2_vlan_filter *next_vlan_entry;
 
 	if (adapter->filter_ctxt.uc_num > 0) {
-		RTE_TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.uc_list, next,
+		TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.uc_list, next,
 				       next_mac_entry) {
 			if (!mac_entry->hw_config) {
 				ret = sxe2_drv_uc_config(adapter, &mac_entry->mac_addr,
@@ -624,7 +624,7 @@ static int32_t sxe2_all_filter_hw_set(struct sxe2_adapter *adapter)
 	}
 
 	if (adapter->filter_ctxt.mc_num > 0) {
-		RTE_TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.mc_list, next,
+		TAILQ_FOREACH_SAFE(mac_entry, &adapter->filter_ctxt.mc_list, next,
 				       next_mac_entry) {
 			if (!mac_entry->hw_config) {
 				ret = sxe2_drv_mc_config(adapter, &mac_entry->mac_addr, true);
@@ -641,7 +641,7 @@ static int32_t sxe2_all_filter_hw_set(struct sxe2_adapter *adapter)
 	}
 
 	if (adapter->filter_ctxt.vlan_num > 0) {
-		RTE_TAILQ_FOREACH_SAFE(vlan_entry, &adapter->filter_ctxt.vlan_list, next,
+		TAILQ_FOREACH_SAFE(vlan_entry, &adapter->filter_ctxt.vlan_list, next,
 				       next_vlan_entry) {
 			if (!vlan_entry->hw_config) {
 				ret = sxe2_drv_vlan_filter_id_config(adapter,

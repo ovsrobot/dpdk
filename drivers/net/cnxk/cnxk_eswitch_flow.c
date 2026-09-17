@@ -21,7 +21,7 @@ cnxk_eswitch_flow_rules_remove_list(struct cnxk_eswitch_dev *eswitch_dev, struct
 	struct roc_npc_flow *flow, *tvar;
 	int rc = 0;
 
-	RTE_TAILQ_FOREACH_SAFE(flow, list, next, tvar) {
+	TAILQ_FOREACH_SAFE(flow, list, next, tvar) {
 		plt_esw_dbg("Removing flow %d", flow->mcam_id);
 		rc = roc_eswitch_npc_mcam_delete_rule(&eswitch_dev->npc, flow,
 						      hw_func);

@@ -501,7 +501,7 @@ struct rte_bbdev_callback;
 struct rte_intr_handle;
 
 /** Structure to keep track of registered callbacks */
-RTE_TAILQ_HEAD(rte_bbdev_cb_list, rte_bbdev_callback);
+TAILQ_HEAD(rte_bbdev_cb_list, rte_bbdev_callback);
 
 /**
  * @internal The data structure associated with a device. Drivers can access

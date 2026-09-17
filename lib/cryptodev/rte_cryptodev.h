@@ -1049,7 +1049,7 @@ rte_cryptodev_queue_pair_event_error_query(uint8_t dev_id, uint16_t qp_id);
 struct rte_cryptodev_callback;
 
 /** Structure to keep track of registered callbacks */
-RTE_TAILQ_HEAD(rte_cryptodev_cb_list, rte_cryptodev_callback);
+TAILQ_HEAD(rte_cryptodev_cb_list, rte_cryptodev_callback);
 
 /**
  * Structure used to hold information about the callbacks to be called for a

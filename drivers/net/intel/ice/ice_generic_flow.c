@@ -1998,7 +1998,7 @@ ice_flow_init(struct ice_adapter *ad)
 			ice_parser_dvm_set(ad->psr, false);
 	}
 
-	RTE_TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
+	TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
 		if (engine->init == NULL) {
 			PMD_INIT_LOG(ERR, "Invalid engine type (%d)",
 					engine->type);
@@ -2028,7 +2028,7 @@ ice_flow_uninit(struct ice_adapter *ad)
 	struct rte_flow *p_flow;
 	void *temp;
 
-	RTE_TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
+	TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
 		if (ICE_FLOW_ENGINE_DISABLED(ad->disabled_engine_mask, engine->type)) {
 			PMD_DRV_LOG(DEBUG, "Engine %d disabled skip it", engine->type);
 			continue;
@@ -2556,7 +2556,7 @@ ice_flow_flush(struct rte_eth_dev *dev,
 	void *temp;
 	int ret = 0;
 
-	RTE_TAILQ_FOREACH_SAFE(p_flow, &pf->flow_list, node, temp) {
+	TAILQ_FOREACH_SAFE(p_flow, &pf->flow_list, node, temp) {
 		ret = ice_flow_destroy(dev, p_flow, error);
 		if (ret) {
 			PMD_DRV_LOG(ERR, "Failed to flush flows");
@@ -2697,7 +2697,7 @@ ice_flow_redirect(struct ice_adapter *ad,
 
 	rte_spinlock_lock(&pf->flow_ops_lock);
 
-	RTE_TAILQ_FOREACH_SAFE(p_flow, &pf->flow_list, node, temp) {
+	TAILQ_FOREACH_SAFE(p_flow, &pf->flow_list, node, temp) {
 		if (!p_flow->engine->redirect)
 			continue;
 		ret = p_flow->engine->redirect(ad, p_flow, rd);

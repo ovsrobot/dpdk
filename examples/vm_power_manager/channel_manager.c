@@ -59,16 +59,16 @@ struct virtual_machine_info {
 	virDomainInfo info;
 	rte_spinlock_t config_spinlock;
 	int allow_query;
-	RTE_TAILQ_ENTRY(virtual_machine_info) vms_info;
+	TAILQ_ENTRY(virtual_machine_info) vms_info;
 };
 
-RTE_TAILQ_HEAD(, virtual_machine_info) vm_list_head;
+TAILQ_HEAD(, virtual_machine_info) vm_list_head;
 
 static struct virtual_machine_info *
 find_domain_by_name(const char *name)
 {
 	struct virtual_machine_info *info;
-	RTE_TAILQ_FOREACH(info, &vm_list_head, vms_info) {
+	TAILQ_FOREACH(info, &vm_list_head, vms_info) {
 		if (!strncmp(info->name, name, CHANNEL_MGR_MAX_NAME_LEN-1))
 			return info;
 	}
@@ -1015,7 +1015,7 @@ channel_manager_exit(void)
 	char mask[RTE_MAX_LCORE];
 	struct virtual_machine_info *vm_info, *tmp;
 
-	RTE_TAILQ_FOREACH_SAFE(vm_info, &vm_list_head, vms_info, tmp) {
+	TAILQ_FOREACH_SAFE(vm_info, &vm_list_head, vms_info, tmp) {
 
 		rte_spinlock_lock(&(vm_info->config_spinlock));
 

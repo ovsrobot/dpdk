@@ -281,7 +281,7 @@ static int nbl_userdev_free_record(u64 vaddr, u64 iova __rte_unused, u64 len __r
 {
 	struct nbl_userdev_map_record *record, *tmp_record;
 
-	RTE_TAILQ_FOREACH_SAFE(record, &nbl_map_list, next, tmp_record) {
+	TAILQ_FOREACH_SAFE(record, &nbl_map_list, next, tmp_record) {
 		if (record->vaddr != vaddr)
 			continue;
 		nbl_vfio_dma_mem_map(nbl_default_container, vaddr, record->len, 0);
@@ -296,7 +296,7 @@ static void nbl_userdev_dma_free(void)
 {
 	struct nbl_userdev_map_record *record, *tmp_record;
 
-	RTE_TAILQ_FOREACH_SAFE(record, &nbl_map_list, next, tmp_record) {
+	TAILQ_FOREACH_SAFE(record, &nbl_map_list, next, tmp_record) {
 		TAILQ_REMOVE(&nbl_map_list, record, next);
 		free(record);
 	}

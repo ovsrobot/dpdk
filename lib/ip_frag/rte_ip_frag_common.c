@@ -140,7 +140,7 @@ rte_ip_frag_table_del_expired_entries(struct rte_ip_frag_tbl *tbl,
 
 	max_cycles = tbl->max_cycles;
 
-	RTE_TAILQ_FOREACH_SAFE(fp, &tbl->lru, lru, tmp) {
+	TAILQ_FOREACH_SAFE(fp, &tbl->lru, lru, tmp) {
 		if (max_cycles + fp->start >= tms)
 			return;
 

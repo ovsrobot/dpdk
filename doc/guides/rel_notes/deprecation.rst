@@ -177,3 +177,11 @@ Deprecation Notices
   after a VF reset, but this is of questionable value
   since most applications expect their settings to be preserved
   transparently across a reset.
+
+* eal: The ``RTE_TAILQ_HEAD``, ``RTE_TAILQ_ENTRY``, ``RTE_TAILQ_FOREACH``,
+  ``RTE_TAILQ_FIRST``, ``RTE_TAILQ_NEXT``, ``RTE_TAILQ_FOREACH_SAFE``,
+  ``RTE_STAILQ_HEAD`` and ``RTE_STAILQ_ENTRY`` macros in ``rte_tailq.h``
+  are deprecated and will be removed in DPDK 27.11.
+  They existed only because Windows had no ``<sys/queue.h>``.
+  Use the equivalent ``TAILQ_`` and ``STAILQ_`` macros from
+  ``<rte_queue.h>``, which are now available on all platforms.

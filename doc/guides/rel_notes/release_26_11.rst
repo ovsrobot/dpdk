@@ -130,6 +130,14 @@ API Changes
   * ``rte_tel_data_add_dict_uint_hex``
   * ``rte_telemetry_register_cmd_arg``
 
+* eal: Deprecated the ``RTE_TAILQ_HEAD``, ``RTE_TAILQ_ENTRY``,
+  ``RTE_TAILQ_FOREACH``, ``RTE_TAILQ_FIRST``, ``RTE_TAILQ_NEXT``,
+  ``RTE_TAILQ_FOREACH_SAFE``, ``RTE_STAILQ_HEAD`` and ``RTE_STAILQ_ENTRY``
+  macros.
+  They existed only because Windows had no ``<sys/queue.h>``.
+  Use the standard ``TAILQ_`` and ``STAILQ_`` macros from ``rte_queue.h``.
+  The macros are kept as aliases and will be removed in DPDK 27.11.
+
 
 ABI Changes
 -----------

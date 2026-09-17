@@ -460,7 +460,7 @@ rte_pmu_fini(void)
 	if (!rte_pmu.initialized)
 		return;
 
-	RTE_TAILQ_FOREACH_SAFE(event, &rte_pmu.event_list, next, tmp_event) {
+	TAILQ_FOREACH_SAFE(event, &rte_pmu.event_list, next, tmp_event) {
 		TAILQ_REMOVE(&rte_pmu.event_list, event, next);
 		free_event(event);
 	}

@@ -131,7 +131,7 @@ struct rte_cryptodev_global {
 
 /* Cryptodev driver, containing the driver ID */
 struct cryptodev_driver {
-	RTE_TAILQ_ENTRY(cryptodev_driver) next; /**< Next in list. */
+	TAILQ_ENTRY(cryptodev_driver) next; /**< Next in list. */
 	const struct rte_driver *driver;
 	uint8_t id;
 };

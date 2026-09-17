@@ -275,7 +275,7 @@ ethdev_sec_tel_handle_sa_info(const char *cmd __rte_unused, const char *params,
 	i = 0;
 	if (dev->tx_offloads & RTE_ETH_TX_OFFLOAD_SECURITY) {
 		tvar = NULL;
-		RTE_TAILQ_FOREACH_SAFE(eth_sec, &dev->outb.list, entry, tvar) {
+		TAILQ_FOREACH_SAFE(eth_sec, &dev->outb.list, entry, tvar) {
 			if (eth_sec->sa_idx == sa_idx) {
 				rte_tel_data_add_dict_int(d, "outb_sa", 1);
 				if (roc_model_is_cn10k())
@@ -292,7 +292,7 @@ ethdev_sec_tel_handle_sa_info(const char *cmd __rte_unused, const char *params,
 	i = 0;
 	if (dev->rx_offloads & RTE_ETH_RX_OFFLOAD_SECURITY) {
 		tvar = NULL;
-		RTE_TAILQ_FOREACH_SAFE(eth_sec, &dev->inb.list, entry, tvar) {
+		TAILQ_FOREACH_SAFE(eth_sec, &dev->inb.list, entry, tvar) {
 			if (eth_sec->sa_idx == sa_idx) {
 				rte_tel_data_add_dict_int(d, "inb_sa", 1);
 				if (roc_model_is_cn10k())
@@ -353,7 +353,7 @@ ethdev_sec_tel_handle_info(const char *cmd __rte_unused, const char *params,
 
 	if (dev->tx_offloads & RTE_ETH_TX_OFFLOAD_SECURITY) {
 		tvar = NULL;
-		RTE_TAILQ_FOREACH_SAFE(eth_sec, &dev->outb.list, entry, tvar) {
+		TAILQ_FOREACH_SAFE(eth_sec, &dev->outb.list, entry, tvar) {
 			if (eth_sec->sa_idx < min_outb_sa)
 				min_outb_sa = eth_sec->sa_idx;
 			if (eth_sec->sa_idx > max_outb_sa)
@@ -370,7 +370,7 @@ ethdev_sec_tel_handle_info(const char *cmd __rte_unused, const char *params,
 
 	if (dev->rx_offloads & RTE_ETH_RX_OFFLOAD_SECURITY) {
 		tvar = NULL;
-		RTE_TAILQ_FOREACH_SAFE(eth_sec, &dev->inb.list, entry, tvar) {
+		TAILQ_FOREACH_SAFE(eth_sec, &dev->inb.list, entry, tvar) {
 			if (eth_sec->sa_idx < min_inb_sa)
 				min_inb_sa = eth_sec->sa_idx;
 			if (eth_sec->sa_idx > max_inb_sa)

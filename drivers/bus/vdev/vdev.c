@@ -103,7 +103,7 @@ rte_vdev_remove_custom_scan(rte_vdev_scan_callback callback, void *user_arg)
 	struct vdev_custom_scan *custom_scan, *tmp_scan;
 
 	rte_spinlock_lock(&vdev_custom_scan_lock);
-	RTE_TAILQ_FOREACH_SAFE(custom_scan, &vdev_custom_scans, next,
+	TAILQ_FOREACH_SAFE(custom_scan, &vdev_custom_scans, next,
 				tmp_scan) {
 		if (custom_scan->callback != callback ||
 				(custom_scan->user_arg != (void *)-1 &&

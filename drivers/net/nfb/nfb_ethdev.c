@@ -1127,7 +1127,7 @@ nfb_eth_common_remove(struct rte_device *dev)
 {
 	struct pmd_internals *entry, *temp;
 
-	RTE_TAILQ_FOREACH_SAFE(entry, &nfb_eth_dev_list, eth_dev_list, temp) {
+	TAILQ_FOREACH_SAFE(entry, &nfb_eth_dev_list, eth_dev_list, temp) {
 		if (dev == entry->eth_dev->device)
 			rte_eth_dev_destroy(entry->eth_dev, nfb_eth_dev_uninit);
 	}

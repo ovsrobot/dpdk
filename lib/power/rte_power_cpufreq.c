@@ -13,7 +13,7 @@ static enum power_management_env global_default_env = PM_ENV_NOT_SET;
 static struct rte_power_cpufreq_ops *global_cpufreq_ops;
 
 static rte_spinlock_t global_env_cfg_lock = RTE_SPINLOCK_INITIALIZER;
-static RTE_TAILQ_HEAD(, rte_power_cpufreq_ops) cpufreq_ops_list =
+static TAILQ_HEAD(, rte_power_cpufreq_ops) cpufreq_ops_list =
 			TAILQ_HEAD_INITIALIZER(cpufreq_ops_list);
 
 const char *power_env_str[] = {
@@ -55,7 +55,7 @@ rte_power_check_env_supported(enum power_management_env env)
 	if (env >= RTE_DIM(power_env_str))
 		return 0;
 
-	RTE_TAILQ_FOREACH(ops, &cpufreq_ops_list, next)
+	TAILQ_FOREACH(ops, &cpufreq_ops_list, next)
 		if (strncmp(ops->name, power_env_str[env],
 				RTE_POWER_DRIVER_NAMESZ) == 0)
 			return ops->check_env_support();
@@ -77,7 +77,7 @@ rte_power_set_env(enum power_management_env env)
 		goto out;
 	}
 
-	RTE_TAILQ_FOREACH(ops, &cpufreq_ops_list, next)
+	TAILQ_FOREACH(ops, &cpufreq_ops_list, next)
 		if (strncmp(ops->name, power_env_str[env],
 				RTE_POWER_DRIVER_NAMESZ) == 0) {
 			global_cpufreq_ops = ops;
@@ -123,7 +123,7 @@ rte_power_init(unsigned int lcore_id)
 	POWER_LOG(INFO, "Env isn't set yet!");
 
 	/* Auto detect Environment */
-	RTE_TAILQ_FOREACH(ops, &cpufreq_ops_list, next) {
+	TAILQ_FOREACH(ops, &cpufreq_ops_list, next) {
 		POWER_LOG(INFO,
 			"Attempting to initialise %s cpufreq power management...",
 			ops->name);

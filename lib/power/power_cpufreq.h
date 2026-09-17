@@ -147,7 +147,7 @@ typedef int (*rte_power_get_capabilities_t)(unsigned int lcore_id,
 
 /** Structure defining core power operations structure */
 struct rte_power_cpufreq_ops {
-	RTE_TAILQ_ENTRY(rte_power_cpufreq_ops) next;	/**< Next in list. */
+	TAILQ_ENTRY(rte_power_cpufreq_ops) next;	/**< Next in list. */
 	char name[RTE_POWER_DRIVER_NAMESZ];             /**< power mgmt driver. */
 	rte_power_cpufreq_init_t init;                  /**< Initialize power management. */
 	rte_power_cpufreq_exit_t exit;                  /**< Exit power management. */

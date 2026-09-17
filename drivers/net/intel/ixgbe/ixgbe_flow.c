@@ -2783,7 +2783,7 @@ ixgbe_filterlist_flush(struct rte_eth_dev *dev)
 	struct ixgbe_adapter *adapter = IXGBE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct ixgbe_filter_ele_base *ele, *tmp;
 
-	RTE_TAILQ_FOREACH_SAFE(ele, &adapter->flow_list, entries, tmp) {
+	TAILQ_FOREACH_SAFE(ele, &adapter->flow_list, entries, tmp) {
 		struct ixgbe_flow_mem *ixgbe_flow_mem_ptr =
 			(struct ixgbe_flow_mem *)ele;
 		struct rte_flow *flow = ixgbe_flow_mem_ptr->flow;

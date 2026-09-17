@@ -20,7 +20,7 @@ struct rte_device;
 struct rte_driver;
 
 /** Double linked list of buses */
-RTE_TAILQ_HEAD(rte_bus_list, rte_bus);
+TAILQ_HEAD(rte_bus_list, rte_bus);
 
 /**
  * Bus specific scan for devices attached on the bus.
@@ -351,7 +351,7 @@ typedef void *(*rte_bus_dev_iterate_t)(const struct rte_bus *bus,
  * A structure describing a generic bus.
  */
 struct rte_bus {
-	RTE_TAILQ_ENTRY(rte_bus) next; /**< Next bus object in linked list */
+	TAILQ_ENTRY(rte_bus) next; /**< Next bus object in linked list */
 	const char *name;            /**< Name of the bus */
 	bool allow_multi_probe;      /**< Allow probing devices multiple times */
 	rte_bus_scan_t scan;         /**< Scan for devices attached to bus */
@@ -374,8 +374,8 @@ struct rte_bus {
 					/**< handle sigbus error on the bus */
 	rte_bus_free_device_t free_device; /**< Free bus-specific device */
 	rte_bus_cleanup_t cleanup;   /**< Cleanup devices on bus */
-	RTE_TAILQ_HEAD(, rte_device) device_list; /**< List of devices on the bus */
-	RTE_TAILQ_HEAD(, rte_driver) driver_list; /**< List of drivers on the bus */
+	TAILQ_HEAD(, rte_device) device_list; /**< List of devices on the bus */
+	TAILQ_HEAD(, rte_driver) driver_list; /**< List of drivers on the bus */
 };
 
 /**

@@ -185,7 +185,7 @@ typedef void (*rte_power_uncore_driver_cb_t)(void);
 
 /** Structure defining uncore power operations structure */
 struct rte_power_uncore_ops {
-	RTE_TAILQ_ENTRY(rte_power_uncore_ops) next;     /**< Next in list. */
+	TAILQ_ENTRY(rte_power_uncore_ops) next;     /**< Next in list. */
 	char name[RTE_POWER_UNCORE_DRIVER_NAMESZ];      /**< power mgmt driver. */
 	rte_power_uncore_driver_cb_t cb;                /**< Driver specific callbacks. */
 	rte_power_uncore_init_t init;                   /**< Initialize power management. */

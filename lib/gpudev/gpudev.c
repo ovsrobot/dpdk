@@ -476,7 +476,7 @@ rte_gpu_callback_unregister(int16_t dev_id, enum rte_gpu_event event,
 	rte_rwlock_write_lock(&gpu_callback_lock);
 	do {
 		callbacks = &gpus[next_dev].callbacks;
-		RTE_TAILQ_FOREACH_SAFE(callback, callbacks, next, nextcb) {
+		TAILQ_FOREACH_SAFE(callback, callbacks, next, nextcb) {
 			if (callback->event != event ||
 					callback->function != function ||
 					(callback->user_data != user_data &&
@@ -499,7 +499,7 @@ gpu_free_callbacks(struct rte_gpu *dev)
 
 	callbacks = &dev->callbacks;
 	rte_rwlock_write_lock(&gpu_callback_lock);
-	RTE_TAILQ_FOREACH_SAFE(callback, callbacks, next, nextcb) {
+	TAILQ_FOREACH_SAFE(callback, callbacks, next, nextcb) {
 		TAILQ_REMOVE(callbacks, callback, next);
 		free(callback);
 	}

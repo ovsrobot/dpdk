@@ -27,7 +27,7 @@ cpfl_flow_engine_match(struct rte_eth_dev *dev,
 	struct cpfl_flow_engine *engine = NULL;
 	void *temp;
 
-	RTE_TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
+	TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
 		if (!engine->parse_pattern_action)
 			continue;
 
@@ -46,7 +46,7 @@ cpfl_flow_engine_init(struct cpfl_adapter_ext *adapter)
 	void *temp;
 	int ret;
 
-	RTE_TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
+	TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
 		if (!engine->init) {
 			PMD_INIT_LOG(ERR, "Invalid engine type (%d)",
 				     engine->type);
@@ -70,7 +70,7 @@ cpfl_flow_engine_uninit(struct cpfl_adapter_ext *adapter)
 	struct cpfl_flow_engine *engine = NULL;
 	void *temp;
 
-	RTE_TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
+	TAILQ_FOREACH_SAFE(engine, &engine_list, node, temp) {
 		if (engine->uninit)
 			engine->uninit(adapter);
 	}
@@ -244,7 +244,7 @@ cpfl_flow_flush(struct rte_eth_dev *dev,
 	void *temp;
 	int ret = 0;
 
-	RTE_TAILQ_FOREACH_SAFE(p_flow, &itf->flow_list, next, temp) {
+	TAILQ_FOREACH_SAFE(p_flow, &itf->flow_list, next, temp) {
 		ret = cpfl_flow_destroy(dev, p_flow, error);
 		if (ret) {
 			PMD_DRV_LOG(ERR, "Failed to flush flows");

@@ -26,6 +26,11 @@
  * _FOREACH_SAFE, _FOREACH_FROM or _SWAP. Conversely, when this header wins,
  * the glibc-only CIRCLEQ_ and SIMPLEQ_ families are not defined.
  *
+ * Within DPDK this is not a problem: rte_os.h includes this header and is
+ * reached from rte_common.h, so any DPDK header included first wins the
+ * race. Note that the include in rte_os.h is load bearing for that reason,
+ * even though nothing in rte_os.h itself uses the list macros.
+ *
  * The FreeBSD QUEUE_MACRO_DEBUG and INVARIANTS facilities are omitted: they
  * are there to debug the macros themselves, which is not something DPDK does.
  */

@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <rte_debug.h>
+#include <rte_queue.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,11 +20,11 @@ extern "C" {
 
 /** dummy structure type used by the rte_tailq APIs */
 struct rte_tailq_entry {
-	RTE_TAILQ_ENTRY(rte_tailq_entry) next; /**< Pointer entries for a tailq list */
+	TAILQ_ENTRY(rte_tailq_entry) next; /**< Pointer entries for a tailq list */
 	void *data; /**< Pointer to the data referenced by this tailq entry */
 };
 /** dummy */
-RTE_TAILQ_HEAD(rte_tailq_entry_head, rte_tailq_entry);
+TAILQ_HEAD(rte_tailq_entry_head, rte_tailq_entry);
 
 #define RTE_TAILQ_NAMESIZE 32
 
@@ -46,7 +47,7 @@ struct rte_tailq_elem {
 	 * rte_eal_tailqs_init()
 	 */
 	struct rte_tailq_head *head;
-	RTE_TAILQ_ENTRY(rte_tailq_elem) next;
+	TAILQ_ENTRY(rte_tailq_elem) next;
 	const char name[RTE_TAILQ_NAMESIZE];
 };
 
@@ -124,10 +125,32 @@ RTE_INIT(tailqinitfn_ ##t) \
 		rte_panic("Cannot initialize tailq: %s\n", t.name); \
 }
 
-/* This macro permits both remove and free var within the loop safely.*/
+/*
+ * Compatibility wrappers, deprecated.
+ *
+ * These existed only because Windows had no <sys/queue.h>. Use the plain
+ * macros from <rte_queue.h> instead; these are kept for out of tree code
+ * and will be removed in a future release.
+ *
+ * They are defined in terms of the plain TAILQ_ and STAILQ_ macros only,
+ * never the extended ones, so that they keep working in a translation unit
+ * that included a system <sys/queue.h> before any DPDK header, in which
+ * case rte_queue.h is suppressed and only the subset the system provides
+ * is defined. That is why RTE_TAILQ_FOREACH_SAFE is open coded rather than
+ * mapped to TAILQ_FOREACH_SAFE, which glibc does not have.
+ */
+#define RTE_TAILQ_HEAD(name, type) TAILQ_HEAD(name, type)
+#define RTE_TAILQ_ENTRY(type) TAILQ_ENTRY(type)
+#define RTE_TAILQ_FOREACH(var, head, field) TAILQ_FOREACH(var, head, field)
+#define RTE_TAILQ_FIRST(head) TAILQ_FIRST(head)
+#define RTE_TAILQ_NEXT(elem, field) TAILQ_NEXT(elem, field)
+#define RTE_STAILQ_HEAD(name, type) STAILQ_HEAD(name, type)
+#define RTE_STAILQ_ENTRY(type) STAILQ_ENTRY(type)
+
+/* This macro permits both remove and free var within the loop safely. */
 #define RTE_TAILQ_FOREACH_SAFE(var, head, field, tvar) \
-	for ((var) = RTE_TAILQ_FIRST((head)); \
-	    (var) && ((tvar) = RTE_TAILQ_NEXT((var), field), 1); \
+	for ((var) = TAILQ_FIRST((head)); \
+	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1); \
 	    (var) = (tvar))
 
 #ifdef __cplusplus

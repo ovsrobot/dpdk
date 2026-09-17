@@ -464,7 +464,7 @@ nix_meter_fini(struct cnxk_eth_dev *dev)
 	uint32_t i;
 	int rc = 0;
 
-	RTE_TAILQ_FOREACH_SAFE(mtr, fms, next, next_mtr) {
+	TAILQ_FOREACH_SAFE(mtr, fms, next, next_mtr) {
 		for (i = 0; i < mtr->rq_num; i++) {
 			rq = &dev->rqs[mtr->rq_id[i]];
 			rc |= roc_nix_bpf_ena_dis(nix, mtr->bpf_id, rq, false);
@@ -512,7 +512,7 @@ nix_security_release(struct cnxk_eth_dev *dev)
 	if (dev->rx_offloads & RTE_ETH_RX_OFFLOAD_SECURITY || dev->ip_reass_en) {
 		/* Destroy inbound sessions */
 		tvar = NULL;
-		RTE_TAILQ_FOREACH_SAFE(eth_sec, &dev->inb.list, entry, tvar)
+		TAILQ_FOREACH_SAFE(eth_sec, &dev->inb.list, entry, tvar)
 			cnxk_eth_sec_ops.session_destroy(eth_dev,
 							 eth_sec->sess);
 
@@ -534,7 +534,7 @@ nix_security_release(struct cnxk_eth_dev *dev)
 	    dev->rx_offloads & RTE_ETH_RX_OFFLOAD_SECURITY) {
 		/* Destroy outbound sessions */
 		tvar = NULL;
-		RTE_TAILQ_FOREACH_SAFE(eth_sec, &dev->outb.list, entry, tvar)
+		TAILQ_FOREACH_SAFE(eth_sec, &dev->outb.list, entry, tvar)
 			cnxk_eth_sec_ops.session_destroy(eth_dev,
 							 eth_sec->sess);
 

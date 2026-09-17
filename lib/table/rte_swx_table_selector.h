@@ -55,7 +55,7 @@ struct rte_swx_table_selector_params {
 /** Group member parameters. */
 struct rte_swx_table_selector_member {
 	/** Linked list connectivity. */
-	RTE_TAILQ_ENTRY(rte_swx_table_selector_member) node;
+	TAILQ_ENTRY(rte_swx_table_selector_member) node;
 
 	/** Member ID. */
 	uint32_t member_id;
@@ -65,7 +65,7 @@ struct rte_swx_table_selector_member {
 };
 
 /** List of group members. */
-RTE_TAILQ_HEAD(rte_swx_table_selector_member_list, rte_swx_table_selector_member);
+TAILQ_HEAD(rte_swx_table_selector_member_list, rte_swx_table_selector_member);
 
 /** Group parameters. */
 struct rte_swx_table_selector_group {

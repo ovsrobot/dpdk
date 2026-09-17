@@ -115,7 +115,7 @@ vhost_user_iotlb_pending_remove_all(struct virtio_net *dev)
 
 	rte_rwlock_write_lock(&dev->iotlb_pending_lock);
 
-	RTE_TAILQ_FOREACH_SAFE(node, &dev->iotlb_pending_list, next, temp_node) {
+	TAILQ_FOREACH_SAFE(node, &dev->iotlb_pending_list, next, temp_node) {
 		TAILQ_REMOVE(&dev->iotlb_pending_list, node, next);
 		vhost_user_iotlb_pool_put(dev, node);
 	}
@@ -181,7 +181,7 @@ vhost_user_iotlb_pending_remove(struct virtio_net *dev, uint64_t iova, uint64_t 
 
 	rte_rwlock_write_lock(&dev->iotlb_pending_lock);
 
-	RTE_TAILQ_FOREACH_SAFE(node, &dev->iotlb_pending_list, next,
+	TAILQ_FOREACH_SAFE(node, &dev->iotlb_pending_list, next,
 				temp_node) {
 		if (node->iova < iova)
 			continue;
@@ -203,7 +203,7 @@ vhost_user_iotlb_cache_remove_all(struct virtio_net *dev)
 
 	vhost_user_iotlb_wr_lock_all(dev);
 
-	RTE_TAILQ_FOREACH_SAFE(node, &dev->iotlb_list, next, temp_node) {
+	TAILQ_FOREACH_SAFE(node, &dev->iotlb_list, next, temp_node) {
 		vhost_user_iotlb_clear_dump(dev, node, NULL, NULL);
 
 		TAILQ_REMOVE(&dev->iotlb_list, node, next);
@@ -226,9 +226,9 @@ vhost_user_iotlb_cache_random_evict(struct virtio_net *dev)
 
 	entry_idx = rte_rand() % dev->iotlb_cache_nr;
 
-	RTE_TAILQ_FOREACH_SAFE(node, &dev->iotlb_list, next, temp_node) {
+	TAILQ_FOREACH_SAFE(node, &dev->iotlb_list, next, temp_node) {
 		if (!entry_idx) {
-			struct vhost_iotlb_entry *next_node = RTE_TAILQ_NEXT(node, next);
+			struct vhost_iotlb_entry *next_node = TAILQ_NEXT(node, next);
 
 			vhost_user_iotlb_clear_dump(dev, node, prev_node, next_node);
 
@@ -314,13 +314,13 @@ vhost_user_iotlb_cache_remove(struct virtio_net *dev, uint64_t iova, uint64_t si
 
 	vhost_user_iotlb_wr_lock_all(dev);
 
-	RTE_TAILQ_FOREACH_SAFE(node, &dev->iotlb_list, next, temp_node) {
+	TAILQ_FOREACH_SAFE(node, &dev->iotlb_list, next, temp_node) {
 		/* Sorted list */
 		if (unlikely(iova + size < node->iova))
 			break;
 
 		if (iova < node->iova + node->size) {
-			struct vhost_iotlb_entry *next_node = RTE_TAILQ_NEXT(node, next);
+			struct vhost_iotlb_entry *next_node = TAILQ_NEXT(node, next);
 
 			vhost_user_iotlb_clear_dump(dev, node, prev_node, next_node);
 
