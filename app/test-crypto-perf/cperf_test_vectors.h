@@ -132,7 +132,7 @@ struct cperf_mlkem_test_data {
 	} sk;
 };
 
-#define TEST_DATA_SIZE 4096
+#define TEST_DATA_SIZE 8192
 struct cperf_rsa_plaintext {
 	uint8_t data[TEST_DATA_SIZE];
 	unsigned int len;

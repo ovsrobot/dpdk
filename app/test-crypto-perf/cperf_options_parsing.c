@@ -564,8 +564,24 @@ parse_op_type(struct cperf_options *opts, const char *arg)
 			CPERF_ASYM_MLDSA44
 		},
 		{
+			cperf_op_type_strs[CPERF_ASYM_MLDSA65],
+			CPERF_ASYM_MLDSA65
+		},
+		{
+			cperf_op_type_strs[CPERF_ASYM_MLDSA87],
+			CPERF_ASYM_MLDSA87
+		},
+		{
 			cperf_op_type_strs[CPERF_ASYM_MLKEM512],
 			CPERF_ASYM_MLKEM512
+		},
+		{
+			cperf_op_type_strs[CPERF_ASYM_MLKEM768],
+			CPERF_ASYM_MLKEM768
+		},
+		{
+			cperf_op_type_strs[CPERF_ASYM_MLKEM1024],
+			CPERF_ASYM_MLKEM1024
 		},
 		{
 			cperf_op_type_strs[CPERF_TLS],
@@ -1690,6 +1706,28 @@ cperf_options_check(struct cperf_options *options)
 			return -EINVAL;
 		}
 	}
+	if (options->op_type == CPERF_ASYM_MLKEM768) {
+		if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT)
+			options->mlkem_data = &mlkem_encap_perf_data[1];
+		else if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_DECRYPT)
+			options->mlkem_data = &mlkem_decap_perf_data[1];
+		else {
+			RTE_LOG(ERR, USER1,
+				"ML-KEM operations only support encrypt (encapsulate) and decrypt (decapsulate)\n");
+			return -EINVAL;
+		}
+	}
+	if (options->op_type == CPERF_ASYM_MLKEM1024) {
+		if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT)
+			options->mlkem_data = &mlkem_encap_perf_data[2];
+		else if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_DECRYPT)
+			options->mlkem_data = &mlkem_decap_perf_data[2];
+		else {
+			RTE_LOG(ERR, USER1,
+				"ML-KEM operations only support encrypt (encapsulate) and decrypt (decapsulate)\n");
+			return -EINVAL;
+		}
+	}
 
 #ifdef RTE_LIB_SECURITY
 	if (options->op_type == CPERF_DOCSIS) {
@@ -1718,6 +1756,26 @@ cperf_options_check(struct cperf_options *options)
 			options->mldsa_data = &mldsa_sign_perf_data[0];
 		else if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_VERIFY)
 			options->mldsa_data = &mldsa_verify_perf_data[0];
+		else {
+			RTE_LOG(ERR, USER1, "ML-DSA only supports sign and verify operations\n");
+			return -EINVAL;
+		}
+	}
+	if (options->op_type == CPERF_ASYM_MLDSA65) {
+		if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_SIGN)
+			options->mldsa_data = &mldsa_sign_perf_data[1];
+		else if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_VERIFY)
+			options->mldsa_data = &mldsa_verify_perf_data[1];
+		else {
+			RTE_LOG(ERR, USER1, "ML-DSA only supports sign and verify operations\n");
+			return -EINVAL;
+		}
+	}
+	if (options->op_type == CPERF_ASYM_MLDSA87) {
+		if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_SIGN)
+			options->mldsa_data = &mldsa_sign_perf_data[2];
+		else if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_VERIFY)
+			options->mldsa_data = &mldsa_verify_perf_data[2];
 		else {
 			RTE_LOG(ERR, USER1, "ML-DSA only supports sign and verify operations\n");
 			return -EINVAL;
@@ -1774,9 +1832,13 @@ cperf_options_dump(struct cperf_options *opts)
 				   rte_crypto_asym_op_strings[opts->asym_op_type]);
 		if (opts->op_type == CPERF_ASYM_RSA)
 			printf("# rsa test name: %s\n", opts->rsa_data->name);
-		if (opts->op_type == CPERF_ASYM_MLDSA44)
+		if (opts->op_type == CPERF_ASYM_MLDSA44 ||
+			opts->op_type == CPERF_ASYM_MLDSA65 ||
+			opts->op_type == CPERF_ASYM_MLDSA87)
 			printf("# mldsa test name: %s\n", opts->mldsa_data->name);
-		if (opts->op_type == CPERF_ASYM_MLKEM512)
+		if (opts->op_type == CPERF_ASYM_MLKEM512 ||
+			opts->op_type == CPERF_ASYM_MLKEM768 ||
+			opts->op_type == CPERF_ASYM_MLKEM1024)
 			printf("# mlkem test name: %s\n", opts->mlkem_data->name);
 	}
 	printf("# sessionless: %s\n", opts->sessionless ? "yes" : "no");
