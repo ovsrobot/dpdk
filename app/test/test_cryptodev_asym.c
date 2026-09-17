@@ -35,6 +35,7 @@
 #ifndef TEST_DATA_SIZE
 	#define TEST_DATA_SIZE 4096
 #endif
+#define ML_TEST_DATA_SIZE 8192
 #define ASYM_TEST_MSG_LEN 256
 #define TEST_VECTOR_SIZE 256
 #define DEQ_TIMEOUT 10000
@@ -3910,8 +3911,8 @@ mlkem_keygen(const void *test_data)
 	const struct crypto_testsuite_mlkem_params *vector = test_data;
 	const uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_xform xform = {0};
-	uint8_t ek[TEST_DATA_SIZE] = {0};
-	uint8_t dk[TEST_DATA_SIZE] = {0};
+	uint8_t ek[ML_TEST_DATA_SIZE] = {0};
+	uint8_t dk[ML_TEST_DATA_SIZE] = {0};
 
 	xform.mlkem.type = vector->type;
 	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_ML_KEM;
@@ -3969,9 +3970,9 @@ mlkem_encap(const void *test_data)
 	const struct crypto_testsuite_mlkem_params *vector = test_data;
 	const uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_xform xform = {0};
-	uint8_t cipher[TEST_DATA_SIZE] = {0};
-	uint8_t skcopy[TEST_DATA_SIZE] = {0};
-	uint8_t sk[TEST_DATA_SIZE] = {0};
+	uint8_t cipher[ML_TEST_DATA_SIZE] = {0};
+	uint8_t skcopy[ML_TEST_DATA_SIZE] = {0};
+	uint8_t sk[ML_TEST_DATA_SIZE] = {0};
 	size_t cipher_len;
 
 	xform.mlkem.type = vector->type;
@@ -4093,8 +4094,8 @@ mlkem_decap(const void *test_data)
 	const struct crypto_testsuite_mlkem_params *vector = test_data;
 	const uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_xform xform = {0};
-	uint8_t cipher[TEST_DATA_SIZE] = {0};
-	uint8_t sk[TEST_DATA_SIZE] = {0};
+	uint8_t cipher[ML_TEST_DATA_SIZE] = {0};
+	uint8_t sk[ML_TEST_DATA_SIZE] = {0};
 	size_t cipher_len;
 
 	xform.mlkem.type = vector->type;
@@ -4172,8 +4173,8 @@ mldsa_keygen(const void *test_data)
 	const struct crypto_testsuite_mldsa_params *vector = test_data;
 	const uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_xform xform = {0};
-	uint8_t privkey[TEST_DATA_SIZE] = {0};
-	uint8_t pubkey[TEST_DATA_SIZE] = {0};
+	uint8_t privkey[ML_TEST_DATA_SIZE] = {0};
+	uint8_t pubkey[ML_TEST_DATA_SIZE] = {0};
 
 	xform.mldsa.type = vector->type;
 	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_ML_DSA;
@@ -4231,7 +4232,7 @@ mldsa_sign(const void *test_data)
 	const uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_xform xform = {0};
 	struct rte_cryptodev_info dev_info;
-	uint8_t sign[TEST_DATA_SIZE] = {0};
+	uint8_t sign[ML_TEST_DATA_SIZE] = {0};
 	size_t sign_len;
 
 	xform.mldsa.type = vector->type;
@@ -4356,7 +4357,7 @@ mldsa_verify(const void *test_data)
 	const uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_xform xform = {0};
 	struct rte_cryptodev_info dev_info;
-	uint8_t sign[TEST_DATA_SIZE] = {0};
+	uint8_t sign[ML_TEST_DATA_SIZE] = {0};
 	size_t sign_len;
 
 	xform.mldsa.type = vector->type;
