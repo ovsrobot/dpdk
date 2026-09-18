@@ -375,6 +375,19 @@ void bnxt_handle_fwd_req(struct bnxt *bp, struct cmpl_base *cmpl)
 
 	/* Qualify the fwd request */
 	fw_vf_id = rte_le_to_cpu_16(fwd_cmpl->source_id);
+
+	if (fw_vf_id < bp->pf->first_vf_id ||
+	    fw_vf_id >= bp->pf->first_vf_id + bp->pf->active_vfs) {
+		PMD_DRV_LOG_LINE(ERR,
+		"FWD req's source_id 0x%x out of range 0x%x - 0x%x (%d %d)",
+			fw_vf_id, bp->pf->first_vf_id,
+			(bp->pf->first_vf_id) + bp->pf->active_vfs - 1,
+			bp->pf->first_vf_id, bp->pf->active_vfs);
+		fwd_cmd = NULL;
+		req_len = 0;
+		goto reject;
+	}
+
 	vf_id = fw_vf_id - bp->pf->first_vf_id;
 
 	req_len = (rte_le_to_cpu_16(fwd_cmpl->req_len_type) &
@@ -385,16 +398,6 @@ void bnxt_handle_fwd_req(struct bnxt *bp, struct cmpl_base *cmpl)
 
 	/* Locate VF's forwarded command */
 	fwd_cmd = (struct input *)bp->pf->vf_info[vf_id].req_buf;
-
-	if (fw_vf_id < bp->pf->first_vf_id ||
-	    fw_vf_id >= bp->pf->first_vf_id + bp->pf->active_vfs) {
-		PMD_DRV_LOG_LINE(ERR,
-		"FWD req's source_id 0x%x out of range 0x%x - 0x%x (%d %d)",
-			fw_vf_id, bp->pf->first_vf_id,
-			(bp->pf->first_vf_id) + bp->pf->active_vfs - 1,
-			bp->pf->first_vf_id, bp->pf->active_vfs);
-		goto reject;
-	}
 
 	if (bnxt_rcv_msg_from_vf(bp, vf_id, fwd_cmd)) {
 		/*
@@ -495,7 +498,7 @@ reject:
 		PMD_DRV_LOG_LINE(ERR,
 			"Failed to send REJECT req VF 0x%x, type 0x%x.",
 			fw_vf_id - bp->pf->first_vf_id,
-			rte_le_to_cpu_16(fwd_cmd->req_type));
+			fwd_cmd ? rte_le_to_cpu_16(fwd_cmd->req_type) : 0xFFFF);
 	}
 
 	return;
