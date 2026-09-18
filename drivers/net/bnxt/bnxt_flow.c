@@ -58,24 +58,36 @@ bnxt_flow_args_validate(const struct rte_flow_attr *attr,
 	return 0;
 }
 
+#define BNXT_MAX_FLOW_ITEMS 256
+
 static const struct rte_flow_item *
 bnxt_flow_non_void_item(const struct rte_flow_item *cur)
 {
-	while (1) {
-		if (cur->type != RTE_FLOW_ITEM_TYPE_VOID)
-			return cur;
+	int i = 0;
+
+	if (!cur)
+		return NULL;
+
+	while (cur->type == RTE_FLOW_ITEM_TYPE_VOID && i < BNXT_MAX_FLOW_ITEMS) {
 		cur++;
+		i++;
 	}
+	return cur;
 }
 
 static const struct rte_flow_action *
 bnxt_flow_non_void_action(const struct rte_flow_action *cur)
 {
-	while (1) {
-		if (cur->type != RTE_FLOW_ACTION_TYPE_VOID)
-			return cur;
+	int i = 0;
+
+	if (!cur)
+		return NULL;
+
+	while (cur->type == RTE_FLOW_ACTION_TYPE_VOID && i < BNXT_MAX_FLOW_ITEMS) {
 		cur++;
+		i++;
 	}
+	return cur;
 }
 
 static int
@@ -109,7 +121,7 @@ bnxt_filter_type_check(const struct rte_flow_item pattern[],
 			PMD_DRV_LOG_LINE(DEBUG, "Unknown Flow type");
 			use_ntuple |= 0;
 		}
-		item++;
+		item = bnxt_flow_non_void_item(item + 1);
 	}
 
 	if (has_vlan && use_ntuple) {
@@ -680,7 +692,7 @@ bnxt_validate_and_parse_flow_type(const struct rte_flow_attr *attr,
 		default:
 			break;
 		}
-		item++;
+		item = bnxt_flow_non_void_item(item + 1);
 	}
 	filter->enables = en;
 	filter->valid_flags = valid_flags;
