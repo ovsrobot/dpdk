@@ -91,8 +91,8 @@
 /* Minimum spec version that supports AUTONEG_PAUSE bit in auto_pause field */
 #define HWRM_SPEC_CODE_AUTONEG_PAUSE	0x10201
 
-#define BNXT_MAX_MTU		9574
-#define BNXT_NUM_VLANS		2
+#define BNXT_MAX_MTU		9574UL
+#define BNXT_NUM_VLANS		2UL
 #define BNXT_MAX_PKT_LEN	(BNXT_MAX_MTU + RTE_ETHER_HDR_LEN +\
 				 RTE_ETHER_CRC_LEN +\
 				 (BNXT_NUM_VLANS * RTE_VLAN_HLEN))
@@ -105,8 +105,8 @@
 #define BNXT_VF_RSV_NUM_VNIC	1
 #define BNXT_MAX_LED		4
 #define BNXT_MIN_RING_DESC	16
-#define BNXT_MAX_TX_RING_DESC	4096
-#define BNXT_MAX_RX_RING_DESC	8192
+#define BNXT_MAX_TX_RING_DESC	16384
+#define BNXT_MAX_RX_RING_DESC	16384
 #define BNXT_DB_SIZE		0x80
 
 #define TPA_MAX_AGGS		64

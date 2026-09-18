@@ -37,9 +37,9 @@ static inline struct rte_mbuf *__bnxt_alloc_rx_data(struct rte_mempool *mb)
 
 static inline int bnxt_alloc_rx_data(struct bnxt_rx_queue *rxq,
 				     struct bnxt_rx_ring_info *rxr,
-				     uint16_t raw_prod)
+				     uint32_t raw_prod)
 {
-	uint16_t prod = RING_IDX(rxr->rx_ring_struct, raw_prod);
+	uint32_t prod = RING_IDX(rxr->rx_ring_struct, raw_prod);
 	struct rx_prod_pkt_bd *rxbd;
 	struct rte_mbuf **rx_buf;
 	struct rte_mbuf *mbuf;
@@ -65,9 +65,9 @@ static inline int bnxt_alloc_rx_data(struct bnxt_rx_queue *rxq,
 
 static inline int bnxt_alloc_ag_data(struct bnxt_rx_queue *rxq,
 				     struct bnxt_rx_ring_info *rxr,
-				     uint16_t raw_prod)
+				     uint32_t raw_prod)
 {
-	uint16_t prod = RING_IDX(rxr->ag_ring_struct, raw_prod);
+	uint32_t prod = RING_IDX(rxr->ag_ring_struct, raw_prod);
 	struct rx_prod_pkt_bd *rxbd;
 	struct rte_mbuf **rx_buf;
 	struct rte_mbuf *mbuf;
@@ -104,7 +104,7 @@ static inline int bnxt_alloc_ag_data(struct bnxt_rx_queue *rxq,
 static inline void bnxt_reuse_rx_mbuf(struct bnxt_rx_ring_info *rxr,
 			       struct rte_mbuf *mbuf)
 {
-	uint16_t prod, raw_prod = RING_NEXT(rxr->rx_raw_prod);
+	uint32_t prod, raw_prod = RING_NEXT(rxr->rx_raw_prod);
 	struct rte_mbuf **prod_rx_buf;
 	struct rx_prod_pkt_bd *prod_bd;
 
@@ -125,7 +125,7 @@ static inline void bnxt_reuse_rx_mbuf(struct bnxt_rx_ring_info *rxr,
 
 static inline
 struct rte_mbuf *bnxt_consume_rx_buf(struct bnxt_rx_ring_info *rxr,
-				     uint16_t cons)
+				     uint32_t cons)
 {
 	struct rte_mbuf **cons_rx_buf;
 	struct rte_mbuf *mbuf;
@@ -297,7 +297,7 @@ static void bnxt_tpa_start(struct bnxt_rx_queue *rxq,
 static int bnxt_agg_bufs_valid(struct bnxt_cp_ring_info *cpr,
 		uint8_t agg_bufs, uint32_t raw_cp_cons)
 {
-	uint16_t last_cp_cons;
+	uint32_t last_cp_cons;
 	struct rx_pkt_cmpl *agg_cmpl;
 
 	raw_cp_cons = ADV_RAW_CMP(raw_cp_cons, agg_bufs);
@@ -311,8 +311,8 @@ static int bnxt_agg_bufs_valid(struct bnxt_cp_ring_info *cpr,
 static int bnxt_prod_ag_mbuf(struct bnxt_rx_queue *rxq)
 {
 	struct bnxt_rx_ring_info *rxr = rxq->rx_ring;
-	uint16_t raw_next = RING_NEXT(rxr->ag_raw_prod);
-	uint16_t bmap_next = RING_IDX(rxr->ag_ring_struct, raw_next);
+	uint32_t raw_next = RING_NEXT(rxr->ag_raw_prod);
+	uint32_t bmap_next = RING_IDX(rxr->ag_ring_struct, raw_next);
 
 	/* TODO batch allocation for better performance */
 	while (rte_bitmap_get(rxr->ag_bitmap, bmap_next)) {
@@ -334,7 +334,7 @@ static int bnxt_rx_pages(struct bnxt_rx_queue *rxq,
 	struct bnxt_cp_ring_info *cpr = rxq->cp_ring;
 	struct bnxt_rx_ring_info *rxr = rxq->rx_ring;
 	int i;
-	uint16_t cp_cons, ag_cons;
+	uint32_t cp_cons, ag_cons;
 	struct rx_pkt_cmpl *rxcmp;
 	struct rte_mbuf *last = mbuf;
 	bool is_p5_tpa = tpa_info && BNXT_CHIP_P5_P7(rxq->bp);
@@ -1003,7 +1003,7 @@ static int bnxt_rx_pages_crx(struct bnxt_rx_queue *rxq, struct rte_mbuf *mbuf,
 	struct bnxt_cp_ring_info *cpr = rxq->cp_ring;
 	struct bnxt_rx_ring_info *rxr = rxq->rx_ring;
 	int i;
-	uint16_t cp_cons, ag_cons;
+	uint32_t cp_cons, ag_cons;
 	struct rx_pkt_compress_cmpl *rxcmp;
 	struct rte_mbuf *last = mbuf;
 
@@ -1058,7 +1058,7 @@ static int bnxt_crx_pkt(struct rte_mbuf **rx_pkt,
 	struct bnxt_cp_ring_info *cpr = rxq->cp_ring;
 	struct bnxt_rx_ring_info *rxr = rxq->rx_ring;
 	uint32_t tmp_raw_cons = *raw_cons;
-	uint16_t cons, raw_prod;
+	uint32_t cons, raw_prod;
 	struct rte_mbuf *mbuf;
 	int rc = 0;
 	uint8_t agg_buf = 0;
@@ -1119,12 +1119,12 @@ static int bnxt_rx_pkt(struct rte_mbuf **rx_pkt,
 	struct rx_pkt_cmpl *rxcmp;
 	struct rx_pkt_cmpl_hi *rxcmp1;
 	uint32_t tmp_raw_cons = *raw_cons;
-	uint16_t cons, raw_prod, cp_cons =
+	uint32_t cons, raw_prod, cp_cons =
 	    RING_CMP(cpr->cp_ring_struct, tmp_raw_cons);
 	struct rte_mbuf *mbuf;
 	int rc = 0;
 	uint8_t agg_buf = 0;
-	uint16_t cmp_type;
+	uint32_t cmp_type;
 	uint32_t vfr_flag = 0, mark_id = 0;
 	struct bnxt *bp = rxq->bp;
 
@@ -1343,7 +1343,7 @@ static void bnxt_reattempt_buffer_alloc(struct bnxt_rx_queue *rxq)
 {
 	struct bnxt_rx_ring_info *rxr = rxq->rx_ring;
 	struct bnxt_ring *ring;
-	uint16_t raw_prod;
+	uint32_t raw_prod;
 	uint32_t cnt;
 
 	/* Assume alloc passes. On failure,
@@ -1363,7 +1363,7 @@ alloc_rx:
 	ring = rxr->rx_ring_struct;
 	for (cnt = 0; cnt < ring->ring_size; cnt++) {
 		struct rte_mbuf **rx_buf;
-		uint16_t ndx;
+		uint32_t ndx;
 
 		ndx = RING_IDX(ring, raw_prod + cnt);
 		rx_buf = &rxr->rx_buf_ring[ndx];
@@ -1387,8 +1387,8 @@ uint16_t bnxt_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	struct bnxt_rx_queue *rxq = rx_queue;
 	struct bnxt_cp_ring_info *cpr = rxq->cp_ring;
 	struct bnxt_rx_ring_info *rxr = rxq->rx_ring;
-	uint16_t rx_raw_prod = rxr->rx_raw_prod;
-	uint16_t ag_raw_prod = rxr->ag_raw_prod;
+	uint32_t rx_raw_prod = rxr->rx_raw_prod;
+	uint32_t ag_raw_prod = rxr->ag_raw_prod;
 	uint32_t raw_cons = cpr->cp_raw_cons;
 	uint32_t cons;
 	int nb_rx_pkts = 0;
@@ -1627,7 +1627,7 @@ int bnxt_init_rx_ring_struct(struct bnxt_rx_queue *rxq, unsigned int socket_id)
 }
 
 static void bnxt_init_rxbds(struct bnxt_ring *ring, uint32_t type,
-			    uint16_t len)
+			    uint32_t len)
 {
 	uint32_t j;
 	struct rx_prod_pkt_bd *rx_bd_ring = (struct rx_prod_pkt_bd *)ring->bd;
@@ -1647,7 +1647,7 @@ int bnxt_init_one_rx_ring(struct bnxt_rx_queue *rxq)
 	struct bnxt_ring *ring;
 	uint32_t raw_prod, type;
 	unsigned int i;
-	uint16_t size;
+	uint32_t size;
 
 	/* Initialize packet type table. */
 	bnxt_init_ptype_table();
