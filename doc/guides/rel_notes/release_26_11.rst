@@ -56,6 +56,11 @@ New Features
      =======================================================
 
 
+* **Updated Intel ice driver.**
+
+  Added support for the Rx hardware timestamp offload
+  (``RTE_ETH_RX_OFFLOAD_TIMESTAMP``) in the AVX2 and AVX512 vector Rx paths.
+
 Removed Items
 -------------
 
