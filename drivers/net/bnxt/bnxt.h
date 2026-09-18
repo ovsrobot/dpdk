@@ -1285,6 +1285,21 @@ extern int bnxt_logtype_driver;
 						       BNXT_LINK_SPEEDS_V2_VF((bp))))
 #define BNXT_MAX_SPEED_LANES 8
 #define BNXT_SUPPORTS_TPA(bp)  (!BNXT_CHIP_P5_P7(bp) || (bp)->max_tpa_v2)
+
+static inline int
+check_snprintf_rc(int rc, size_t max_size, const char *ctx)
+{
+	if (rc < 0) {
+		PMD_DRV_LOG_LINE(ERR, "Error when creating string for %s", ctx);
+		return rc;
+	}
+
+	if (rc >= (int)max_size)
+		PMD_DRV_LOG_LINE(INFO, "String truncated when creating string for %s", ctx);
+
+	return 0;
+}
+
 extern const struct rte_flow_ops bnxt_ulp_rte_flow_ops;
 int32_t bnxt_ulp_port_init(struct bnxt *bp);
 void bnxt_ulp_port_deinit(struct bnxt *bp);

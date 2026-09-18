@@ -1108,7 +1108,7 @@ int bnxt_dev_xstats_get_names_op(struct rte_eth_dev *eth_dev,
 	struct bnxt *bp = (struct bnxt *)eth_dev->data->dev_private;
 	unsigned int stat_cnt;
 	unsigned int i, count = 0, sz;
-	int rc;
+	int rc, snp_rc = 0;
 
 	rc = is_bnxt_in_error(bp);
 	if (rc)
@@ -1183,12 +1183,16 @@ skip_func_stats:
 		for (i = 0; i < bp->max_l2_ctx; i++) {
 			char buf[RTE_ETH_XSTATS_NAME_SIZE];
 
-			sprintf(buf, "flow_%d_bytes", i);
+			snp_rc = snprintf(buf, sizeof(buf), "flow_%d_bytes", i);
+			if (check_snprintf_rc(snp_rc, sizeof(buf), "flow_%d_bytes") < 0)
+				return snp_rc;
 			strlcpy(xstats_names[count].name, buf,
 				sizeof(xstats_names[count].name));
 			count++;
 
-			sprintf(buf, "flow_%d_packets", i);
+			snp_rc = snprintf(buf, sizeof(buf), "flow_%d_packets", i);
+			if (check_snprintf_rc(snp_rc, sizeof(buf), "flow_%d_packets") < 0)
+				return snp_rc;
 			strlcpy(xstats_names[count].name, buf,
 				sizeof(xstats_names[count].name));
 

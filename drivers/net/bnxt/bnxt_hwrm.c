@@ -1583,12 +1583,12 @@ int bnxt_hwrm_func_resc_qcaps(struct bnxt *bp)
 
 int bnxt_hwrm_ver_get(struct bnxt *bp, uint32_t timeout)
 {
-	int rc = 0;
 	struct hwrm_ver_get_input req = {.req_type = 0 };
 	struct hwrm_ver_get_output *resp = bp->hwrm_cmd_resp_addr;
 	uint32_t fw_version;
 	uint16_t max_resp_len;
 	char type[RTE_MEMZONE_NAMESIZE];
+	int rc = 0, snp_rc = 0;
 	uint32_t dev_caps_cfg;
 
 	bp->max_req_len = HWRM_MAX_REQ_LEN;
@@ -1669,11 +1669,15 @@ int bnxt_hwrm_ver_get(struct bnxt *bp, uint32_t timeout)
 	     (dev_caps_cfg &
 	      HWRM_VER_GET_OUTPUT_DEV_CAPS_CFG_SHORT_CMD_REQUIRED)) ||
 	    bp->hwrm_max_ext_req_len > HWRM_MAX_REQ_LEN) {
-		sprintf(type, "bnxt_hwrm_short_" PCI_PRI_FMT,
-			bp->pdev->addr.domain, bp->pdev->addr.bus,
-			bp->pdev->addr.devid, bp->pdev->addr.function);
-
+		snp_rc = snprintf(type, sizeof(type), "bnxt_hwrm_short_" PCI_PRI_FMT,
+				  bp->pdev->addr.domain, bp->pdev->addr.bus,
+				  bp->pdev->addr.devid, bp->pdev->addr.function);
 		rte_free(bp->hwrm_short_cmd_req_addr);
+		bp->hwrm_short_cmd_req_addr = NULL;
+		if (check_snprintf_rc(snp_rc, sizeof(type), "bnxt_hwrm_short_") < 0) {
+			bp->flags &= ~BNXT_FLAG_SHORT_CMD;
+			return snp_rc;
+		}
 
 		bp->hwrm_short_cmd_req_addr =
 				rte_malloc(type, bp->hwrm_max_ext_req_len, 0);
@@ -3541,9 +3545,12 @@ int bnxt_alloc_hwrm_resources(struct bnxt *bp)
 {
 	struct rte_pci_device *pdev = bp->pdev;
 	char type[RTE_MEMZONE_NAMESIZE];
+	int snp_rc = 0;
 
-	sprintf(type, "bnxt_hwrm_" PCI_PRI_FMT, pdev->addr.domain,
-		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
+	snp_rc = snprintf(type, sizeof(type), "bnxt_hwrm_" PCI_PRI_FMT, pdev->addr.domain,
+			  pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
+	if (check_snprintf_rc(snp_rc, sizeof(type), "bnxt_hwrm_") < 0)
+		return snp_rc;
 	bp->max_resp_len = BNXT_PAGE_SIZE;
 	bp->hwrm_cmd_resp_addr = rte_malloc(type, bp->max_resp_len, 0);
 	if (bp->hwrm_cmd_resp_addr == NULL)
@@ -6780,6 +6787,7 @@ static int bnxt_alloc_all_ctx_pg_info(struct bnxt *bp)
 {
 	struct bnxt_ctx_mem_info *ctx = bp->ctx;
 	char name[RTE_MEMZONE_NAMESIZE];
+	int snp_rc = 0;
 	uint16_t type;
 
 	for (type = 0; type < ctx->types; type++) {
@@ -6792,8 +6800,10 @@ static int bnxt_alloc_all_ctx_pg_info(struct bnxt *bp)
 		if (ctxm->instance_bmap)
 			n = hweight32(ctxm->instance_bmap);
 
-		sprintf(name, "bnxt_ctx_pgmem_%d_%d",
-			bp->eth_dev->data->port_id, type);
+		snp_rc = snprintf(name, sizeof(name), "bnxt_ctx_pgmem_%d_%d",
+				  bp->eth_dev->data->port_id, type);
+		if (check_snprintf_rc(snp_rc, sizeof(name), "bnxt_ctx_pgmem_") < 0)
+			return snp_rc;
 		ctxm->pg_info = rte_malloc(name, sizeof(*ctxm->pg_info) * n,
 					   RTE_CACHE_LINE_SIZE);
 		if (!ctxm->pg_info)
@@ -7751,7 +7761,7 @@ int bnxt_hwrm_cfa_pair_exists(struct bnxt *bp, struct bnxt_representor *rep_bp)
 {
 	struct hwrm_cfa_pair_info_output *resp = bp->hwrm_cmd_resp_addr;
 	struct hwrm_cfa_pair_info_input req = {0};
-	int rc = 0;
+	int rc = 0, snp_rc = 0;
 
 	if (!(BNXT_PF(bp) || BNXT_VF_IS_TRUSTED(bp))) {
 		PMD_DRV_LOG_LINE(DEBUG,
@@ -7760,8 +7770,16 @@ int bnxt_hwrm_cfa_pair_exists(struct bnxt *bp, struct bnxt_representor *rep_bp)
 	}
 
 	HWRM_PREP(&req, HWRM_CFA_PAIR_INFO, BNXT_USE_CHIMP_MB);
-	snprintf(req.pair_name, sizeof(req.pair_name), "%svfr%d",
-		 bp->eth_dev->data->name, rep_bp->vf_id);
+	snp_rc = snprintf(req.pair_name, sizeof(req.pair_name), "%svfr%d",
+			  bp->eth_dev->data->name, rep_bp->vf_id);
+	if (check_snprintf_rc(snp_rc, sizeof(req.pair_name), "svfr") < 0) {
+		HWRM_UNLOCK();
+		return snp_rc;
+	}
+	if (snp_rc >= (int)sizeof(req.pair_name)) {
+		HWRM_UNLOCK();
+		return -EINVAL;
+	}
 	req.flags =
 		rte_cpu_to_le_32(HWRM_CFA_PAIR_INFO_INPUT_FLAGS_LOOKUP_TYPE);
 
@@ -7779,7 +7797,7 @@ int bnxt_hwrm_cfa_pair_alloc(struct bnxt *bp, struct bnxt_representor *rep_bp)
 {
 	struct hwrm_cfa_pair_alloc_output *resp = bp->hwrm_cmd_resp_addr;
 	struct hwrm_cfa_pair_alloc_input req = {0};
-	int rc;
+	int rc, snp_rc = 0;
 
 	if (!(BNXT_PF(bp) || BNXT_VF_IS_TRUSTED(bp))) {
 		PMD_DRV_LOG_LINE(DEBUG,
@@ -7789,8 +7807,16 @@ int bnxt_hwrm_cfa_pair_alloc(struct bnxt *bp, struct bnxt_representor *rep_bp)
 
 	HWRM_PREP(&req, HWRM_CFA_PAIR_ALLOC, BNXT_USE_CHIMP_MB);
 	req.pair_mode = HWRM_CFA_PAIR_FREE_INPUT_PAIR_MODE_REP2FN_TRUFLOW;
-	snprintf(req.pair_name, sizeof(req.pair_name), "%svfr%d",
-		 bp->eth_dev->data->name, rep_bp->vf_id);
+	snp_rc = snprintf(req.pair_name, sizeof(req.pair_name), "%svfr%d",
+			  bp->eth_dev->data->name, rep_bp->vf_id);
+	if (check_snprintf_rc(snp_rc, sizeof(req.pair_name), "svfr") < 0) {
+		HWRM_UNLOCK();
+		return snp_rc;
+	}
+	if (snp_rc >= (int)sizeof(req.pair_name)) {
+		HWRM_UNLOCK();
+		return -EINVAL;
+	}
 
 	req.pf_b_id = rep_bp->parent_pf_idx;
 	req.vf_b_id = BNXT_REP_PF(rep_bp) ? rte_cpu_to_le_16(((uint16_t)-1)) :
@@ -7825,7 +7851,7 @@ int bnxt_hwrm_cfa_pair_free(struct bnxt *bp, struct bnxt_representor *rep_bp)
 {
 	struct hwrm_cfa_pair_free_output *resp = bp->hwrm_cmd_resp_addr;
 	struct hwrm_cfa_pair_free_input req = {0};
-	int rc;
+	int rc, snp_rc = 0;
 
 	if (!(BNXT_PF(bp) || BNXT_VF_IS_TRUSTED(bp))) {
 		PMD_DRV_LOG_LINE(DEBUG,
@@ -7834,8 +7860,17 @@ int bnxt_hwrm_cfa_pair_free(struct bnxt *bp, struct bnxt_representor *rep_bp)
 	}
 
 	HWRM_PREP(&req, HWRM_CFA_PAIR_FREE, BNXT_USE_CHIMP_MB);
-	snprintf(req.pair_name, sizeof(req.pair_name), "%svfr%d",
-		 bp->eth_dev->data->name, rep_bp->vf_id);
+	snp_rc = snprintf(req.pair_name, sizeof(req.pair_name), "%svfr%d",
+			  bp->eth_dev->data->name, rep_bp->vf_id);
+	if (check_snprintf_rc(snp_rc, sizeof(req.pair_name), "svfr") < 0) {
+		HWRM_UNLOCK();
+		return snp_rc;
+	}
+	if (snp_rc >= (int)sizeof(req.pair_name)) {
+		HWRM_UNLOCK();
+		return -EINVAL;
+	}
+
 	req.pf_b_id = rep_bp->parent_pf_idx;
 	req.pair_mode = HWRM_CFA_PAIR_FREE_INPUT_PAIR_MODE_REP2FN_TRUFLOW;
 	req.vf_id = BNXT_REP_PF(rep_bp) ? rte_cpu_to_le_16(((uint16_t)-1)) :
