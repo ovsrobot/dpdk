@@ -95,6 +95,12 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* bpf: Made the ``bpf_def.h`` header file private, so eBPF instruction opcodes
+  are no longer publicly available (their numerical values follow the RFC and
+  e.g. Linux headers). The definition of the instruction struct and number of
+  program arguments were moved to ``rte_bpf.h`` and gained the public ``RTE_``
+  prefix: ``struct rte_ebpf_insn`` and ``RTE_BPF_FUNC_MAX_ARGS``.
+
 * eventdev: Promoted the following API from experimental to stable:
 
   * Rx adapter: ``rte_event_eth_rx_adapter_create_ext_with_params``,
