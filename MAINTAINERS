@@ -1724,6 +1724,8 @@ F: app/pdump/
 F: doc/guides/tools/pdump.rst
 F: app/dumpcap/
 F: doc/guides/tools/dumpcap.rst
+F: examples/rpcapd/
+F: doc/guides/sample_app_ug/rpcapd.rst
 
 
 Packet Framework
