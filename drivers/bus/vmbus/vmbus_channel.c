@@ -104,8 +104,8 @@ rte_vmbus_chan_signal_tx(struct rte_vmbus_device *dev, const struct vmbus_channe
 {
 	const struct vmbus_br *tbr = &chan->txbr;
 
-	/* Make sure all updates are done before signaling host */
-	rte_smp_wmb();
+	/* Order ring index update before reading host interrupt mask */
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
 
 	/* If host is ignoring interrupts? */
 	if (tbr->vbr->imask)
