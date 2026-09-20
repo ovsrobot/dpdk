@@ -80,9 +80,11 @@ static struct bpf_eth_cbh tx_cbh = {
 static __rte_always_inline void
 bpf_eth_cbi_inuse(struct bpf_eth_cbi *cbi)
 {
-	cbi->use++;
+	rte_atomic_store_explicit(&cbi->use,
+		rte_atomic_load_explicit(&cbi->use, rte_memory_order_relaxed) + 1,
+		rte_memory_order_relaxed);
 	/* make sure no store/load reordering could happen */
-	rte_smp_mb();
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
 }
 
 /*
@@ -91,9 +93,16 @@ bpf_eth_cbi_inuse(struct bpf_eth_cbi *cbi)
 static __rte_always_inline void
 bpf_eth_cbi_unuse(struct bpf_eth_cbi *cbi)
 {
-	/* make sure all previous loads are completed */
-	rte_smp_rmb();
-	cbi->use++;
+	/*
+	 * Make sure all previous loads are completed before the counter
+	 * goes even. Acquire is enough: the read side only loads from the
+	 * cbi, so there are no stores to publish and acq_rel would just
+	 * cost a stronger barrier on weakly ordered CPUs.
+	 */
+	rte_atomic_thread_fence(rte_memory_order_acquire);
+	rte_atomic_store_explicit(&cbi->use,
+		rte_atomic_load_explicit(&cbi->use, rte_memory_order_relaxed) + 1,
+		rte_memory_order_relaxed);
 }
 
 /*
@@ -105,9 +114,9 @@ bpf_eth_cbi_wait(const struct bpf_eth_cbi *cbi)
 	uint32_t puse;
 
 	/* make sure all previous loads and stores are completed */
-	rte_smp_mb();
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
 
-	puse = cbi->use;
+	puse = rte_atomic_load_explicit(&cbi->use, rte_memory_order_relaxed);
 
 	/* in use, busy wait till current RX/TX iteration is finished */
 	if ((puse & BPF_ETH_CBI_INUSE) != 0) {
@@ -439,7 +448,7 @@ bpf_eth_cbi_unload(struct bpf_eth_cbi *bc)
 {
 	/* mark this cbi as empty */
 	bc->cb = NULL;
-	rte_smp_mb();
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
 
 	/* make sure datapath doesn't use bpf anymore, then destroy bpf */
 	bpf_eth_cbi_wait(bc);
