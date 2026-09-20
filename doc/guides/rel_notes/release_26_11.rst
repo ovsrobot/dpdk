@@ -79,6 +79,17 @@ Removed Items
     ``rte_rib6_is_equal``
   * table: ``RTE_LPM_IPV6_ADDR_SIZE``
 
+* Removed SMP memory barriers:
+
+  * ``rte_smp_mb()`` replaced with ``rte_atomic_thread_fence(rte_memory_order_seq_cst)``
+  * ``rte_smp_rmb()`` replaced with ``rte_atomic_thread_fence(rte_memory_order_acquire)``
+  * ``rte_smp_wmb()`` replaced with ``rte_atomic_thread_fence(rte_memory_order_release)``
+
+  Some call sites became release stores or acquire loads instead of a
+  standalone fence. Barriers that order CPU accesses against a device,
+  rather than against another CPU, should use ``rte_io_wmb()`` and
+  ``rte_io_rmb()`` instead.
+
 
 API Changes
 -----------
