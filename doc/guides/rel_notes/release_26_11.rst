@@ -55,6 +55,23 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell cnxk dmadev driver.**
+
+  Added support for CN20K DPI DMA hardware in the ``cnxk`` dmadev PMD.
+
+  * Added support for CN20K DPI PF (PCI device ID ``0xA0E8``) and VF
+    (PCI device ID ``0xA0E9``) devices.
+  * CN20K DPI PF and VF devices can be bound directly to ``vfio-pci`` and
+    used without the ``octeontx2_dpi.ko`` kernel driver.
+  * Added support for multiple virtual channels per device on CN20K.
+  * Added support for ``copy``, ``copy-sg``, ``fill`` and enqueue/dequeue
+    operations on CN20K.
+  * Added support for inter-process domain DMA transfers on CN20K using the
+    access pair group API
+    (``rte_dma_access_pair_group_create``,
+    ``rte_dma_access_pair_group_join``,
+    ``rte_dma_access_pair_group_handler_get`` and related functions).
+
 
 Removed Items
 -------------
