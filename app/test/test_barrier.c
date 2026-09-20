@@ -2,51 +2,41 @@
  * Copyright(c) 2010-2018 Intel Corporation
  */
 
- /*
-  * This is a simple functional test for rte_smp_mb() implementation.
-  * I.E. make sure that LOAD and STORE operations that precede the
-  * rte_smp_mb() call are globally visible across the lcores
-  * before the LOAD and STORE operations that follows it.
-  * The test uses simple implementation of Peterson's lock algorithm
-  * (https://en.wikipedia.org/wiki/Peterson%27s_algorithm)
-  * for two execution units to make sure that rte_smp_mb() prevents
-  * store-load reordering to happen.
-  * Also when executed on a single lcore could be used as a approximate
-  * estimation of number of cycles particular implementation of rte_smp_mb()
-  * will take.
-  */
+/*
+ * Functional test for rte_atomic_thread_fence(rte_memory_order_seq_cst).
+ * I.E. make sure that LOAD and STORE operations that precede the fence
+ * are globally visible across the lcores before the LOAD and STORE
+ * operations that follow it.
+ * The test uses a simple implementation of Peterson's lock algorithm
+ * (https://en.wikipedia.org/wiki/Peterson%27s_algorithm)
+ * for two execution units, since that algorithm only works if
+ * store-load reordering is prevented.
+ * Also when executed on a single lcore it can be used as an approximate
+ * estimate of the number of cycles a sequentially consistent fence takes.
+ */
 
+#include <errno.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <inttypes.h>
 
-#include <rte_memory.h>
-#include <rte_per_lcore.h>
 #include <rte_launch.h>
 #include <rte_eal.h>
 #include <rte_lcore.h>
 #include <rte_pause.h>
 #include <rte_random.h>
 #include <rte_cycles.h>
-#include <rte_vect.h>
-#include <rte_debug.h>
+#include <rte_stdatomic.h>
 
 #include "test.h"
 
 #define ADD_MAX		8
 #define ITER_MAX	0x1000000
 
-enum plock_use_type {
-	USE_MB,
-	USE_SMP_MB,
-	USE_NUM
-};
-
 struct plock {
-	volatile uint32_t flag[2];
-	volatile uint32_t victim;
-	enum plock_use_type utype;
+	RTE_ATOMIC(uint32_t) flag[2];
+	RTE_ATOMIC(uint32_t) victim;
 };
 
 /*
@@ -69,19 +59,11 @@ struct lcore_plock_test {
 	uint32_t lc;              /* given lcore id */
 };
 
-static inline void
-store_load_barrier(uint32_t utype)
-{
-	if (utype == USE_MB)
-		rte_mb();
-	else if (utype == USE_SMP_MB)
-		rte_smp_mb();
-	else
-		RTE_VERIFY(0);
-}
-
 /*
  * Peterson lock implementation.
+ * The stores below are relaxed on purpose: the sequentially consistent
+ * fence is the only thing keeping them ahead of the loads in the spin
+ * loop, so a broken fence shows up as two lcores in the critical section.
  */
 static void
 plock_lock(struct plock *l, uint32_t self)
@@ -90,29 +72,22 @@ plock_lock(struct plock *l, uint32_t self)
 
 	other = self ^ 1;
 
-	l->flag[self] = 1;
-	rte_smp_wmb();
-	l->victim = self;
+	rte_atomic_store_explicit(&l->flag[self], 1, rte_memory_order_relaxed);
+	rte_atomic_store_explicit(&l->victim, self, rte_memory_order_relaxed);
 
-	store_load_barrier(l->utype);
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
 
-	while (l->flag[other] == 1 && l->victim == self)
+	while (rte_atomic_load_explicit(&l->flag[other], rte_memory_order_relaxed) == 1 &&
+			rte_atomic_load_explicit(&l->victim, rte_memory_order_relaxed) == self)
 		rte_pause();
-	rte_smp_rmb();
+
+	rte_atomic_thread_fence(rte_memory_order_acquire);
 }
 
 static void
 plock_unlock(struct plock *l, uint32_t self)
 {
-	rte_smp_wmb();
-	l->flag[self] = 0;
-}
-
-static void
-plock_reset(struct plock *l, enum plock_use_type utype)
-{
-	memset(l, 0, sizeof(*l));
-	l->utype = utype;
+	rte_atomic_store_explicit(&l->flag[self], 0, rte_memory_order_release);
 }
 
 /*
@@ -186,7 +161,7 @@ plock_test1_lcore(void *data)
  * and local data are the same.
  */
 static int
-plock_test(uint64_t iter, enum plock_use_type utype)
+plock_test(uint64_t iter)
 {
 	int32_t rc;
 	uint32_t i, lc, n;
@@ -201,8 +176,7 @@ plock_test(uint64_t iter, enum plock_use_type utype)
 	lpt = calloc(n, sizeof(*lpt));
 	sum = calloc(n + 1, sizeof(*sum));
 
-	printf("%s(iter=%" PRIu64 ", utype=%u) started on %u lcores\n",
-		__func__, iter, utype, n);
+	printf("%s(iter=%" PRIu64 ") started on %u lcores\n", __func__, iter, n);
 
 	if (pt == NULL || lpt == NULL || sum == NULL) {
 		printf("%s: failed to allocate memory for %u lcores\n",
@@ -212,9 +186,6 @@ plock_test(uint64_t iter, enum plock_use_type utype)
 		free(sum);
 		return -ENOMEM;
 	}
-
-	for (i = 0; i != n + 1; i++)
-		plock_reset(&pt[i].lock, utype);
 
 	i = 0;
 	RTE_LCORE_FOREACH(lc) {
@@ -263,26 +234,18 @@ plock_test(uint64_t iter, enum plock_use_type utype)
 	free(lpt);
 	free(sum);
 
-	printf("%s(utype=%u) returns %d\n", __func__, utype, rc);
+	printf("%s returns %d\n", __func__, rc);
 	return rc;
 }
 
 static int
 test_barrier(void)
 {
-	int32_t i, ret, rc[USE_NUM];
+	int rc = plock_test(ITER_MAX);
 
-	for (i = 0; i != RTE_DIM(rc); i++)
-		rc[i] = plock_test(ITER_MAX, i);
+	printf("%s %s\n", __func__, rc == 0 ? "passed" : "failed");
 
-	ret = 0;
-	for (i = 0; i != RTE_DIM(rc); i++) {
-		printf("%s for utype=%d %s\n",
-			__func__, i, rc[i] == 0 ? "passed" : "failed");
-		ret |= rc[i];
-	}
-
-	return ret;
+	return rc;
 }
 
 REGISTER_PERF_TEST(barrier_autotest, test_barrier);
