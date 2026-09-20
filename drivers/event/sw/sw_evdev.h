@@ -160,7 +160,7 @@ struct sw_port {
 	 * progress is read by the scheduler, no more events will be pushed to
 	 * the port - hence the scheduler core can just assign zero.
 	 */
-	uint8_t unlinks_in_progress;
+	RTE_ATOMIC(uint8_t) unlinks_in_progress;
 
 	int16_t is_directed; /** Takes from a single directed QID */
 	/**
