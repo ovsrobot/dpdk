@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added per-queue statistics API in bbdev.**
+
+  Added ``rte_bbdev_queue_stats_get()`` function to retrieve statistics
+  for a specific queue, complementing the existing device-level statistics API.
+
 
 Removed Items
 -------------
