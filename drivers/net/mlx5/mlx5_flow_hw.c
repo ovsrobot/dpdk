@@ -16696,10 +16696,11 @@ __flow_hw_ctrl_flows_unicast(struct rte_eth_dev *dev,
 			     struct rte_flow_template_table *tbl,
 			     const enum mlx5_flow_ctrl_rx_expanded_rss_type rss_type)
 {
+	struct mlx5_priv *priv = dev->data->dev_private;
 	unsigned int i;
 	int ret;
 
-	for (i = 0; i < MLX5_MAX_MAC_ADDRESSES; ++i) {
+	for (i = 0; i < priv->sh->dev_cap.max_mac_addrs; ++i) {
 		struct rte_ether_addr *mac = &dev->data->mac_addrs[i];
 
 		if (rte_is_zero_ether_addr(mac))
@@ -16766,7 +16767,7 @@ __flow_hw_ctrl_flows_unicast_vlan(struct rte_eth_dev *dev,
 	unsigned int i;
 	unsigned int j;
 
-	for (i = 0; i < MLX5_MAX_MAC_ADDRESSES; ++i) {
+	for (i = 0; i < priv->sh->dev_cap.max_mac_addrs; ++i) {
 		struct rte_ether_addr *mac = &dev->data->mac_addrs[i];
 
 		if (rte_is_zero_ether_addr(mac))
