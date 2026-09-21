@@ -92,7 +92,8 @@ void bnxt_set_db(struct bnxt *bp,
 		 uint32_t ring_mask,
 		 uint16_t dpi);
 
-static inline void bnxt_db_write(struct bnxt_db_info *db, uint32_t idx)
+/* Native doorbell write inline functions */
+static inline void bnxt_native_db_write(struct bnxt_db_info *db, uint32_t idx)
 {
 	uint32_t db_idx = DB_RING_IDX(db, idx);
 	void *doorbell = db->doorbell;
@@ -109,7 +110,12 @@ static inline void bnxt_db_write(struct bnxt_db_info *db, uint32_t idx)
 	}
 }
 
-static inline void bnxt_db_epoch_write(struct bnxt_db_info *db, uint32_t idx, uint32_t epoch)
+static inline void bnxt_db_write(struct bnxt_db_info *db, uint32_t idx)
+{
+	bnxt_native_db_write(db, idx);
+}
+
+static inline void bnxt_native_db_epoch_write(struct bnxt_db_info *db, uint32_t idx, uint32_t epoch)
 {
 	uint32_t db_idx = DB_RING_IDX(db, idx);
 	void *doorbell = db->doorbell;
@@ -128,7 +134,12 @@ static inline void bnxt_db_epoch_write(struct bnxt_db_info *db, uint32_t idx, ui
 	}
 }
 
-static inline void bnxt_db_mpc_write(struct bnxt_db_info *db, uint32_t idx, uint32_t epoch)
+static inline void bnxt_db_epoch_write(struct bnxt_db_info *db, uint32_t idx, uint32_t epoch)
+{
+	bnxt_native_db_epoch_write(db, idx, epoch);
+}
+
+static inline void bnxt_native_db_mpc_write(struct bnxt_db_info *db, uint32_t idx, uint32_t epoch)
 {
 	uint32_t db_idx = DB_RING_IDX(db, idx);
 	void *doorbell = db->doorbell;
@@ -144,8 +155,13 @@ static inline void bnxt_db_mpc_write(struct bnxt_db_info *db, uint32_t idx, uint
 	}
 }
 
+static inline void bnxt_db_mpc_write(struct bnxt_db_info *db, uint32_t idx, uint32_t epoch)
+{
+	bnxt_native_db_mpc_write(db, idx, epoch);
+}
+
 /* Ring an NQ doorbell and disable interrupts for the ring. */
-static inline void bnxt_db_nq(struct bnxt_cp_ring_info *cpr)
+static inline void bnxt_native_db_nq(struct bnxt_cp_ring_info *cpr)
 {
 	uint32_t db_idx = DB_RING_IDX(&cpr->cp_db, cpr->cp_raw_cons);
 	uint64_t key_idx = cpr->cp_db.db_key64 | DBR_TYPE_NQ | db_idx;
@@ -158,8 +174,13 @@ static inline void bnxt_db_nq(struct bnxt_cp_ring_info *cpr)
 	rte_write64(key_idx, doorbell);
 }
 
+static inline void bnxt_db_nq(struct bnxt_cp_ring_info *cpr)
+{
+	bnxt_native_db_nq(cpr);
+}
+
 /* Ring an NQ doorbell and enable interrupts for the ring. */
-static inline void bnxt_db_nq_arm(struct bnxt_cp_ring_info *cpr)
+static inline void bnxt_native_db_nq_arm(struct bnxt_cp_ring_info *cpr)
 {
 	uint32_t db_idx = DB_RING_IDX(&cpr->cp_db, cpr->cp_raw_cons);
 	uint64_t key_idx = cpr->cp_db.db_key64 | DBR_TYPE_NQ_ARM | db_idx;
@@ -171,7 +192,12 @@ static inline void bnxt_db_nq_arm(struct bnxt_cp_ring_info *cpr)
 	rte_write64(key_idx, doorbell);
 }
 
-static inline void bnxt_db_cq(struct bnxt_cp_ring_info *cpr)
+static inline void bnxt_db_nq_arm(struct bnxt_cp_ring_info *cpr)
+{
+	bnxt_native_db_nq_arm(cpr);
+}
+
+static inline void bnxt_native_db_cq(struct bnxt_cp_ring_info *cpr)
 {
 	struct bnxt_db_info *db = &cpr->cp_db;
 	uint32_t idx = DB_RING_IDX(&cpr->cp_db, cpr->cp_raw_cons);
@@ -190,7 +216,12 @@ static inline void bnxt_db_cq(struct bnxt_cp_ring_info *cpr)
 	}
 }
 
-static inline void bnxt_db_mpc_cq(struct bnxt_cp_ring_info *cpr)
+static inline void bnxt_db_cq(struct bnxt_cp_ring_info *cpr)
+{
+	bnxt_native_db_cq(cpr);
+}
+
+static inline void bnxt_native_db_mpc_cq(struct bnxt_cp_ring_info *cpr)
 {
 	struct bnxt_db_info *db = &cpr->cp_db;
 	uint32_t idx = DB_RING_IDX(&cpr->cp_db, cpr->cp_raw_cons);
@@ -210,4 +241,16 @@ static inline void bnxt_db_mpc_cq(struct bnxt_cp_ring_info *cpr)
 	}
 }
 
+static inline void bnxt_db_mpc_cq(struct bnxt_cp_ring_info *cpr)
+{
+	bnxt_native_db_mpc_cq(cpr);
+}
+
+void bnxt_native_set_db(struct bnxt *bp,
+			struct bnxt_db_info *db,
+			uint32_t ring_type,
+			uint32_t map_idx,
+			uint32_t fid,
+			uint32_t ring_mask,
+			uint16_t dpi);
 #endif

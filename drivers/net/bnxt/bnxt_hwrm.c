@@ -14,6 +14,7 @@
 #include <rte_io.h>
 
 #include "bnxt.h"
+#include "bnxt_drv_map.h"
 #include "bnxt_filter.h"
 #include "bnxt_hwrm.h"
 #include "bnxt_rxq.h"
@@ -477,7 +478,8 @@ bnxt_check_cq_hwrm_done(struct bnxt_cp_ring_info *cpr,
  * command was failed by the FW.
  */
 
-static int bnxt_hwrm_send_message(struct bnxt *bp, void *msg,
+/* Native HWRM send message implementation - renamed for drv_map layer */
+int bnxt_native_hwrm_send_message(struct bnxt *bp, void *msg,
 				  uint32_t msg_len, bool use_kong_mb)
 {
 	unsigned int i;
@@ -609,6 +611,18 @@ static int bnxt_hwrm_send_message(struct bnxt *bp, void *msg,
 		return -ETIMEDOUT;
 	}
 	return 0;
+}
+
+/* Wrapper for drv_map layer - dispatches to appropriate implementation */
+static int bnxt_hwrm_send_message(struct bnxt *bp, void *msg,
+				  uint32_t msg_len, bool use_kong_mb)
+{
+	/* Use drv_map layer if initialized */
+	if (bp->drv_map_ctx)
+		return bnxt_drv_hwrm_send_msg(bp, msg, msg_len, use_kong_mb);
+
+	/* Fall back to native implementation for compatibility */
+	return bnxt_native_hwrm_send_message(bp, msg, msg_len, use_kong_mb);
 }
 
 /*

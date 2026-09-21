@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "bnxt.h"
+#include "bnxt_drv_map.h"
 #include "bnxt_hwrm.h"
 #include "bnxt_ring.h"
 #include "bnxt_rxq.h"
@@ -348,13 +349,14 @@ void bnxt_init_dflt_coal(struct bnxt_coal *coal)
 	coal->cmpl_aggr_dma_tmr_during_int = BNXT_CMPL_AGGR_DMA_TMR_DURING_INT;
 }
 
-void bnxt_set_db(struct bnxt *bp,
-		 struct bnxt_db_info *db,
-		 uint32_t ring_type,
-		 uint32_t map_idx,
-		 uint32_t fid,
-		 uint32_t ring_mask,
-		 uint16_t dpi)
+/* Native doorbell setup implementation - renamed for drv_map layer */
+void bnxt_native_set_db(struct bnxt *bp,
+			struct bnxt_db_info *db,
+			uint32_t ring_type,
+			uint32_t map_idx,
+			uint32_t fid,
+			uint32_t ring_mask,
+			uint16_t dpi)
 {
 	uint64_t dpi_offset;
 
@@ -409,6 +411,25 @@ void bnxt_set_db(struct bnxt *bp,
 		db->db_64 = false;
 	}
 	db->db_ring_mask = ring_mask;
+}
+
+/* Wrapper for drv_map layer - dispatches to appropriate implementation */
+void bnxt_set_db(struct bnxt *bp,
+		 struct bnxt_db_info *db,
+		 uint32_t ring_type,
+		 uint32_t map_idx,
+		 uint32_t fid,
+		 uint32_t ring_mask,
+		 uint16_t dpi)
+{
+	/* Use drv_map layer if initialized */
+	if (bp->drv_map_ctx) {
+		bnxt_drv_set_db(bp, db, ring_type, map_idx, fid, ring_mask, dpi);
+		return;
+	}
+
+	/* Fall back to native implementation for compatibility */
+	bnxt_native_set_db(bp, db, ring_type, map_idx, fid, ring_mask, dpi);
 }
 
 int bnxt_alloc_cmpl_ring(struct bnxt *bp, int queue_index,

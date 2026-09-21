@@ -17,6 +17,7 @@
 #include <rte_vect.h>
 
 #include "bnxt.h"
+#include "bnxt_drv_map.h"
 #include "bnxt_filter.h"
 #include "bnxt_hwrm.h"
 #include "bnxt_irq.h"
@@ -1983,6 +1984,9 @@ static void bnxt_drv_uninit(struct bnxt *bp)
 
 	rte_free(bp->grp_info);
 	bp->grp_info = NULL;
+
+	/* Cleanup driver mapping layer */
+	bnxt_drv_map_cleanup(bp);
 }
 
 static int bnxt_dev_close_op(struct rte_eth_dev *eth_dev)
@@ -5626,7 +5630,8 @@ static void bnxt_check_fw_status(struct bnxt *bp)
 			    fw_status);
 }
 
-static int bnxt_map_hcomm_fw_status_reg(struct bnxt *bp)
+/* Native implementation of FW status register mapping */
+int bnxt_native_map_fw_status_reg(struct bnxt *bp)
 {
 	struct bnxt_error_recovery_info *info = bp->recovery_info;
 	uint32_t status_loc;
@@ -5672,6 +5677,17 @@ static int bnxt_map_hcomm_fw_status_reg(struct bnxt *bp)
 	bp->fw_cap |= BNXT_FW_CAP_HCOMM_FW_STATUS;
 
 	return 0;
+}
+
+/* Wrapper for drv_map layer - dispatches to appropriate implementation */
+static int bnxt_map_hcomm_fw_status_reg(struct bnxt *bp)
+{
+	/* Use drv_map layer if initialized */
+	if (bp->drv_map_ctx)
+		return bnxt_drv_map_fw_status_reg(bp);
+
+	/* Fall back to native implementation for compatibility */
+	return bnxt_native_map_fw_status_reg(bp);
 }
 
 /* This function gets the FW version along with the
@@ -6480,6 +6496,15 @@ static int bnxt_drv_init(struct rte_eth_dev *eth_dev)
 	if (rc) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Failed to initialize board rc: %x", rc);
+		return rc;
+	}
+
+	/* Initialize driver mapping layer */
+	rc = bnxt_drv_map_init(bp, BNXT_DRV_MODE_NATIVE);
+	if (rc) {
+		PMD_DRV_LOG_LINE(ERR,
+				 "Failed to initialize driver mapping layer rc: %x",
+				 rc);
 		return rc;
 	}
 

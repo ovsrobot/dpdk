@@ -398,4 +398,7 @@ int bnxt_hwrm_release_afm_func(struct bnxt *bp,
 			       uint16_t rfid,
 			       uint8_t type,
 			       uint32_t flags);
+
+int bnxt_native_hwrm_send_message(struct bnxt *bp, void *msg,
+				  uint32_t msg_len, bool use_kong_mb);
 #endif

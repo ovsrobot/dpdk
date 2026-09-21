@@ -32,6 +32,8 @@ deps += ['hash']
 
 sources = files(
         'bnxt_cpr.c',
+        'bnxt_drv_map.c',
+        'bnxt_drv_native.c',
         'bnxt_ethdev.c',
         'bnxt_filter.c',
         'bnxt_flow.c',
