@@ -68,6 +68,9 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* net/bnxt: Removed VMDq support. ``max_vmdq_pools`` and
+  ``vmdq_queue_num`` are now always reported as 0 in ``dev_info``.
+
 * Removed deprecated symbols:
 
   * eal: ``__rte_packed``
