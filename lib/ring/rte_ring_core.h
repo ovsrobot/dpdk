@@ -114,14 +114,13 @@ struct rte_ring_hts_headtail {
  * a problem.
  */
 struct rte_ring {
-	alignas(RTE_CACHE_LINE_SIZE) char name[RTE_RING_NAMESIZE];
-	/**< Name of the ring. */
-	int flags;               /**< Flags supplied at creation. */
+	alignas(RTE_CACHE_LINE_SIZE) int flags; /**< Flags supplied at creation. */
 	const struct rte_memzone *memzone;
 			/**< Memzone, if any, containing the rte_ring */
 	uint32_t size;           /**< Size of ring. */
 	uint32_t mask;           /**< Mask (size-1) of ring. */
 	uint32_t capacity;       /**< Usable size of ring */
+	char name[RTE_RING_NAMESIZE]; /**< Name of the ring. */
 
 	RTE_CACHE_GUARD;
 

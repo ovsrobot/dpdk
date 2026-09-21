@@ -230,13 +230,11 @@ struct __rte_cache_aligned rte_mempool_info {
  * The RTE mempool structure.
  */
 struct __rte_cache_aligned rte_mempool {
-	char name[RTE_MEMPOOL_NAMESIZE]; /**< Name of mempool. */
 	union {
 		void *pool_data;         /**< Ring or pool to store objects. */
 		uint64_t pool_id;        /**< External mempool identifier. */
 	};
-	void *pool_config;               /**< optional args for ops alloc. */
-	const struct rte_memzone *mz;    /**< Memzone where pool is alloc'd. */
+	struct rte_mempool_cache *local_cache; /**< Per-lcore local cache */
 	unsigned int flags;              /**< Flags of the mempool. */
 	int socket_id;                   /**< Socket id passed at create. */
 	uint32_t size;                   /**< Max size of the mempool. */
@@ -257,7 +255,9 @@ struct __rte_cache_aligned rte_mempool {
 	 */
 	int32_t ops_index;
 
-	struct rte_mempool_cache *local_cache; /**< Per-lcore local cache */
+	void *pool_config;               /**< optional args for ops alloc. */
+	const struct rte_memzone *mz;    /**< Memzone where pool is alloc'd. */
+	char name[RTE_MEMPOOL_NAMESIZE]; /**< Name of mempool. */
 
 	uint32_t populated_size;         /**< Number of populated objects. */
 	struct rte_mempool_objhdr_list elt_list; /**< List of objects in pool */
