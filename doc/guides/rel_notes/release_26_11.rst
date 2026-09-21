@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated bnxt driver.**
+
+  * Added a per-queue ``tx_dma_err_pkts`` xstat to report Tx completions
+    that the device flagged with a DMA error. These are also folded into
+    the standard ``oerrors`` counter.
+
 
 Removed Items
 -------------
