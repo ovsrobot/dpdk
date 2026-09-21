@@ -2148,6 +2148,14 @@ bnxt_flow_create(struct rte_eth_dev *dev,
 	}
 
 	vnic = find_matching_vnic(bp, filter);
+	if (vnic == NULL) {
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+				   "Missing destination action for flow.");
+		bnxt_clear_one_vnic_filter(bp, filter);
+		ret = -EINVAL;
+		goto free_filter;
+	}
 done:
 	if (!ret || update_flow) {
 		flow->filter = filter;
