@@ -391,10 +391,14 @@ struct dpni_rsp_get_link_state {
 #define DPNI_LNI_SHAPER_SHIFT	1
 #define DPNI_LNI_SHAPER_SIZE	1
 
+#define DPNI_BURST_LO(burst)	((burst) & GENMASK(15, 0))
+#define DPNI_BURST_HI(burst)	((burst) >> 16)
+
 struct dpni_cmd_set_tx_shaping {
 	uint16_t tx_cr_max_burst_size;
 	uint16_t tx_er_max_burst_size;
-	uint32_t pad;
+	uint16_t tx_cr_max_burst_size_hi;
+	uint16_t tx_er_max_burst_size_hi;
 	uint32_t tx_cr_rate_limit;
 	uint32_t tx_er_rate_limit;
 	/* from LSB: coupled:1, lni_shaper: 1*/

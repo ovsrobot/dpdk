@@ -833,11 +833,12 @@ int dpni_get_link_state(struct fsl_mc_io *mc_io,
 /**
  * struct dpni_tx_shaping - Structure representing DPNI tx shaping configuration
  * @rate_limit:		Rate in Mbits/s
- * @max_burst_size:	Burst size in bytes (up to 64KB)
+ * @max_burst_size:	Burst size in bytes. Limits depend on the SoC (0x37FFF
+ *		for LX2160A, 0xF7FF for all others)
  */
 struct dpni_tx_shaping_cfg {
 	uint32_t rate_limit;
-	uint16_t max_burst_size;
+	uint32_t max_burst_size;
 };
 
 /**
