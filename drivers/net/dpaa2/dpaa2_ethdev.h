@@ -506,6 +506,8 @@ struct dpaa2_dev_priv {
 #define DPNI_GET_MAC_SUPPORTED_IFS_VER_MINOR	6
 #define DPNI_TX_BURST_LARGE_VER_MAJOR		8
 #define DPNI_TX_BURST_LARGE_VER_MINOR		7
+#define DPNI_MIN_ENTRY_SIZE_VER_MAJOR		8
+#define DPNI_MIN_ENTRY_SIZE_VER_MINOR		8
 
 static inline int dpaa2_dev_cmp_dpni_ver(struct dpaa2_dev_priv *priv,
 					 uint16_t ver_major, uint16_t ver_minor)
