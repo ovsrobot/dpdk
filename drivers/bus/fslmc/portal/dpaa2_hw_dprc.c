@@ -52,6 +52,11 @@ rte_dpaa2_create_dprc_device(int vdev_fd __rte_unused,
 	RTE_BUS_FOREACH_DEV(dev, &rte_fslmc_bus) {
 		/** DPRC is always created before it's children are created.*/
 		dev->container = dprc_node;
+
+		if (dev->device.devargs &&
+		    dev->device.devargs->policy == RTE_DEV_BLOCKED)
+			continue;
+
 		if (dev->dev_type == DPAA2_ETH) {
 			int link_state;
 
