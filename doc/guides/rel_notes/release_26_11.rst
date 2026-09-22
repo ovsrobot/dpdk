@@ -79,6 +79,9 @@ Removed Items
     ``rte_rib6_is_equal``
   * table: ``RTE_LPM_IPV6_ADDR_SIZE``
 
+* Removed defect bitfields in IPv6 header (``struct rte_ipv6_hdr``):
+  ``version``, ``ds``, ``ecn``, ``flow_label``
+
 
 API Changes
 -----------
