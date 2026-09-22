@@ -21,6 +21,7 @@
 #include <rte_debug.h>
 #include <rte_ethdev.h>
 #include <ethdev_driver.h>
+#include <rte_geneve.h>
 #include <rte_security_driver.h>
 #include <rte_memzone.h>
 #include <rte_atomic.h>
@@ -419,6 +420,7 @@ txgbe_set_xmit_ctx(struct txgbe_tx_queue *txq,
 			break;
 		case RTE_MBUF_F_TX_TUNNEL_VXLAN:
 		case RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE:
+		case RTE_MBUF_F_TX_TUNNEL_UDP:
 		case RTE_MBUF_F_TX_TUNNEL_GENEVE:
 			tunnel_seed |= TXGBE_TXD_ETYPE_UDP;
 			break;
@@ -593,6 +595,7 @@ tx_desc_ol_flags_to_ptype(uint64_t oflags)
 	switch (oflags & RTE_MBUF_F_TX_TUNNEL_MASK) {
 	case RTE_MBUF_F_TX_TUNNEL_VXLAN:
 	case RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE:
+	case RTE_MBUF_F_TX_TUNNEL_UDP:
 		ptype |= RTE_PTYPE_TUNNEL_GRENAT;
 		break;
 	case RTE_MBUF_F_TX_TUNNEL_GRE:
@@ -713,9 +716,32 @@ txgbe_get_tun_len(struct rte_mbuf *mbuf)
 	const struct txgbe_genevehdr *gh;
 	const struct txgbe_grehdr *grh;
 	struct txgbe_grehdr grehdr;
+	struct txgbe_udphdr udphdr;
+	const struct txgbe_udphdr *uh;
+	uint64_t tun_type;
 	uint8_t tun_len;
 
-	switch (mbuf->ol_flags & RTE_MBUF_F_TX_TUNNEL_MASK) {
+	/* Resolve the UDP tunnel to its inner type without rewriting the
+	 * mbuf: the application still owns it and may re-transmit it.
+	 */
+	tun_type = mbuf->ol_flags & RTE_MBUF_F_TX_TUNNEL_MASK;
+	if (tun_type == RTE_MBUF_F_TX_TUNNEL_UDP) {
+		uh = rte_pktmbuf_read(mbuf,
+				      mbuf->outer_l2_len + mbuf->outer_l3_len,
+				      sizeof(udphdr), &udphdr);
+		if (uh == NULL) {
+			/* The outer offsets are application supplied and may
+			 * point past the end of the packet.
+			 */
+			return 0;
+		}
+		tun_type = (uh->dest ==
+			    rte_cpu_to_be_16(RTE_GENEVE_DEFAULT_PORT)) ?
+			   RTE_MBUF_F_TX_TUNNEL_GENEVE :
+			   RTE_MBUF_F_TX_TUNNEL_VXLAN;
+	}
+
+	switch (tun_type) {
 	case RTE_MBUF_F_TX_TUNNEL_IPIP:
 		tun_len = 0;
 		break;
