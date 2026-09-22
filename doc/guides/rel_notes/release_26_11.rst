@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Wycheproof validation example application.**
+
+  Added a new example application that validates a DPDK cryptodev PMD against
+  the Google Wycheproof JSON test vectors, covering AEAD, MAC, DSA, ECDH and
+  ECDSA algorithm families.
+
 
 Removed Items
 -------------
