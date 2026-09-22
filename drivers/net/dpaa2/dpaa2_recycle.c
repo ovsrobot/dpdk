@@ -30,11 +30,6 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#ifndef PAGE_SIZE
-#define PAGE_SIZE			(sysconf(_SC_PAGESIZE))
-#endif
-#define PAGE_MASK			(~(PAGE_SIZE - 1))
-
 #define LSX_SERDES_LAN_NB		8
 #define LSX_SERDES_REG_BASE		0x1ea0000
 #define LSX_LB_EN_BIT			0x10000000
@@ -176,6 +171,9 @@ static void *lsx_ccsr_map_region(uint64_t addr, size_t len)
 	void *tmp;
 	uint64_t start;
 	uint64_t offset;
+	uint64_t page_mask;
+	long page_size;
+	size_t map_len;
 
 	fd = open("/dev/mem", O_RDWR);
 	if (fd < 0) {
@@ -183,20 +181,35 @@ static void *lsx_ccsr_map_region(uint64_t addr, size_t len)
 		return NULL;
 	}
 
-	start = addr & PAGE_MASK;
+	page_size = sysconf(_SC_PAGESIZE);
+	if (page_size <= 0) {
+		close(fd);
+		return NULL;
+	}
+	page_mask = ~((uint64_t)page_size - 1);
+	start = addr & page_mask;
 	offset = addr - start;
-	len = len & PAGE_MASK;
-	if (len < (size_t)PAGE_SIZE)
-		len = PAGE_SIZE;
+	len = len & page_mask;
+	if (len == 0) {
+		close(fd);
+		return NULL;
+	}
 
-	tmp = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, start);
+	map_len = len;
+	if (map_len < (size_t)page_size)
+		map_len = (size_t)page_size;
+
+	tmp = mmap(NULL, map_len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, start);
 
 	close(fd);
 
-	if (tmp != MAP_FAILED)
-		return (uint8_t *)tmp + offset;
-	else
+	if (tmp == MAP_FAILED) {
+		DPAA2_PMD_ERR("mmap 0x%" PRIx64 "(size=0x%zx) failed",
+			addr, map_len);
 		return NULL;
+	}
+
+	return (uint8_t *)tmp + offset;
 }
 
 static const uint8_t ls_sd1_prot_idx_map[] = {
