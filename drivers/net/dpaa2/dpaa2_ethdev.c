@@ -3544,6 +3544,7 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	priv->dist_queues = attr.num_queues;
 	priv->num_channels = attr.num_channels;
 	priv->channel_inuse = 0;
+	priv->default_flow = 0;
 	rte_spinlock_init(&priv->lpbk_qp_lock);
 	rte_spinlock_init(&priv->meter_lock);
 
