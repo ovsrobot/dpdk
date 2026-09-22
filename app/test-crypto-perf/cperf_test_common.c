@@ -145,7 +145,7 @@ cperf_alloc_common_memory(const struct cperf_options *options,
 			struct rte_mempool **pool)
 {
 	const char *mp_ops_name;
-	char pool_name[32] = "";
+	char pool_name[RTE_MEMPOOL_NAMESIZE] = "";
 	int ret;
 
 	/* Calculate the object size */
@@ -154,7 +154,7 @@ cperf_alloc_common_memory(const struct cperf_options *options,
 
 	if (cperf_is_asym_test(options)) {
 		crypto_op_size += sizeof(struct rte_crypto_asym_op);
-		snprintf(pool_name, RTE_MEMPOOL_NAMESIZE, "perf_asym_op_pool%u",
+		snprintf(pool_name, sizeof(pool_name), "perf_asym_op_pool%u",
 			 rte_socket_id());
 		*pool = rte_crypto_op_pool_create(
 			pool_name, RTE_CRYPTO_OP_TYPE_ASYMMETRIC,
