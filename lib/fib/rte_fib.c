@@ -37,6 +37,9 @@ EAL_REGISTER_TAILQ(rte_fib_tailq)
 #define FIB_RETURN_IF_TRUE(cond, retval)
 #endif
 
+/* Prefix used for the memory objects owned by a FIB. */
+#define FIB_MEM_PREFIX		"FIB_"
+
 struct rte_fib {
 	char			name[RTE_FIB_NAMESIZE];
 	enum rte_fib_type	type;	/**< Type of FIB struct */
@@ -173,14 +176,21 @@ rte_fib_create(const char *name, int socket_id, struct rte_fib_conf *conf)
 	rib_conf.ext_sz = conf->rib_ext_sz;
 	rib_conf.max_nodes = conf->max_routes * 2;
 
-	rib = rte_rib_create(name, socket_id, &rib_conf);
-	if (rib == NULL) {
-		FIB_LOG(ERR,
-			"Can not allocate RIB %s", name);
+	/* Add FIB Prefix to its mempool name */
+	ret = snprintf(mem_name, sizeof(mem_name), FIB_MEM_PREFIX "%s", name);
+	if (ret < 0 || ret >= (int)sizeof(mem_name)) {
+		FIB_LOG(ERR, "FIB name %s is too long", name);
+		rte_errno = ENAMETOOLONG;
 		return NULL;
 	}
 
-	snprintf(mem_name, sizeof(mem_name), "FIB_%s", name);
+	rib = rte_rib_create(mem_name, socket_id, &rib_conf);
+	if (rib == NULL) {
+		FIB_LOG(ERR,
+			"Can not allocate RIB for FIB: %s", mem_name);
+		return NULL;
+	}
+
 	fib_list = RTE_TAILQ_CAST(rte_fib_tailq.head, rte_fib_list);
 
 	rte_mcfg_tailq_write_lock();
