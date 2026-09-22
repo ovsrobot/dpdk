@@ -3451,6 +3451,8 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 
 	PMD_INIT_FUNC_TRACE();
 
+	priv->psr_dynfield_offset = -1;
+
 	dpni_dev = rte_malloc(NULL, sizeof(struct fsl_mc_io), 0);
 	if (!dpni_dev) {
 		DPAA2_PMD_ERR("Memory allocation failed for dpni device");
