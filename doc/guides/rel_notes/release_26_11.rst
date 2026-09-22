@@ -139,6 +139,27 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Increased memzone maximum name size.**
+
+  ``RTE_MEMZONE_NAMESIZE`` was increased from 32 to 64,
+  and the derived ``RTE_RING_NAMESIZE``, ``RTE_MEMPOOL_NAMESIZE``,
+  ``RTE_STACK_NAMESIZE`` and ``RTE_RCU_QSBR_DQ_NAMESIZE`` grew accordingly.
+  This impacts the following structures:
+
+  * ``struct rte_memzone`` grew by 32 bytes.
+
+  * ``struct rte_ring`` grew by one cache line,
+    and ``memzone`` and ``name`` were moved after the size fields
+    to keep the datapath fields in the first cache line.
+
+  * ``struct rte_mempool`` is unchanged in size,
+    but the fields were reordered so the datapath fields
+    (``pool_data``/``pool_id``, ``local_cache``, ``ops_index``
+    and ``cache_size``) come first,
+    and ``name``, ``pool_config`` and ``mz`` were moved after them.
+
+  * ``struct rte_stack`` grew by one cache line.
+
 
 Known Issues
 ------------
