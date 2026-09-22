@@ -1124,11 +1124,12 @@ enum dpni_policer_mode {
 
 /**
  * enum dpni_policer_unit - DPNI policer units
- * @DPNI_POLICER_UNIT_BYTES: bytes units
+ * @DPNI_POLICER_UNIT_BYTES_L3: bytes units (for each frame takes into account
+ * FD length - L3 offset)
  * @DPNI_POLICER_UNIT_FRAMES: frames units
  */
 enum dpni_policer_unit {
-	DPNI_POLICER_UNIT_BYTES = 0,
+	DPNI_POLICER_UNIT_BYTES_L3 = 0,
 	DPNI_POLICER_UNIT_FRAMES
 };
 
@@ -1169,7 +1170,6 @@ struct dpni_rx_tc_policing_cfg {
 	uint32_t eir;
 	uint32_t ebs;
 };
-
 
 int dpni_set_rx_tc_policing(struct fsl_mc_io *mc_io,
 			    uint32_t cmd_flags,

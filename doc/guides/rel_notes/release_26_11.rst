@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated NXP DPAA2 net driver.**
+
+  * Added support for flow classification on more protocol fields.
+  * Added support for traffic metering and policing.
 
 Removed Items
 -------------

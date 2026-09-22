@@ -1666,6 +1666,7 @@ dpaa2_dev_close(struct rte_eth_dev *dev)
 
 	dpaa2_tm_deinit(dev);
 	dpaa2_flow_clean(dev);
+	dpaa2_meter_clean(dev);
 	/* Clean the device first */
 	ret = dpni_reset(dpni, CMD_PRI_LOW, priv->token);
 	if (ret) {
@@ -3320,6 +3321,7 @@ static struct eth_dev_ops dpaa2_ethdev_ops = {
 	.rxq_info_get	      = dpaa2_rxq_info_get,
 	.txq_info_get	      = dpaa2_txq_info_get,
 	.tm_ops_get	      = dpaa2_tm_ops_get,
+	.mtr_ops_get	      = dpaa2_mtr_ops_get,
 #if defined(RTE_LIBRTE_IEEE1588)
 	.timesync_enable      = dpaa2_timesync_enable,
 	.timesync_disable     = dpaa2_timesync_disable,
@@ -3543,6 +3545,7 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	priv->num_channels = attr.num_channels;
 	priv->channel_inuse = 0;
 	rte_spinlock_init(&priv->lpbk_qp_lock);
+	rte_spinlock_init(&priv->meter_lock);
 
 	/* only if the custom CG is enabled */
 	if (attr.options & DPNI_OPT_CUSTOM_CG)
