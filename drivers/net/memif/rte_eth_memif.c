@@ -1595,25 +1595,18 @@ static int
 memif_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 		struct eth_queue_stats *qstats)
 {
-	struct pmd_internals *pmd = dev->data->dev_private;
 	struct memif_queue *mq;
-	int i;
-	uint8_t tmp, nq;
+	unsigned int i;
 
-	stats->ipackets = 0;
-	stats->ibytes = 0;
-	stats->opackets = 0;
-	stats->obytes = 0;
-
-	tmp = (pmd->role == MEMIF_ROLE_CLIENT) ? pmd->run.num_s2c_rings :
-	    pmd->run.num_c2s_rings;
-	nq = (tmp < RTE_ETHDEV_QUEUE_STAT_CNTRS) ? tmp :
-	    RTE_ETHDEV_QUEUE_STAT_CNTRS;
+	/*
+	 * Use the configured queue counts, not pmd->run, which memif_disconnect()
+	 * clears; otherwise all counters would read zero once the peer is gone.
+	 */
 
 	/* RX stats */
-	for (i = 0; i < nq; i++) {
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		mq = dev->data->rx_queues[i];
-		if (qstats != NULL) {
+		if (qstats != NULL && i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
 			qstats->q_ipackets[i] = mq->n_pkts;
 			qstats->q_ibytes[i] = mq->n_bytes;
 		}
@@ -1622,15 +1615,10 @@ memif_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 		stats->ierrors += mq->n_err;
 	}
 
-	tmp = (pmd->role == MEMIF_ROLE_CLIENT) ? pmd->run.num_c2s_rings :
-	    pmd->run.num_s2c_rings;
-	nq = (tmp < RTE_ETHDEV_QUEUE_STAT_CNTRS) ? tmp :
-	    RTE_ETHDEV_QUEUE_STAT_CNTRS;
-
 	/* TX stats */
-	for (i = 0; i < nq; i++) {
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		mq = dev->data->tx_queues[i];
-		if (qstats != NULL) {
+		if (qstats != NULL && i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
 			qstats->q_opackets[i] = mq->n_pkts;
 			qstats->q_obytes[i] = mq->n_bytes;
 		}
@@ -1643,20 +1631,18 @@ memif_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 static int
 memif_stats_reset(struct rte_eth_dev *dev)
 {
-	struct pmd_internals *pmd = dev->data->dev_private;
-	int i;
 	struct memif_queue *mq;
+	unsigned int i;
 
-	for (i = 0; i < pmd->run.num_c2s_rings; i++) {
-		mq = (pmd->role == MEMIF_ROLE_CLIENT) ? dev->data->tx_queues[i] :
-		    dev->data->rx_queues[i];
+	/* Same as memif_stats_get(), pmd->run is cleared on disconnect. */
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		mq = dev->data->rx_queues[i];
 		mq->n_pkts = 0;
 		mq->n_bytes = 0;
 		mq->n_err = 0;
 	}
-	for (i = 0; i < pmd->run.num_s2c_rings; i++) {
-		mq = (pmd->role == MEMIF_ROLE_CLIENT) ? dev->data->rx_queues[i] :
-		    dev->data->tx_queues[i];
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		mq = dev->data->tx_queues[i];
 		mq->n_pkts = 0;
 		mq->n_bytes = 0;
 		mq->n_err = 0;
