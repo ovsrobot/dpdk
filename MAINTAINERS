@@ -2099,3 +2099,8 @@ F: examples/vmdq/
 F: doc/guides/sample_app_ug/vmdq_forwarding.rst
 F: examples/vmdq_dcb/
 F: doc/guides/sample_app_ug/vmdq_dcb_forwarding.rst
+
+Wycheproof validation example
+M: Kai Ji <kai.ji@intel.com>
+F: examples/wycheproof_validation/
+F: doc/guides/sample_app_ug/wycheproof_validation.rst

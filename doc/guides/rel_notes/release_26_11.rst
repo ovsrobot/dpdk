@@ -133,6 +133,12 @@ New Features
     with per-descriptor mbuf free (``rte_pktmbuf_free_seg``) and prefetch hints.
   * Changed the set of per-queue xstats counters.
 
+* **Added Wycheproof validation example application.**
+
+  Added a new example application that validates a DPDK cryptodev PMD against
+  the Google Wycheproof JSON test vectors, covering AEAD, MAC, DSA, ECDH and
+  ECDSA algorithm families.
+
 
 Removed Items
 -------------
