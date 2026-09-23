@@ -97,6 +97,8 @@ Split patches following this approach:
 * Organize each patch logically as a new feature.
 * Run test tools per patch (See :ref:`contrib_tool_list`).
 * Update relevant documentation and `<driver>.ini` file with each patch.
+  ``devtools/check-doc-vs-code.py -g <driver>`` prints the rows
+  that the driver code supports, as a starting point.
 
 The following order in the patch series is as suggested below.
 
@@ -207,7 +209,7 @@ Run the following test tools per patch in a patch series:
 * `checkpatches.sh`
 * `check-git-log.sh`
 * `check-meson.py`
-* `check-doc-vs-code.sh`
+* `check-doc-vs-code.py`
 * `check-spdx-tag.sh`
 * Build documentation and validate how output looks
 * Optionally run ``review-patch.py`` for AI-assisted review

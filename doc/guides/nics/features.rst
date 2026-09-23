@@ -22,6 +22,11 @@ for cases where provided data can't be represented simply by a function.
 
 ``[related]``    : Related API with that feature.
 
+The feature tables in ``doc/guides/nics/features/`` are checked against
+the driver code by ``devtools/check-doc-vs-code.py``,
+based on the structs and flags listed below.
+See :ref:`the contributing guide <contrib_check_doc_vs_code>` for usage.
+
 
 .. _nic_features_speed_capabilities:
 

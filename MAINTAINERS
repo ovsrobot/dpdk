@@ -88,7 +88,7 @@ F: MAINTAINERS
 F: devtools/build-dict.sh
 F: devtools/check-abi.sh
 F: devtools/check-abi-version.sh
-F: devtools/check-doc-vs-code.sh
+F: devtools/check-doc-vs-code.py
 F: devtools/check-dup-includes.sh
 F: devtools/check-maintainers.sh
 F: devtools/check-forbidden-tokens.awk
@@ -100,7 +100,6 @@ F: devtools/get-maintainer.sh
 F: devtools/git-log-fixes.sh
 F: devtools/load-devel-config
 F: devtools/mailmap-ctl.py
-F: devtools/parse-flow-support.sh
 F: devtools/process-iwyu.py
 F: devtools/update-patches.py
 F: devtools/libabigail.abignore

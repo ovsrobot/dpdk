@@ -513,6 +513,33 @@ The script usage is::
 For both scripts, the -n option specifies a number of commits from HEAD,
 and the -r option specifies a ``git log`` range.
 
+.. _contrib_check_doc_vs_code:
+
+When a patch changes a network driver or its features file,
+check that the NIC feature tables (see :doc:`/nics/overview`)
+match the driver code using the ``check-doc-vs-code.py`` script::
+
+   devtools/check-doc-vs-code.py origin/main
+
+With a git reference, only drivers changed since that reference are checked,
+and only findings not already present at the reference are reported.
+Without a reference, all drivers are checked.
+
+Errors are features documented without matching code,
+platforms excluded by the build, and rte_flow mismatches.
+Warnings are features implemented but not documented,
+full support documented where the code is partial,
+and incomplete sets of operations such as a queue start without stop.
+The script exits with an error status only if errors are reported.
+
+The script usage is::
+
+   check-doc-vs-code.py [-h] [-d DRIVER] [-g DRIVER] [-q] [-v] [ref]
+
+The -d option restricts the check to one features file,
+and the -g option prints the features derived from the driver code,
+as a starting point for a new driver.
+
 Additionally, when contributing to the DTS tool, check patches using
 the ``dts-check-format.sh`` script in the ``devtools`` directory of the DPDK repo.
 Running the script requires extra :ref:`Python dependencies <dts_deps>`.
