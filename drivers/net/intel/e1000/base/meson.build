@@ -22,3 +22,7 @@ base_sources = files(
         'e1000_phy.c',
         'e1000_vf.c',
 )
+# testpmd crashes with gcc > 11 with compiling with default -O3 or -O2
+if (cc.get_id() == 'gcc' and cc.version().version_compare('>=12.0'))
+    base_cflags += '-O1'
+endif
