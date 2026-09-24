@@ -646,15 +646,6 @@ cn10k_nix_reassembly_capability_get(struct rte_eth_dev *eth_dev,
 }
 
 static int
-cn10k_nix_reassembly_conf_get(struct rte_eth_dev *eth_dev,
-		struct rte_eth_ip_reassembly_params *conf)
-{
-	RTE_SET_USED(eth_dev);
-	RTE_SET_USED(conf);
-	return -ENOTSUP;
-}
-
-static int
 cn10k_nix_reassembly_conf_set(struct rte_eth_dev *eth_dev,
 			      const struct rte_eth_ip_reassembly_params *conf)
 {
@@ -883,7 +874,6 @@ nix_eth_dev_ops_override(void)
 		cn10k_nix_timesync_read_tx_timestamp;
 	cnxk_eth_dev_ops.ip_reassembly_capability_get =
 			cn10k_nix_reassembly_capability_get;
-	cnxk_eth_dev_ops.ip_reassembly_conf_get = cn10k_nix_reassembly_conf_get;
 	cnxk_eth_dev_ops.ip_reassembly_conf_set = cn10k_nix_reassembly_conf_set;
 	cnxk_eth_dev_ops.eth_rx_descriptor_dump = cn10k_rx_descriptor_dump;
 }
