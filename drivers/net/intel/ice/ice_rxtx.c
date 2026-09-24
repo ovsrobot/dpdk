@@ -2698,7 +2698,7 @@ ice_fdir_setup_rx_resources(struct ice_pf *pf)
 	}
 
 	/* Allocate RX hardware ring descriptors. */
-	ring_size = sizeof(union ice_32byte_rx_desc) * ICE_FDIR_NUM_RX_DESC;
+	ring_size = sizeof(union ci_rx_flex_desc) * ICE_FDIR_NUM_RX_DESC;
 	ring_size = RTE_ALIGN(ring_size, ICE_DMA_MEM_ALIGN);
 
 	rz = rte_eth_dma_zone_reserve(dev, "fdir_rx_ring",
@@ -2718,7 +2718,7 @@ ice_fdir_setup_rx_resources(struct ice_pf *pf)
 
 	rxq->rx_ring_phys_addr = rz->iova;
 	memset(rz->addr, 0, ICE_FDIR_NUM_RX_DESC *
-	       sizeof(union ice_32byte_rx_desc));
+	       sizeof(union ci_rx_flex_desc));
 	rxq->rx_flex_ring = (union ci_rx_flex_desc *)rz->addr;
 
 	/*
@@ -4464,40 +4464,33 @@ ice_set_default_ptype_table(struct rte_eth_dev *dev)
 static inline int
 ice_check_fdir_programming_status(struct ci_rx_queue *rxq)
 {
-	volatile union ice_32byte_rx_desc *rxdp;
-	uint64_t qword1;
-	uint32_t rx_status;
-	uint32_t error;
-	uint32_t id;
+	volatile union ci_rx_flex_desc *rxdp;
+	uint32_t stat_err, error, id;
 	int ret = -EAGAIN;
 
-	rxdp = (volatile union ice_32byte_rx_desc *)&rxq->rx_flex_ring[rxq->rx_tail];
-	qword1 = rte_le_to_cpu_64(rxdp->wb.qword1.status_error_len);
-	rx_status = (qword1 & ICE_RXD_QW1_STATUS_M)
-			>> ICE_RXD_QW1_STATUS_S;
+	rxdp = &rxq->rx_flex_ring[rxq->rx_tail];
+	stat_err = rte_le_to_cpu_16(rxdp->wb.status_error0);
 
-	if (rx_status & (1 << ICE_RX_DESC_STATUS_DD_S)) {
+	if (FIELD_GET(ICE_FXD_FLTR_WB_QW1_DD_M, stat_err) == ICE_FXD_FLTR_WB_QW1_DD_YES) {
 		ret = 0;
-		error = (qword1 & ICE_RX_PROG_STATUS_DESC_WB_QW1_FAIL_M) >>
-			ICE_RX_PROG_STATUS_DESC_WB_QW1_FAIL_S;
-		id = (qword1 & ICE_RX_PROG_STATUS_DESC_WB_QW1_PROGID_M) >>
-			ICE_RX_PROG_STATUS_DESC_WB_QW1_PROGID_S;
-		if (error) {
-			if (id == ICE_RX_PROG_STATUS_DESC_WB_QW1_PROG_ADD)
-				PMD_DRV_LOG(ERR, "Failed to add FDIR rule.");
-			else if (id == ICE_RX_PROG_STATUS_DESC_WB_QW1_PROG_DEL)
-				PMD_DRV_LOG(ERR, "Failed to remove FDIR rule.");
+		id = FIELD_GET(ICE_FXD_FLTR_WB_QW1_PROG_ID_M, stat_err);
+		error = FIELD_GET(ICE_FXD_FLTR_WB_QW1_FAIL_M, stat_err);
+		if (error == ICE_FXD_FLTR_WB_QW1_FAIL_YES) {
+			if (id == ICE_FXD_FLTR_WB_QW1_PROG_ADD)
+				PMD_DRV_LOG(ERR, "Failed to add FDIR rule due to no space in the table");
+			else
+				PMD_DRV_LOG(ERR, "Failed to remove FDIR rule, attempt to remove non-existent entry");
 			ret = -EINVAL;
 			goto err;
 		}
-		error = (qword1 & ICE_RX_PROG_STATUS_DESC_WB_QW1_FAIL_PROF_M) >>
-			ICE_RX_PROG_STATUS_DESC_WB_QW1_FAIL_PROF_S;
-		if (error) {
-			PMD_DRV_LOG(ERR, "Failed to create FDIR profile.");
+		error = FIELD_GET(ICE_FXD_FLTR_WB_QW1_FAIL_PROF_M, stat_err);
+		if (error == ICE_FXD_FLTR_WB_QW1_FAIL_PROF_YES) {
+			PMD_DRV_LOG(ERR, "Profile matching error");
 			ret = -EINVAL;
+			goto err;
 		}
 err:
-		rxdp->wb.qword1.status_error_len = 0;
+		rxdp->wb.status_error0 = 0;
 		rxq->rx_tail++;
 		if (unlikely(rxq->rx_tail == rxq->nb_rx_desc))
 			rxq->rx_tail = 0;
@@ -4506,7 +4499,6 @@ err:
 		else
 			ICE_PCI_REG_WRITE(rxq->qrx_tail, rxq->rx_tail - 1);
 	}
-
 	return ret;
 }
 
