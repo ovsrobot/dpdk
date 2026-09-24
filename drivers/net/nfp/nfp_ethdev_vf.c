@@ -144,19 +144,6 @@ nfp_netvf_stop(struct rte_eth_dev *dev)
 	return 0;
 }
 
-static int
-nfp_netvf_set_link_up(struct rte_eth_dev *dev __rte_unused)
-{
-	return -ENOTSUP;
-}
-
-/* Set the link down. */
-static int
-nfp_netvf_set_link_down(struct rte_eth_dev *dev __rte_unused)
-{
-	return -ENOTSUP;
-}
-
 /* Reset and stop device. The device can not be restarted. */
 static int
 nfp_netvf_close(struct rte_eth_dev *dev)
@@ -203,8 +190,6 @@ static const struct eth_dev_ops nfp_netvf_eth_dev_ops = {
 	.dev_configure          = nfp_net_configure,
 	.dev_start              = nfp_netvf_start,
 	.dev_stop               = nfp_netvf_stop,
-	.dev_set_link_up        = nfp_netvf_set_link_up,
-	.dev_set_link_down      = nfp_netvf_set_link_down,
 	.dev_close              = nfp_netvf_close,
 	.promiscuous_enable     = nfp_net_promisc_enable,
 	.promiscuous_disable    = nfp_net_promisc_disable,
