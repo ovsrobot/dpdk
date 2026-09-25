@@ -129,7 +129,7 @@ gve_free_queue_page_list(struct gve_queue_page_list *qpl)
 	if (qpl->mz) {
 		rte_memzone_free(qpl->mz);
 		qpl->mz = NULL;
-	} else if (qpl->qpl_bufs) {
+	} else {
 		uint32_t i;
 
 		for (i = 0; i < qpl->num_entries; i++)
