@@ -3512,7 +3512,6 @@ iavf_handle_hw_reset(struct rte_eth_dev *dev, bool vf_initiated_reset)
 				    ret);
 			vf->start_pending = true;
 			dev->data->dev_started = 0;
-			ret = 0;
 		}
 	}
 
