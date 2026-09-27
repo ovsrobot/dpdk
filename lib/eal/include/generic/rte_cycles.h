@@ -33,8 +33,13 @@ extern enum timer_source eal_timer_source;
 /**
  * Get the measured frequency of the RDTSC counter
  *
+ * The frequency is determined once during rte_eal_init(), which fails if
+ * it cannot be established, so this never returns zero once the EAL is
+ * initialized and the value does not change afterwards.  It is therefore
+ * safe to divide by without checking.
+ *
  * @return
- *   The TSC frequency for this lcore
+ *   The TSC frequency for this lcore, always non-zero.
  */
 uint64_t
 rte_get_tsc_hz(void);
