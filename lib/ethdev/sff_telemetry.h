@@ -7,12 +7,14 @@
 
 #include <rte_telemetry.h>
 
+#include "rte_ethdev.h"
+
 #define SFF_ITEM_VAL_COMPOSE_SIZE 64
 
 /* Consumer of decoded module EEPROM fields */
 struct sff_output {
 	/* Called once per decoded field, name may repeat */
-	void (*field_cb)(const char *name, const char *value, void *arg);
+	rte_eth_module_eeprom_field_cb field_cb;
 	void *arg;
 };
 
