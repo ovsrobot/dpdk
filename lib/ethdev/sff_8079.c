@@ -7,12 +7,12 @@
 
 #include "sff_common.h"
 
-static void sff_8079_show_identifier(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8079_show_identifier(const uint8_t *data, struct sff_output *d)
 {
 	sff_8024_show_identifier(data, 0, d);
 }
 
-static void sff_8079_show_ext_identifier(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8079_show_ext_identifier(const uint8_t *data, struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 
@@ -32,12 +32,12 @@ static void sff_8079_show_ext_identifier(const uint8_t *data, struct rte_tel_dat
 	ssf_add_dict_string(d, "Extended identifier", val_string);
 }
 
-static void sff_8079_show_connector(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8079_show_connector(const uint8_t *data, struct sff_output *d)
 {
 	sff_8024_show_connector(data, 2, d);
 }
 
-static void sff_8079_show_transceiver(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8079_show_transceiver(const uint8_t *data, struct sff_output *d)
 {
 	static const char *name = "Transceiver type";
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
@@ -227,12 +227,12 @@ static void sff_8079_show_transceiver(const uint8_t *data, struct rte_tel_data *
 	}
 }
 
-static void sff_8079_show_encoding(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8079_show_encoding(const uint8_t *data, struct sff_output *d)
 {
 	sff_8024_show_encoding(data, 11, RTE_ETH_MODULE_SFF_8472, d);
 }
 
-static void sff_8079_show_rate_identifier(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8079_show_rate_identifier(const uint8_t *data, struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 
@@ -262,14 +262,14 @@ static void sff_8079_show_rate_identifier(const uint8_t *data, struct rte_tel_da
 	ssf_add_dict_string(d, "Rate identifier", val_string);
 }
 
-static void sff_8079_show_oui(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8079_show_oui(const uint8_t *data, struct sff_output *d)
 {
 	sff_8024_show_oui(data, 37, d);
 }
 
 static void
 sff_8079_show_wavelength_or_copper_compliance(const uint8_t *data,
-					      struct rte_tel_data *d)
+					      struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 
@@ -312,7 +312,7 @@ sff_8079_show_wavelength_or_copper_compliance(const uint8_t *data,
 	}
 }
 
-static void sff_8079_show_options(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8079_show_options(const uint8_t *data, struct sff_output *d)
 {
 	static const char *name = "Option";
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
@@ -348,7 +348,7 @@ static void sff_8079_show_options(const uint8_t *data, struct rte_tel_data *d)
 		ssf_add_dict_string(d, name, "Power level 3 requirement");
 }
 
-void sff_8079_show_all(const uint8_t *data, struct rte_tel_data *d)
+void sff_8079_show_all(const uint8_t *data, struct sff_output *d)
 {
 	sff_8079_show_identifier(data, d);
 	if (((data[0] == 0x02) || (data[0] == 0x03)) && (data[1] == 0x04)) {

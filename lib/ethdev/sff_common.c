@@ -15,7 +15,7 @@ double sff_convert_mw_to_dbm(double mw)
 
 void sff_show_value_with_unit(const uint8_t *data, unsigned int reg,
 			      const char *name, unsigned int mult,
-			      const char *unit, struct rte_tel_data *d)
+			      const char *unit, struct sff_output *d)
 {
 	unsigned int val = data[reg];
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
@@ -25,7 +25,7 @@ void sff_show_value_with_unit(const uint8_t *data, unsigned int reg,
 }
 
 void sff_show_ascii(const uint8_t *data, unsigned int first_reg,
-		    unsigned int last_reg, const char *name, struct rte_tel_data *d)
+		    unsigned int last_reg, const char *name, struct sff_output *d)
 {
 	unsigned int reg, val;
 	char tmp[3];
@@ -47,7 +47,7 @@ void sff_show_ascii(const uint8_t *data, unsigned int first_reg,
 	ssf_add_dict_string(d, name, val_string);
 }
 
-void sff_8024_show_oui(const uint8_t *data, int id_offset, struct rte_tel_data *d)
+void sff_8024_show_oui(const uint8_t *data, int id_offset, struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 
@@ -56,7 +56,7 @@ void sff_8024_show_oui(const uint8_t *data, int id_offset, struct rte_tel_data *
 	ssf_add_dict_string(d, "Vendor OUI", val_string);
 }
 
-void sff_8024_show_identifier(const uint8_t *data, int id_offset, struct rte_tel_data *d)
+void sff_8024_show_identifier(const uint8_t *data, int id_offset, struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 
@@ -145,7 +145,7 @@ void sff_8024_show_identifier(const uint8_t *data, int id_offset, struct rte_tel
 	ssf_add_dict_string(d, "Identifier", val_string);
 }
 
-void sff_8024_show_connector(const uint8_t *data, int ctor_offset, struct rte_tel_data *d)
+void sff_8024_show_connector(const uint8_t *data, int ctor_offset, struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 
@@ -217,7 +217,7 @@ void sff_8024_show_connector(const uint8_t *data, int ctor_offset, struct rte_te
 }
 
 void sff_8024_show_encoding(const uint8_t *data, int encoding_offset,
-			    int sff_type, struct rte_tel_data *d)
+			    int sff_type, struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 
@@ -268,7 +268,7 @@ void sff_8024_show_encoding(const uint8_t *data, int encoding_offset,
 	ssf_add_dict_string(d, "Encoding", val_string);
 }
 
-void sff_show_thresholds(struct sff_diags sd, struct rte_tel_data *d)
+void sff_show_thresholds(struct sff_diags sd, struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 

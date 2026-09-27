@@ -164,12 +164,12 @@ static struct sff_8636_aw_flags {
 	{ NULL, 0, 0 },
 };
 
-static void sff_8636_show_identifier(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8636_show_identifier(const uint8_t *data, struct sff_output *d)
 {
 	sff_8024_show_identifier(data, SFF_8636_ID_OFFSET, d);
 }
 
-static void sff_8636_show_ext_identifier(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8636_show_ext_identifier(const uint8_t *data, struct sff_output *d)
 {
 	static const char *name = "Extended identifier description";
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
@@ -224,12 +224,12 @@ static void sff_8636_show_ext_identifier(const uint8_t *data, struct rte_tel_dat
 	ssf_add_dict_string(d, name, val_string);
 }
 
-static void sff_8636_show_connector(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8636_show_connector(const uint8_t *data, struct sff_output *d)
 {
 	sff_8024_show_connector(data, SFF_8636_CTOR_OFFSET, d);
 }
 
-static void sff_8636_show_transceiver(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8636_show_transceiver(const uint8_t *data, struct sff_output *d)
 {
 	static const char *name = "Transceiver type";
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
@@ -438,13 +438,13 @@ static void sff_8636_show_transceiver(const uint8_t *data, struct rte_tel_data *
 		ssf_add_dict_string(d, name, "FC: 100 MBytes/sec");
 }
 
-static void sff_8636_show_encoding(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8636_show_encoding(const uint8_t *data, struct sff_output *d)
 {
 	sff_8024_show_encoding(data, SFF_8636_ENCODING_OFFSET,
 			       RTE_ETH_MODULE_SFF_8636, d);
 }
 
-static void sff_8636_show_rate_identifier(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8636_show_rate_identifier(const uint8_t *data, struct sff_output *d)
 {
 	char val_string[20];
 
@@ -452,13 +452,13 @@ static void sff_8636_show_rate_identifier(const uint8_t *data, struct rte_tel_da
 	ssf_add_dict_string(d, "Rate identifier", val_string);
 }
 
-static void sff_8636_show_oui(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8636_show_oui(const uint8_t *data, struct sff_output *d)
 {
 	sff_8024_show_oui(data, SFF_8636_VENDOR_OUI_OFFSET, d);
 }
 
 static void sff_8636_show_wavelength_or_copper_compliance(const uint8_t *data,
-							  struct rte_tel_data *d)
+							  struct sff_output *d)
 {
 	char val_string[SFF_ITEM_VAL_COMPOSE_SIZE];
 	snprintf(val_string, sizeof(val_string), "0x%02x",
@@ -554,7 +554,7 @@ static void sff_8636_show_wavelength_or_copper_compliance(const uint8_t *data,
 	}
 }
 
-static void sff_8636_show_revision_compliance(const uint8_t *data, struct rte_tel_data *d)
+static void sff_8636_show_revision_compliance(const uint8_t *data, struct sff_output *d)
 {
 	static const char *name = "Revision Compliance";
 
@@ -638,7 +638,7 @@ static void sff_8636_dom_parse(const uint8_t *data, struct sff_diags *sd)
 
 }
 
-static void sff_8636_show_dom(const uint8_t *data, uint32_t eeprom_len, struct rte_tel_data *d)
+static void sff_8636_show_dom(const uint8_t *data, uint32_t eeprom_len, struct sff_output *d)
 {
 	struct sff_diags sd = {0};
 	const char *rx_power_string = NULL;
@@ -723,7 +723,7 @@ static void sff_8636_show_dom(const uint8_t *data, uint32_t eeprom_len, struct r
 	}
 
 }
-void sff_8636_show_all(const uint8_t *data, uint32_t eeprom_len, struct rte_tel_data *d)
+void sff_8636_show_all(const uint8_t *data, uint32_t eeprom_len, struct sff_output *d)
 {
 	sff_8636_show_identifier(data, d);
 	if ((data[SFF_8636_ID_OFFSET] == SFF_8024_ID_QSFP) ||

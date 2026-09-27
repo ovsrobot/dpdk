@@ -231,7 +231,7 @@ static void sff_8472_parse_eeprom(const uint8_t *data, struct sff_diags *sd)
 		sff_8472_calibration(data, sd);
 }
 
-void sff_8472_show_all(const uint8_t *data, struct rte_tel_data *d)
+void sff_8472_show_all(const uint8_t *data, struct sff_output *d)
 {
 	struct sff_diags sd = {0};
 	const char *rx_power_string = NULL;
