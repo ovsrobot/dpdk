@@ -99,25 +99,46 @@ sff_port_module_eeprom_parse(uint16_t port_id, struct rte_tel_data *d)
 		return;
 	}
 
-	switch (minfo.type) {
+	ret = sff_decode_module_eeprom(minfo.type, einfo.data, einfo.length, &out);
+	if (ret == -ENOTSUP)
+		RTE_ETHDEV_LOG_LINE(NOTICE, "Unsupported module type: %u", minfo.type);
+	else if (ret != 0)
+		RTE_ETHDEV_LOG_LINE(ERR, "Port %u module EEPROM is too short: %u bytes",
+			port_id, einfo.length);
+
+	free(einfo.data);
+}
+
+int
+sff_decode_module_eeprom(uint32_t type, const uint8_t *data, uint32_t length,
+			 struct sff_output *d)
+{
+	switch (type) {
 	/* parsing module EEPROM data base on different module type */
 	case RTE_ETH_MODULE_SFF_8079:
-		sff_8079_show_all(einfo.data, &out);
+		if (length < RTE_ETH_MODULE_SFF_8079_LEN)
+			return -EINVAL;
+		sff_8079_show_all(data, d);
 		break;
 	case RTE_ETH_MODULE_SFF_8472:
-		sff_8079_show_all(einfo.data, &out);
-		sff_8472_show_all(einfo.data, &out);
+		if (length < RTE_ETH_MODULE_SFF_8079_LEN)
+			return -EINVAL;
+		sff_8079_show_all(data, d);
+		/* diagnostics are in the second page (A2h) */
+		if (length >= RTE_ETH_MODULE_SFF_8472_LEN)
+			sff_8472_show_all(data, d);
 		break;
 	case RTE_ETH_MODULE_SFF_8436:
 	case RTE_ETH_MODULE_SFF_8636:
-		sff_8636_show_all(einfo.data, einfo.length, &out);
+		if (length < RTE_ETH_MODULE_SFF_8636_LEN)
+			return -EINVAL;
+		sff_8636_show_all(data, length, d);
 		break;
 	default:
-		RTE_ETHDEV_LOG_LINE(NOTICE, "Unsupported module type: %u", minfo.type);
-		break;
+		return -ENOTSUP;
 	}
 
-	free(einfo.data);
+	return 0;
 }
 
 void
