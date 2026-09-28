@@ -158,15 +158,15 @@ struct sff_diags {
 double sff_convert_mw_to_dbm(double mw);
 void sff_show_value_with_unit(const uint8_t *data, unsigned int reg,
 			      const char *name, unsigned int mult,
-			      const char *unit, struct rte_tel_data *d);
+			      const char *unit, struct sff_output *d);
 void sff_show_ascii(const uint8_t *data, unsigned int first_reg,
-		    unsigned int last_reg, const char *name, struct rte_tel_data *d);
-void sff_show_thresholds(struct sff_diags sd, struct rte_tel_data *d);
+		    unsigned int last_reg, const char *name, struct sff_output *d);
+void sff_show_thresholds(struct sff_diags sd, struct sff_output *d);
 
-void sff_8024_show_oui(const uint8_t *data, int id_offset, struct rte_tel_data *d);
-void sff_8024_show_identifier(const uint8_t *data, int id_offset, struct rte_tel_data *d);
-void sff_8024_show_connector(const uint8_t *data, int ctor_offset, struct rte_tel_data *d);
+void sff_8024_show_oui(const uint8_t *data, int id_offset, struct sff_output *d);
+void sff_8024_show_identifier(const uint8_t *data, int id_offset, struct sff_output *d);
+void sff_8024_show_connector(const uint8_t *data, int ctor_offset, struct sff_output *d);
 void sff_8024_show_encoding(const uint8_t *data, int encoding_offset,
-			    int sff_type, struct rte_tel_data *d);
+			    int sff_type, struct sff_output *d);
 
 #endif /* _SFF_COMMON_H_ */
