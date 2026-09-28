@@ -760,12 +760,6 @@ int nbl_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
 	uint32_t frame_size = mtu + NBL_ETH_OVERHEAD;
 	int ret;
 
-	/* mtu setting is forbidden if port is start */
-	if (dev_data->dev_started) {
-		NBL_LOG(ERR, "port %d must be stopped before configuration", dev_data->port_id);
-		return -EBUSY;
-	}
-
 	dev_data->dev_conf.rxmode.mtu = frame_size;
 	ret = disp_ops->set_mtu(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), dev_mgt->net_dev->vsi_id, mtu);
 	if (ret)
