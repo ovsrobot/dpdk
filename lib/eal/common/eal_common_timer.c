@@ -52,7 +52,7 @@ estimate_tsc_freq(void)
 	return RTE_ALIGN_MUL_NEAR(rte_rdtsc() - start, CYC_PER_10MHZ);
 }
 
-void
+int
 set_tsc_freq(void)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
@@ -65,18 +65,31 @@ set_tsc_freq(void)
 		 * systems where arch-specific frequency detection is not
 		 * available.
 		 */
+		if (mcfg->tsc_hz == 0) {
+			EAL_LOG(ERR, "Primary process TSC frequency is zero");
+			return -1;
+		}
+
 		eal_tsc_resolution_hz = mcfg->tsc_hz;
-		return;
+		return 0;
 	}
 
 	freq = get_tsc_freq_arch();
 	freq = get_tsc_freq(freq);
-	if (!freq)
+	if (freq == 0) {
 		freq = estimate_tsc_freq();
+
+		/* Check if TSC is not moving */
+		if (freq == 0) {
+			EAL_LOG(ERR, "TSC frequency is not changing");
+			return -1;
+		}
+	}
 
 	EAL_LOG(DEBUG, "TSC frequency is ~%" PRIu64 " KHz", freq / 1000);
 	eal_tsc_resolution_hz = freq;
 	mcfg->tsc_hz = freq;
+	return 0;
 }
 
 RTE_EXPORT_SYMBOL(rte_delay_us_callback_register)
