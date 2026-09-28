@@ -104,6 +104,14 @@ New Features
 
   Added network driver for the LinkData network adapters.
 
+* **Added VDUSE API version 1 support in vhost library.**
+
+  Updated VDUSE (vDPA Device in Userspace) support with API version 1 features
+  to enable live migration:
+
+  * Added Address Space ID (ASID) support for multiple independent address spaces
+    per device, enabling better isolation and support for virtqueue groups.
+
 * **Updated Microsoft mana driver.**
 
   Added device reset support to the MANA PMD,
