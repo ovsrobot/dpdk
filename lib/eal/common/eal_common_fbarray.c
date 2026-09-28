@@ -1015,15 +1015,19 @@ rte_fbarray_destroy(struct rte_fbarray *arr)
 		/* we're OK to destroy the file */
 		eal_get_fbarray_path(path, sizeof(path), arr->name);
 		if (unlink(path)) {
+			const int unlink_errno = errno;
+
 			EAL_LOG(DEBUG, "Cannot unlink fbarray: %s",
-				strerror(errno));
-			rte_errno = errno;
+				strerror(unlink_errno));
 			/*
 			 * we're still holding an exclusive lock, so drop it to
 			 * shared.
 			 */
-			eal_file_lock(fd, EAL_FLOCK_SHARED, EAL_FLOCK_RETURN);
+			if (eal_file_lock(fd, EAL_FLOCK_SHARED, EAL_FLOCK_RETURN) != 0)
+				EAL_LOG(DEBUG, "Cannot restore fbarray shared lock: %s",
+					rte_strerror(rte_errno));
 
+			rte_errno = unlink_errno;
 			ret = -1;
 			goto out;
 		}
