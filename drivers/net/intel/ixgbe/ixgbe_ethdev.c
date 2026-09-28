@@ -7355,6 +7355,9 @@ ixgbe_set_eeprom(struct rte_eth_dev *dev,
 
 	in_eeprom->magic = hw->vendor_id | (hw->device_id << 16);
 
+	if (eeprom->ops.write_buffer == NULL)
+		return -ENOTSUP;
+
 	return eeprom->ops.write_buffer(hw,  first, length, data);
 }
 
