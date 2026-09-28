@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright 2017-2023 NXP
+ * Copyright 2017-2026 NXP
  */
 
 /* System headers */
@@ -204,6 +204,41 @@ struct fmc_model_t {
 
 struct fmc_model_t *g_fmc_model;
 
+#define FMC_PORT_NAME_MAC "MAC/"
+#define FMC_PORT_NAME_OFFLINE "OFFLINE/"
+
+static int
+dpaa_port_fmc_get_idx_from_name(const char *name)
+{
+	const char *found;
+	char *endptr;
+	int idx_str_start = -1, idx;
+
+	found = strstr(name, FMC_PORT_NAME_MAC);
+	if (!found) {
+		found = strstr(name, FMC_PORT_NAME_OFFLINE);
+		if (found)
+			idx_str_start = strlen(FMC_PORT_NAME_OFFLINE);
+	} else {
+		idx_str_start = strlen(FMC_PORT_NAME_MAC);
+	}
+
+	if (!found) {
+		DPAA_PMD_ERR("Invalid fmc port name: %s", name);
+		return -EINVAL;
+	}
+
+	idx = (int)strtol(&found[idx_str_start], &endptr, 10);
+	if (endptr == &found[idx_str_start] || (*endptr != '\0' && *endptr != '/')) {
+		DPAA_PMD_ERR("Invalid index in fmc port name: %s", name);
+		return -EINVAL;
+	}
+
+	DPAA_PMD_INFO("MAC index of %s is %d", name, idx);
+
+	return idx;
+}
+
 static int
 dpaa_port_fmc_port_parse(struct fman_if *fif,
 	const struct fmc_model_t *fmc_model,
@@ -211,7 +246,10 @@ dpaa_port_fmc_port_parse(struct fman_if *fif,
 {
 	int current_port = fmc_model->apply_order[apply_idx].index;
 	const fmc_port *pport = &fmc_model->port[current_port];
-	uint32_t num;
+	int num = dpaa_port_fmc_get_idx_from_name(pport->name);
+
+	if (num < 0)
+		return num;
 
 	if (pport->type == e_FM_PORT_TYPE_OH_OFFLINE_PARSING &&
 	    pport->number == fif->mac_idx &&
@@ -219,40 +257,30 @@ dpaa_port_fmc_port_parse(struct fman_if *fif,
 	     fif->mac_type == fman_onic))
 		return current_port;
 
-	if (fif->mac_type == fman_mac_1g) {
-		if (pport->type != e_FM_PORT_TYPE_RX)
-			return -ENODEV;
-		num = pport->number + DPAA_1G_MAC_START_IDX;
-		if (fif->mac_idx == num)
-			return current_port;
-
+	if (fif->mac_type == fman_mac_1g &&
+			pport->type != e_FM_PORT_TYPE_RX)
 		return -ENODEV;
+
+	if (fif->mac_type == fman_mac_2_5g &&
+			pport->type != e_FM_PORT_TYPE_RX_2_5G)
+		return -ENODEV;
+
+	if (fif->mac_type == fman_mac_10g &&
+			pport->type != e_FM_PORT_TYPE_RX_10G)
+		return -ENODEV;
+
+	if (fif->mac_type != fman_mac_1g &&
+			fif->mac_type != fman_mac_2_5g &&
+			fif->mac_type != fman_mac_10g) {
+		DPAA_PMD_ERR("Unknown mac_type(%d) for port %s",
+			     fif->mac_type, pport->name);
+		return -EINVAL;
 	}
 
-	if (fif->mac_type == fman_mac_2_5g) {
-		if (pport->type != e_FM_PORT_TYPE_RX_2_5G)
-			return -ENODEV;
-		num = pport->number + DPAA_2_5G_MAC_START_IDX;
-		if (fif->mac_idx == num)
-			return current_port;
+	if (fif->mac_idx == num)
+		return current_port;
 
-		return -ENODEV;
-	}
-
-	if (fif->mac_type == fman_mac_10g) {
-		if (pport->type != e_FM_PORT_TYPE_RX_10G)
-			return -ENODEV;
-		num = pport->number + DPAA_10G_MAC_START_IDX;
-		if (fif->mac_idx == num)
-			return current_port;
-
-		return -ENODEV;
-	}
-
-	DPAA_PMD_ERR("Invalid MAC(mac_idx=%d) type(%d)",
-		fif->mac_idx, fif->mac_type);
-
-	return -EINVAL;
+	return -ENODEV;
 }
 
 static int
