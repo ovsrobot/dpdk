@@ -474,6 +474,12 @@ dpdk_arch_headers += files('rte_config.h')
 # specify -D_GNU_SOURCE unconditionally
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
 
+# define __counted_by as empty on compilers that don't support it
+if not cc.compiles('struct s { int n; int a[] __counted_by(n); };',
+        name : '__counted_by support')
+    add_project_arguments('-D__counted_by(a)=', language : 'c')
+endif
+
 # specify -D__BSD_VISIBLE for FreeBSD
 if is_freebsd
     add_project_arguments('-D__BSD_VISIBLE', language: 'c')
