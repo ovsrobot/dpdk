@@ -49,35 +49,12 @@ struct nfp_net_init {
 };
 
 static int
-nfp_devarg_handle_int(const char *key,
-		const char *value,
-		void *extra_args)
-{
-	char *end_ptr;
-	uint64_t *num = extra_args;
-
-	if (value == NULL)
-		return -EPERM;
-
-	*num = strtoul(value, &end_ptr, 10);
-	if (*num == ULONG_MAX) {
-		PMD_DRV_LOG(ERR, "%s: '%s' is not a valid param.", key, value);
-		return -ERANGE;
-	} else if (value == end_ptr) {
-		return -EPERM;
-	}
-
-	return 0;
-}
-
-static int
 nfp_devarg_parse_bool_para(struct rte_kvargs *kvlist,
 		const char *key_match,
 		bool *value_ret)
 {
 	int ret;
 	uint32_t count;
-	uint64_t value;
 
 	count = rte_kvargs_count(kvlist, key_match);
 	if (count == 0)
@@ -88,19 +65,10 @@ nfp_devarg_parse_bool_para(struct rte_kvargs *kvlist,
 		return -EINVAL;
 	}
 
-	ret = rte_kvargs_process(kvlist, key_match, &nfp_devarg_handle_int, &value);
+	ret = rte_kvargs_process_opt(kvlist, key_match, rte_kvargs_handle_bool,
+			value_ret);
 	if (ret != 0)
 		return -EINVAL;
-
-	if (value == 1) {
-		*value_ret = true;
-	} else if (value == 0) {
-		*value_ret = false;
-	} else {
-		PMD_DRV_LOG(ERR, "The param does not work, the format is %s=0/1.",
-				key_match);
-		return -EINVAL;
-	}
 
 	return 0;
 }
