@@ -537,7 +537,7 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 
 	if (fif->mac_type == fman_offline_internal ||
 	    fif->mac_type == fman_onic)
-		return 0;
+		goto clean_1;
 
 	/* Reset link to autoneg */
 	if (link->link_status && !link->link_autoneg) {
@@ -562,7 +562,7 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 				dev->data->name, ret);
 		}
 	}
-
+clean_1:
 	/* release configuration memory */
 	rte_free(dpaa_intf->fc_conf);
 
@@ -623,6 +623,9 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 				dev->data->name, ret);
 		}
 	}
+
+	rte_free(dpaa_intf->tx_conf_queues);
+	dpaa_intf->tx_conf_queues = NULL;
 
 	return ret;
 }
@@ -2499,6 +2502,8 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 	return 0;
 
 free_tx:
+	rte_free(dpaa_intf->tx_conf_queues);
+	dpaa_intf->tx_conf_queues = NULL;
 	rte_free(dpaa_intf->tx_queues);
 	dpaa_intf->tx_queues = NULL;
 	dpaa_intf->nb_tx_queues = 0;
