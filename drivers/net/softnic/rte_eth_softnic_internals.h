@@ -5,6 +5,7 @@
 #ifndef __INCLUDE_RTE_ETH_SOFTNIC_INTERNALS_H__
 #define __INCLUDE_RTE_ETH_SOFTNIC_INTERNALS_H__
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/queue.h>
@@ -34,7 +35,7 @@ struct pmd_params {
 	char firmware[SOFTNIC_PATH_MAX];
 	uint16_t conn_port;
 	uint32_t cpu_id;
-	int sc; /**< Service cores. */
+	bool sc; /**< Service cores. */
 };
 
 /**

@@ -345,28 +345,6 @@ get_string(const char *key __rte_unused, const char *value, void *extra_args)
 }
 
 static int
-get_uint32(const char *key __rte_unused, const char *value, void *extra_args)
-{
-	if (!value || !extra_args)
-		return -EINVAL;
-
-	*(uint32_t *)extra_args = strtoull(value, NULL, 0);
-
-	return 0;
-}
-
-static int
-get_uint16(const char *key __rte_unused, const char *value, void *extra_args)
-{
-	if (!value || !extra_args)
-		return -EINVAL;
-
-	*(uint16_t *)extra_args = strtoull(value, NULL, 0);
-
-	return 0;
-}
-
-static int
 pmd_parse_args(struct pmd_params *p, const char *params)
 {
 	struct rte_kvargs *kvlist;
@@ -412,7 +390,7 @@ pmd_parse_args(struct pmd_params *p, const char *params)
 	/* Connection listening port (optional) */
 	if (rte_kvargs_count(kvlist, PMD_PARAM_CONN_PORT) == 1) {
 		ret = rte_kvargs_process(kvlist, PMD_PARAM_CONN_PORT,
-			&get_uint16, &p->conn_port);
+			rte_kvargs_handle_u16, &p->conn_port);
 		if (ret < 0)
 			goto out_free;
 	}
@@ -420,15 +398,15 @@ pmd_parse_args(struct pmd_params *p, const char *params)
 	/* CPU ID (optional) */
 	if (rte_kvargs_count(kvlist, PMD_PARAM_CPU_ID) == 1) {
 		ret = rte_kvargs_process(kvlist, PMD_PARAM_CPU_ID,
-			&get_uint32, &p->cpu_id);
+			rte_kvargs_handle_u32, &p->cpu_id);
 		if (ret < 0)
 			goto out_free;
 	}
 
 	/* Service cores (optional) */
 	if (rte_kvargs_count(kvlist, PMD_PARAM_SC) == 1) {
-		ret = rte_kvargs_process(kvlist, PMD_PARAM_SC,
-			&get_uint32, &p->sc);
+		ret = rte_kvargs_process_opt(kvlist, PMD_PARAM_SC,
+			rte_kvargs_handle_bool, &p->sc);
 		if (ret < 0)
 			goto out_free;
 	}
