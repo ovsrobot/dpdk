@@ -202,11 +202,9 @@ eth_dev_vmbus_release(struct rte_eth_dev *eth_dev)
 static int hn_set_parameter(const char *key, const char *value, void *opaque)
 {
 	struct hn_data *hv = opaque;
-	char *endp = NULL;
-	unsigned long v;
+	uint64_t v;
 
-	v = strtoul(value, &endp, 0);
-	if (*value == '\0' || *endp != '\0') {
+	if (rte_kvargs_to_uint(value, 0, UINT32_MAX, &v) < 0) {
 		PMD_DRV_LOG(ERR, "invalid parameter %s=%s", key, value);
 		return -EINVAL;
 	}
