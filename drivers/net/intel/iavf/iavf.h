@@ -324,10 +324,10 @@ struct iavf_devargs {
 	uint8_t proto_xtr[IAVF_MAX_QUEUE_NUM];
 	uint16_t quanta_size;
 	uint32_t watchdog_period;
-	int auto_reset;
-	int no_poll_on_link_down;
+	bool auto_reset;
+	bool no_poll_on_link_down;
 	uint64_t mbuf_check;
-	int enable_lldp;
+	bool enable_lldp;
 };
 
 struct iavf_security_ctx;
