@@ -2,6 +2,8 @@
  * Copyright 2014 6WIND S.A.
  */
 
+#include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -328,6 +330,221 @@ static int test_invalid_kvargs(void)
 	return -1;
 }
 
+/* Check the numeric conversion helpers on a value passed through kvargs. */
+static int
+handle_one(arg_handler_t handler, const char *value, void *opaque)
+{
+	struct rte_kvargs *kvlist;
+	char args[128];
+	int ret;
+
+	if (value != NULL)
+		snprintf(args, sizeof(args), "k=%s", value);
+	else
+		snprintf(args, sizeof(args), "k");
+
+	kvlist = rte_kvargs_parse(args, NULL);
+	if (kvlist == NULL)
+		return -1;
+
+	ret = rte_kvargs_process_opt(kvlist, "k", handler, opaque);
+	rte_kvargs_free(kvlist);
+
+	/* rte_kvargs_process_opt() flattens the handler error to -1. */
+	return ret;
+}
+
+/* A handler must accept a good value, and leave the target alone otherwise. */
+#define CHECK_GOOD(handler, type, str, expected) do { \
+	type v = (type)0x5a; \
+	TEST_ASSERT_SUCCESS(handle_one(handler, str, &v), \
+			    "%s rejected \"%s\"", #handler, str); \
+	TEST_ASSERT_EQUAL(v, (type)(expected), \
+			  "%s(\"%s\") gave the wrong value", #handler, str); \
+} while (0)
+
+#define CHECK_BAD(handler, type, str) do { \
+	type v = (type)0x5a; \
+	TEST_ASSERT_FAIL(handle_one(handler, str, &v), \
+			 "%s accepted \"%s\"", #handler, str); \
+	TEST_ASSERT_EQUAL(v, (type)0x5a, \
+			  "%s clobbered the target on \"%s\"", #handler, str); \
+} while (0)
+
+static int
+test_handle_unsigned(void)
+{
+	CHECK_GOOD(rte_kvargs_handle_u8, uint8_t, "0", 0);
+	CHECK_GOOD(rte_kvargs_handle_u8, uint8_t, "255", 255);
+	CHECK_GOOD(rte_kvargs_handle_u8, uint8_t, "0xff", 255);
+	CHECK_GOOD(rte_kvargs_handle_u8, uint8_t, "0XFF", 255);
+	CHECK_GOOD(rte_kvargs_handle_u8, uint8_t, "+7", 7);
+	/* A leading zero must not select octal. */
+	CHECK_GOOD(rte_kvargs_handle_u8, uint8_t, "010", 10);
+	CHECK_BAD(rte_kvargs_handle_u8, uint8_t, "256");
+	CHECK_BAD(rte_kvargs_handle_u8, uint8_t, "-1");
+
+	CHECK_GOOD(rte_kvargs_handle_u16, uint16_t, "65535", 65535);
+	CHECK_BAD(rte_kvargs_handle_u16, uint16_t, "65536");
+
+	CHECK_GOOD(rte_kvargs_handle_u32, uint32_t, "4294967295", UINT32_MAX);
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "4294967296");
+
+	CHECK_GOOD(rte_kvargs_handle_u64, uint64_t, "18446744073709551615",
+		   UINT64_MAX);
+	CHECK_GOOD(rte_kvargs_handle_u64, uint64_t, "0xffffffffffffffff",
+		   UINT64_MAX);
+	CHECK_BAD(rte_kvargs_handle_u64, uint64_t, "18446744073709551616");
+
+	CHECK_GOOD(rte_kvargs_handle_uint, unsigned int, "42", 42);
+	CHECK_GOOD(rte_kvargs_handle_size, size_t, "42", 42);
+
+	/* Malformed values, rejected for every width. */
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "abc");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "12abc");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "12 34");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "0x");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "0x0x10");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "0X0X10");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "--1");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "+-1");
+	/* strtoull() would skip the space and negate what follows. */
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "+ 1");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "- 1");
+	CHECK_BAD(rte_kvargs_handle_u32, uint32_t, "+ -1");
+	/* Trailing white space is fine, though. */
+	CHECK_GOOD(rte_kvargs_handle_u32, uint32_t, " 12 ", 12);
+
+	/* A key with no value at all. */
+	{
+		uint32_t v = 0x5a;
+
+		TEST_ASSERT_FAIL(handle_one(rte_kvargs_handle_u32, NULL, &v),
+				 "u32 accepted a key with no value");
+		TEST_ASSERT_EQUAL(v, 0x5aU, "target clobbered");
+	}
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_handle_signed(void)
+{
+	CHECK_GOOD(rte_kvargs_handle_i8, int8_t, "-128", -128);
+	CHECK_GOOD(rte_kvargs_handle_i8, int8_t, "127", 127);
+	CHECK_BAD(rte_kvargs_handle_i8, int8_t, "-129");
+	CHECK_BAD(rte_kvargs_handle_i8, int8_t, "128");
+
+	CHECK_GOOD(rte_kvargs_handle_i16, int16_t, "-32768", -32768);
+	CHECK_BAD(rte_kvargs_handle_i16, int16_t, "32768");
+
+	CHECK_GOOD(rte_kvargs_handle_i32, int32_t, "-2147483648", INT32_MIN);
+	CHECK_BAD(rte_kvargs_handle_i32, int32_t, "2147483648");
+
+	/* INT64_MIN has a magnitude one past INT64_MAX. */
+	CHECK_GOOD(rte_kvargs_handle_i64, int64_t, "-9223372036854775808",
+		   INT64_MIN);
+	CHECK_GOOD(rte_kvargs_handle_i64, int64_t, "9223372036854775807",
+		   INT64_MAX);
+	CHECK_BAD(rte_kvargs_handle_i64, int64_t, "9223372036854775808");
+	CHECK_BAD(rte_kvargs_handle_i64, int64_t, "-9223372036854775809");
+
+	/* A sign in front of a hex value. */
+	CHECK_GOOD(rte_kvargs_handle_i32, int32_t, "-0x10", -16);
+	CHECK_BAD(rte_kvargs_handle_i32, int32_t, "-0x0x10");
+
+	CHECK_GOOD(rte_kvargs_handle_int, int, "-1", -1);
+	CHECK_GOOD(rte_kvargs_handle_int, int, "+1", 1);
+	CHECK_BAD(rte_kvargs_handle_int, int, "");
+	CHECK_BAD(rte_kvargs_handle_int, int, "1x");
+	CHECK_BAD(rte_kvargs_handle_int, int, "-");
+	CHECK_BAD(rte_kvargs_handle_int, int, "- 1");
+	CHECK_BAD(rte_kvargs_handle_int, int, "--1");
+
+	CHECK_GOOD(rte_kvargs_handle_long, long, "-1", -1);
+	CHECK_GOOD(rte_kvargs_handle_long, long, "+1", 1);
+	CHECK_BAD(rte_kvargs_handle_long, long, "");
+	CHECK_BAD(rte_kvargs_handle_long, long, "1x");
+
+	CHECK_GOOD(rte_kvargs_handle_ulong, unsigned long, "1", 1);
+	CHECK_GOOD(rte_kvargs_handle_ulong, unsigned long, "0x10", 16);
+	CHECK_BAD(rte_kvargs_handle_ulong, unsigned long, "-1");
+	CHECK_BAD(rte_kvargs_handle_ulong, unsigned long, "1x");
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_handle_bool(void)
+{
+	static const char * const yes[] = {
+		"1", "y", "Y", "yes", "YES", "on", "On", "true", "TRUE",
+	};
+	static const char * const no[] = {
+		"0", "n", "N", "no", "NO", "off", "Off", "false", "FALSE",
+	};
+	unsigned int i;
+	bool v;
+
+	for (i = 0; i < RTE_DIM(yes); i++) {
+		v = false;
+		TEST_ASSERT_SUCCESS(handle_one(rte_kvargs_handle_bool, yes[i], &v),
+				    "bool rejected \"%s\"", yes[i]);
+		TEST_ASSERT(v, "\"%s\" should be true", yes[i]);
+	}
+
+	for (i = 0; i < RTE_DIM(no); i++) {
+		v = true;
+		TEST_ASSERT_SUCCESS(handle_one(rte_kvargs_handle_bool, no[i], &v),
+				    "bool rejected \"%s\"", no[i]);
+		TEST_ASSERT(!v, "\"%s\" should be false", no[i]);
+	}
+
+	/* A bare key is enough to enable the option. */
+	v = false;
+	TEST_ASSERT_SUCCESS(handle_one(rte_kvargs_handle_bool, NULL, &v),
+			    "bool rejected a key with no value");
+	TEST_ASSERT(v, "a key with no value should be true");
+
+	/* But a blank value is not a missing one. */
+	CHECK_BAD(rte_kvargs_handle_bool, bool, "");
+	CHECK_BAD(rte_kvargs_handle_bool, bool, "2");
+	CHECK_BAD(rte_kvargs_handle_bool, bool, "yep");
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_kvargs_to_range(void)
+{
+	uint64_t u = 0x5a;
+	int64_t s = 0x5a;
+
+	TEST_ASSERT_SUCCESS(rte_kvargs_to_uint("10", 0, 10, &u), "10 in [0,10]");
+	TEST_ASSERT_EQUAL(u, 10U, "wrong value");
+
+	TEST_ASSERT_EQUAL(rte_kvargs_to_uint("11", 0, 10, &u), -ERANGE,
+			  "11 should be out of [0,10]");
+	TEST_ASSERT_EQUAL(u, 10U, "target clobbered on range error");
+
+	TEST_ASSERT_EQUAL(rte_kvargs_to_uint("0", 1, 10, &u), -ERANGE,
+			  "0 should be out of [1,10]");
+	TEST_ASSERT_EQUAL(rte_kvargs_to_uint(NULL, 0, 10, &u), -EINVAL,
+			  "NULL should be rejected");
+	TEST_ASSERT_EQUAL(rte_kvargs_to_uint("x", 0, 10, &u), -EINVAL,
+			  "\"x\" should be rejected");
+	TEST_ASSERT_EQUAL(rte_kvargs_to_uint("5", 0, 10, NULL), -EINVAL,
+			  "a NULL result should be rejected");
+
+	TEST_ASSERT_SUCCESS(rte_kvargs_to_int("-5", -10, 10, &s), "-5 in [-10,10]");
+	TEST_ASSERT_EQUAL(s, -5, "wrong value");
+	TEST_ASSERT_EQUAL(rte_kvargs_to_int("-11", -10, 10, &s), -ERANGE,
+			  "-11 should be out of [-10,10]");
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite kvargs_test_suite  = {
 	.suite_name = "Kvargs Unit Test Suite",
 	.setup = NULL,
@@ -354,6 +571,10 @@ static struct unit_test_suite kvargs_test_suite  = {
 		TEST_CASE(test_parse_empty_elements),
 		TEST_CASE(test_parse_with_only_key),
 		TEST_CASE(test_invalid_kvargs),
+		TEST_CASE(test_handle_unsigned),
+		TEST_CASE(test_handle_signed),
+		TEST_CASE(test_handle_bool),
+		TEST_CASE(test_kvargs_to_range),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
