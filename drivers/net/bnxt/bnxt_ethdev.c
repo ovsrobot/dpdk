@@ -6359,57 +6359,69 @@ bnxt_parse_dev_args(struct bnxt *bp, struct rte_devargs *devargs)
 	if (ret)
 		goto err;
 
-err:
 	/*
 	 * Handler for "mpc" devarg.
 	 * Invoked as for ex: "-a 000:00:0d.0,mpc=1"
 	 */
-	rte_kvargs_process(kvlist, BNXT_DEVARG_MPC,
-			   bnxt_parse_devarg_mpc, bp);
+	ret = rte_kvargs_process(kvlist, BNXT_DEVARG_MPC,
+				 bnxt_parse_devarg_mpc, bp);
+	if (ret)
+		goto err;
 
 	/*
 	 * Handler for "app-id" devarg.
 	 * Invoked as for ex: "-a 000:00:0d.0,app-id=1"
 	 */
-	rte_kvargs_process(kvlist, BNXT_DEVARG_APP_ID,
-			   bnxt_parse_devarg_app_id, bp);
+	ret = rte_kvargs_process(kvlist, BNXT_DEVARG_APP_ID,
+				 bnxt_parse_devarg_app_id, bp);
+	if (ret)
+		goto err;
 
 	/*
 	 * Handler for "ieee-1588" devarg.
 	 * Invoked as for ex: "-a 000:00:0d.0,ieee-1588=1"
 	 */
-	rte_kvargs_process(kvlist, BNXT_DEVARG_IEEE_1588,
-			   bnxt_parse_devarg_ieee_1588, bp);
+	ret = rte_kvargs_process(kvlist, BNXT_DEVARG_IEEE_1588,
+				 bnxt_parse_devarg_ieee_1588, bp);
+	if (ret)
+		goto err;
 
 	/*
 	 * Handler for "cqe-mode" devarg.
 	 * Invoked as for ex: "-a 000:00:0d.0,cqe-mode=1"
 	 */
-	rte_kvargs_process(kvlist, BNXT_DEVARG_CQE_MODE,
-			   bnxt_parse_devarg_cqe_mode, bp);
+	ret = rte_kvargs_process(kvlist, BNXT_DEVARG_CQE_MODE,
+				 bnxt_parse_devarg_cqe_mode, bp);
+	if (ret)
+		goto err;
 
 	/*
 	 * Handler for "representor" devarg.
 	 * Invoked as for ex: "-a 000:00:0d.0,representor=1"
 	 */
-	rte_kvargs_process(kvlist, BNXT_DEVARG_REPRESENTOR,
-			   bnxt_parse_devarg_representor_mode, bp);
+	ret = rte_kvargs_process(kvlist, BNXT_DEVARG_REPRESENTOR,
+				 bnxt_parse_devarg_representor_mode, bp);
+	if (ret)
+		goto err;
 
 	/*
 	 * Handler for "scalar-mode" devarg.
 	 * Invoked as for ex: "-a 000:00:0d.0,scalar-mode=1"
 	 */
-	rte_kvargs_process(kvlist, BNXT_DEVARG_SCALAR_MODE,
-			   bnxt_parse_devarg_scalar_mode, bp);
+	ret = rte_kvargs_process(kvlist, BNXT_DEVARG_SCALAR_MODE,
+				 bnxt_parse_devarg_scalar_mode, bp);
+	if (ret)
+		goto err;
 
 	/*
 	 * Handler for "app-instance-id" devarg.
 	 * Invoked as for ex: "-a 000:00:0d.0,app-instance-id=1"
 	 * This argument is required for enabling truflow hot upgrade feature.
 	 */
-	rte_kvargs_process(kvlist, BNXT_DEVARD_APP_INST_ID,
-			   bnxt_parse_devarg_app_instance_id, bp);
+	ret = rte_kvargs_process(kvlist, BNXT_DEVARD_APP_INST_ID,
+				 bnxt_parse_devarg_app_instance_id, bp);
 
+err:
 	rte_kvargs_free(kvlist);
 	return ret;
 }
