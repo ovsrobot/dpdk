@@ -231,14 +231,13 @@ hns3_parse_mbx_time_limit(const char *key, const char *value, void *extra_args)
 	if (value == NULL || extra_args == NULL)
 		return 0;
 
-	val = strtoul(value, NULL, HNS3_CONVERT_TO_DECIMAL);
-
 	/*
 	 * 500ms is empirical value in process of mailbox communication. If
 	 * the delay value is set to one lower than the empirical value, mailbox
 	 * communication may fail.
 	 */
-	if (val > HNS3_MBX_DEF_TIME_LIMIT_MS && val <= UINT16_MAX)
+	if (rte_kvargs_to_uint(value, HNS3_MBX_DEF_TIME_LIMIT_MS + 1,
+			       UINT16_MAX, &val) == 0)
 		*(uint16_t *)extra_args = val;
 
 	return 0;
