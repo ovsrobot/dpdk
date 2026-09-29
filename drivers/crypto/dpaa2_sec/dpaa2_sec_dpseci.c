@@ -4342,13 +4342,22 @@ check_devargs_handler(const char *key, const char *value,
 	if (!strcmp(key, "drv_strict_order")) {
 		priv->en_loose_ordered = false;
 	} else if (!strcmp(key, "drv_dump_mode")) {
-		dpaa2_sec_dp_dump = atoi(value);
-		if (dpaa2_sec_dp_dump > DPAA2_SEC_DP_FULL_DUMP) {
+		uint64_t val;
+
+		if (rte_kvargs_to_uint(value, 0, UINT8_MAX, &val) < 0) {
+			DPAA2_SEC_WARN("WARN: invalid value \"%s\" for \"%s\"",
+				       value, key);
+			return -EINVAL;
+		}
+
+		if (val > DPAA2_SEC_DP_FULL_DUMP) {
 			DPAA2_SEC_WARN("WARN: DPAA2_SEC_DP_DUMP_LEVEL is not "
 				      "supported, changing to FULL error"
 				      " prints");
-			dpaa2_sec_dp_dump = DPAA2_SEC_DP_FULL_DUMP;
+			val = DPAA2_SEC_DP_FULL_DUMP;
 		}
+
+		dpaa2_sec_dp_dump = val;
 	} else
 		return -1;
 
