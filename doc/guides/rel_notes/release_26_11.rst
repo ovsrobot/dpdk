@@ -190,6 +190,13 @@ Removed Items
   The only remaining method for detecting LLDP packets is by using
   the mbuf packet type in conjunction with the ``enable_lldp`` devarg.
 
+* Removed the ``rte_atomicNN_t`` types and the ``rte_atomicNN_*`` functions
+  (16, 32 and 64 bit variants of ``init``, ``read``, ``set``, ``add``,
+  ``sub``, ``inc``, ``dec``, ``add_return``, ``sub_return``,
+  ``inc_and_test``, ``dec_and_test``, ``test_and_set``, ``clear``,
+  ``cmpset`` and ``exchange``). Use the C11 ``rte_atomic_*_explicit``
+  operations instead.
+
 
 API Changes
 -----------
