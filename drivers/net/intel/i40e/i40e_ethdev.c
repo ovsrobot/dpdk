@@ -4850,6 +4850,7 @@ static int i40e_pf_config_vf_rxq_number(struct rte_eth_dev *dev)
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct rte_kvargs *kvlist;
 	int kvargs_count;
+	int ret;
 
 	/* set default queue number per VF as 4 */
 	pf->vf_nb_qp_max = RTE_LIBRTE_I40E_QUEUE_NUM_PER_VF;
@@ -4872,12 +4873,12 @@ static int i40e_pf_config_vf_rxq_number(struct rte_eth_dev *dev)
 			    "the first invalid or last valid one is used !",
 			    ETH_I40E_QUEUE_NUM_PER_VF_ARG);
 
-	rte_kvargs_process(kvlist, ETH_I40E_QUEUE_NUM_PER_VF_ARG,
-			   i40e_pf_parse_vf_queue_number_handler, pf);
+	ret = rte_kvargs_process(kvlist, ETH_I40E_QUEUE_NUM_PER_VF_ARG,
+				 i40e_pf_parse_vf_queue_number_handler, pf);
 
 	rte_kvargs_free(kvlist);
 
-	return 0;
+	return ret;
 }
 
 static int
@@ -4887,13 +4888,16 @@ i40e_pf_parameter_init(struct rte_eth_dev *dev)
 	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
 	struct rte_pci_device *pci_dev = RTE_CLASS_TO_BUS_DEVICE(dev, *pci_dev);
 	uint16_t qp_count = 0, vsi_count = 0;
+	int ret;
 
 	if (pci_dev->max_vfs && !hw->func_caps.sr_iov_1_1) {
 		PMD_INIT_LOG(ERR, "HW configuration doesn't support SRIOV");
 		return -EINVAL;
 	}
 
-	i40e_pf_config_vf_rxq_number(dev);
+	ret = i40e_pf_config_vf_rxq_number(dev);
+	if (ret != 0)
+		return ret;
 
 	/* Add the parameter init for LFC */
 	pf->fc_conf.pause_time = I40E_DEFAULT_PAUSE_TIME;
