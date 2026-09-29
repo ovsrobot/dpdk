@@ -476,6 +476,50 @@ test_handle_signed(void)
 }
 
 static int
+test_handle_hex(void)
+{
+	uint64_t u = 0x5a;
+
+	/* The 0x prefix is optional, and a bare value is still hexadecimal. */
+	CHECK_GOOD(rte_kvargs_handle_hex32, uint32_t, "0xff", 0xff);
+	CHECK_GOOD(rte_kvargs_handle_hex32, uint32_t, "0XFF", 0xff);
+	CHECK_GOOD(rte_kvargs_handle_hex32, uint32_t, "ff", 0xff);
+	CHECK_GOOD(rte_kvargs_handle_hex32, uint32_t, "FF", 0xff);
+	/* "10" is sixteen here, not ten. */
+	CHECK_GOOD(rte_kvargs_handle_hex32, uint32_t, "10", 0x10);
+	CHECK_GOOD(rte_kvargs_handle_hex32, uint32_t, "0", 0);
+	CHECK_GOOD(rte_kvargs_handle_hex32, uint32_t, "00110F10", 0x00110f10);
+	CHECK_GOOD(rte_kvargs_handle_hex32, uint32_t, "ffffffff", 0xffffffff);
+	CHECK_BAD(rte_kvargs_handle_hex32, uint32_t, "100000000");
+	CHECK_BAD(rte_kvargs_handle_hex32, uint32_t, "");
+	CHECK_BAD(rte_kvargs_handle_hex32, uint32_t, "-1");
+	CHECK_BAD(rte_kvargs_handle_hex32, uint32_t, "0x");
+	CHECK_BAD(rte_kvargs_handle_hex32, uint32_t, "0x0x10");
+	CHECK_BAD(rte_kvargs_handle_hex32, uint32_t, "1g");
+	CHECK_BAD(rte_kvargs_handle_hex32, uint32_t, "0x1p");
+
+	CHECK_GOOD(rte_kvargs_handle_hex64, uint64_t, "0xF", 0xf);
+	CHECK_GOOD(rte_kvargs_handle_hex64, uint64_t, "F", 0xf);
+	CHECK_GOOD(rte_kvargs_handle_hex64, uint64_t, "ffffffffffffffff",
+		   UINT64_MAX);
+	CHECK_BAD(rte_kvargs_handle_hex64, uint64_t, "10000000000000000");
+	CHECK_BAD(rte_kvargs_handle_hex64, uint64_t, "-1");
+
+	/* The underlying conversion, with a mask narrower than the type. */
+	TEST_ASSERT_SUCCESS(rte_kvargs_to_hex("fff", 0xfff, &u), "fff in 0..fff");
+	TEST_ASSERT_EQUAL(u, 0xfffU, "wrong value");
+	TEST_ASSERT_EQUAL(rte_kvargs_to_hex("1000", 0xfff, &u), -ERANGE,
+			  "1000 should be out of 0..fff");
+	TEST_ASSERT_EQUAL(u, 0xfffU, "target clobbered on range error");
+	TEST_ASSERT_EQUAL(rte_kvargs_to_hex(NULL, 0xfff, &u), -EINVAL,
+			  "NULL should be rejected");
+	TEST_ASSERT_EQUAL(rte_kvargs_to_hex("f", 0xfff, NULL), -EINVAL,
+			  "a NULL result should be rejected");
+
+	return TEST_SUCCESS;
+}
+
+static int
 test_handle_bool(void)
 {
 	static const char * const yes[] = {
@@ -603,6 +647,7 @@ static struct unit_test_suite kvargs_test_suite  = {
 		TEST_CASE(test_invalid_kvargs),
 		TEST_CASE(test_handle_unsigned),
 		TEST_CASE(test_handle_signed),
+		TEST_CASE(test_handle_hex),
 		TEST_CASE(test_handle_bool),
 		TEST_CASE(test_handle_socket_id),
 		TEST_CASE(test_kvargs_to_range),

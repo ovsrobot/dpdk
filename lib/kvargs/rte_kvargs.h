@@ -334,6 +334,24 @@ int rte_kvargs_handle_size(const char *key, const char *value, void *opaque);
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
+ * Convert a bit mask to uint32_t.
+ *
+ * As rte_kvargs_handle_u32(), except that the value is always read as
+ * hexadecimal, with or without a ``0x`` prefix, so ``10`` is sixteen. This
+ * is for arguments documented as a bare hexadecimal mask; use
+ * rte_kvargs_handle_u32() for a count or a size.
+ */
+__rte_experimental
+int rte_kvargs_handle_hex32(const char *key, const char *value, void *opaque);
+
+/** Convert a hexadecimal value to uint64_t. See rte_kvargs_handle_hex32(). */
+__rte_experimental
+int rte_kvargs_handle_hex64(const char *key, const char *value, void *opaque);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
  * Convert a key/value pair to a boolean.
  *
  * Accepts, case insensitively, ``1``, ``y``, ``yes``, ``on`` and ``true``
@@ -442,6 +460,32 @@ int rte_kvargs_to_uint(const char *value, uint64_t min, uint64_t max,
 __rte_experimental
 int rte_kvargs_to_int(const char *value, int64_t min, int64_t max,
 	int64_t *result);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Convert a hexadecimal string to an unsigned integer, checking it against
+ * a maximum.
+ *
+ * This is the conversion underlying rte_kvargs_handle_hex32(), and is the
+ * hexadecimal counterpart of rte_kvargs_to_uint(). The minimum is always
+ * zero, since a negative value is rejected rather than wrapped around.
+ *
+ * @param value
+ *   The string to convert. Must be non-NULL and non-empty.
+ * @param max
+ *   Largest acceptable value, inclusive.
+ * @param result
+ *   Where to store the converted value. Left unmodified on error.
+ *
+ * @return
+ *   - 0 on success.
+ *   - -EINVAL if the value is missing or malformed, or if @p result is NULL.
+ *   - -ERANGE if the value is greater than @p max.
+ */
+__rte_experimental
+int rte_kvargs_to_hex(const char *value, uint64_t max, uint64_t *result);
 
 #ifdef __cplusplus
 }
