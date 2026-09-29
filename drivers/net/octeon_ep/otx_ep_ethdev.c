@@ -30,20 +30,10 @@ static const struct rte_eth_desc_lim otx_ep_tx_desc_lim = {
 };
 
 static int
-parse_flag(const char *key, const char *value, void *extra_args)
-{
-	RTE_SET_USED(key);
-
-	*(uint8_t *)extra_args = atoi(value);
-
-	return 0;
-}
-
-static int
 otx_ethdev_parse_devargs(struct rte_devargs *devargs, struct otx_ep_device *otx_epvf)
 {
 	struct rte_kvargs *kvlist;
-	uint8_t ism_enable = 0;
+	bool ism_enable = false;
 
 	if (devargs == NULL)
 		goto null_devargs;
@@ -52,11 +42,11 @@ otx_ethdev_parse_devargs(struct rte_devargs *devargs, struct otx_ep_device *otx_
 	if (kvlist == NULL)
 		goto exit;
 
-	rte_kvargs_process(kvlist, OTX_ISM_ENABLE, &parse_flag, &ism_enable);
+	rte_kvargs_process_opt(kvlist, OTX_ISM_ENABLE, rte_kvargs_handle_bool, &ism_enable);
 	rte_kvargs_free(kvlist);
 
 null_devargs:
-	otx_epvf->ism_ena = !!ism_enable;
+	otx_epvf->ism_ena = ism_enable;
 
 	return 0;
 
