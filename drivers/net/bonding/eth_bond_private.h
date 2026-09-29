@@ -299,10 +299,6 @@ bond_ethdev_parse_member_agg_mode_kvarg(const char *key __rte_unused,
 		const char *value, void *extra_args);
 
 int
-bond_ethdev_parse_socket_id_kvarg(const char *key,
-		const char *value, void *extra_args);
-
-int
 bond_ethdev_parse_primary_member_port_id_kvarg(const char *key,
 		const char *value, void *extra_args);
 
@@ -312,10 +308,6 @@ bond_ethdev_parse_balance_xmit_policy_kvarg(const char *key,
 
 int
 bond_ethdev_parse_bond_mac_addr_kvarg(const char *key,
-		const char *value, void *extra_args);
-
-int
-bond_ethdev_parse_time_ms_kvarg(const char *key,
 		const char *value, void *extra_args);
 
 void
