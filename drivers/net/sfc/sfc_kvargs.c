@@ -108,25 +108,6 @@ sfc_kvarg_bool_handler(__rte_unused const char *key,
 }
 
 int
-sfc_kvarg_long_handler(__rte_unused const char *key,
-		       const char *value_str, void *opaque)
-{
-	long value;
-	char *endptr;
-
-	if (!opaque)
-		return -EINVAL;
-
-	value = strtol(value_str, &endptr, 0);
-	if (endptr == value_str)
-		return -EINVAL;
-
-	*(long *)opaque = value;
-
-	return 0;
-}
-
-int
 sfc_kvarg_string_handler(__rte_unused const char *key,
 			 const char *value_str, void *opaque)
 {

@@ -88,8 +88,6 @@ int sfc_kvargs_process_opt(struct sfc_adapter *sa, const char *key_match,
 
 int sfc_kvarg_bool_handler(const char *key, const char *value_str,
 			   void *opaque);
-int sfc_kvarg_long_handler(const char *key, const char *value_str,
-			   void *opaque);
 int sfc_kvarg_string_handler(const char *key, const char *value_str,
 			     void *opaque);
 

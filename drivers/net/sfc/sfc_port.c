@@ -488,7 +488,7 @@ sfc_port_attach(struct sfc_adapter *sa)
 	kvarg_stats_update_period_ms = SFC_MAC_STATS_UPDATE_PERIOD_MS_DEF;
 
 	rc = sfc_kvargs_process(sa, SFC_KVARG_STATS_UPDATE_PERIOD_MS,
-				sfc_kvarg_long_handler,
+				rte_kvargs_handle_long,
 				&kvarg_stats_update_period_ms);
 	if ((rc == 0) &&
 	    ((kvarg_stats_update_period_ms < 0) ||
