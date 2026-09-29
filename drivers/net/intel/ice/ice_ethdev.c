@@ -8,6 +8,7 @@
 
 #include <ctype.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -15,6 +16,7 @@
 #include <math.h>
 
 #include <rte_tailq.h>
+#include <rte_kvargs.h>
 #include <rte_os_shim.h>
 
 #include "eal_firmware.h"
@@ -738,18 +740,20 @@ handle_proto_xtr_arg(__rte_unused const char *key, const char *value,
 }
 
 static int
-handle_field_offs_arg(__rte_unused const char *key, const char *value,
-				void *offs_args)
+handle_field_offs_arg(const char *key, const char *value, void *offs_args)
 {
-	uint8_t *offset = offs_args;
+	int64_t offset;
 
-	if (value == NULL || offs_args == NULL)
+	if (offs_args == NULL)
 		return -EINVAL;
 
-	if (!isdigit(*value))
-		return -1;
+	/* A negative offset is reserved: -1 means no field is configured. */
+	if (rte_kvargs_to_int(value, 0, INT_MAX, &offset) < 0) {
+		PMD_DRV_LOG(ERR, "Invalid %s, must be a positive offset", key);
+		return -EINVAL;
+	}
 
-	*offset = atoi(value);
+	*(int *)offs_args = offset;
 
 	return 0;
 }
@@ -1089,7 +1093,7 @@ ice_init_mac_address(struct rte_eth_dev *dev)
 		return -ENOMEM;
 	}
 	/* store it to dev data */
-	if (ad->devargs.default_mac_disable != 1)
+	if (!ad->devargs.default_mac_disable)
 		rte_ether_addr_copy((struct rte_ether_addr *)hw->port_info[0].mac.perm_addr,
 			&dev->data->mac_addrs[0]);
 	return 0;
@@ -1119,7 +1123,7 @@ ice_add_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 	struct ice_adapter *ad = (struct ice_adapter *)hw->back;
 	int ret = 0;
 
-	if (ad->devargs.default_mac_disable == 1 && rte_is_same_ether_addr(mac_addr,
+	if (ad->devargs.default_mac_disable && rte_is_same_ether_addr(mac_addr,
 			(struct rte_ether_addr *)hw->port_info[0].mac.perm_addr)) {
 		PMD_DRV_LOG(ERR, "This Default MAC filter is disabled.");
 		return 0;
@@ -1769,7 +1773,7 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 		 */
 		vsi_ctx.info.sw_id = hw->port_info->sw_id;
 		/* Source Prune */
-		if (ad->devargs.source_prune != 1) {
+		if (!ad->devargs.source_prune) {
 			/* Disable source prune to support VRRP
 			 * when source-prune devarg is not set
 			 */
@@ -2141,25 +2145,6 @@ ice_base_queue_get(struct ice_pf *pf)
 }
 
 static int
-parse_bool(const char *key, const char *value, void *args)
-{
-	int *i = args;
-
-	if (value == NULL || value[0] == '\0') {
-		PMD_DRV_LOG(WARNING, "key:\"%s\", requires a value, which must be 0 or 1", key);
-		return -1;
-	}
-	if (value[1] != '\0' || (value[0] != '0' && value[0] != '1')) {
-		PMD_DRV_LOG(WARNING, "invalid value:\"%s\" for key:\"%s\", value must be 0 or 1",
-			value, key);
-		return -1;
-	}
-
-	*i = (value[0] == '1');
-	return 0;
-}
-
-static int
 parse_u64(const char *key, const char *value, void *args)
 {
 	u64 *num = (u64 *)args;
@@ -2179,44 +2164,18 @@ parse_u64(const char *key, const char *value, void *args)
 }
 
 static int
-parse_u32(const char *key, const char *value, void *args)
-{
-	uint32_t *num = args;
-	unsigned long tmp;
-	char *endptr;
-
-	errno = 0;
-	tmp = strtoul(value, &endptr, 0);
-	if (errno != 0 || endptr == value || *endptr != '\0') {
-		PMD_DRV_LOG(WARNING, "%s: \"%s\" is not a valid u32", key, value);
-		return -1;
-	}
-	if (tmp > UINT32_MAX) {
-		PMD_DRV_LOG(WARNING, "%s: value \"%s\" is out of range", key, value);
-		return -1;
-	}
-
-	*num = (uint32_t)tmp;
-
-	return 0;
-}
-
-static int
 parse_tx_sched_levels(const char *key, const char *value, void *args)
 {
 	uint8_t *num = args;
-	long tmp;
-	char *endptr;
+	uint64_t tmp;
 
-	errno = 0;
-	tmp = strtol(value, &endptr, 0);
 	/* the value needs two stage validation, since the actual number of available
 	 * levels is not known at this point. Initially just validate that it is in
 	 * the correct range, between 3 and 8. Later validation will check that the
 	 * available layers on a particular port is higher than the value specified here.
 	 */
-	if (errno || *endptr != '\0' ||
-			tmp < (ICE_VSI_LAYER_OFFSET - 1) || tmp >= ICE_TM_MAX_LAYERS) {
+	if (rte_kvargs_to_uint(value, ICE_VSI_LAYER_OFFSET - 1,
+			       ICE_TM_MAX_LAYERS - 1, &tmp) < 0) {
 		PMD_DRV_LOG(WARNING, "%s: Invalid value \"%s\", should be in range [%d, %d]",
 			    key, value, ICE_VSI_LAYER_OFFSET - 1, ICE_TM_MAX_LAYERS - 1);
 		return -1;
@@ -2457,13 +2416,13 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 	if (ret)
 		goto bail;
 
-	ret = rte_kvargs_process(kvlist, ICE_SAFE_MODE_SUPPORT_ARG,
-				 &parse_bool, &ad->devargs.safe_mode_support);
+	ret = rte_kvargs_process_opt(kvlist, ICE_SAFE_MODE_SUPPORT_ARG,
+				 rte_kvargs_handle_bool, &ad->devargs.safe_mode_support);
 	if (ret)
 		goto bail;
 
-	ret = rte_kvargs_process(kvlist, ICE_DEFAULT_MAC_DISABLE,
-				&parse_bool, &ad->devargs.default_mac_disable);
+	ret = rte_kvargs_process_opt(kvlist, ICE_DEFAULT_MAC_DISABLE,
+				rte_kvargs_handle_bool, &ad->devargs.default_mac_disable);
 	if (ret)
 		goto bail;
 
@@ -2482,8 +2441,8 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 	if (ret)
 		goto bail;
 
-	ret = rte_kvargs_process(kvlist, ICE_RX_LOW_LATENCY_ARG,
-				 &parse_bool, &ad->devargs.rx_low_latency);
+	ret = rte_kvargs_process_opt(kvlist, ICE_RX_LOW_LATENCY_ARG,
+				 rte_kvargs_handle_bool, &ad->devargs.rx_low_latency);
 	if (ret)
 		goto bail;
 
@@ -2492,8 +2451,8 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 	if (ret)
 		goto bail;
 
-	ret = rte_kvargs_process(kvlist, ICE_DDP_LOAD_SCHED_ARG,
-				 &parse_bool, &ad->devargs.ddp_load_sched);
+	ret = rte_kvargs_process_opt(kvlist, ICE_DDP_LOAD_SCHED_ARG,
+				 rte_kvargs_handle_bool, &ad->devargs.ddp_load_sched);
 	if (ret)
 		goto bail;
 
@@ -2503,12 +2462,12 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 		goto bail;
 
 	ret = rte_kvargs_process(kvlist, ICE_RL_BURST_SIZE_ARG,
-				 &parse_u32, &ad->devargs.rl_burst_size);
+				 rte_kvargs_handle_u32, &ad->devargs.rl_burst_size);
 	if (ret)
 		goto bail;
 
-	ret = rte_kvargs_process(kvlist, ICE_SOURCE_PRUNE_ARG,
-				 &parse_bool, &ad->devargs.source_prune);
+	ret = rte_kvargs_process_opt(kvlist, ICE_SOURCE_PRUNE_ARG,
+				 rte_kvargs_handle_bool, &ad->devargs.source_prune);
 	if (ret)
 		goto bail;
 
@@ -2762,7 +2721,7 @@ ice_dev_init(struct rte_eth_dev *dev)
 	}
 
 	if (ret) {
-		if (ad->devargs.safe_mode_support == 0) {
+		if (!ad->devargs.safe_mode_support) {
 			PMD_INIT_LOG(ERR, "Failed to load the DDP package,"
 					"Use safe-mode-support=1 to enter Safe Mode");
 			goto err_init_fw;
@@ -4313,7 +4272,8 @@ __vsi_queues_bind_intr(struct ice_vsi *vsi, uint16_t msix_vect,
 {
 	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
 	uint32_t val, val_tx;
-	int rx_low_latency, i;
+	bool rx_low_latency;
+	int i;
 
 	rx_low_latency = vsi->adapter->devargs.rx_low_latency;
 	for (i = 0; i < nb_queue; i++) {
