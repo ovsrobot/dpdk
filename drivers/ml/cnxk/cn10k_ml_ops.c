@@ -377,7 +377,7 @@ cn10k_ml_dev_configure(struct cnxk_ml_dev *cnxk_mldev, const struct rte_ml_dev_c
 	rte_spinlock_init(&ocm->lock);
 
 	/* Set JCMDQ enqueue function */
-	if (cn10k_mldev->hw_queue_lock == 1)
+	if (cn10k_mldev->hw_queue_lock)
 		cn10k_mldev->ml_jcmdq_enqueue = roc_ml_jcmdq_enqueue_sl;
 	else
 		cn10k_mldev->ml_jcmdq_enqueue = roc_ml_jcmdq_enqueue_lf;
