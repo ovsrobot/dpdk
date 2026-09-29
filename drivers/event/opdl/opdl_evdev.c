@@ -3,6 +3,7 @@
  */
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -581,38 +582,6 @@ opdl_close(struct rte_eventdev *dev)
 }
 
 static int
-assign_numa_node(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *socket_id = opaque;
-	*socket_id = atoi(value);
-	if (*socket_id >= RTE_MAX_NUMA_NODES)
-		return -1;
-	return 0;
-}
-
-static int
-set_do_validation(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *do_val = opaque;
-	*do_val = atoi(value);
-	if (*do_val != 0)
-		*do_val = 1;
-
-	return 0;
-}
-static int
-set_do_test(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *do_test = opaque;
-
-	*do_test = atoi(value);
-
-	if (*do_test != 0)
-		*do_test = 1;
-	return 0;
-}
-
-static int
 opdl_probe(struct rte_vdev_device *vdev)
 {
 	static struct eventdev_ops evdev_opdl_ops = {
@@ -650,8 +619,8 @@ opdl_probe(struct rte_vdev_device *vdev)
 	struct rte_eventdev *dev;
 	struct opdl_evdev *opdl;
 	int socket_id = rte_socket_id();
-	int do_validation = 0;
-	int do_test = 0;
+	bool do_validation = false;
+	bool do_test = false;
 	int str_len;
 	int test_result = 0;
 
@@ -666,7 +635,7 @@ opdl_probe(struct rte_vdev_device *vdev)
 					name);
 		} else {
 			int ret = rte_kvargs_process(kvlist, NUMA_NODE_ARG,
-					assign_numa_node, &socket_id);
+					rte_kvargs_handle_socket_id, &socket_id);
 			if (ret != 0) {
 				PMD_DRV_LOG(ERR,
 						"%s: Error parsing numa node parameter",
@@ -676,8 +645,8 @@ opdl_probe(struct rte_vdev_device *vdev)
 				return ret;
 			}
 
-			ret = rte_kvargs_process(kvlist, DO_VALIDATION_ARG,
-					set_do_validation, &do_validation);
+			ret = rte_kvargs_process_opt(kvlist, DO_VALIDATION_ARG,
+					rte_kvargs_handle_bool, &do_validation);
 			if (ret != 0) {
 				PMD_DRV_LOG(ERR,
 					"%s: Error parsing do validation parameter",
@@ -686,8 +655,8 @@ opdl_probe(struct rte_vdev_device *vdev)
 				return ret;
 			}
 
-			ret = rte_kvargs_process(kvlist, DO_TEST_ARG,
-					set_do_test, &do_test);
+			ret = rte_kvargs_process_opt(kvlist, DO_TEST_ARG,
+					rte_kvargs_handle_bool, &do_test);
 			if (ret != 0) {
 				PMD_DRV_LOG(ERR,
 					"%s: Error parsing do test parameter",
@@ -734,7 +703,7 @@ opdl_probe(struct rte_vdev_device *vdev)
 	str_len = strlen(name);
 	memcpy(opdl->service_name, name, str_len);
 
-	if (do_test == 1)
+	if (do_test)
 		test_result =  opdl_selftest();
 
 done:
