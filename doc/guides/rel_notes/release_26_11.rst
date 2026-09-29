@@ -164,6 +164,24 @@ New Features
   ``rte_kvargs_to_hex`` for the cases where a driver needs a narrower range
   than the target type allows.
 
+  52 drivers were converted to use these helpers. A device argument which
+  is malformed or out of range is now reported and rejected, where before
+  it was commonly truncated, wrapped around, or taken as zero.
+
+  The device arguments which are booleans were converted along with them.
+  Those now take any of the spellings above rather than only ``0`` and
+  ``1``, and ``key`` on its own means true. A value which is not a
+  boolean is rejected, where several drivers previously read it as false.
+  That includes an empty ``key=``, which ``net/pcap`` used to take as
+  true for ``infinite_rx``.
+
+  Two of these change what an existing argument means. ``event/dlb2``
+  only looked for a leading ``y`` in ``vector_opts_enable``,
+  ``default_ldb_port_allocation`` and ``enable_cq_weight``, so ``=1``
+  used to mean false and now means true. ``net/virtio`` compared
+  ``vectorized`` against ``"1"``, so ``vectorized=y`` used to mean false
+  and now means true.
+
 
 Removed Items
 -------------
