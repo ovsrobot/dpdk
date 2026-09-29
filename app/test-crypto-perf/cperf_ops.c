@@ -219,7 +219,26 @@ cperf_set_ops_asym_mlkem(struct rte_crypto_op **ops,
 		uint32_t *imix_idx __rte_unused,
 		uint64_t *tsc_start __rte_unused)
 {
+	/* Intermediate writable buffers for static const test vectors */
+	static uint8_t ek_buf[1568];     /* ML-KEM-1024 ek max */
+	static uint8_t dk_buf[3168];     /* ML-KEM-1024 dk max */
+	static uint8_t msg_buf[32];      /* ML-KEM message (32 bytes) */
+	static uint8_t cipher_buf[1568]; /* ML-KEM-1024 cipher max */
+	static uint8_t sk_buf[32];       /* shared key (32 bytes) */
 	uint16_t i;
+
+	if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT) {
+		memcpy(ek_buf, options->mlkem_data->ek.data,
+		       options->mlkem_data->ek.length);
+		if (options->mlkem_data->message.length)
+			memcpy(msg_buf, options->mlkem_data->message.data,
+			       options->mlkem_data->message.length);
+	} else {
+		memcpy(dk_buf, options->mlkem_data->dk.data,
+		       options->mlkem_data->dk.length);
+		memcpy(cipher_buf, options->mlkem_data->cipher.data,
+		       options->mlkem_data->cipher.length);
+	}
 
 	for (i = 0; i < nb_ops; i++) {
 		struct rte_crypto_asym_op *asym_op = ops[i]->asym;
@@ -229,24 +248,25 @@ cperf_set_ops_asym_mlkem(struct rte_crypto_op **ops,
 
 		if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT) {
 			asym_op->mlkem.op = RTE_CRYPTO_ML_KEM_OP_ENCAP;
-			asym_op->mlkem.encap.ek.data = options->mlkem_data->ek.data;
+			asym_op->mlkem.encap.ek.data = ek_buf;
 			asym_op->mlkem.encap.ek.length = options->mlkem_data->ek.length;
-			asym_op->mlkem.encap.cipher.data = options->mlkem_data->cipher.data;
+			asym_op->mlkem.encap.cipher.data = cipher_buf;
 			asym_op->mlkem.encap.cipher.length = options->mlkem_data->cipher.length;
-			asym_op->mlkem.encap.sk.data = options->mlkem_data->sk.data;
+			asym_op->mlkem.encap.sk.data = sk_buf;
 			asym_op->mlkem.encap.sk.length = options->mlkem_data->sk.length;
-			asym_op->mlkem.encap.message.data = options->mlkem_data->message.data;
+			asym_op->mlkem.encap.message.data = msg_buf;
 			asym_op->mlkem.encap.message.length = options->mlkem_data->message.length;
 		} else if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_DECRYPT) {
 			asym_op->mlkem.op = RTE_CRYPTO_ML_KEM_OP_DECAP;
-			asym_op->mlkem.decap.dk.data = options->mlkem_data->dk.data;
+			asym_op->mlkem.decap.dk.data = dk_buf;
 			asym_op->mlkem.decap.dk.length = options->mlkem_data->dk.length;
-			asym_op->mlkem.decap.cipher.data = options->mlkem_data->cipher.data;
+			asym_op->mlkem.decap.cipher.data = cipher_buf;
 			asym_op->mlkem.decap.cipher.length = options->mlkem_data->cipher.length;
-			asym_op->mlkem.decap.sk.data = options->mlkem_data->sk.data;
+			asym_op->mlkem.decap.sk.data = sk_buf;
 			asym_op->mlkem.decap.sk.length = options->mlkem_data->sk.length;
 		} else {
-			rte_panic("Unsupported ML-KEM operation type %d\n", options->asym_op_type);
+			rte_panic("Unsupported ML-KEM operation type %d\n",
+				  options->asym_op_type);
 		}
 	}
 }
@@ -262,7 +282,47 @@ cperf_set_ops_asym_mldsa(struct rte_crypto_op **ops,
 		uint32_t *imix_idx __rte_unused,
 		uint64_t *tsc_start __rte_unused)
 {
+	/* Intermediate writable buffers for static const test vectors */
+	static uint8_t privkey_buf[4896]; /* ML-DSA-87 privkey max */
+	static uint8_t pubkey_buf[2592];  /* ML-DSA-87 pubkey max */
+	static uint8_t msg_buf[256];      /* message */
+	static uint8_t sign_buf[4627];    /* ML-DSA-87 sign max */
+	static uint8_t ctx_buf[256];      /* context */
+	static uint8_t seed_buf[32];      /* seed */
+	static uint8_t mu_buf[64];        /* mu */
 	uint16_t i;
+
+	if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_SIGN) {
+		memcpy(privkey_buf, options->mldsa_data->privkey.data,
+		       options->mldsa_data->privkey.length);
+		if (options->mldsa_data->message.length)
+			memcpy(msg_buf, options->mldsa_data->message.data,
+			       options->mldsa_data->message.length);
+		if (options->mldsa_data->ctx.length)
+			memcpy(ctx_buf, options->mldsa_data->ctx.data,
+			       options->mldsa_data->ctx.length);
+		if (options->mldsa_data->seed.length)
+			memcpy(seed_buf, options->mldsa_data->seed.data,
+			       options->mldsa_data->seed.length);
+		if (options->mldsa_data->mu.length)
+			memcpy(mu_buf, options->mldsa_data->mu.data,
+			       options->mldsa_data->mu.length);
+	} else {
+		memcpy(pubkey_buf, options->mldsa_data->pubkey.data,
+		       options->mldsa_data->pubkey.length);
+		if (options->mldsa_data->message.length)
+			memcpy(msg_buf, options->mldsa_data->message.data,
+			       options->mldsa_data->message.length);
+		if (options->mldsa_data->sign.length)
+			memcpy(sign_buf, options->mldsa_data->sign.data,
+			       options->mldsa_data->sign.length);
+		if (options->mldsa_data->ctx.length)
+			memcpy(ctx_buf, options->mldsa_data->ctx.data,
+			       options->mldsa_data->ctx.length);
+		if (options->mldsa_data->mu.length)
+			memcpy(mu_buf, options->mldsa_data->mu.data,
+			       options->mldsa_data->mu.length);
+	}
 
 	for (i = 0; i < nb_ops; i++) {
 		struct rte_crypto_asym_op *asym_op = ops[i]->asym;
@@ -272,34 +332,35 @@ cperf_set_ops_asym_mldsa(struct rte_crypto_op **ops,
 
 		if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_SIGN) {
 			asym_op->mldsa.op = RTE_CRYPTO_ML_DSA_OP_SIGN;
-			asym_op->mldsa.siggen.privkey.data = options->mldsa_data->privkey.data;
+			asym_op->mldsa.siggen.privkey.data = privkey_buf;
 			asym_op->mldsa.siggen.privkey.length = options->mldsa_data->privkey.length;
-			asym_op->mldsa.siggen.message.data = options->mldsa_data->message.data;
+			asym_op->mldsa.siggen.message.data = msg_buf;
 			asym_op->mldsa.siggen.message.length = options->mldsa_data->message.length;
-			asym_op->mldsa.siggen.sign.data = options->mldsa_data->sign.data;
+			asym_op->mldsa.siggen.sign.data = sign_buf;
 			asym_op->mldsa.siggen.sign.length = options->mldsa_data->sign.length;
-			asym_op->mldsa.siggen.ctx.data = options->mldsa_data->ctx.data;
+			asym_op->mldsa.siggen.ctx.data = ctx_buf;
 			asym_op->mldsa.siggen.ctx.length = options->mldsa_data->ctx.length;
-			asym_op->mldsa.siggen.seed.data = options->mldsa_data->seed.data;
+			asym_op->mldsa.siggen.seed.data = seed_buf;
 			asym_op->mldsa.siggen.seed.length = options->mldsa_data->seed.length;
-			asym_op->mldsa.siggen.mu.data = options->mldsa_data->mu.data;
+			asym_op->mldsa.siggen.mu.data = mu_buf;
 			asym_op->mldsa.siggen.mu.length = options->mldsa_data->mu.length;
 			asym_op->mldsa.siggen.hash = options->mldsa_data->hash;
 		} else if (options->asym_op_type == RTE_CRYPTO_ASYM_OP_VERIFY) {
 			asym_op->mldsa.op = RTE_CRYPTO_ML_DSA_OP_VERIFY;
-			asym_op->mldsa.sigver.pubkey.data = options->mldsa_data->pubkey.data;
+			asym_op->mldsa.sigver.pubkey.data = pubkey_buf;
 			asym_op->mldsa.sigver.pubkey.length = options->mldsa_data->pubkey.length;
-			asym_op->mldsa.sigver.message.data = options->mldsa_data->message.data;
+			asym_op->mldsa.sigver.message.data = msg_buf;
 			asym_op->mldsa.sigver.message.length = options->mldsa_data->message.length;
-			asym_op->mldsa.sigver.sign.data = options->mldsa_data->sign.data;
+			asym_op->mldsa.sigver.sign.data = sign_buf;
 			asym_op->mldsa.sigver.sign.length = options->mldsa_data->sign.length;
-			asym_op->mldsa.sigver.ctx.data = options->mldsa_data->ctx.data;
+			asym_op->mldsa.sigver.ctx.data = ctx_buf;
 			asym_op->mldsa.sigver.ctx.length = options->mldsa_data->ctx.length;
-			asym_op->mldsa.sigver.mu.data = options->mldsa_data->mu.data;
+			asym_op->mldsa.sigver.mu.data = mu_buf;
 			asym_op->mldsa.sigver.mu.length = options->mldsa_data->mu.length;
 			asym_op->mldsa.sigver.hash = options->mldsa_data->hash;
 		} else {
-			rte_panic("Unsupported ML-DSA operation type %d\n", options->asym_op_type);
+			rte_panic("Unsupported ML-DSA operation type %d\n",
+				  options->asym_op_type);
 		}
 	}
 }
