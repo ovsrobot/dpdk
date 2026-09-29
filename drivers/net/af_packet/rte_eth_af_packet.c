@@ -15,7 +15,6 @@
 #include <rte_kvargs.h>
 #include <bus_vdev_driver.h>
 
-#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 #include <linux/if_ether.h>
@@ -1156,36 +1155,17 @@ free_internals:
 /* Parse an unsigned integer device argument. */
 static int
 parse_uint(const char *key, const char *value,
-	   unsigned int *out, unsigned long limit)
+	   unsigned int *out, unsigned long min, unsigned long max)
 {
-	unsigned long val;
-	char *endptr;
+	uint64_t val;
 
-	if (value == NULL) {
-		PMD_LOG(ERR, "no value for argument \"%s\"", key);
-		return -1;
-	}
-
-	/* Skip leading whitespace so a leading sign can be detected. */
-	while (isspace((unsigned char)*value))
-		value++;
-
-	/* strtoul() silently accepts and negates a leading '-'. */
-	if (*value == '\0' || *value == '-') {
+	if (rte_kvargs_to_uint(value, min, max, &val) < 0) {
 		PMD_LOG(ERR, "invalid value \"%s\" for argument \"%s\"",
-			value, key);
+			value == NULL ? "" : value, key);
 		return -1;
 	}
 
-	errno = 0;
-	val = strtoul(value, &endptr, 10);
-	if (errno != 0 || *endptr != '\0' || val > limit) {
-		PMD_LOG(ERR, "invalid value \"%s\" for argument \"%s\"",
-			value, key);
-		return -1;
-	}
-
-	*out = (unsigned int)val;
+	*out = val;
 	return 0;
 }
 
@@ -1204,7 +1184,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	unsigned int framesize = DFLT_FRAME_SIZE;
 	unsigned int framecount = DFLT_FRAME_COUNT;
 	unsigned int qpairs = 1;
-	unsigned int qdisc_bypass = 1;
+	bool qdisc_bypass = true;
 	const char *fanout_mode = NULL;
 
 	/* do some parameter checking */
@@ -1219,52 +1199,32 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	for (k_idx = 0; k_idx < kvlist->count; k_idx++) {
 		pair = &kvlist->pairs[k_idx];
 		if (strstr(pair->key, ETH_AF_PACKET_NUM_Q_ARG) != NULL) {
-			if (parse_uint(pair->key, pair->value,
-				       &qpairs, RTE_MAX_QUEUES_PER_PORT) < 0)
+			if (parse_uint(pair->key, pair->value, &qpairs,
+				       1, RTE_MAX_QUEUES_PER_PORT) < 0)
 				return -1;
-			if (qpairs < 1) {
-				PMD_LOG(ERR,
-					"%s: invalid qpairs value",
-					name);
-				return -1;
-			}
 			continue;
 		}
 		if (strstr(pair->key, ETH_AF_PACKET_BLOCKSIZE_ARG) != NULL) {
-			if (parse_uint(pair->key, pair->value, &blocksize, UINT_MAX) < 0)
+			if (parse_uint(pair->key, pair->value, &blocksize,
+				       1, UINT_MAX) < 0)
 				return -1;
-			if (!blocksize) {
-				PMD_LOG(ERR,
-					"%s: invalid blocksize value",
-					name);
-				return -1;
-			}
 			continue;
 		}
 		if (strstr(pair->key, ETH_AF_PACKET_FRAMESIZE_ARG) != NULL) {
-			if (parse_uint(pair->key, pair->value, &framesize, UINT_MAX) < 0)
+			if (parse_uint(pair->key, pair->value, &framesize,
+				       1, UINT_MAX) < 0)
 				return -1;
-			if (!framesize) {
-				PMD_LOG(ERR,
-					"%s: invalid framesize value",
-					name);
-				return -1;
-			}
 			continue;
 		}
 		if (strstr(pair->key, ETH_AF_PACKET_FRAMECOUNT_ARG) != NULL) {
-			if (parse_uint(pair->key, pair->value, &framecount, UINT_MAX) < 0)
+			if (parse_uint(pair->key, pair->value, &framecount,
+				       1, UINT_MAX) < 0)
 				return -1;
-			if (!framecount) {
-				PMD_LOG(ERR,
-					"%s: invalid framecount value",
-					name);
-				return -1;
-			}
 			continue;
 		}
 		if (strstr(pair->key, ETH_AF_PACKET_QDISC_BYPASS_ARG) != NULL) {
-			if (parse_uint(pair->key, pair->value, &qdisc_bypass, 1) < 0)
+			if (rte_kvargs_handle_bool(pair->key, pair->value,
+						   &qdisc_bypass) < 0)
 				return -1;
 			continue;
 		}
