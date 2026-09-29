@@ -638,19 +638,24 @@ skeldma_destroy(const char *name)
 }
 
 static int
-skeldma_parse_lcore(const char *key __rte_unused,
+skeldma_parse_lcore(const char *key,
 		    const char *value,
 		    void *opaque)
 {
-	int lcore_id;
+	int64_t lcore_id;
+	int ret;
 
-	if (value == NULL || opaque == NULL)
+	if (opaque == NULL)
 		return -EINVAL;
 
-	lcore_id = atoi(value);
-	if (lcore_id >= 0 && lcore_id < RTE_MAX_LCORE)
-		*(int *)opaque = lcore_id;
+	ret = rte_kvargs_to_int(value, 0, RTE_MAX_LCORE - 1, &lcore_id);
+	if (ret < 0) {
+		SKELDMA_LOG(ERR, "Invalid %s, must be 0..%u", key,
+			    RTE_MAX_LCORE - 1);
+		return ret;
+	}
 
+	*(int *)opaque = lcore_id;
 	return 0;
 }
 
@@ -673,9 +678,9 @@ skeldma_parse_vdev_args(struct rte_vdev_device *vdev, int *lcore_id)
 	if (!kvlist)
 		return;
 
-	(void)rte_kvargs_process(kvlist, SKELDMA_ARG_LCORE,
-				 skeldma_parse_lcore, lcore_id);
-	SKELDMA_LOG(INFO, "Parse lcore_id = %d", *lcore_id);
+	if (rte_kvargs_process(kvlist, SKELDMA_ARG_LCORE,
+			       skeldma_parse_lcore, lcore_id) == 0)
+		SKELDMA_LOG(INFO, "Parse lcore_id = %d", *lcore_id);
 
 	rte_kvargs_free(kvlist);
 }
