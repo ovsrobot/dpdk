@@ -2012,28 +2012,30 @@ enetc4_vf_dev_init(struct rte_eth_dev *eth_dev)
 			/* parse optional VSI-PSI timeout devarg */
 			val = rte_kvargs_get(kvlist, ENETC4_VSI_TIMEOUT);
 			if (val) {
-				errno = 0;
-				hw->vsi_timeout = (uint32_t)strtoul(val, NULL, 0);
-				if (errno != 0 || hw->vsi_timeout == 0) {
-					ENETC_PMD_ERR("Invalid VSI Timeout value = %u",
-							hw->vsi_timeout);
+				uint64_t num;
+
+				if (rte_kvargs_to_uint(val, 1, UINT32_MAX, &num) < 0) {
+					ENETC_PMD_ERR("Invalid VSI Timeout value = %s",
+							val);
 					rte_kvargs_free(kvlist);
 					return -1;
 				}
+				hw->vsi_timeout = num;
 				ENETC_PMD_NOTICE("VSI timeout set to %u", hw->vsi_timeout);
 			}
 
 			/* parse optional VSI-PSI delay devarg */
 			val = rte_kvargs_get(kvlist, ENETC4_VSI_DELAY);
 			if (val) {
-				errno = 0;
-				hw->vsi_delay = (uint32_t)strtoul(val, NULL, 0);
-				if (errno != 0 || hw->vsi_delay == 0) {
-					ENETC_PMD_ERR("Invalid VSI Delay value = %u",
-							hw->vsi_delay);
+				uint64_t num;
+
+				if (rte_kvargs_to_uint(val, 1, UINT32_MAX, &num) < 0) {
+					ENETC_PMD_ERR("Invalid VSI Delay value = %s",
+							val);
 					rte_kvargs_free(kvlist);
 					return -1;
 				}
+				hw->vsi_delay = num;
 				ENETC_PMD_NOTICE("VSI delay set to %u us", hw->vsi_delay);
 			}
 
