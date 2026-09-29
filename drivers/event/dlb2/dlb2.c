@@ -288,24 +288,15 @@ dlb2_hw_query_resources(struct dlb2_eventdev *dlb2)
 	return 0;
 }
 
-#define DLB2_BASE_10 10
-
 static int
 dlb2_string_to_int(int *result, const char *str)
 {
-	long ret;
-	char *endptr;
+	int64_t ret;
 
-	if (str == NULL || result == NULL)
+	if (result == NULL)
 		return -EINVAL;
 
-	errno = 0;
-	ret = strtol(str, &endptr, DLB2_BASE_10);
-	if (errno)
-		return -errno;
-
-	/* long int and int may be different width for some architectures */
-	if (ret < INT_MIN || ret > INT_MAX || endptr == str)
+	if (rte_kvargs_to_int(str, INT_MIN, INT_MAX, &ret) < 0)
 		return -EINVAL;
 
 	*result = ret;
@@ -328,22 +319,6 @@ set_producer_coremask(const char *key __rte_unused,
 
 	return 0;
 }
-
-static int
-set_numa_node(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *socket_id = opaque;
-	int ret;
-
-	ret = dlb2_string_to_int(socket_id, value);
-	if (ret < 0)
-		return ret;
-
-	if (*socket_id > RTE_MAX_NUMA_NODES)
-		return -EINVAL;
-	return 0;
-}
-
 
 static int
 set_max_cq_depth(const char *key __rte_unused,
@@ -663,84 +638,6 @@ set_default_depth_thresh(const char *key __rte_unused,
 	ret = dlb2_string_to_int(default_depth_thresh, value);
 	if (ret < 0)
 		return ret;
-
-	return 0;
-}
-
-static int
-set_vector_opts_enab(const char *key __rte_unused,
-	const char *value,
-	void *opaque)
-{
-	bool *dlb2_vector_opts_enabled = opaque;
-
-	if (value == NULL || opaque == NULL) {
-		DLB2_LOG_ERR("NULL pointer");
-		return -EINVAL;
-	}
-
-	if ((*value == 'y') || (*value == 'Y'))
-		*dlb2_vector_opts_enabled = true;
-	else
-		*dlb2_vector_opts_enabled = false;
-
-	return 0;
-}
-
-static int
-set_default_ldb_port_allocation(const char *key __rte_unused,
-		      const char *value,
-		      void *opaque)
-{
-	bool *default_ldb_port_allocation = opaque;
-
-	if (value == NULL || opaque == NULL) {
-		DLB2_LOG_ERR("NULL pointer");
-		return -EINVAL;
-	}
-
-	if ((*value == 'y') || (*value == 'Y'))
-		*default_ldb_port_allocation = true;
-	else
-		*default_ldb_port_allocation = false;
-
-	return 0;
-}
-
-static int
-set_enable_cq_weight(const char *key __rte_unused,
-		      const char *value,
-		      void *opaque)
-{
-	bool *enable_cq_weight = opaque;
-
-	if (value == NULL || opaque == NULL) {
-		DLB2_LOG_ERR("NULL pointer");
-		return -EINVAL;
-	}
-
-	if ((*value == 'y') || (*value == 'Y'))
-		*enable_cq_weight = true;
-	else
-		*enable_cq_weight = false;
-
-	return 0;
-}
-
-static int set_hl_override(const char *key __rte_unused, const char *value,
-			   void *opaque)
-{
-	bool *default_hl = opaque;
-
-	if (value == NULL || opaque == NULL) {
-		DLB2_LOG_ERR("NULL pointer");
-		return -EINVAL;
-	}
-
-	if ((*value == 'n') || (*value == 'N') || (*value == '0'))
-		*default_hl = false;
-	else
-		*default_hl = true;
 
 	return 0;
 }
@@ -5223,7 +5120,7 @@ dlb2_parse_params(const char *params,
 				      name);
 		} else {
 			int ret = rte_kvargs_process(kvlist, NUMA_NODE_ARG,
-						     set_numa_node,
+						     rte_kvargs_handle_socket_id,
 						     &dlb2_args->socket_id);
 			if (ret != 0) {
 				DLB2_LOG_ERR("%s: Error parsing numa node parameter",
@@ -5335,9 +5232,9 @@ dlb2_parse_params(const char *params,
 				return ret;
 			}
 
-			ret = rte_kvargs_process(kvlist,
+			ret = rte_kvargs_process_opt(kvlist,
 					DLB2_VECTOR_OPTS_ENAB_ARG,
-					set_vector_opts_enab,
+					rte_kvargs_handle_bool,
 					&dlb2_args->vector_opts_enabled);
 			if (ret != 0) {
 				DLB2_LOG_ERR("%s: Error parsing vector opts enabled",
@@ -5403,9 +5300,9 @@ dlb2_parse_params(const char *params,
 				return ret;
 			}
 
-			ret = rte_kvargs_process(kvlist,
+			ret = rte_kvargs_process_opt(kvlist,
 						 DLB2_DEFAULT_LDB_PORT_ALLOCATION_ARG,
-						 set_default_ldb_port_allocation,
+						 rte_kvargs_handle_bool,
 						 &dlb2_args->default_ldb_port_allocation);
 			if (ret != 0) {
 				DLB2_LOG_ERR("%s: Error parsing ldb default port allocation arg",
@@ -5414,9 +5311,9 @@ dlb2_parse_params(const char *params,
 				return ret;
 			}
 
-			ret = rte_kvargs_process(kvlist,
+			ret = rte_kvargs_process_opt(kvlist,
 						 DLB2_ENABLE_CQ_WEIGHT_ARG,
-						 set_enable_cq_weight,
+						 rte_kvargs_handle_bool,
 						 &dlb2_args->enable_cq_weight);
 			if (ret != 0) {
 				DLB2_LOG_ERR("%s: Error parsing enable_cq_weight arg",
@@ -5427,8 +5324,8 @@ dlb2_parse_params(const char *params,
 			if (version == DLB2_HW_V2 && dlb2_args->enable_cq_weight)
 				DLB2_LOG_INFO("Ignoring 'enable_cq_weight=y'. Only supported for 2.5 HW onwards");
 
-			ret = rte_kvargs_process(kvlist, DLB2_USE_DEFAULT_HL,
-						 set_hl_override,
+			ret = rte_kvargs_process_opt(kvlist, DLB2_USE_DEFAULT_HL,
+						 rte_kvargs_handle_bool,
 						 &dlb2_args->use_default_hl);
 			if (ret != 0) {
 				DLB2_LOG_ERR("%s: Error parsing hl_override arg",
