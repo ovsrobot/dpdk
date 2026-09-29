@@ -965,19 +965,14 @@ static int nfb_eth_dev_create_for_ifc_by_port(const char *key __rte_unused,
 		const char *value, void *opaque)
 {
 	int ret = -EINVAL;
-	char *end;
-	unsigned long port;
+	uint64_t port;
 	struct nfb_ifc_create_params *ifc_params = opaque;
 
-	if (value == NULL || strlen(value) == 0 || !isdigit(*value))
+	if (ifc_params->map_info.ifc_cnt == 0)
 		goto out;
 
-	errno = 0;
-	port = strtoul(value, &end, 10);
-	if (errno != 0 || *end != '\0')
-		goto out;
-
-	if (port >= LONG_MAX || port >= (unsigned long)ifc_params->map_info.ifc_cnt)
+	if (rte_kvargs_to_uint(value, 0, ifc_params->map_info.ifc_cnt - 1,
+			       &port) < 0)
 		goto out;
 
 	ifc_params->ifc_info = &ifc_params->map_info.ifc[port];
