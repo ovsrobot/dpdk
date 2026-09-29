@@ -1331,6 +1331,18 @@ dpaa2_qdma_vchan_rbp_set(struct qdma_virt_queue *vq,
 	return 0;
 }
 
+static void
+dpaa2_qdma_fle_pool_iova_check(struct rte_mempool *mp __rte_unused,
+	void *opaque, struct rte_mempool_memhdr *memhdr,
+	unsigned int mem_idx __rte_unused)
+{
+	int *bad_map = opaque;
+
+	if (DPAA2_VADDR_TO_IOVA_AND_CHECK(memhdr->addr,
+			memhdr->len) == RTE_BAD_IOVA)
+		*bad_map = 1;
+}
+
 static int
 dpaa2_qdma_vchan_setup(struct rte_dma_dev *dev, uint16_t vchan,
 	const struct rte_dma_vchan_conf *conf,
@@ -1340,7 +1352,7 @@ dpaa2_qdma_vchan_setup(struct rte_dma_dev *dev, uint16_t vchan,
 	struct qdma_device *qdma_dev = dpdmai_dev->qdma_dev;
 	uint32_t pool_size;
 	char pool_name[64];
-	int ret;
+	int ret, bad_map = 0;
 	uint64_t iova, va;
 
 	DPAA2_QDMA_FUNC_TRACE();
@@ -1380,6 +1392,15 @@ dpaa2_qdma_vchan_setup(struct rte_dma_dev *dev, uint16_t vchan,
 	iova = qdma_dev->vqs[vchan].fle_pool->mz->iova;
 	va = qdma_dev->vqs[vchan].fle_pool->mz->addr_64;
 	qdma_dev->vqs[vchan].fle_iova2va_offset = va - iova;
+
+	rte_mempool_mem_iter(qdma_dev->vqs[vchan].fle_pool,
+		dpaa2_qdma_fle_pool_iova_check, &bad_map);
+	if (bad_map) {
+		DPAA2_QDMA_ERR("No IOMMU map for %s", pool_name);
+		rte_mempool_free(qdma_dev->vqs[vchan].fle_pool);
+		qdma_dev->vqs[vchan].fle_pool = NULL;
+		return -ENOMEM;
+	}
 
 	if (qdma_dev->is_silent) {
 		ret = rte_mempool_get_bulk(qdma_dev->vqs[vchan].fle_pool,
