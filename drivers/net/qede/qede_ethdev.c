@@ -1201,39 +1201,14 @@ static const char * const valid_args[] = {
 	NULL,
 };
 
-static int qede_args_check(const char *key, const char *val, void *opaque)
-{
-	unsigned long tmp;
-	int ret = 0;
-	struct rte_eth_dev *eth_dev = opaque;
-	struct qede_dev *qdev = QEDE_INIT_QDEV(eth_dev);
-	struct ecore_dev *edev = QEDE_INIT_EDEV(qdev);
-
-	errno = 0;
-	tmp = strtoul(val, NULL, 0);
-	if (errno) {
-		DP_INFO(edev, "%s: \"%s\" is not a valid integer", key, val);
-		return errno;
-	}
-
-	if ((strcmp(QEDE_NPAR_TX_SWITCHING, key) == 0) ||
-	    ((strcmp(QEDE_VF_TX_SWITCHING, key) == 0) && IS_VF(edev))) {
-		qdev->enable_tx_switching = !!tmp;
-		DP_INFO(edev, "Disabling %s tx-switching\n",
-			strcmp(QEDE_NPAR_TX_SWITCHING, key) ?
-			"VF" : "NPAR");
-	}
-
-	return ret;
-}
-
 static int qede_args(struct rte_eth_dev *eth_dev)
 {
 	struct rte_pci_device *pci_dev = RTE_CLASS_TO_BUS_DEVICE(eth_dev, *pci_dev);
+	struct qede_dev *qdev = QEDE_INIT_QDEV(eth_dev);
+	struct ecore_dev *edev = QEDE_INIT_EDEV(qdev);
 	struct rte_kvargs *kvlist;
 	struct rte_devargs *devargs;
 	int ret;
-	int i;
 
 	devargs = pci_dev->device.devargs;
 	if (!devargs)
@@ -1243,20 +1218,22 @@ static int qede_args(struct rte_eth_dev *eth_dev)
 	if (kvlist == NULL)
 		return -EINVAL;
 
-	 /* Process parameters. */
-	for (i = 0; (valid_args[i] != NULL); ++i) {
-		if (rte_kvargs_count(kvlist, valid_args[i])) {
-			ret = rte_kvargs_process(kvlist, valid_args[i],
-						 qede_args_check, eth_dev);
-			if (ret != ECORE_SUCCESS) {
-				rte_kvargs_free(kvlist);
-				return ret;
-			}
-		}
-	}
+	/*
+	 * Both arguments select the same thing. The VF one is only honoured
+	 * on a VF, which is why the two are handled separately rather than
+	 * in a loop over valid_args[].
+	 */
+	ret = rte_kvargs_process_opt(kvlist, QEDE_NPAR_TX_SWITCHING,
+				     rte_kvargs_handle_bool,
+				     &qdev->enable_tx_switching);
+	if (ret == 0 && IS_VF(edev))
+		ret = rte_kvargs_process_opt(kvlist, QEDE_VF_TX_SWITCHING,
+					     rte_kvargs_handle_bool,
+					     &qdev->enable_tx_switching);
+
 	rte_kvargs_free(kvlist);
 
-	return 0;
+	return ret;
 }
 
 static int qede_dev_configure(struct rte_eth_dev *eth_dev)
