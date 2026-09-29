@@ -4330,11 +4330,11 @@ struct crypto_testsuite_mlkem_params mlkem_keygen_test_vectors[] = {
 			.length = sizeof(mlkem_512_z),
 		},
 		.dk = {
-			.data = mlkem_768_dk_seeded,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_dk_seeded,
 			.length = sizeof(mlkem_768_dk_seeded),
 		},
 		.ek = {
-			.data = mlkem_768_ek_seeded,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_ek_seeded,
 			.length = sizeof(mlkem_768_ek_seeded),
 		}
 	},
@@ -4350,11 +4350,11 @@ struct crypto_testsuite_mlkem_params mlkem_keygen_test_vectors[] = {
 			.length = sizeof(mlkem_512_z),
 		},
 		.dk = {
-			.data = mlkem_1024_dk_seeded,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_dk_seeded,
 			.length = sizeof(mlkem_1024_dk_seeded),
 		},
 		.ek = {
-			.data = mlkem_1024_ek_seeded,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_ek_seeded,
 			.length = sizeof(mlkem_1024_ek_seeded),
 		}
 	},
@@ -4390,11 +4390,11 @@ struct crypto_testsuite_mlkem_params mlkem_keygen_test_vectors[] = {
 			.length = 32,
 		},
 		.dk = {
-			.data = mlkem_768_dk_noseed,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_dk_noseed,
 			.length = sizeof(mlkem_768_dk_noseed),
 		},
 		.ek = {
-			.data = mlkem_768_ek_noseed,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_ek_noseed,
 			.length = sizeof(mlkem_768_ek_noseed),
 		}
 	},
@@ -4410,11 +4410,11 @@ struct crypto_testsuite_mlkem_params mlkem_keygen_test_vectors[] = {
 			.length = 32,
 		},
 		.dk = {
-			.data = mlkem_1024_dk_noseed,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_dk_noseed,
 			.length = sizeof(mlkem_1024_dk_noseed),
 		},
 		.ek = {
-			.data = mlkem_1024_ek_noseed,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_ek_noseed,
 			.length = sizeof(mlkem_1024_ek_noseed),
 		}
 	},
@@ -4465,23 +4465,23 @@ struct crypto_testsuite_mlkem_params mlkem_encap_test_vectors[] = {
 		.name = "mlkem_768_encap (deterministic)",
 		.type = RTE_CRYPTO_ML_KEM_768,
 		.dk = {
-			.data = mlkem_768_dk,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_dk,
 			.length = sizeof(mlkem_768_dk),
 		},
 		.ek = {
-			.data = mlkem_768_ek,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_ek,
 			.length = sizeof(mlkem_768_ek),
 		},
 		.message = {
-			.data = mlkem_768_message,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_message,
 			.length = sizeof(mlkem_768_message),
 		},
 		.cipher = {
-			.data = mlkem_768_cipher,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_cipher,
 			.length = sizeof(mlkem_768_cipher),
 		},
 		.sk = {
-			.data = mlkem_768_sk,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_sk,
 			.length = sizeof(mlkem_768_sk),
 		},
 	},
@@ -4489,23 +4489,23 @@ struct crypto_testsuite_mlkem_params mlkem_encap_test_vectors[] = {
 		.name = "mlkem_1024_encap (deterministic)",
 		.type = RTE_CRYPTO_ML_KEM_1024,
 		.dk = {
-			.data = mlkem_1024_dk,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_dk,
 			.length = sizeof(mlkem_1024_dk),
 		},
 		.ek = {
-			.data = mlkem_1024_ek,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_ek,
 			.length = sizeof(mlkem_1024_ek),
 		},
 		.message = {
-			.data = mlkem_1024_message,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_message,
 			.length = sizeof(mlkem_1024_message),
 		},
 		.cipher = {
-			.data = mlkem_1024_cipher,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_cipher,
 			.length = sizeof(mlkem_1024_cipher),
 		},
 		.sk = {
-			.data = mlkem_1024_sk,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_sk,
 			.length = sizeof(mlkem_1024_sk),
 		},
 	},
@@ -4532,15 +4532,15 @@ struct crypto_testsuite_mlkem_params mlkem_decap_test_vectors[] = {
 		.name = "mlkem_768_decap",
 		.type = RTE_CRYPTO_ML_KEM_768,
 		.cipher = {
-			.data = mlkem_768_cipher,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_cipher,
 			.length = sizeof(mlkem_768_cipher),
 		},
 		.dk = {
-			.data = mlkem_768_dk,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_dk,
 			.length = sizeof(mlkem_768_dk),
 		},
 		.sk = {
-			.data = mlkem_768_sk,
+			.data = (uint8_t *)(uintptr_t)mlkem_768_sk,
 			.length = sizeof(mlkem_768_sk),
 		},
 	},
@@ -4548,15 +4548,15 @@ struct crypto_testsuite_mlkem_params mlkem_decap_test_vectors[] = {
 		.name = "mlkem_1024_decap",
 		.type = RTE_CRYPTO_ML_KEM_1024,
 		.cipher = {
-			.data = mlkem_1024_cipher,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_cipher,
 			.length = sizeof(mlkem_1024_cipher),
 		},
 		.dk = {
-			.data = mlkem_1024_dk,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_dk,
 			.length = sizeof(mlkem_1024_dk),
 		},
 		.sk = {
-			.data = mlkem_1024_sk,
+			.data = (uint8_t *)(uintptr_t)mlkem_1024_sk,
 			.length = sizeof(mlkem_1024_sk),
 		},
 	},
