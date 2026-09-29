@@ -719,3 +719,7 @@ class OSSession(ABC):
             A list containing all of the PCI addresses of the VFs on the port. If the port has no
             VFs then the list will be empty.
         """
+
+    @abstractmethod
+    def clean_up_vhost(self) -> None:
+        """Deletes stale vhost-user Unix domain socket files."""
