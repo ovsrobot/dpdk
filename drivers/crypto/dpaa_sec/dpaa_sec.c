@@ -3625,15 +3625,24 @@ dpaa_sec_uninit(struct rte_cryptodev *dev)
 }
 
 static int
-check_devargs_handler(__rte_unused const char *key, const char *value,
+check_devargs_handler(const char *key, const char *value,
 		      __rte_unused void *opaque)
 {
-	dpaa_sec_dp_dump = atoi(value);
-	if (dpaa_sec_dp_dump > DPAA_SEC_DP_FULL_DUMP) {
+	uint64_t val;
+
+	if (rte_kvargs_to_uint(value, 0, UINT8_MAX, &val) < 0) {
+		DPAA_SEC_WARN("WARN: invalid value \"%s\" for \"%s\"",
+			      value, key);
+		return -EINVAL;
+	}
+
+	if (val > DPAA_SEC_DP_FULL_DUMP) {
 		DPAA_SEC_WARN("WARN: DPAA_SEC_DP_DUMP_LEVEL is not "
 			      "supported, changing to FULL error prints");
-		dpaa_sec_dp_dump = DPAA_SEC_DP_FULL_DUMP;
+		val = DPAA_SEC_DP_FULL_DUMP;
 	}
+
+	dpaa_sec_dp_dump = val;
 
 	return 0;
 }
