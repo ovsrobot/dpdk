@@ -659,21 +659,9 @@ skeleton_rawdev_destroy(const char *name)
 }
 
 static int
-skeldev_get_selftest(const char *key __rte_unused,
-		     const char *value,
-		     void *opaque)
-{
-	int *flag = opaque;
-	if (value == NULL || opaque == NULL)
-		return -EINVAL;
-	*flag = atoi(value);
-	return 0;
-}
-
-static int
 skeldev_parse_vdev_args(struct rte_vdev_device *vdev)
 {
-	int selftest = 0;
+	bool selftest = false;
 	const char *name;
 	const char *params;
 
@@ -693,10 +681,10 @@ skeldev_parse_vdev_args(struct rte_vdev_device *vdev)
 				"Ignoring unsupported params supplied '%s'",
 				name);
 		} else {
-			int ret = rte_kvargs_process(kvlist,
+			int ret = rte_kvargs_process_opt(kvlist,
 					SKELETON_SELFTEST_ARG,
-					skeldev_get_selftest, &selftest);
-			if (ret != 0 || (selftest < 0 || selftest > 1)) {
+					rte_kvargs_handle_bool, &selftest);
+			if (ret != 0) {
 				SKELETON_PMD_ERR("%s: Error in parsing args",
 						 name);
 				rte_kvargs_free(kvlist);
