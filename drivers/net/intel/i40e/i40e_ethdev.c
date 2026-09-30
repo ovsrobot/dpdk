@@ -14,6 +14,7 @@
 #include <assert.h>
 
 #include <rte_common.h>
+#include <rte_kvargs.h>
 #include <rte_eal.h>
 #include <rte_string_fns.h>
 #include <rte_pci.h>
@@ -1268,33 +1269,6 @@ i40e_init_queue_region_conf(struct rte_eth_dev *dev)
 }
 
 static int
-i40e_parse_multi_drv_handler(__rte_unused const char *key,
-			       const char *value,
-			       void *opaque)
-{
-	struct i40e_pf *pf;
-	unsigned long support_multi_driver;
-	char *end;
-
-	pf = (struct i40e_pf *)opaque;
-
-	errno = 0;
-	support_multi_driver = strtoul(value, &end, 10);
-	if (errno != 0 || end == value || *end != 0) {
-		PMD_DRV_LOG(WARNING, "Wrong global configuration");
-		return -(EINVAL);
-	}
-
-	if (support_multi_driver == 1 || support_multi_driver == 0)
-		pf->support_multi_driver = (bool)support_multi_driver;
-	else
-		PMD_DRV_LOG(WARNING, "%s must be 1 or 0,",
-			    "enable global configuration by default."
-			    ETH_I40E_SUPPORT_MULTI_DRIVER);
-	return 0;
-}
-
-static int
 i40e_support_multi_driver(struct rte_eth_dev *dev)
 {
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
@@ -1322,8 +1296,9 @@ i40e_support_multi_driver(struct rte_eth_dev *dev)
 			    "the first invalid or last valid one is used !",
 			    ETH_I40E_SUPPORT_MULTI_DRIVER);
 
-	if (rte_kvargs_process(kvlist, ETH_I40E_SUPPORT_MULTI_DRIVER,
-			       i40e_parse_multi_drv_handler, pf) < 0) {
+	if (rte_kvargs_process_opt(kvlist, ETH_I40E_SUPPORT_MULTI_DRIVER,
+			       rte_kvargs_handle_bool,
+			       &pf->support_multi_driver) < 0) {
 		rte_kvargs_free(kvlist);
 		return -EINVAL;
 	}
@@ -4847,15 +4822,12 @@ static int i40e_pf_parse_vf_queue_number_handler(const char *key,
 		void *opaque)
 {
 	struct i40e_pf *pf;
-	unsigned long num;
-	char *end;
+	uint64_t num;
 
 	pf = (struct i40e_pf *)opaque;
 	RTE_SET_USED(key);
 
-	errno = 0;
-	num = strtoul(value, &end, 0);
-	if (errno != 0 || end == value || *end != 0) {
+	if (rte_kvargs_to_uint(value, 0, UINT16_MAX, &num) < 0) {
 		PMD_DRV_LOG(WARNING, "Wrong VF queue number = %s, Now it is "
 			    "kept the value = %hu", value, pf->vf_nb_qp_max);
 		return -(EINVAL);
@@ -4865,9 +4837,10 @@ static int i40e_pf_parse_vf_queue_number_handler(const char *key,
 		pf->vf_nb_qp_max = (uint16_t)num;
 	else
 		/* here return 0 to make next valid same argument work */
-		PMD_DRV_LOG(WARNING, "Wrong VF queue number = %lu, it must be "
+		PMD_DRV_LOG(WARNING, "Wrong VF queue number = %hu, it must be "
 			    "power of 2 and equal or less than 16 !, Now it is "
-			    "kept the value = %hu", num, pf->vf_nb_qp_max);
+			    "kept the value = %hu", (uint16_t)num,
+			    pf->vf_nb_qp_max);
 
 	return 0;
 }
