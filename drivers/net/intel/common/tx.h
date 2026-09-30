@@ -262,6 +262,13 @@ struct ci_tx_queue {
 				uint16_t sw_nb_desc;
 				uint16_t sw_tail;
 				uint16_t rs_compl_count;
+				/* Split-Tx completion tracking: shadow ring indexed by a
+				 * rolling compl_tag decouples RS-completion mbuf lifetime
+				 * from sw_ring[] slot reuse. sized next_pow2(nb_tx_desc).
+				 */
+				struct rte_mbuf **tx_pending_pkts;
+				uint16_t tx_pending_mask;
+				uint16_t tx_next_compl_tag;
 		};
 	};
 };

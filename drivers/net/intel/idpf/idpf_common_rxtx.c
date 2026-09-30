@@ -233,6 +233,23 @@ idpf_qc_split_tx_descq_reset(struct ci_tx_queue *txq)
 	txq->rs_compl_count = 0;
 	txq->tx_next_dd = txq->tx_rs_thresh - 1;
 	txq->tx_next_rs = txq->tx_rs_thresh - 1;
+
+	if (txq->tx_pending_pkts == NULL) {
+		uint32_t pending_sz = rte_align32pow2(txq->nb_tx_desc);
+
+		txq->tx_pending_pkts = rte_zmalloc_socket("idpf_tx_pending",
+			sizeof(struct rte_mbuf *) * pending_sz,
+			RTE_CACHE_LINE_SIZE, SOCKET_ID_ANY);
+		if (txq->tx_pending_pkts == NULL) {
+			DRV_LOG(ERR, "Failed to alloc idpf tx_pending shadow ring");
+			return;
+		}
+		txq->tx_pending_mask = (uint16_t)(pending_sz - 1);
+	} else {
+		for (i = 0; i <= txq->tx_pending_mask; i++)
+			txq->tx_pending_pkts[i] = NULL;
+	}
+	txq->tx_next_compl_tag = 0;
 }
 
 RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_tx_complq_reset)
@@ -385,6 +402,17 @@ idpf_qc_tx_queue_release(void *txq)
 	if (q->complq) {
 		rte_memzone_free(q->complq->mz);
 		rte_free(q->complq);
+	}
+
+	if (q->tx_pending_pkts != NULL) {
+		uint32_t i;
+
+		for (i = 0; i <= q->tx_pending_mask; i++) {
+			if (q->tx_pending_pkts[i] != NULL)
+				rte_pktmbuf_free(q->tx_pending_pkts[i]);
+		}
+		rte_free(q->tx_pending_pkts);
+		q->tx_pending_pkts = NULL;
 	}
 
 	ci_txq_release_all_mbufs(q, false);
@@ -787,7 +815,6 @@ idpf_split_tx_free(struct idpf_complq *cq)
 	volatile struct idpf_splitq_tx_compl_desc *compl_ring = cq->compl_ring;
 	volatile struct idpf_splitq_tx_compl_desc *txd;
 	uint16_t next = cq->tx_tail;
-	struct ci_tx_entry *txe;
 	struct ci_tx_queue *txq;
 	uint16_t gen, qid, q_head;
 	uint16_t nb_desc_clean;
@@ -824,26 +851,20 @@ idpf_split_tx_free(struct idpf_complq *cq)
 		txq->nb_tx_free += nb_desc_clean;
 		txq->last_desc_cleaned = q_head;
 		break;
-	case IDPF_TXD_COMPLT_RS:
-		/* Walk from first segment to EOP, freeing each segment. */
-		txe = &txq->sw_ring[q_head];
-		if (txe->mbuf != NULL) {
-			uint16_t first = txe->first_id;
-			uint16_t idx = first;
-			uint16_t end = (q_head + 1 == txq->sw_nb_desc) ?
-					0 : q_head + 1;
+	case IDPF_TXD_COMPLT_RS: {
+		/* Shadow ring indexed by the software-defined compl_tag is
+		 * the sole source of truth for RS-time mbuf ownership; free
+		 * the whole multi-seg chain via mbuf->next in one call.
+		 */
+		uint16_t tag = q_head & txq->tx_pending_mask;
+		struct rte_mbuf *pkt = txq->tx_pending_pkts[tag];
 
-			do {
-				txe = &txq->sw_ring[idx];
-				if (txe->mbuf != NULL) {
-					rte_pktmbuf_free_seg(txe->mbuf);
-					txe->mbuf = NULL;
-				}
-				idx = (idx + 1 == txq->sw_nb_desc) ?
-					0 : idx + 1;
-			} while (idx != end);
+		if (pkt != NULL) {
+			rte_pktmbuf_free(pkt);
+			txq->tx_pending_pkts[tag] = NULL;
 		}
 		break;
+	}
 	default:
 		TX_LOG(ERR, "unknown completion type.");
 		return;
@@ -991,7 +1012,7 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 				tx_id = 0;
 		}
 
-		uint16_t first_sw_id = sw_id;
+		uint16_t tag = txq->tx_next_compl_tag++ & txq->tx_pending_mask;
 
 		do {
 			uint16_t slen = tx_pkt->data_len;
@@ -1010,7 +1031,7 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 				txd->qw1.cmd_dtype = cmd_dtype |
 					IDPF_TX_DESC_DTYPE_FLEX_FLOW_SCHE;
 				txd->qw1.rxr_bufsize = CI_MAX_DATA_PER_TXD;
-				txd->qw1.compl_tag = sw_id;
+				txd->qw1.compl_tag = 0;
 
 				buf_dma_addr += CI_MAX_DATA_PER_TXD;
 				slen -= CI_MAX_DATA_PER_TXD;
@@ -1031,7 +1052,7 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			txd->qw1.cmd_dtype = cmd_dtype |
 				IDPF_TX_DESC_DTYPE_FLEX_FLOW_SCHE;
 			txd->qw1.rxr_bufsize = slen;
-			txd->qw1.compl_tag = sw_id;
+			txd->qw1.compl_tag = 0;
 			tx_id++;
 			if (tx_id == txq->nb_tx_desc)
 				tx_id = 0;
@@ -1043,8 +1064,11 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		/* fill the last descriptor with End of Packet (EOP) bit */
 		txd->qw1.cmd_dtype |= IDPF_TXD_FLEX_FLOW_CMD_EOP;
 
-		/* Record first sw_id at EOP so completion can walk forward. */
-		sw_ring[txd->qw1.compl_tag].first_id = first_sw_id;
+		/* Stamp EOP with the rolling compl_tag; RS uses it to look up
+		 * the packet-head mbuf in the shadow ring.
+		 */
+		txd->qw1.compl_tag = tag;
+		txq->tx_pending_pkts[tag] = tx_pkts[nb_tx];
 
 		txq->nb_tx_free = (uint16_t)(txq->nb_tx_free - nb_used);
 		txq->rs_compl_count += nb_used;
