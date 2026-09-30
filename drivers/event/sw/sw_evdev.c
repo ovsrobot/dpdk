@@ -872,58 +872,6 @@ sw_close(struct rte_eventdev *dev)
 	return 0;
 }
 
-static int
-set_sched_quanta(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *quanta = opaque;
-	uint64_t val;
-
-	if (rte_kvargs_to_uint(value, 0, 4095, &val) < 0)
-		return -1;
-
-	*quanta = val;
-	return 0;
-}
-
-static int
-set_credit_quanta(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *credit = opaque;
-	uint64_t val;
-
-	if (rte_kvargs_to_uint(value, 0, 127, &val) < 0)
-		return -1;
-
-	*credit = val;
-	return 0;
-}
-
-static int
-set_deq_burst_sz(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *deq_burst_sz = opaque;
-	uint64_t val;
-
-	if (rte_kvargs_to_uint(value, 0, SCHED_DEQUEUE_MAX_BURST_SIZE, &val) < 0)
-		return -1;
-
-	*deq_burst_sz = val;
-	return 0;
-}
-
-static int
-set_min_burst_sz(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *min_burst_sz = opaque;
-	uint64_t val;
-
-	if (rte_kvargs_to_uint(value, 0, SCHED_DEQUEUE_MAX_BURST_SIZE, &val) < 0)
-		return -1;
-
-	*min_burst_sz = val;
-	return 0;
-}
-
 static int32_t sw_sched_service_func(void *args)
 {
 	struct rte_eventdev *dev = args;
@@ -979,10 +927,15 @@ sw_probe(struct rte_vdev_device *vdev)
 	struct rte_eventdev *dev;
 	struct sw_evdev *sw;
 	int socket_id = rte_socket_id();
-	int sched_quanta  = SW_DEFAULT_SCHED_QUANTA;
-	int credit_quanta = SW_DEFAULT_CREDIT_QUANTA;
-	int min_burst_size = 1;
-	int deq_burst_size = SCHED_DEQUEUE_DEFAULT_BURST_SIZE;
+	struct rte_kvargs_urange sched_quanta = {
+		.min = 0, .max = 4095, .val = SW_DEFAULT_SCHED_QUANTA };
+	struct rte_kvargs_urange credit_quanta = {
+		.min = 0, .max = 127, .val = SW_DEFAULT_CREDIT_QUANTA };
+	struct rte_kvargs_urange min_burst_size = {
+		.min = 0, .max = SCHED_DEQUEUE_MAX_BURST_SIZE, .val = 1 };
+	struct rte_kvargs_urange deq_burst_size = {
+		.min = 0, .max = SCHED_DEQUEUE_MAX_BURST_SIZE,
+		.val = SCHED_DEQUEUE_DEFAULT_BURST_SIZE };
 	bool refill_once = false;
 
 	name = rte_vdev_device_name(vdev);
@@ -1006,7 +959,7 @@ sw_probe(struct rte_vdev_device *vdev)
 			}
 
 			ret = rte_kvargs_process(kvlist, SCHED_QUANTA_ARG,
-					set_sched_quanta, &sched_quanta);
+					rte_kvargs_handle_urange, &sched_quanta);
 			if (ret != 0) {
 				SW_LOG_ERR(
 					"%s: Error parsing sched quanta parameter",
@@ -1016,7 +969,7 @@ sw_probe(struct rte_vdev_device *vdev)
 			}
 
 			ret = rte_kvargs_process(kvlist, CREDIT_QUANTA_ARG,
-					set_credit_quanta, &credit_quanta);
+					rte_kvargs_handle_urange, &credit_quanta);
 			if (ret != 0) {
 				SW_LOG_ERR(
 					"%s: Error parsing credit quanta parameter",
@@ -1026,7 +979,7 @@ sw_probe(struct rte_vdev_device *vdev)
 			}
 
 			ret = rte_kvargs_process(kvlist, MIN_BURST_SIZE_ARG,
-					set_min_burst_sz, &min_burst_size);
+					rte_kvargs_handle_urange, &min_burst_size);
 			if (ret != 0) {
 				SW_LOG_ERR(
 					"%s: Error parsing minimum burst size parameter",
@@ -1036,7 +989,7 @@ sw_probe(struct rte_vdev_device *vdev)
 			}
 
 			ret = rte_kvargs_process(kvlist, DEQ_BURST_SIZE_ARG,
-					set_deq_burst_sz, &deq_burst_size);
+					rte_kvargs_handle_urange, &deq_burst_size);
 			if (ret != 0) {
 				SW_LOG_ERR(
 					"%s: Error parsing dequeue burst size parameter",
@@ -1061,10 +1014,10 @@ sw_probe(struct rte_vdev_device *vdev)
 
 	SW_LOG_INFO(
 			"Creating eventdev sw device %s, numa_node=%d, "
-			"sched_quanta=%d, credit_quanta=%d "
-			"min_burst=%d, deq_burst=%d, refill_once=%d",
-			name, socket_id, sched_quanta, credit_quanta,
-			min_burst_size, deq_burst_size, refill_once);
+			"sched_quanta=%"PRIu64", credit_quanta=%"PRIu64" "
+			"min_burst=%"PRIu64", deq_burst=%"PRIu64", refill_once=%d",
+			name, socket_id, sched_quanta.val, credit_quanta.val,
+			min_burst_size.val, deq_burst_size.val, refill_once);
 
 	dev = rte_event_pmd_vdev_init(name,
 			sizeof(struct sw_evdev), socket_id, vdev);
@@ -1085,10 +1038,10 @@ sw_probe(struct rte_vdev_device *vdev)
 	sw->data = dev->data;
 
 	/* copy values passed from vdev command line to instance */
-	sw->credit_update_quanta = credit_quanta;
-	sw->sched_quanta = sched_quanta;
-	sw->sched_min_burst_size = min_burst_size;
-	sw->sched_deq_burst_size = deq_burst_size;
+	sw->credit_update_quanta = credit_quanta.val;
+	sw->sched_quanta = sched_quanta.val;
+	sw->sched_min_burst_size = min_burst_size.val;
+	sw->sched_deq_burst_size = deq_burst_size.val;
 	sw->refill_once_per_iter = refill_once;
 
 	/* register service with EAL */
