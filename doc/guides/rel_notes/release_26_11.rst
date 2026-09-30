@@ -151,6 +151,8 @@ New Features
   * ``rte_kvargs_handle_i8``, ``rte_kvargs_handle_i16``,
     ``rte_kvargs_handle_i32``, ``rte_kvargs_handle_i64``,
     ``rte_kvargs_handle_int`` and ``rte_kvargs_handle_long``
+  * ``rte_kvargs_handle_socket_id``, which accepts ``SOCKET_ID_ANY``
+    through ``RTE_MAX_NUMA_NODES`` - 1
   * ``rte_kvargs_handle_bool``, accepting ``1``, ``y``, ``yes``, ``on``,
     ``true`` and their negative counterparts. A bare ``key`` means true;
     an empty ``key=`` is rejected.

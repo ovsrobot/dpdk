@@ -750,3 +750,21 @@ rte_kvargs_handle_bool(const char *key, const char *value, void *opaque)
 
 	return -EINVAL;
 }
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_socket_id, 26.11)
+int
+rte_kvargs_handle_socket_id(const char *key, const char *value, void *opaque)
+{
+	int64_t val;
+	int ret;
+
+	/* SOCKET_ID_ANY, which is -1, is a valid socket id. It is spelled
+	 * out here rather than included from EAL, which kvargs sits below.
+	 */
+	ret = kvargs_store_int(key, value, opaque, -1,
+			       RTE_MAX_NUMA_NODES - 1, &val);
+	if (ret == 0)
+		*(int *)opaque = (int)val;
+
+	return ret;
+}
