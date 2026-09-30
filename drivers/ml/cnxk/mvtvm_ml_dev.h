@@ -31,7 +31,7 @@ struct mvtvm_ml_dev {
 	uint16_t max_nb_qpairs;
 
 	/* Enable / disable model data caching */
-	int cache_model_data;
+	bool cache_model_data;
 };
 
 #endif /* _MVTVM_ML_DEV_H_ */
