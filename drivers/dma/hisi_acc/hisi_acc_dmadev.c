@@ -660,13 +660,10 @@ hacc_dma_parse_queues(const char *key, const char *value, void *extra_args)
 {
 	struct hacc_dma_config *config = extra_args;
 	uint64_t val;
-	char *end;
 
 	RTE_SET_USED(key);
 
-	errno = 0;
-	val = strtoull(value, &end, 0);
-	if (errno == ERANGE || value == end || *end != '\0' || val == 0) {
+	if (rte_kvargs_to_uint(value, 1, UINT64_MAX, &val) < 0) {
 		HACC_DMA_LOG(ERR, "%s invalid queues! set to default one queue!",
 			    config->dev->name);
 		config->queues = HACC_DMA_DEFAULT_QUEUES;
