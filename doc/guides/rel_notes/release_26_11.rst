@@ -206,6 +206,12 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* net/ring: The last parameter of ``rte_eth_from_rings`` changed from
+  ``const unsigned numa_node`` to ``int socket_id``, so that
+  ``SOCKET_ID_ANY`` can be passed as it can everywhere else a socket is
+  given. The value was already used as a signed socket id by the memory
+  and ring allocations underneath.
+
 * ethdev: Updated VMDq related API.
 
   * At port configuration time, the number of VMDq pools advertised by a driver

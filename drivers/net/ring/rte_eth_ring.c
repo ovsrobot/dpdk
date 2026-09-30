@@ -32,7 +32,7 @@ struct ring_internal_args {
 	const unsigned int nb_rx_queues;
 	struct rte_ring * const *tx_queues;
 	const unsigned int nb_tx_queues;
-	const unsigned int numa_node;
+	int socket_id;
 };
 
 /* rte_eth_from_rings() stashes a pointer to its on-stack args here */
@@ -361,7 +361,7 @@ do_eth_dev_ring_create(const char *name,
 		const unsigned int nb_rx_queues,
 		struct rte_ring *const tx_queues[],
 		const unsigned int nb_tx_queues,
-		const unsigned int numa_node, enum dev_action action,
+		int socket_id, enum dev_action action,
 		struct rte_eth_dev **eth_dev_p)
 {
 	struct rte_eth_dev_data *data = NULL;
@@ -371,24 +371,24 @@ do_eth_dev_ring_create(const char *name,
 	void **tx_queues_local = NULL;
 	unsigned int i;
 
-	PMD_LOG(INFO, "Creating rings-backed ethdev on numa socket %u",
-			numa_node);
+	PMD_LOG(INFO, "Creating rings-backed ethdev on numa socket %d",
+			socket_id);
 
 	rx_queues_local = rte_calloc_socket(name, nb_rx_queues,
-					    sizeof(void *), 0, numa_node);
+					    sizeof(void *), 0, socket_id);
 	if (rx_queues_local == NULL) {
 		rte_errno = ENOMEM;
 		goto error;
 	}
 
 	tx_queues_local = rte_calloc_socket(name, nb_tx_queues,
-					    sizeof(void *), 0, numa_node);
+					    sizeof(void *), 0, socket_id);
 	if (tx_queues_local == NULL) {
 		rte_errno = ENOMEM;
 		goto error;
 	}
 
-	internals = rte_zmalloc_socket(name, sizeof(*internals), 0, numa_node);
+	internals = rte_zmalloc_socket(name, sizeof(*internals), 0, socket_id);
 	if (internals == NULL) {
 		rte_errno = ENOMEM;
 		goto error;
@@ -404,7 +404,7 @@ do_eth_dev_ring_create(const char *name,
 	/* now put it all together
 	 * - store EAL device in eth_dev,
 	 * - store queue data in internals,
-	 * - store numa_node info in eth_dev_data
+	 * - store socket id info in eth_dev_data
 	 * - point eth_dev_data to internals
 	 * - and point eth_dev structure to new eth_dev_data structure
 	 */
@@ -439,7 +439,7 @@ do_eth_dev_ring_create(const char *name,
 	data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 
 	eth_dev->dev_ops = &ops;
-	data->numa_node = numa_node;
+	data->numa_node = socket_id;
 
 	/* finally assign rx and tx ops */
 	eth_dev->rx_pkt_burst = eth_ring_rx;
@@ -464,14 +464,14 @@ rte_eth_from_rings(const char *name, struct rte_ring *const rx_queues[],
 		const unsigned int nb_rx_queues,
 		struct rte_ring *const tx_queues[],
 		const unsigned int nb_tx_queues,
-		const unsigned int numa_node)
+		int socket_id)
 {
 	struct ring_internal_args args = {
 		.rx_queues = rx_queues,
 		.nb_rx_queues = nb_rx_queues,
 		.tx_queues = tx_queues,
 		.nb_tx_queues = nb_tx_queues,
-		.numa_node = numa_node,
+		.socket_id = socket_id,
 	};
 	char ring_name[RTE_RING_NAMESIZE];
 	uint16_t port_id = RTE_MAX_ETHPORTS;
@@ -526,7 +526,7 @@ rte_eth_from_ring(struct rte_ring *r)
 static int
 eth_dev_ring_create(const char *name,
 		struct rte_vdev_device *vdev,
-		const unsigned int numa_node,
+		int socket_id,
 		enum dev_action action, struct rte_eth_dev **eth_dev)
 {
 	/* rx and tx are so-called from point of view of first port.
@@ -549,7 +549,7 @@ eth_dev_ring_create(const char *name,
 		}
 
 		rxtx[i] = (action == DEV_CREATE) ?
-				rte_ring_create(rng_name, 1024, numa_node,
+				rte_ring_create(rng_name, 1024, socket_id,
 						RING_F_SP_ENQ|RING_F_SC_DEQ) :
 				rte_ring_lookup(rng_name);
 		if (rxtx[i] == NULL)
@@ -557,7 +557,7 @@ eth_dev_ring_create(const char *name,
 	}
 
 	if (do_eth_dev_ring_create(name, vdev, rxtx, num_rings, rxtx, num_rings,
-		numa_node, action, eth_dev) < 0)
+		socket_id, action, eth_dev) < 0)
 		return -1;
 
 	return 0;
@@ -565,7 +565,7 @@ eth_dev_ring_create(const char *name,
 
 struct node_action_pair {
 	char name[ETH_RING_ACTION_MAX_LEN];
-	unsigned int node;
+	int socket_id;
 	enum dev_action action;
 };
 
@@ -626,7 +626,7 @@ static int parse_kvlist(const char *key __rte_unused,
 		goto out;
 
 	errno = 0;
-	info->list[info->count].node = strtol(node, &end, 10);
+	info->list[info->count].socket_id = strtol(node, &end, 10);
 
 	if ((errno != 0) || (*end != '\0')) {
 		PMD_LOG(WARNING,
@@ -686,7 +686,7 @@ rte_pmd_ring_probe(struct rte_vdev_device *dev)
 			internal_args->nb_rx_queues,
 			internal_args->tx_queues,
 			internal_args->nb_tx_queues,
-			internal_args->numa_node,
+			internal_args->socket_id,
 			DEV_ATTACH,
 			&eth_dev);
 		return ret >= 0 ? 0 : ret;
@@ -740,7 +740,7 @@ rte_pmd_ring_probe(struct rte_vdev_device *dev)
 		for (info->count = 0; info->count < info->total; info->count++) {
 			ret = eth_dev_ring_create(info->list[info->count].name,
 						  dev,
-						  info->list[info->count].node,
+						  info->list[info->count].socket_id,
 						  info->list[info->count].action,
 						  &eth_dev);
 			if (ret == -1 && info->list[info->count].action == DEV_CREATE) {
@@ -748,7 +748,7 @@ rte_pmd_ring_probe(struct rte_vdev_device *dev)
 					"Attach to pmd_ring for %s",
 					name);
 				ret = eth_dev_ring_create(name, dev,
-						info->list[info->count].node,
+						info->list[info->count].socket_id,
 						DEV_ATTACH,
 						&eth_dev);
 			}

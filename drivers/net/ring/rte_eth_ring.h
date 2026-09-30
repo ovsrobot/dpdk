@@ -24,17 +24,18 @@ extern "C" {
  *    pointer to array of rte_rings to be used as TX queues
  * @param nb_tx_queues
  *    number of elements in the tx_queues array
- * @param numa_node
- *    the numa node on which the memory for this port is to be allocated
+ * @param socket_id
+ *    the NUMA socket on which the memory for this port is to be allocated,
+ *    or SOCKET_ID_ANY
  * @return
  *    the port number of the newly created the ethdev or -1 on error.
  */
 int rte_eth_from_rings(const char *name,
 		struct rte_ring * const rx_queues[],
-		const unsigned nb_rx_queues,
+		const unsigned int nb_rx_queues,
 		struct rte_ring *const tx_queues[],
-		const unsigned nb_tx_queues,
-		const unsigned numa_node);
+		const unsigned int nb_tx_queues,
+		int socket_id);
 
 /**
  * Create a new ethdev port from a ring
