@@ -22,67 +22,6 @@ struct flow_pre_l2_size_info {
 };
 
 static int
-parse_outb_nb_crypto_qs(const char *key, const char *value, void *extra_args)
-{
-	uint64_t val;
-
-	RTE_SET_USED(key);
-
-	if (rte_kvargs_to_uint(value, 1, 64, &val) < 0)
-		return -EINVAL;
-
-	*(uint16_t *)extra_args = val;
-
-	return 0;
-}
-
-static int
-parse_rxc_step(const char *key, const char *value, void *extra_args)
-{
-	uint64_t val;
-
-	RTE_SET_USED(key);
-
-	if (rte_kvargs_to_uint(value, 0, ROC_NIX_INL_REAS_STEP_MAX, &val) < 0)
-		return -EINVAL;
-
-	*(uint32_t *)extra_args = val;
-
-	return 0;
-}
-
-static int
-parse_flow_max_priority(const char *key, const char *value, void *extra_args)
-{
-	uint64_t val;
-
-	RTE_SET_USED(key);
-
-	if (rte_kvargs_to_uint(value, 1, ROC_NPC_MAX_MCAM_PRIORITY, &val) < 0)
-		return -EINVAL;
-
-	*(uint16_t *)extra_args = val;
-
-	return 0;
-}
-
-static int
-parse_flow_prealloc_size(const char *key, const char *value, void *extra_args)
-{
-	uint64_t val;
-
-	RTE_SET_USED(key);
-
-	/* Limit the prealloc size to 32 */
-	if (rte_kvargs_to_uint(value, 1, 32, &val) < 0)
-		return -EINVAL;
-
-	*(uint16_t *)extra_args = val;
-
-	return 0;
-}
-
-static int
 parse_reta_size(const char *key, const char *value, void *extra_args)
 {
 	uint64_t val;
@@ -159,21 +98,6 @@ parse_switch_header_type(const char *key, const char *value, void *extra_args)
 }
 
 static int
-parse_skip_size_info(const char *key, const char *value, void *extra_args)
-{
-	uint64_t val;
-
-	RTE_SET_USED(key);
-
-	if (rte_kvargs_to_uint(value, 0, 255, &val) < 0)
-		return -EINVAL;
-
-	*(uint16_t *)extra_args = val;
-
-	return 0;
-}
-
-static int
 parse_sdp_channel_mask(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
@@ -234,11 +158,15 @@ cnxk_ethdev_parse_devargs(struct rte_devargs *devargs, struct cnxk_eth_dev *dev)
 	uint16_t sqb_slack = ROC_NIX_SQB_SLACK;
 	uint32_t ipsec_out_max_sa = BIT(12);
 	bool custom_meta_aura_dis = false;
-	uint16_t flow_prealloc_size = 1;
+	struct rte_kvargs_urange flow_prealloc_size = {
+		.min = 1, .max = 32, .val = 1 };
 	uint16_t switch_header_type = 0;
-	uint16_t skip_size_info = 0;
-	uint16_t flow_max_priority = 3;
-	uint16_t outb_nb_crypto_qs = 1;
+	struct rte_kvargs_urange skip_size_info = {
+		.min = 0, .max = 255, .val = 0 };
+	struct rte_kvargs_urange flow_max_priority = {
+		.min = 1, .max = ROC_NPC_MAX_MCAM_PRIORITY, .val = 3 };
+	struct rte_kvargs_urange outb_nb_crypto_qs = {
+		.min = 1, .max = 64, .val = 1 };
 	uint32_t ipsec_in_min_spi = 0;
 	uint16_t outb_nb_desc = 8200;
 	struct sdp_channel sdp_chan;
@@ -254,7 +182,8 @@ cnxk_ethdev_parse_devargs(struct rte_devargs *devargs, struct cnxk_eth_dev *dev)
 	bool lock_rx_ctx = false;
 	bool rx_inj_ena = false;
 	bool no_inl_dev = false;
-	uint32_t rxc_step = 0;
+	struct rte_kvargs_urange rxc_step = {
+		.min = 0, .max = ROC_NIX_INL_REAS_STEP_MAX, .val = 0 };
 	int ret;
 
 	memset(&sdp_chan, 0, sizeof(sdp_chan));
@@ -277,9 +206,9 @@ cnxk_ethdev_parse_devargs(struct rte_devargs *devargs, struct cnxk_eth_dev *dev)
 	ret |= rte_kvargs_process(kvlist, CNXK_MAX_SQB_COUNT, rte_kvargs_handle_u16,
 				  &sqb_count);
 	ret |= rte_kvargs_process(kvlist, CNXK_FLOW_PREALLOC_SIZE,
-				  &parse_flow_prealloc_size, &flow_prealloc_size);
+				  rte_kvargs_handle_urange, &flow_prealloc_size);
 	ret |= rte_kvargs_process(kvlist, CNXK_FLOW_MAX_PRIORITY,
-				  &parse_flow_max_priority, &flow_max_priority);
+				  rte_kvargs_handle_urange, &flow_max_priority);
 	ret |= rte_kvargs_process(kvlist, CNXK_SWITCH_HEADER_TYPE,
 				  &parse_switch_header_type, &switch_header_type);
 	ret |= rte_kvargs_process_opt(kvlist, CNXK_RSS_TAG_AS_XOR, rte_kvargs_handle_bool,
@@ -295,7 +224,7 @@ cnxk_ethdev_parse_devargs(struct rte_devargs *devargs, struct cnxk_eth_dev *dev)
 	ret |= rte_kvargs_process(kvlist, CNXK_OUTB_NB_DESC, rte_kvargs_handle_u16,
 				  &outb_nb_desc);
 	ret |= rte_kvargs_process(kvlist, CNXK_OUTB_NB_CRYPTO_QS,
-				  &parse_outb_nb_crypto_qs, &outb_nb_crypto_qs);
+				  rte_kvargs_handle_urange, &outb_nb_crypto_qs);
 	ret |= rte_kvargs_process_opt(kvlist, CNXK_NO_INL_DEV, rte_kvargs_handle_bool,
 				  &no_inl_dev);
 	ret |= rte_kvargs_process(kvlist, CNXK_SDP_CHANNEL_MASK,
@@ -320,8 +249,9 @@ cnxk_ethdev_parse_devargs(struct rte_devargs *devargs, struct cnxk_eth_dev *dev)
 				  &force_tail_drop);
 	ret |= rte_kvargs_process_opt(kvlist, CNXK_DIS_XQE_DROP, rte_kvargs_handle_bool,
 				  &dis_xqe_drop);
-	ret |= rte_kvargs_process(kvlist, CNXK_RXC_STEP, &parse_rxc_step, &rxc_step);
-	ret |= rte_kvargs_process(kvlist, CNXK_SKIP_SIZE_INFO, &parse_skip_size_info,
+	ret |= rte_kvargs_process(kvlist, CNXK_RXC_STEP, rte_kvargs_handle_urange,
+				  &rxc_step);
+	ret |= rte_kvargs_process(kvlist, CNXK_SKIP_SIZE_INFO, rte_kvargs_handle_urange,
 				  &skip_size_info);
 	rte_kvargs_free(kvlist);
 
@@ -337,7 +267,7 @@ null_devargs:
 	dev->inb.custom_meta_aura_dis = custom_meta_aura_dis;
 	dev->outb.max_sa = ipsec_out_max_sa;
 	dev->outb.nb_desc = outb_nb_desc;
-	dev->outb.nb_crypto_qs = outb_nb_crypto_qs;
+	dev->outb.nb_crypto_qs = outb_nb_crypto_qs.val;
 	dev->nix.ipsec_out_max_sa = ipsec_out_max_sa;
 	dev->nix.rss_tag_as_xor = rss_tag_as_xor;
 	dev->nix.max_sqb_count = sqb_count;
@@ -350,15 +280,15 @@ null_devargs:
 	if (roc_feature_nix_has_own_meta_aura())
 		dev->nix.meta_buf_sz = meta_buf_sz;
 
-	dev->npc.flow_prealloc_size = flow_prealloc_size;
+	dev->npc.flow_prealloc_size = flow_prealloc_size.val;
 
 	if (roc_model_is_cn20k())
 		dev->npc.flow_max_priority = ROC_NPC_MAX_MCAM_PRIORITY;
 	else
-		dev->npc.flow_max_priority = flow_max_priority;
+		dev->npc.flow_max_priority = flow_max_priority.val;
 
 	dev->npc.switch_header_type = switch_header_type;
-	dev->npc.skip_size = skip_size_info;
+	dev->npc.skip_size = skip_size_info.val;
 	dev->npc.sdp_channel = sdp_chan.channel;
 	dev->npc.sdp_channel_mask = sdp_chan.mask;
 	dev->npc.is_sdp_mask_set = sdp_chan.is_sdp_mask_set;
@@ -370,7 +300,7 @@ null_devargs:
 		dev->nix.rx_inj_ena = rx_inj_ena;
 	dev->nix.force_tail_drop = force_tail_drop;
 	dev->nix.dis_xqe_drop = dis_xqe_drop;
-	dev->nix.rxc_step = rxc_step;
+	dev->nix.rxc_step = rxc_step.val;
 	return 0;
 exit:
 	return -EINVAL;
