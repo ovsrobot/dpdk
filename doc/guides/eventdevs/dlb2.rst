@@ -380,7 +380,7 @@ follows
 
     .. code-block:: console
 
-       --allow ea:00.0,vector_opts_enabled=<y/Y>
+       --allow ea:00.0,vector_opts_enabled=<0|1>
 
 Maximum CQ Depth
 ~~~~~~~~~~~~~~~~
@@ -459,7 +459,7 @@ Example command to enable QE Weight feature:
 
     .. code-block:: console
 
-       --allow ea:00.0,enable_cq_weight=<y/Y>
+       --allow ea:00.0,enable_cq_weight=<0|1>
 
 Credit Handling Scenario Improvements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
