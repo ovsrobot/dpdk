@@ -70,7 +70,7 @@ struct mlx4_conf {
 		uint32_t present; /**< Bit-field for existing ports. */
 		uint32_t enabled; /**< Bit-field for user-enabled ports. */
 	} ports;
-	int mr_ext_memseg_en;
+	bool mr_ext_memseg_en;
 	/** Whether memseg should be extended for MR creation. */
 };
 
@@ -532,12 +532,10 @@ mlx4_ibv_device_to_pci_addr(const struct ibv_device *device,
 static int
 mlx4_arg_parse(const char *key, const char *val, struct mlx4_conf *conf)
 {
-	unsigned long tmp;
+	uint64_t tmp;
 
-	errno = 0;
-	tmp = strtoul(val, NULL, 0);
-	if (errno) {
-		rte_errno = errno;
+	if (rte_kvargs_to_uint(val, 0, UINT32_MAX, &tmp) < 0) {
+		rte_errno = EINVAL;
 		WARN("%s: \"%s\" is not a valid integer", key, val);
 		return -rte_errno;
 	}
@@ -545,18 +543,16 @@ mlx4_arg_parse(const char *key, const char *val, struct mlx4_conf *conf)
 		uint32_t ports = rte_log2_u32(conf->ports.present + 1);
 
 		if (tmp >= ports) {
-			ERROR("port index %lu outside range [0,%" PRIu32 ")",
-			      tmp, ports);
+			ERROR("port index %u outside range [0,%u)",
+			      (unsigned int)tmp, ports);
 			return -EINVAL;
 		}
 		if (!(conf->ports.present & (1 << tmp))) {
 			rte_errno = EINVAL;
-			ERROR("invalid port index %lu", tmp);
+			ERROR("invalid port index %u", (unsigned int)tmp);
 			return -rte_errno;
 		}
 		conf->ports.enabled |= 1 << tmp;
-	} else if (strcmp(MLX4_MR_EXT_MEMSEG_EN_KVARG, key) == 0) {
-		conf->mr_ext_memseg_en = !!tmp;
 	} else {
 		rte_errno = EINVAL;
 		WARN("%s: unknown parameter", key);
@@ -590,8 +586,21 @@ mlx4_args(struct rte_devargs *devargs, struct mlx4_conf *conf)
 		ERROR("failed to parse kvargs");
 		return -rte_errno;
 	}
+	/*
+	 * mr_ext_memseg_en is a boolean and has a handler of its own; the
+	 * loop below covers the arguments which mlx4_arg_parse() handles.
+	 */
+	ret = rte_kvargs_process_opt(kvlist, MLX4_MR_EXT_MEMSEG_EN_KVARG,
+				     rte_kvargs_handle_bool,
+				     &conf->mr_ext_memseg_en);
+	if (ret != 0)
+		goto free_kvlist;
+
 	/* Process parameters. */
 	for (i = 0; pmd_mlx4_init_params[i]; ++i) {
+		if (strcmp(pmd_mlx4_init_params[i],
+			   MLX4_MR_EXT_MEMSEG_EN_KVARG) == 0)
+			continue;
 		arg_count = rte_kvargs_count(kvlist, pmd_mlx4_init_params[i]);
 		while (arg_count-- > 0) {
 			ret = rte_kvargs_process(kvlist,
@@ -783,7 +792,7 @@ mlx4_pci_probe(struct rte_pci_driver *pci_drv, struct rte_pci_device *pci_dev)
 	struct rte_eth_dev *prev_dev = NULL;
 	struct mlx4_conf conf = {
 		.ports.present = 0,
-		.mr_ext_memseg_en = 1,
+		.mr_ext_memseg_en = true,
 	};
 	unsigned int vf;
 	int i;
