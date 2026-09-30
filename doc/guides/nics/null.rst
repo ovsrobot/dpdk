@@ -30,7 +30,7 @@ Runtime Configuration
 
 - ``size`` [optional, default=64 bytes]
 
- Custom packet length value to use.r
+ Custom packet length value to use, from 1 to 65535.
  If ``copy`` is enabled, this is the length of copy operation.
 
 .. code-block:: console
