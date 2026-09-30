@@ -1213,7 +1213,7 @@ sfc_kvarg_rxd_wait_timeout_ns(struct sfc_adapter *sa)
 	value = SFC_RXD_WAIT_TIMEOUT_NS_DEF;
 
 	rc = sfc_kvargs_process(sa, SFC_KVARG_RXD_WAIT_TIMEOUT_NS,
-				sfc_kvarg_long_handler, &value);
+				rte_kvargs_handle_long, &value);
 	if (rc != 0)
 		return rc;
 
