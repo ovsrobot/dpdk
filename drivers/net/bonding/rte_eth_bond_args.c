@@ -91,13 +91,13 @@ parse_port_id(const char *port_str)
 		/* try parsing as device name, virtual devices */
 		port_id = find_port_id_by_dev_name(port_str);
 		if (port_id < 0) {
-			char *end;
-			errno = 0;
+			uint64_t val;
 
 			/* try parsing as port id */
-			port_id = strtol(port_str, &end, 10);
-			if (*end != 0 || errno != 0)
+			if (rte_kvargs_to_uint(port_str, 0, RTE_MAX_ETHPORTS - 1, &val) < 0)
 				return -1;
+
+			port_id = val;
 		}
 	}
 
@@ -136,18 +136,16 @@ int
 bond_ethdev_parse_member_mode_kvarg(const char *key __rte_unused,
 		const char *value, void *extra_args)
 {
-	uint8_t *mode;
-	char *endptr;
+	uint8_t *mode = extra_args;
+	uint64_t val;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
-	mode = extra_args;
-
-	errno = 0;
-	*mode = strtol(value, &endptr, 10);
-	if (*endptr != 0 || errno != 0)
+	if (rte_kvargs_to_uint(value, 0, UINT8_MAX, &val) < 0)
 		return -1;
+
+	*mode = val;
 
 	/* validate mode value */
 	switch (*mode) {
@@ -176,7 +174,6 @@ bond_ethdev_parse_member_agg_mode_kvarg(const char *key __rte_unused,
 
 	agg_mode = extra_args;
 
-	errno = 0;
 	if (strncmp(value, "stable", 6) == 0)
 		*agg_mode = AGG_STABLE;
 
@@ -195,35 +192,6 @@ bond_ethdev_parse_member_agg_mode_kvarg(const char *key __rte_unused,
 		RTE_BOND_LOG(ERR, "Invalid agg mode value stable/bandwidth/count");
 		return -1;
 	}
-}
-
-int
-bond_ethdev_parse_socket_id_kvarg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	long socket_id;
-	char *endptr;
-
-	if (value == NULL || extra_args == NULL)
-		return -1;
-
-	errno = 0;
-	socket_id = strtol(value, &endptr, 10);
-	if (*endptr != 0 || errno != 0)
-		return -1;
-
-	/* SOCKET_ID_ANY also consider a valid socket id */
-	if ((int8_t)socket_id == SOCKET_ID_ANY) {
-		*(int *)extra_args = SOCKET_ID_ANY;
-		return 0;
-	}
-
-	/* validate socket id value */
-	if (socket_id >= 0 && socket_id < RTE_MAX_NUMA_NODES) {
-		*(int *)extra_args = (int)socket_id;
-		return 0;
-	}
-	return -1;
 }
 
 int
@@ -278,22 +246,3 @@ bond_ethdev_parse_bond_mac_addr_kvarg(const char *key __rte_unused,
 	return rte_ether_unformat_addr(value, extra_args);
 }
 
-int
-bond_ethdev_parse_time_ms_kvarg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	uint32_t time_ms;
-	char *endptr;
-
-	if (value == NULL || extra_args == NULL)
-		return -1;
-
-	errno = 0;
-	time_ms = (uint32_t)strtol(value, &endptr, 10);
-	if (*endptr != 0 || errno != 0)
-		return -1;
-
-	*(uint32_t *)extra_args = time_ms;
-
-	return 0;
-}
