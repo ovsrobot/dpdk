@@ -579,18 +579,22 @@ static int parse_kvlist(const char *key __rte_unused,
 			const char *value, void *data)
 {
 	struct node_action_list *info = data;
+	int64_t socket_val;
 	int ret;
-	char *name;
+	char *name = NULL;
 	char *action;
 	char *node;
-	char *end;
-
-	name = strdup(value);
 
 	ret = -EINVAL;
 
-	if (!name) {
+	if (value == NULL) {
 		PMD_LOG(WARNING, "command line parameter is empty for ring pmd!");
+		goto out;
+	}
+
+	name = strdup(value);
+	if (!name) {
+		ret = -ENOMEM;
 		goto out;
 	}
 
@@ -625,14 +629,13 @@ static int parse_kvlist(const char *key __rte_unused,
 	else
 		goto out;
 
-	errno = 0;
-	info->list[info->count].socket_id = strtol(node, &end, 10);
-
-	if ((errno != 0) || (*end != '\0')) {
+	/* -1 is SOCKET_ID_ANY, the range rte_kvargs_handle_socket_id() takes. */
+	if (rte_kvargs_to_int(node, -1, RTE_MAX_NUMA_NODES - 1, &socket_val) < 0) {
 		PMD_LOG(WARNING,
-			"node value %s is unparseable as a number", node);
+			"node value %s is not a valid socket id", node);
 		goto out;
 	}
+	info->list[info->count].socket_id = socket_val;
 
 	strlcpy(info->list[info->count].name, name,
 		sizeof(info->list[info->count].name));
