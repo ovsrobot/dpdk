@@ -248,6 +248,24 @@ PMD drivers can parse devargs using the kvargs library:
        return 0;
    }
 
+Rather than writing a handler for each numeric argument, use the
+conversion handlers provided by kvargs, which do the range checking:
+
+.. code-block:: c
+
+   uint16_t queues = 1;
+   bool scalar = false;
+
+   rte_kvargs_process(kvlist, "queues", rte_kvargs_handle_u16, &queues);
+   rte_kvargs_process_opt(kvlist, "scalar", rte_kvargs_handle_bool, &scalar);
+
+Boolean arguments accept ``1``, ``y``, ``yes``, ``on`` and ``true``,
+case insensitively, and their negative counterparts. A bare ``scalar``
+with no value means true, but reaches the handler only through
+rte_kvargs_process_opt(); rte_kvargs_process() rejects a missing value
+first. An empty ``scalar=`` is rejected, since that is what an unset
+shell variable expands to.
+
 For Ethernet devices, use ``rte_eth_devargs_parse()``
 to parse standard Ethernet arguments like representors:
 

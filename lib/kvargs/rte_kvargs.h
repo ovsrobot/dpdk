@@ -21,6 +21,10 @@
  * ethernet devices at initialization for arguments parsing.
  */
 
+#include <stdint.h>
+
+#include <rte_compat.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -229,6 +233,188 @@ int rte_kvargs_process_opt(const struct rte_kvargs *kvlist,
  */
 unsigned rte_kvargs_count(const struct rte_kvargs *kvlist,
 	const char *key_match);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Handlers to convert a key/value pair into a numeric type.
+ *
+ * The functions below all match the ``arg_handler_t`` prototype, so they can
+ * be passed directly to rte_kvargs_process():
+ *
+ * @code
+ *   uint16_t nb_desc = DEFAULT_NB_DESC;
+ *
+ *   ret = rte_kvargs_process(kvlist, "nb_desc",
+ *                            rte_kvargs_handle_u16, &nb_desc);
+ * @endcode
+ *
+ * The value string is accepted only if it represents the whole number, that
+ * is:
+ *
+ * - it is not NULL and not empty;
+ * - it is decimal, or hexadecimal with a ``0x`` or ``0X`` prefix;
+ * - it has no trailing characters other than white space;
+ * - it does not overflow the target type.
+ *
+ * A leading ``+`` or ``-`` sign is accepted. The unsigned handlers reject a
+ * negative value rather than wrapping it around, which is what strtoul()
+ * would otherwise do.
+ *
+ * Note that a leading zero does @b not select octal, so ``010`` is ten and
+ * not eight.
+ *
+ * @param key
+ *   The key, used for error reporting only. May be NULL.
+ * @param value
+ *   The value to convert.
+ * @param opaque
+ *   Pointer to the variable to store the result into. The pointed-to type
+ *   must match the handler: for example rte_kvargs_handle_u16() requires a
+ *   ``uint16_t *``. On error the variable is left unmodified.
+ *
+ * @return
+ *   - 0 on success.
+ *   - -EINVAL if the value is missing or malformed, or if @p opaque is NULL.
+ *   - -ERANGE if the value does not fit in the target type.
+ */
+__rte_experimental
+int rte_kvargs_handle_u8(const char *key, const char *value, void *opaque);
+
+/** Convert a value to uint16_t. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_u16(const char *key, const char *value, void *opaque);
+
+/** Convert a value to uint32_t. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_u32(const char *key, const char *value, void *opaque);
+
+/** Convert a value to uint64_t. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_u64(const char *key, const char *value, void *opaque);
+
+/** Convert a value to int8_t. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_i8(const char *key, const char *value, void *opaque);
+
+/** Convert a value to int16_t. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_i16(const char *key, const char *value, void *opaque);
+
+/** Convert a value to int32_t. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_i32(const char *key, const char *value, void *opaque);
+
+/** Convert a value to int64_t. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_i64(const char *key, const char *value, void *opaque);
+
+/** Convert a value to unsigned int. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_uint(const char *key, const char *value, void *opaque);
+
+/** Convert a value to int. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_int(const char *key, const char *value, void *opaque);
+
+/** Convert a value to long. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_long(const char *key, const char *value, void *opaque);
+
+/** Convert a value to unsigned long. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_ulong(const char *key, const char *value, void *opaque);
+
+/** Convert a value to size_t. See rte_kvargs_handle_u8(). */
+__rte_experimental
+int rte_kvargs_handle_size(const char *key, const char *value, void *opaque);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Convert a key/value pair to a boolean.
+ *
+ * Accepts, case insensitively, ``1``, ``y``, ``yes``, ``on`` and ``true``
+ * for true; ``0``, ``n``, ``no``, ``off`` and ``false`` for false.
+ *
+ * A key given without a value, as in ``key``, is treated as true. Use
+ * rte_kvargs_process_opt() rather than rte_kvargs_process() to support
+ * that form, since the latter rejects a missing value before the handler
+ * is called. An empty value, as in ``key=``, is rejected.
+ *
+ * @param key
+ *   The key, used for error reporting only. May be NULL.
+ * @param value
+ *   The value to convert. NULL means true.
+ * @param opaque
+ *   Pointer to a ``bool`` to store the result into. On error it is left
+ *   unmodified.
+ *
+ * @return
+ *   - 0 on success.
+ *   - -EINVAL if the value is malformed or if @p opaque is NULL.
+ */
+__rte_experimental
+int rte_kvargs_handle_bool(const char *key, const char *value, void *opaque);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Convert a string to an unsigned integer, checking it against a range.
+ *
+ * This is the underlying conversion used by the rte_kvargs_handle_*()
+ * unsigned handlers. It is meant for drivers which need a range narrower
+ * than the target type, or which parse a value obtained from
+ * rte_kvargs_get() rather than from a handler.
+ *
+ * @param value
+ *   The string to convert. Must be non-NULL and non-empty. See
+ *   rte_kvargs_handle_u8() for the accepted syntax.
+ * @param min
+ *   Smallest acceptable value, inclusive.
+ * @param max
+ *   Largest acceptable value, inclusive.
+ * @param result
+ *   Where to store the converted value. Left unmodified on error.
+ *
+ * @return
+ *   - 0 on success.
+ *   - -EINVAL if the value is missing or malformed, or if @p result is NULL.
+ *   - -ERANGE if the value is outside [@p min, @p max].
+ */
+__rte_experimental
+int rte_kvargs_to_uint(const char *value, uint64_t min, uint64_t max,
+	uint64_t *result);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Convert a string to a signed integer, checking it against a range.
+ *
+ * This is the signed counterpart of rte_kvargs_to_uint().
+ *
+ * @param value
+ *   The string to convert. Must be non-NULL and non-empty. See
+ *   rte_kvargs_handle_u8() for the accepted syntax.
+ * @param min
+ *   Smallest acceptable value, inclusive.
+ * @param max
+ *   Largest acceptable value, inclusive.
+ * @param result
+ *   Where to store the converted value. Left unmodified on error.
+ *
+ * @return
+ *   - 0 on success.
+ *   - -EINVAL if the value is missing or malformed, or if @p result is NULL.
+ *   - -ERANGE if the value is outside [@p min, @p max].
+ */
+__rte_experimental
+int rte_kvargs_to_int(const char *value, int64_t min, int64_t max,
+	int64_t *result);
 
 #ifdef __cplusplus
 }

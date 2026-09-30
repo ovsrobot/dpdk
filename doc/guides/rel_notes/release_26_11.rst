@@ -138,6 +138,26 @@ New Features
   Added ``rte_bbdev_queue_stats_get()`` function to retrieve statistics
   for a specific queue, complementing the existing device-level statistics API.
 
+* **Added numeric conversion helpers to kvargs.**
+
+  Added a set of ``arg_handler_t`` compatible helpers which convert a device
+  argument value into a numeric variable, so that drivers no longer need to
+  open code the conversion and its validation:
+
+  * ``rte_kvargs_handle_u8``, ``rte_kvargs_handle_u16``,
+    ``rte_kvargs_handle_u32``, ``rte_kvargs_handle_u64``,
+    ``rte_kvargs_handle_uint``, ``rte_kvargs_handle_ulong``
+    and ``rte_kvargs_handle_size``
+  * ``rte_kvargs_handle_i8``, ``rte_kvargs_handle_i16``,
+    ``rte_kvargs_handle_i32``, ``rte_kvargs_handle_i64``,
+    ``rte_kvargs_handle_int`` and ``rte_kvargs_handle_long``
+  * ``rte_kvargs_handle_bool``, accepting ``1``, ``y``, ``yes``, ``on``,
+    ``true`` and their negative counterparts. A bare ``key`` means true;
+    an empty ``key=`` is rejected.
+
+  Added ``rte_kvargs_to_uint`` and ``rte_kvargs_to_int`` for the cases where
+  a driver needs a narrower range than the target type allows.
+
 
 Removed Items
 -------------
