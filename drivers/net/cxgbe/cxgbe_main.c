@@ -744,36 +744,8 @@ void cxgbe_print_port_info(struct adapter *adap)
 	}
 }
 
-static int check_devargs_handler(const char *key, const char *value, void *p)
-{
-	if (!strncmp(key, CXGBE_DEVARG_CMN_KEEP_OVLAN, strlen(key)) ||
-	    !strncmp(key, CXGBE_DEVARG_CMN_TX_MODE_LATENCY, strlen(key)) ||
-	    !strncmp(key, CXGBE_DEVARG_VF_FORCE_LINK_UP, strlen(key))) {
-		if (!strncmp(value, "1", 1)) {
-			bool *dst_val = (bool *)p;
-
-			*dst_val = true;
-		}
-	}
-
-	if (!strncmp(key, CXGBE_DEVARG_PF_FILTER_MODE, strlen(key)) ||
-	    !strncmp(key, CXGBE_DEVARG_PF_FILTER_MASK, strlen(key))) {
-		u32 *dst_val = (u32 *)p;
-		char *endptr = NULL;
-		u32 arg_val;
-
-		arg_val = strtoul(value, &endptr, 16);
-		if (errno || endptr == value)
-			return -EINVAL;
-
-		*dst_val = arg_val;
-	}
-
-	return 0;
-}
-
 static int cxgbe_get_devargs(struct rte_devargs *devargs, const char *key,
-			     void *p)
+			     arg_handler_t handler, void *p)
 {
 	struct rte_kvargs *kvlist;
 	int ret = 0;
@@ -788,7 +760,7 @@ static int cxgbe_get_devargs(struct rte_devargs *devargs, const char *key,
 	if (!rte_kvargs_count(kvlist, key))
 		goto out;
 
-	ret = rte_kvargs_process(kvlist, key, check_devargs_handler, p);
+	ret = rte_kvargs_process(kvlist, key, handler, p);
 
 out:
 	rte_kvargs_free(kvlist);
@@ -807,7 +779,8 @@ static void cxgbe_get_devargs_int(struct adapter *adap, bool *dst,
 	if (!pdev)
 		return;
 
-	ret = cxgbe_get_devargs(pdev->device.devargs, key, &devarg_value);
+	ret = cxgbe_get_devargs(pdev->device.devargs, key,
+				rte_kvargs_handle_bool, &devarg_value);
 	if (ret)
 		return;
 
@@ -825,7 +798,8 @@ static void cxgbe_get_devargs_u32(struct adapter *adap, u32 *dst,
 	if (!pdev)
 		return;
 
-	ret = cxgbe_get_devargs(pdev->device.devargs, key, &devarg_value);
+	ret = cxgbe_get_devargs(pdev->device.devargs, key,
+				rte_kvargs_handle_hex32, &devarg_value);
 	if (ret)
 		return;
 
