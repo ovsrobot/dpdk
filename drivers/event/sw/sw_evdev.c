@@ -873,22 +873,15 @@ sw_close(struct rte_eventdev *dev)
 }
 
 static int
-assign_numa_node(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *socket_id = opaque;
-	*socket_id = atoi(value);
-	if (*socket_id >= RTE_MAX_NUMA_NODES)
-		return -1;
-	return 0;
-}
-
-static int
 set_sched_quanta(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *quanta = opaque;
-	*quanta = atoi(value);
-	if (*quanta < 0 || *quanta >= 4096)
+	uint64_t val;
+
+	if (rte_kvargs_to_uint(value, 0, 4095, &val) < 0)
 		return -1;
+
+	*quanta = val;
 	return 0;
 }
 
@@ -896,9 +889,12 @@ static int
 set_credit_quanta(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *credit = opaque;
-	*credit = atoi(value);
-	if (*credit < 0 || *credit >= 128)
+	uint64_t val;
+
+	if (rte_kvargs_to_uint(value, 0, 127, &val) < 0)
 		return -1;
+
+	*credit = val;
 	return 0;
 }
 
@@ -906,9 +902,12 @@ static int
 set_deq_burst_sz(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *deq_burst_sz = opaque;
-	*deq_burst_sz = atoi(value);
-	if (*deq_burst_sz < 0 || *deq_burst_sz > SCHED_DEQUEUE_MAX_BURST_SIZE)
+	uint64_t val;
+
+	if (rte_kvargs_to_uint(value, 0, SCHED_DEQUEUE_MAX_BURST_SIZE, &val) < 0)
 		return -1;
+
+	*deq_burst_sz = val;
 	return 0;
 }
 
@@ -916,19 +915,12 @@ static int
 set_min_burst_sz(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *min_burst_sz = opaque;
-	*min_burst_sz = atoi(value);
-	if (*min_burst_sz < 0 || *min_burst_sz > SCHED_DEQUEUE_MAX_BURST_SIZE)
-		return -1;
-	return 0;
-}
+	uint64_t val;
 
-static int
-set_refill_once(const char *key __rte_unused, const char *value, void *opaque)
-{
-	int *refill_once_per_call = opaque;
-	*refill_once_per_call = atoi(value);
-	if (*refill_once_per_call < 0 || *refill_once_per_call > 1)
+	if (rte_kvargs_to_uint(value, 0, SCHED_DEQUEUE_MAX_BURST_SIZE, &val) < 0)
 		return -1;
+
+	*min_burst_sz = val;
 	return 0;
 }
 
@@ -991,7 +983,7 @@ sw_probe(struct rte_vdev_device *vdev)
 	int credit_quanta = SW_DEFAULT_CREDIT_QUANTA;
 	int min_burst_size = 1;
 	int deq_burst_size = SCHED_DEQUEUE_DEFAULT_BURST_SIZE;
-	int refill_once = 0;
+	bool refill_once = false;
 
 	name = rte_vdev_device_name(vdev);
 	params = rte_vdev_device_args(vdev);
@@ -1004,7 +996,7 @@ sw_probe(struct rte_vdev_device *vdev)
 				name);
 		} else {
 			int ret = rte_kvargs_process(kvlist, NUMA_NODE_ARG,
-					assign_numa_node, &socket_id);
+					rte_kvargs_handle_socket_id, &socket_id);
 			if (ret != 0) {
 				SW_LOG_ERR(
 					"%s: Error parsing numa node parameter",
@@ -1053,8 +1045,8 @@ sw_probe(struct rte_vdev_device *vdev)
 				return ret;
 			}
 
-			ret = rte_kvargs_process(kvlist, REFIL_ONCE_ARG,
-					set_refill_once, &refill_once);
+			ret = rte_kvargs_process_opt(kvlist, REFIL_ONCE_ARG,
+					rte_kvargs_handle_bool, &refill_once);
 			if (ret != 0) {
 				SW_LOG_ERR(
 					"%s: Error parsing refill once per call switch",
@@ -1146,5 +1138,5 @@ RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_SW_PMD, evdev_sw_pmd_drv);
 RTE_PMD_REGISTER_PARAM_STRING(event_sw, NUMA_NODE_ARG "=<int> "
 		SCHED_QUANTA_ARG "=<int>" CREDIT_QUANTA_ARG "=<int>"
 		MIN_BURST_SIZE_ARG "=<int>" DEQ_BURST_SIZE_ARG "=<int>"
-		REFIL_ONCE_ARG "=<int>");
+		REFIL_ONCE_ARG "=<0|1>");
 RTE_LOG_REGISTER_DEFAULT(eventdev_sw_log_level, NOTICE);
