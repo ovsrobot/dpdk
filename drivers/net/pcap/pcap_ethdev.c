@@ -1585,45 +1585,18 @@ open_tx_iface(const char *key, const char *value, void *extra_args)
 }
 
 static int
-process_bool_flag(const char *key, const char *value, void *extra_args)
-{
-	bool *flag = extra_args;
-
-	if (value == NULL || *value == '\0') {
-		*flag = true; /* default with no additional argument */
-	} else if (strcmp(value, "0") == 0) {
-		*flag = false;
-	} else if (strcmp(value, "1") == 0) {
-		*flag = true;
-	} else {
-		PMD_LOG(ERR, "Invalid '%s' value '%s'", key, value);
-		return -1;
-	}
-	return 0;
-}
-
-static int
 process_snapshot_len(const char *key, const char *value, void *extra_args)
 {
-	uint32_t *snaplen = extra_args;
-	unsigned long val;
-	char *endptr;
+	uint64_t val;
 
-	if (value == NULL || *value == '\0') {
-		PMD_LOG(ERR, "Argument '%s' requires a value", key);
+	if (rte_kvargs_to_uint(value, RTE_ETHER_HDR_LEN,
+			       ETH_PCAP_MAXIMUM_SNAPLEN, &val) < 0) {
+		PMD_LOG(ERR, "Invalid '%s' value '%s'", key,
+			value == NULL ? "" : value);
 		return -1;
 	}
 
-	errno = 0;
-	val = strtoul(value, &endptr, 10);
-	if (errno != 0 || *endptr != '\0' ||
-	    val < RTE_ETHER_HDR_LEN ||
-	    val > ETH_PCAP_MAXIMUM_SNAPLEN) {
-		PMD_LOG(ERR, "Invalid '%s' value '%s'", key, value);
-		return -1;
-	}
-
-	*snaplen = (uint32_t)val;
+	*(uint32_t *)extra_args = val;
 	return 0;
 }
 
@@ -1932,8 +1905,8 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 
 		dumpers.queue[0] = pcaps.queue[0];
 
-		ret = rte_kvargs_process(kvlist, ETH_PCAP_PHY_MAC_ARG,
-					 &process_bool_flag, &pcaps.phy_mac);
+		ret = rte_kvargs_process_opt(kvlist, ETH_PCAP_PHY_MAC_ARG,
+					 rte_kvargs_handle_bool, &pcaps.phy_mac);
 		if (ret < 0)
 			goto free_kvlist;
 
@@ -1971,9 +1944,9 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 				ETH_PCAP_INFINITE_RX_ARG);
 
 		if (infinite_rx_arg_cnt == 1) {
-			ret = rte_kvargs_process(kvlist,
+			ret = rte_kvargs_process_opt(kvlist,
 					ETH_PCAP_INFINITE_RX_ARG,
-					 &process_bool_flag,
+					 rte_kvargs_handle_bool,
 					 &devargs_all.infinite_rx);
 			if (ret < 0)
 				goto free_kvlist;
@@ -1991,8 +1964,8 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 		 * Check whether to signal EOF via link status change.
 		 */
 		if (rte_kvargs_count(kvlist, ETH_PCAP_EOF_ARG) == 1) {
-			ret = rte_kvargs_process(kvlist, ETH_PCAP_EOF_ARG,
-						 &process_bool_flag,
+			ret = rte_kvargs_process_opt(kvlist, ETH_PCAP_EOF_ARG,
+						 rte_kvargs_handle_bool,
 						 &devargs_all.eof);
 			if (ret < 0)
 				goto free_kvlist;
