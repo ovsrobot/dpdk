@@ -619,6 +619,48 @@ test_kvargs_to_range(void)
 	return TEST_SUCCESS;
 }
 
+static int
+test_handle_range(void)
+{
+	struct rte_kvargs_urange u = { .min = 1, .max = 10, .val = 7 };
+	struct rte_kvargs_irange s = { .min = -10, .max = 10, .val = -7 };
+	struct rte_kvargs *kvlist;
+
+	TEST_ASSERT_SUCCESS(handle_one(rte_kvargs_handle_urange, "10", &u),
+			    "10 rejected in [1,10]");
+	TEST_ASSERT_EQUAL(u.val, 10U, "wrong value");
+
+	/* Out of range and malformed values leave the result alone. */
+	TEST_ASSERT_FAIL(handle_one(rte_kvargs_handle_urange, "11", &u),
+			 "11 accepted in [1,10]");
+	TEST_ASSERT_EQUAL(u.val, 10U, "target clobbered above the range");
+	TEST_ASSERT_FAIL(handle_one(rte_kvargs_handle_urange, "0", &u),
+			 "0 accepted in [1,10]");
+	TEST_ASSERT_EQUAL(u.val, 10U, "target clobbered below the range");
+	TEST_ASSERT_FAIL(handle_one(rte_kvargs_handle_urange, "x", &u),
+			 "\"x\" accepted");
+	TEST_ASSERT_EQUAL(u.val, 10U, "target clobbered on a bad value");
+
+	TEST_ASSERT_SUCCESS(handle_one(rte_kvargs_handle_irange, "-10", &s),
+			    "-10 rejected in [-10,10]");
+	TEST_ASSERT_EQUAL(s.val, -10, "wrong value");
+	TEST_ASSERT_FAIL(handle_one(rte_kvargs_handle_irange, "-11", &s),
+			 "-11 accepted in [-10,10]");
+	TEST_ASSERT_EQUAL(s.val, -10, "target clobbered below the range");
+
+	/* A key which is not present leaves the seeded default alone. */
+	u.val = 7;
+	kvlist = rte_kvargs_parse("other=1", NULL);
+	TEST_ASSERT_NOT_NULL(kvlist, "parse failed");
+	TEST_ASSERT_SUCCESS(rte_kvargs_process(kvlist, "k",
+					       rte_kvargs_handle_urange, &u),
+			    "processing an absent key failed");
+	rte_kvargs_free(kvlist);
+	TEST_ASSERT_EQUAL(u.val, 7U, "default lost when the key is absent");
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite kvargs_test_suite  = {
 	.suite_name = "Kvargs Unit Test Suite",
 	.setup = NULL,
@@ -651,6 +693,7 @@ static struct unit_test_suite kvargs_test_suite  = {
 		TEST_CASE(test_handle_bool),
 		TEST_CASE(test_handle_socket_id),
 		TEST_CASE(test_kvargs_to_range),
+		TEST_CASE(test_handle_range),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };

@@ -164,6 +164,12 @@ New Features
   ``rte_kvargs_to_hex`` for the cases where a driver needs a narrower range
   than the target type allows.
 
+  Added ``rte_kvargs_handle_urange`` and ``rte_kvargs_handle_irange``,
+  which take the bounds and return the result through a
+  ``struct rte_kvargs_urange`` or ``struct rte_kvargs_irange``. An
+  argument whose valid range is narrower than its storage type no longer
+  needs a handler of its own, and a value outside the range is reported
+  as one which does not fit a whole type already is.
 
 Removed Items
 -------------

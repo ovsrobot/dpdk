@@ -487,6 +487,63 @@ int rte_kvargs_to_int(const char *value, int64_t min, int64_t max,
 __rte_experimental
 int rte_kvargs_to_hex(const char *value, uint64_t max, uint64_t *result);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Range and result for rte_kvargs_handle_urange().
+ */
+struct rte_kvargs_urange {
+	uint64_t min;	/**< Smallest acceptable value, inclusive. */
+	uint64_t max;	/**< Largest acceptable value, inclusive. */
+	uint64_t val;	/**< The result, written only on success. */
+};
+
+/** Range and result for rte_kvargs_handle_irange(). */
+struct rte_kvargs_irange {
+	int64_t min;	/**< Smallest acceptable value, inclusive. */
+	int64_t max;	/**< Largest acceptable value, inclusive. */
+	int64_t val;	/**< The result, written only on success. */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Convert a key/value pair to an unsigned integer in a range.
+ *
+ * As rte_kvargs_handle_u8(), except that the bounds are given by the
+ * caller rather than by the target type. This is for an argument whose
+ * valid range is narrower than the type it is stored in.
+ *
+ * The bounds are passed and the result returned through the same
+ * structure, since a handler has only one opaque pointer. Seed ``val``
+ * with the default: it is left alone when the key is absent and when
+ * the value is rejected.
+ *
+ * @param key
+ *   The key, used for error reporting only. May be NULL.
+ * @param value
+ *   The value to convert.
+ * @param opaque
+ *   Pointer to a ``struct rte_kvargs_urange`` holding the range. On
+ *   success its ``val`` is set, on error it is left unmodified.
+ *
+ * @return
+ *   - 0 on success.
+ *   - -EINVAL if the value is missing or malformed, or if @p opaque is NULL.
+ *   - -ERANGE if the value is outside the range.
+ */
+__rte_experimental
+int rte_kvargs_handle_urange(const char *key, const char *value, void *opaque);
+
+/**
+ * Convert a value to a signed integer in a range, taking a
+ * ``struct rte_kvargs_irange``. See rte_kvargs_handle_urange().
+ */
+__rte_experimental
+int rte_kvargs_handle_irange(const char *key, const char *value, void *opaque);
+
 #ifdef __cplusplus
 }
 #endif

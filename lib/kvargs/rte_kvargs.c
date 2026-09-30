@@ -554,17 +554,19 @@ rte_kvargs_to_hex(const char *value, uint64_t max, uint64_t *result)
  */
 static int
 kvargs_store_uint(const char *key, const char *value, void *opaque,
-		  uint64_t max, uint64_t *val)
+		  uint64_t min, uint64_t max, uint64_t *val)
 {
 	int ret;
 
 	if (opaque == NULL)
 		return -EINVAL;
 
-	ret = rte_kvargs_to_uint(value, 0, max, val);
+	ret = rte_kvargs_to_uint(value, min, max, val);
 	if (ret < 0)
-		KVARGS_LOG(ERR, "invalid value \"%s\" for key \"%s\", expected 0..%" PRIu64,
-			   value != NULL ? value : "", key != NULL ? key : "", max);
+		KVARGS_LOG(ERR,
+			   "invalid value \"%s\" for key \"%s\", expected %" PRIu64 "..%" PRIu64,
+			   value != NULL ? value : "", key != NULL ? key : "",
+			   min, max);
 
 	return ret;
 }
@@ -595,7 +597,7 @@ rte_kvargs_handle_u8(const char *key, const char *value, void *opaque)
 	uint64_t val;
 	int ret;
 
-	ret = kvargs_store_uint(key, value, opaque, UINT8_MAX, &val);
+	ret = kvargs_store_uint(key, value, opaque, 0, UINT8_MAX, &val);
 	if (ret == 0)
 		*(uint8_t *)opaque = (uint8_t)val;
 
@@ -609,7 +611,7 @@ rte_kvargs_handle_u16(const char *key, const char *value, void *opaque)
 	uint64_t val;
 	int ret;
 
-	ret = kvargs_store_uint(key, value, opaque, UINT16_MAX, &val);
+	ret = kvargs_store_uint(key, value, opaque, 0, UINT16_MAX, &val);
 	if (ret == 0)
 		*(uint16_t *)opaque = (uint16_t)val;
 
@@ -623,7 +625,7 @@ rte_kvargs_handle_u32(const char *key, const char *value, void *opaque)
 	uint64_t val;
 	int ret;
 
-	ret = kvargs_store_uint(key, value, opaque, UINT32_MAX, &val);
+	ret = kvargs_store_uint(key, value, opaque, 0, UINT32_MAX, &val);
 	if (ret == 0)
 		*(uint32_t *)opaque = (uint32_t)val;
 
@@ -637,7 +639,7 @@ rte_kvargs_handle_u64(const char *key, const char *value, void *opaque)
 	uint64_t val;
 	int ret;
 
-	ret = kvargs_store_uint(key, value, opaque, UINT64_MAX, &val);
+	ret = kvargs_store_uint(key, value, opaque, 0, UINT64_MAX, &val);
 	if (ret == 0)
 		*(uint64_t *)opaque = (uint64_t)val;
 
@@ -651,7 +653,7 @@ rte_kvargs_handle_uint(const char *key, const char *value, void *opaque)
 	uint64_t val;
 	int ret;
 
-	ret = kvargs_store_uint(key, value, opaque, UINT_MAX, &val);
+	ret = kvargs_store_uint(key, value, opaque, 0, UINT_MAX, &val);
 	if (ret == 0)
 		*(unsigned int *)opaque = (unsigned int)val;
 
@@ -665,7 +667,7 @@ rte_kvargs_handle_size(const char *key, const char *value, void *opaque)
 	uint64_t val;
 	int ret;
 
-	ret = kvargs_store_uint(key, value, opaque, SIZE_MAX, &val);
+	ret = kvargs_store_uint(key, value, opaque, 0, SIZE_MAX, &val);
 	if (ret == 0)
 		*(size_t *)opaque = (size_t)val;
 
@@ -763,7 +765,7 @@ rte_kvargs_handle_ulong(const char *key, const char *value, void *opaque)
 	uint64_t val;
 	int ret;
 
-	ret = kvargs_store_uint(key, value, opaque, ULONG_MAX, &val);
+	ret = kvargs_store_uint(key, value, opaque, 0, ULONG_MAX, &val);
 	if (ret == 0)
 		*(unsigned long *)opaque = (unsigned long)val;
 
@@ -870,6 +872,44 @@ rte_kvargs_handle_socket_id(const char *key, const char *value, void *opaque)
 			       RTE_MAX_NUMA_NODES - 1, &val);
 	if (ret == 0)
 		*(int *)opaque = (int)val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_urange, 26.11)
+int
+rte_kvargs_handle_urange(const char *key, const char *value, void *opaque)
+{
+	struct rte_kvargs_urange *range = opaque;
+	uint64_t val;
+	int ret;
+
+	if (range == NULL)
+		return -EINVAL;
+
+	ret = kvargs_store_uint(key, value, opaque, range->min, range->max,
+				&val);
+	if (ret == 0)
+		range->val = val;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_kvargs_handle_irange, 26.11)
+int
+rte_kvargs_handle_irange(const char *key, const char *value, void *opaque)
+{
+	struct rte_kvargs_irange *range = opaque;
+	int64_t val;
+	int ret;
+
+	if (range == NULL)
+		return -EINVAL;
+
+	ret = kvargs_store_int(key, value, opaque, range->min, range->max,
+			       &val);
+	if (ret == 0)
+		range->val = val;
 
 	return ret;
 }
