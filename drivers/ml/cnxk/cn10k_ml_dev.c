@@ -81,20 +81,6 @@ parse_string_arg(const char *key __rte_unused, const char *value, void *extra_ar
 }
 
 static int
-parse_integer_arg(const char *key __rte_unused, const char *value, void *extra_args)
-{
-	int *i = (int *)extra_args;
-
-	*i = atoi(value);
-	if (*i < 0) {
-		plt_err("Argument has to be positive.");
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int
 cn10k_mldev_parse_devargs(struct rte_devargs *devargs, struct cn10k_ml_dev *cn10k_mldev)
 {
 	bool enable_dpe_warnings_set = false;
@@ -131,8 +117,9 @@ cn10k_mldev_parse_devargs(struct rte_devargs *devargs, struct cn10k_ml_dev *cn10
 	}
 
 	if (rte_kvargs_count(kvlist, CN10K_ML_FW_ENABLE_DPE_WARNINGS) == 1) {
-		ret = rte_kvargs_process(kvlist, CN10K_ML_FW_ENABLE_DPE_WARNINGS,
-					 &parse_integer_arg, &cn10k_mldev->fw.enable_dpe_warnings);
+		ret = rte_kvargs_process_opt(kvlist, CN10K_ML_FW_ENABLE_DPE_WARNINGS,
+					 rte_kvargs_handle_bool,
+					 &cn10k_mldev->fw.enable_dpe_warnings);
 		if (ret < 0) {
 			plt_err("Error processing arguments, key = %s",
 				CN10K_ML_FW_ENABLE_DPE_WARNINGS);
@@ -143,8 +130,9 @@ cn10k_mldev_parse_devargs(struct rte_devargs *devargs, struct cn10k_ml_dev *cn10
 	}
 
 	if (rte_kvargs_count(kvlist, CN10K_ML_FW_REPORT_DPE_WARNINGS) == 1) {
-		ret = rte_kvargs_process(kvlist, CN10K_ML_FW_REPORT_DPE_WARNINGS,
-					 &parse_integer_arg, &cn10k_mldev->fw.report_dpe_warnings);
+		ret = rte_kvargs_process_opt(kvlist, CN10K_ML_FW_REPORT_DPE_WARNINGS,
+					 rte_kvargs_handle_bool,
+					 &cn10k_mldev->fw.report_dpe_warnings);
 		if (ret < 0) {
 			plt_err("Error processing arguments, key = %s",
 				CN10K_ML_FW_REPORT_DPE_WARNINGS);
@@ -155,7 +143,8 @@ cn10k_mldev_parse_devargs(struct rte_devargs *devargs, struct cn10k_ml_dev *cn10
 	}
 
 	if (rte_kvargs_count(kvlist, CN10K_ML_DEV_CACHE_MODEL_DATA) == 1) {
-		ret = rte_kvargs_process(kvlist, CN10K_ML_DEV_CACHE_MODEL_DATA, &parse_integer_arg,
+		ret = rte_kvargs_process_opt(kvlist, CN10K_ML_DEV_CACHE_MODEL_DATA,
+					 rte_kvargs_handle_bool,
 					 &cn10k_mldev->cache_model_data);
 		if (ret < 0) {
 			plt_err("Error processing arguments, key = %s",
@@ -178,7 +167,8 @@ cn10k_mldev_parse_devargs(struct rte_devargs *devargs, struct cn10k_ml_dev *cn10
 	}
 
 	if (rte_kvargs_count(kvlist, CN10K_ML_DEV_HW_QUEUE_LOCK) == 1) {
-		ret = rte_kvargs_process(kvlist, CN10K_ML_DEV_HW_QUEUE_LOCK, &parse_integer_arg,
+		ret = rte_kvargs_process_opt(kvlist, CN10K_ML_DEV_HW_QUEUE_LOCK,
+					 rte_kvargs_handle_bool,
 					 &cn10k_mldev->hw_queue_lock);
 		if (ret < 0) {
 			plt_err("Error processing arguments, key = %s",
@@ -190,7 +180,7 @@ cn10k_mldev_parse_devargs(struct rte_devargs *devargs, struct cn10k_ml_dev *cn10
 	}
 
 	if (rte_kvargs_count(kvlist, CN10K_ML_OCM_PAGE_SIZE) == 1) {
-		ret = rte_kvargs_process(kvlist, CN10K_ML_OCM_PAGE_SIZE, &parse_integer_arg,
+		ret = rte_kvargs_process(kvlist, CN10K_ML_OCM_PAGE_SIZE, rte_kvargs_handle_int,
 					 &cn10k_mldev->ocm_page_size);
 		if (ret < 0) {
 			plt_err("Error processing arguments, key = %s", CN10K_ML_OCM_PAGE_SIZE);
@@ -207,44 +197,18 @@ check_args:
 		cn10k_mldev->fw.path = fw_path;
 	plt_info("ML: %s = %s", CN10K_ML_FW_PATH, cn10k_mldev->fw.path);
 
-	if (!enable_dpe_warnings_set) {
+	if (!enable_dpe_warnings_set)
 		cn10k_mldev->fw.enable_dpe_warnings = CN10K_ML_FW_ENABLE_DPE_WARNINGS_DEFAULT;
-	} else {
-		if ((cn10k_mldev->fw.enable_dpe_warnings < 0) ||
-		    (cn10k_mldev->fw.enable_dpe_warnings > 1)) {
-			plt_err("Invalid argument, %s = %d", CN10K_ML_FW_ENABLE_DPE_WARNINGS,
-				cn10k_mldev->fw.enable_dpe_warnings);
-			ret = -EINVAL;
-			goto exit;
-		}
-	}
 	plt_info("ML: %s = %d", CN10K_ML_FW_ENABLE_DPE_WARNINGS,
 		 cn10k_mldev->fw.enable_dpe_warnings);
 
-	if (!report_dpe_warnings_set) {
+	if (!report_dpe_warnings_set)
 		cn10k_mldev->fw.report_dpe_warnings = CN10K_ML_FW_REPORT_DPE_WARNINGS_DEFAULT;
-	} else {
-		if ((cn10k_mldev->fw.report_dpe_warnings < 0) ||
-		    (cn10k_mldev->fw.report_dpe_warnings > 1)) {
-			plt_err("Invalid argument, %s = %d", CN10K_ML_FW_REPORT_DPE_WARNINGS,
-				cn10k_mldev->fw.report_dpe_warnings);
-			ret = -EINVAL;
-			goto exit;
-		}
-	}
 	plt_info("ML: %s = %d", CN10K_ML_FW_REPORT_DPE_WARNINGS,
 		 cn10k_mldev->fw.report_dpe_warnings);
 
-	if (!cache_model_data_set) {
+	if (!cache_model_data_set)
 		cn10k_mldev->cache_model_data = CN10K_ML_DEV_CACHE_MODEL_DATA_DEFAULT;
-	} else {
-		if ((cn10k_mldev->cache_model_data < 0) || (cn10k_mldev->cache_model_data > 1)) {
-			plt_err("Invalid argument, %s = %d", CN10K_ML_DEV_CACHE_MODEL_DATA,
-				cn10k_mldev->cache_model_data);
-			ret = -EINVAL;
-			goto exit;
-		}
-	}
 	plt_info("ML: %s = %d", CN10K_ML_DEV_CACHE_MODEL_DATA, cn10k_mldev->cache_model_data);
 
 	if (!ocm_alloc_mode_set) {
@@ -261,16 +225,8 @@ check_args:
 	}
 	plt_info("ML: %s = %s", CN10K_ML_OCM_ALLOC_MODE, cn10k_mldev->ocm.alloc_mode);
 
-	if (!hw_queue_lock_set) {
+	if (!hw_queue_lock_set)
 		cn10k_mldev->hw_queue_lock = CN10K_ML_DEV_HW_QUEUE_LOCK_DEFAULT;
-	} else {
-		if ((cn10k_mldev->hw_queue_lock < 0) || (cn10k_mldev->hw_queue_lock > 1)) {
-			plt_err("Invalid argument, %s = %d", CN10K_ML_DEV_HW_QUEUE_LOCK,
-				cn10k_mldev->hw_queue_lock);
-			ret = -EINVAL;
-			goto exit;
-		}
-	}
 	plt_info("ML: %s = %d", CN10K_ML_DEV_HW_QUEUE_LOCK, cn10k_mldev->hw_queue_lock);
 
 	if (!ocm_page_size_set) {

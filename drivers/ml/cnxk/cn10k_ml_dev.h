@@ -108,10 +108,10 @@ struct cn10k_ml_fw {
 	const char *path;
 
 	/* Enable DPE warnings */
-	int enable_dpe_warnings;
+	bool enable_dpe_warnings;
 
 	/* Report DPE warnings */
-	int report_dpe_warnings;
+	bool report_dpe_warnings;
 
 	/* Data buffer */
 	uint8_t *data;
@@ -132,10 +132,10 @@ struct cn10k_ml_dev {
 	struct cn10k_ml_ocm ocm;
 
 	/* Enable / disable model data caching */
-	int cache_model_data;
+	bool cache_model_data;
 
 	/* Use spinlock version of ROC enqueue */
-	int hw_queue_lock;
+	bool hw_queue_lock;
 
 	/* OCM page size */
 	int ocm_page_size;
