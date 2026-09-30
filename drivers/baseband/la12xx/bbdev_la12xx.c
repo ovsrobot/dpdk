@@ -912,44 +912,25 @@ err:
 	return ret;
 }
 
-static inline int
-parse_u16_arg(const char *key, const char *value, void *extra_args)
-{
-	uint16_t *u16 = extra_args;
-
-	uint64_t result;
-	if ((value == NULL) || (extra_args == NULL))
-		return -EINVAL;
-	errno = 0;
-	result = strtoul(value, NULL, 0);
-	if ((result >= (1 << 16)) || (errno != 0)) {
-		rte_bbdev_log(ERR, "Invalid value %" PRIu64 " for %s",
-			      result, key);
-		return -ERANGE;
-	}
-	*u16 = (uint16_t)result;
-	return 0;
-}
-
-/* Parse integer from integer argument */
+/*
+ * Parse the modem id.
+ *
+ * A dedicated handler is needed because -1 is meaningful here: it leaves the
+ * modem id unset, and la12xx_bbdev_create() then derives it from the device
+ * id. rte_kvargs_handle_i8() alone would also accept anything down to -128.
+ */
 static int
-parse_integer_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
+parse_modem_id(const char *key, const char *value, void *extra_args)
 {
-	int i;
-	char *end;
+	int64_t modem_id;
 
-	errno = 0;
-
-	i = strtol(value, &end, 10);
-	if (*end != 0 || errno != 0 || i < 0 || i > LA12XX_MAX_MODEM) {
-		rte_bbdev_log(ERR, "Supported Port IDS are 0 to %d",
-			LA12XX_MAX_MODEM - 1);
+	if (rte_kvargs_to_int(value, -1, LA12XX_MAX_MODEM - 1, &modem_id) < 0) {
+		rte_bbdev_log(ERR, "Invalid %s, must be -1..%u", key,
+				LA12XX_MAX_MODEM - 1);
 		return -EINVAL;
 	}
 
-	*((uint32_t *)extra_args) = i;
-
+	*(int8_t *)extra_args = modem_id;
 	return 0;
 }
 
@@ -970,20 +951,16 @@ parse_bbdev_la12xx_params(struct bbdev_la12xx_params *params,
 			return -EFAULT;
 
 		ret = rte_kvargs_process(kvlist, bbdev_la12xx_valid_params[0],
-					&parse_u16_arg, &params->queues_num);
+					rte_kvargs_handle_u8, &params->queues_num);
 		if (ret < 0)
 			goto exit;
 
 		ret = rte_kvargs_process(kvlist,
 					bbdev_la12xx_valid_params[1],
-					&parse_integer_arg,
+					parse_modem_id,
 					&params->modem_id);
-
-		if (params->modem_id >= LA12XX_MAX_MODEM) {
-			rte_bbdev_log(ERR, "Invalid modem id, must be < %u",
-					LA12XX_MAX_MODEM);
+		if (ret < 0)
 			goto exit;
-		}
 	}
 
 exit:
@@ -1062,6 +1039,7 @@ la12xx_bbdev_probe(struct rte_vdev_device *vdev)
 	};
 	const char *name;
 	const char *input_args;
+	int ret;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -1073,7 +1051,9 @@ la12xx_bbdev_probe(struct rte_vdev_device *vdev)
 		return -EINVAL;
 
 	input_args = rte_vdev_device_args(vdev);
-	parse_bbdev_la12xx_params(&init_params, input_args);
+	ret = parse_bbdev_la12xx_params(&init_params, input_args);
+	if (ret < 0)
+		return ret;
 
 	return la12xx_bbdev_create(vdev, &init_params);
 }
