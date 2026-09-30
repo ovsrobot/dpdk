@@ -25,6 +25,15 @@
 #define RTE_TOOLCHAIN_MSVC 1
 #endif
 
+/*
+ * Compatibility define for Linux kernel UAPI headers that may use __counted_by
+ * attribute for bounds checking. This attribute is not understood by userspace
+ * compilers, so define it as empty if not already provided.
+ */
+#ifndef __counted_by
+#define __counted_by(m)
+#endif
+
 /* legacy defines */
 #ifdef RTE_EXEC_ENV_LINUX
 #define RTE_EXEC_ENV_LINUXAPP 1
