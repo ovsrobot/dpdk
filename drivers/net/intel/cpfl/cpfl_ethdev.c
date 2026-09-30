@@ -3,6 +3,7 @@
  */
 
 #include <rte_atomic.h>
+#include <rte_kvargs.h>
 #include <rte_eal.h>
 #include <rte_ether.h>
 #include <rte_malloc.h>
@@ -1559,27 +1560,6 @@ parse_vport(const char *key, const char *value, void *args)
 }
 
 static int
-parse_bool(const char *key, const char *value, void *args)
-{
-	bool *i = args;
-	char *end;
-	int num;
-
-	errno = 0;
-
-	num = strtoul(value, &end, 10);
-
-	if (errno == ERANGE || (num != 0 && num != 1)) {
-		PMD_INIT_LOG(ERR, "invalid value:\"%s\" for key:\"%s\", value must be 0 or 1",
-			value, key);
-		return -EINVAL;
-	}
-
-	*i = (num == 1);
-	return 0;
-}
-
-static int
 enlist(uint16_t *list, uint16_t *len_list, const uint16_t max_list, uint16_t val)
 {
 	uint16_t i;
@@ -1756,12 +1736,12 @@ cpfl_parse_devargs(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adap
 	if (ret != 0)
 		goto fail;
 
-	ret = rte_kvargs_process(kvlist, CPFL_TX_SINGLE_Q, &parse_bool,
+	ret = rte_kvargs_process_opt(kvlist, CPFL_TX_SINGLE_Q, rte_kvargs_handle_bool,
 				 &adapter->base.is_tx_singleq);
 	if (ret != 0)
 		goto fail;
 
-	ret = rte_kvargs_process(kvlist, CPFL_RX_SINGLE_Q, &parse_bool,
+	ret = rte_kvargs_process_opt(kvlist, CPFL_RX_SINGLE_Q, rte_kvargs_handle_bool,
 				 &adapter->base.is_rx_singleq);
 	if (ret != 0)
 		goto fail;
