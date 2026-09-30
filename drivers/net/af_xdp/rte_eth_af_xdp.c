@@ -178,10 +178,10 @@ struct pkt_tx_queue {
 struct pmd_internals {
 	int if_index;
 	char if_name[IFNAMSIZ];
-	int start_queue_idx;
-	int queue_cnt;
-	int max_queue_cnt;
-	int configured_queue_cnt;
+	uint16_t start_queue_idx;
+	uint16_t queue_cnt;
+	uint16_t max_queue_cnt;
+	uint16_t configured_queue_cnt;
 	uint32_t mode_flag;
 	bool shared_umem;
 	char prog_path[PATH_MAX];
@@ -256,6 +256,24 @@ static const char * const valid_arguments[] = {
 	ETH_AF_XDP_RX_TIMESTAMP_VALID_OFFSET_ARG,
 	ETH_AF_XDP_RX_TIMESTAMP_VALID_MASK_ARG,
 	NULL
+};
+
+/* Device arguments, as parsed from the vdev argument string. */
+struct af_xdp_devargs {
+	char if_name[IFNAMSIZ];
+	uint16_t start_queue_idx;
+	uint16_t queue_cnt;
+	bool shared_umem;
+	char prog_path[PATH_MAX];
+	int busy_budget;		/**< -1 until the default is applied */
+	bool force_copy;
+	bool use_cni;
+	bool use_pinned_map;
+	char dp_path[PATH_MAX];
+	uint32_t xdp_mode;
+	int rx_timestamp_offset;	/**< -1 when not specified */
+	int rx_timestamp_valid_offset;	/**< -1 when not specified */
+	uint8_t rx_timestamp_valid_mask;
 };
 
 static const struct rte_eth_link pmd_link = {
@@ -2270,67 +2288,85 @@ static const struct eth_dev_ops ops_afxdp_dp = {
 	.read_clock = eth_af_xdp_read_clock,
 };
 
-/** parse busy_budget argument */
+/**
+ * Parse busy_budget, which is a uint16_t stored in an int so that -1 can
+ * mean "not specified" until the default is applied.
+ */
 static int
 parse_budget_arg(const char *key __rte_unused,
 		  const char *value, void *extra_args)
 {
-	int *i = (int *)extra_args;
-	char *end;
+	int64_t budget;
+	int ret;
 
-	*i = strtol(value, &end, 10);
-	if (*i < 0 || *i > UINT16_MAX) {
-		AF_XDP_LOG_LINE(ERR, "Invalid busy_budget %i, must be >= 0 and <= %u",
-				*i, UINT16_MAX);
-		return -EINVAL;
+	ret = rte_kvargs_to_int(value, 0, UINT16_MAX, &budget);
+	if (ret < 0) {
+		AF_XDP_LOG_LINE(ERR, "Invalid busy_budget, must be >= 0 and <= %u",
+				UINT16_MAX);
+		return ret;
 	}
 
+	*(int *)extra_args = budget;
 	return 0;
 }
 
-/** parse integer from integer argument */
+/** parse queue_count, which must leave at least one queue */
 static int
-parse_integer_arg(const char *key __rte_unused,
-		  const char *value, void *extra_args)
+parse_queue_count_arg(const char *key __rte_unused,
+		      const char *value, void *extra_args)
 {
-	int *i = (int *)extra_args;
-	char *end;
-	long val;
+	uint64_t queue_cnt;
+	int ret;
 
-	if (value == NULL || extra_args == NULL)
-		return -EINVAL;
-
-	errno = 0;
-	val = strtol(value, &end, 10);
-	if (errno != 0 || end == value || *end != '\0' || val < 0 || val > INT_MAX) {
-		AF_XDP_LOG_LINE(ERR, "Argument has to be a valid non-negative integer.");
-		return -EINVAL;
+	ret = rte_kvargs_to_uint(value, 1, RTE_MAX_QUEUES_PER_PORT, &queue_cnt);
+	if (ret < 0) {
+		AF_XDP_LOG_LINE(ERR, "Invalid queue count, must be >= 1 and <= %u",
+				RTE_MAX_QUEUES_PER_PORT);
+		return ret;
 	}
 
-	*i = (int)val;
+	*(uint16_t *)extra_args = queue_cnt;
 	return 0;
 }
 
-/** parse hex from argument */
+/**
+ * Parse a metadata offset into the packet headroom. Stored in an int so
+ * that -1 can mean "not specified"; a negative value from the user would
+ * be indistinguishable from that, so only zero and above are accepted.
+ */
 static int
-parse_hex_arg(const char *key __rte_unused,
-	      const char *value, void *extra_args)
+parse_offset_arg(const char *key __rte_unused,
+		 const char *value, void *extra_args)
 {
-	int *i = (int *)extra_args;
-	char *end;
-	unsigned long val;
+	int64_t offset;
+	int ret;
 
-	if (value == NULL || extra_args == NULL)
-		return -EINVAL;
+	ret = rte_kvargs_to_int(value, 0, XDP_PACKET_HEADROOM, &offset);
+	if (ret < 0) {
+		AF_XDP_LOG_LINE(ERR, "Invalid metadata offset, must be >= 0 and <= %u",
+				XDP_PACKET_HEADROOM);
+		return ret;
+	}
 
-	errno = 0;
-	val = strtoul(value, &end, 16);
-	if (errno != 0 || end == value || *end != '\0' || val > UINT8_MAX) {
+	*(int *)extra_args = offset;
+	return 0;
+}
+
+/** parse the validity hint mask, a bare hexadecimal byte */
+static int
+parse_mask_arg(const char *key __rte_unused,
+	       const char *value, void *extra_args)
+{
+	uint64_t mask;
+	int ret;
+
+	ret = rte_kvargs_to_hex(value, UINT8_MAX, &mask);
+	if (ret < 0) {
 		AF_XDP_LOG_LINE(ERR, "Validity mask must be a valid hex byte (0-0xFF).");
-		return -EINVAL;
+		return ret;
 	}
 
-	*i = (int)val;
+	*(uint8_t *)extra_args = mask;
 	return 0;
 }
 
@@ -2396,12 +2432,14 @@ parse_prog_arg(const char *key __rte_unused,
 }
 
 static int
-xdp_get_channels_info(const char *if_name, int *max_queues,
-				int *configured_queues)
+xdp_get_channels_info(const char *if_name, uint16_t *max_queues,
+				uint16_t *configured_queues)
 {
+	const uint32_t max_q = RTE_MAX_QUEUES_PER_PORT;
 	struct ethtool_channels channels;
 	struct ifreq ifr;
-	int fd, ret, rxtx_q_count;
+	uint32_t rxtx_q_count;
+	int fd, ret;
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd < 0)
@@ -2423,6 +2461,9 @@ xdp_get_channels_info(const char *if_name, int *max_queues,
 	/* For drivers with rx/tx queue configured */
 	rxtx_q_count = RTE_MIN(channels.rx_count, channels.tx_count);
 
+	/* The ethtool counts are 32 bit, but a port cannot have more
+	 * queues than the ethdev layer allows.
+	 */
 	if ((channels.max_combined == 0 && rxtx_q_count == 0) || errno == EOPNOTSUPP) {
 		/* If the device says it has no channels, then all traffic
 		 * is sent to a single stream, so max queues = 1.
@@ -2430,12 +2471,14 @@ xdp_get_channels_info(const char *if_name, int *max_queues,
 		*max_queues = 1;
 		*configured_queues = 1;
 	} else if (channels.max_combined > 0) {
-		*max_queues = channels.max_combined;
-		*configured_queues = channels.combined_count;
+		*max_queues = RTE_MIN(channels.max_combined, max_q);
+		*configured_queues = RTE_MIN(channels.combined_count, max_q);
 		AF_XDP_LOG_LINE(INFO, "Using Combined queues configuration");
 	} else {
-		*max_queues = RTE_MIN(channels.max_rx, channels.max_tx);
-		*configured_queues = rxtx_q_count;
+		uint32_t max_rxtx = RTE_MIN(channels.max_rx, channels.max_tx);
+
+		*max_queues = RTE_MIN(max_rxtx, max_q);
+		*configured_queues = RTE_MIN(rxtx_q_count, max_q);
 		AF_XDP_LOG_LINE(INFO, "Using Rx/Tx queues configuration");
 	}
 
@@ -2445,92 +2488,64 @@ xdp_get_channels_info(const char *if_name, int *max_queues,
 }
 
 static int
-parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
-		 int *queue_cnt, int *shared_umem, char *prog_path,
-		 int *busy_budget, int *force_copy, int *use_cni,
-		 int *use_pinned_map, char *dp_path, uint32_t *xdp_mode,
-		 int *rx_timestamp_offset, int *rx_timestamp_valid_offset,
-		 int *rx_timestamp_valid_mask)
+parse_parameters(struct rte_kvargs *kvlist, struct af_xdp_devargs *devargs)
 {
-	int ret;
+	/*
+	 * The boolean arguments are processed with rte_kvargs_process_opt()
+	 * so that a bare key, with no value, enables the option.
+	 */
+	static const struct {
+		const char *key;
+		arg_handler_t handler;
+		size_t offset;
+		bool optional_value;
+	} args[] = {
+		{ ETH_AF_XDP_IFACE_ARG, parse_name_arg,
+		  offsetof(struct af_xdp_devargs, if_name) },
+		{ ETH_AF_XDP_START_QUEUE_ARG, rte_kvargs_handle_u16,
+		  offsetof(struct af_xdp_devargs, start_queue_idx) },
+		{ ETH_AF_XDP_QUEUE_COUNT_ARG, parse_queue_count_arg,
+		  offsetof(struct af_xdp_devargs, queue_cnt) },
+		{ ETH_AF_XDP_SHARED_UMEM_ARG, rte_kvargs_handle_bool,
+		  offsetof(struct af_xdp_devargs, shared_umem), true },
+		{ ETH_AF_XDP_PROG_ARG, parse_prog_arg,
+		  offsetof(struct af_xdp_devargs, prog_path) },
+		{ ETH_AF_XDP_BUDGET_ARG, parse_budget_arg,
+		  offsetof(struct af_xdp_devargs, busy_budget) },
+		{ ETH_AF_XDP_FORCE_COPY_ARG, rte_kvargs_handle_bool,
+		  offsetof(struct af_xdp_devargs, force_copy), true },
+		{ ETH_AF_XDP_USE_CNI_ARG, rte_kvargs_handle_bool,
+		  offsetof(struct af_xdp_devargs, use_cni), true },
+		{ ETH_AF_XDP_USE_PINNED_MAP_ARG, rte_kvargs_handle_bool,
+		  offsetof(struct af_xdp_devargs, use_pinned_map), true },
+		{ ETH_AF_XDP_DP_PATH_ARG, parse_prog_arg,
+		  offsetof(struct af_xdp_devargs, dp_path) },
+		{ ETH_AF_XDP_MODE_ARG, parse_mode_arg,
+		  offsetof(struct af_xdp_devargs, xdp_mode) },
+		{ ETH_AF_XDP_RX_TIMESTAMP_OFFSET_ARG, parse_offset_arg,
+		  offsetof(struct af_xdp_devargs, rx_timestamp_offset) },
+		{ ETH_AF_XDP_RX_TIMESTAMP_VALID_OFFSET_ARG, parse_offset_arg,
+		  offsetof(struct af_xdp_devargs, rx_timestamp_valid_offset) },
+		{ ETH_AF_XDP_RX_TIMESTAMP_VALID_MASK_ARG, parse_mask_arg,
+		  offsetof(struct af_xdp_devargs, rx_timestamp_valid_mask) },
+	};
+	unsigned int i;
 
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_IFACE_ARG,
-				 &parse_name_arg, if_name);
-	if (ret < 0)
-		goto free_kvlist;
+	for (i = 0; i < RTE_DIM(args); i++) {
+		void *target = RTE_PTR_ADD(devargs, args[i].offset);
+		int ret;
 
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_START_QUEUE_ARG,
-				 &parse_integer_arg, start_queue);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_QUEUE_COUNT_ARG,
-				 &parse_integer_arg, queue_cnt);
-	if (ret < 0 || *queue_cnt <= 0) {
-		ret = -EINVAL;
-		goto free_kvlist;
+		if (args[i].optional_value)
+			ret = rte_kvargs_process_opt(kvlist, args[i].key,
+						     args[i].handler, target);
+		else
+			ret = rte_kvargs_process(kvlist, args[i].key,
+						 args[i].handler, target);
+		if (ret < 0)
+			return ret;
 	}
 
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_SHARED_UMEM_ARG,
-				&parse_integer_arg, shared_umem);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_PROG_ARG,
-				 &parse_prog_arg, prog_path);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_BUDGET_ARG,
-				&parse_budget_arg, busy_budget);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_FORCE_COPY_ARG,
-				&parse_integer_arg, force_copy);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_USE_CNI_ARG,
-				 &parse_integer_arg, use_cni);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_USE_PINNED_MAP_ARG,
-				 &parse_integer_arg, use_pinned_map);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_DP_PATH_ARG,
-				 &parse_prog_arg, dp_path);
-
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_MODE_ARG,
-				 &parse_mode_arg, xdp_mode);
-
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_RX_TIMESTAMP_OFFSET_ARG,
-				 &parse_integer_arg, rx_timestamp_offset);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_RX_TIMESTAMP_VALID_OFFSET_ARG,
-				 &parse_integer_arg, rx_timestamp_valid_offset);
-	if (ret < 0)
-		goto free_kvlist;
-
-	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_RX_TIMESTAMP_VALID_MASK_ARG,
-				 &parse_hex_arg, rx_timestamp_valid_mask);
-	if (ret < 0)
-		goto free_kvlist;
-
-free_kvlist:
-	rte_kvargs_free(kvlist);
-	return ret;
+	return 0;
 }
 
 static int
@@ -2564,57 +2579,54 @@ error:
 }
 
 static struct rte_eth_dev *
-init_internals(struct rte_vdev_device *dev, const char *if_name,
-	       int start_queue_idx, int queue_cnt, int shared_umem,
-	       const char *prog_path, int busy_budget, int force_copy,
-	       int use_cni, int use_pinned_map, const char *dp_path, uint32_t xdp_mode,
-	       int rx_timestamp_offset, int rx_timestamp_valid_offset,
-	       int rx_timestamp_valid_mask)
+init_internals(struct rte_vdev_device *dev,
+	       const struct af_xdp_devargs *devargs)
 {
 	const char *name = rte_vdev_device_name(dev);
 	const unsigned int numa_node = dev->device.numa_node;
+	const uint16_t queue_cnt = devargs->queue_cnt;
 	struct pmd_process_private *process_private;
 	struct pmd_internals *internals;
 	struct rte_eth_dev *eth_dev;
+	uint16_t i;
 	int ret;
-	int i;
 
 	internals = rte_zmalloc_socket(name, sizeof(*internals), 0, numa_node);
 	if (internals == NULL)
 		return NULL;
 
-	internals->start_queue_idx = start_queue_idx;
+	internals->start_queue_idx = devargs->start_queue_idx;
 	internals->queue_cnt = queue_cnt;
-	strlcpy(internals->if_name, if_name, IFNAMSIZ);
-	strlcpy(internals->prog_path, prog_path, PATH_MAX);
+	strlcpy(internals->if_name, devargs->if_name, IFNAMSIZ);
+	strlcpy(internals->prog_path, devargs->prog_path, PATH_MAX);
 	internals->custom_prog_configured = 0;
 
 #ifndef ETH_AF_XDP_SHARED_UMEM
-	if (shared_umem) {
+	if (devargs->shared_umem) {
 		AF_XDP_LOG_LINE(ERR, "Shared UMEM feature not available. "
 				"Check kernel and libbpf version");
 		goto err_free_internals;
 	}
 #endif
-	internals->shared_umem = shared_umem;
-	internals->force_copy = force_copy;
-	internals->use_cni = use_cni;
-	internals->use_pinned_map = use_pinned_map;
-	internals->mode_flag = XDP_FLAGS_UPDATE_IF_NOEXIST | xdp_mode;
-	strlcpy(internals->dp_path, dp_path, PATH_MAX);
-	internals->rx_timestamp_offset = rx_timestamp_offset;
-	internals->rx_timestamp_valid_offset = rx_timestamp_valid_offset;
-	internals->rx_timestamp_valid_mask = (uint8_t)rx_timestamp_valid_mask;
+	internals->shared_umem = devargs->shared_umem;
+	internals->force_copy = devargs->force_copy;
+	internals->use_cni = devargs->use_cni;
+	internals->use_pinned_map = devargs->use_pinned_map;
+	internals->mode_flag = XDP_FLAGS_UPDATE_IF_NOEXIST | devargs->xdp_mode;
+	strlcpy(internals->dp_path, devargs->dp_path, PATH_MAX);
+	internals->rx_timestamp_offset = devargs->rx_timestamp_offset;
+	internals->rx_timestamp_valid_offset = devargs->rx_timestamp_valid_offset;
+	internals->rx_timestamp_valid_mask = devargs->rx_timestamp_valid_mask;
 
-	if (xdp_get_channels_info(if_name, &internals->max_queue_cnt,
+	if (xdp_get_channels_info(internals->if_name, &internals->max_queue_cnt,
 				  &internals->configured_queue_cnt)) {
 		AF_XDP_LOG_LINE(ERR, "Failed to get channel info of interface: %s",
-				if_name);
+				internals->if_name);
 		goto err_free_internals;
 	}
 
 	if (queue_cnt > internals->configured_queue_cnt) {
-		AF_XDP_LOG_LINE(ERR, "Specified queue count %d is larger than configured queue count %d.",
+		AF_XDP_LOG_LINE(ERR, "Specified queue count %u is larger than configured queue count %u.",
 				queue_cnt, internals->configured_queue_cnt);
 		goto err_free_internals;
 	}
@@ -2637,12 +2649,12 @@ init_internals(struct rte_vdev_device *dev, const char *if_name,
 	for (i = 0; i < queue_cnt; i++) {
 		internals->tx_queues[i].pair = &internals->rx_queues[i];
 		internals->rx_queues[i].pair = &internals->tx_queues[i];
-		internals->rx_queues[i].xsk_queue_idx = start_queue_idx + i;
-		internals->tx_queues[i].xsk_queue_idx = start_queue_idx + i;
-		internals->rx_queues[i].busy_budget = busy_budget;
+		internals->rx_queues[i].xsk_queue_idx = internals->start_queue_idx + i;
+		internals->tx_queues[i].xsk_queue_idx = internals->start_queue_idx + i;
+		internals->rx_queues[i].busy_budget = devargs->busy_budget;
 	}
 
-	ret = get_iface_info(if_name, &internals->eth_addr,
+	ret = get_iface_info(internals->if_name, &internals->eth_addr,
 			     &internals->if_index);
 	if (ret)
 		goto err_free_tx;
@@ -2828,23 +2840,17 @@ get_dflt_dp_path(char *dp_path, size_t size, const char *if_name,
 static int
 rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 {
-	struct rte_kvargs *kvlist;
-	char if_name[IFNAMSIZ] = {'\0'};
-	int xsk_start_queue_idx = ETH_AF_XDP_DFLT_START_QUEUE_IDX;
-	int xsk_queue_cnt = ETH_AF_XDP_DFLT_QUEUE_COUNT;
-	int shared_umem = 0;
-	char prog_path[PATH_MAX] = {'\0'};
-	int busy_budget = -1, ret;
-	int force_copy = 0;
-	int use_cni = 0;
-	int use_pinned_map = 0;
-	uint32_t xdp_mode = 0;
-	char dp_path[PATH_MAX] = {'\0'};
-	int rx_timestamp_offset = -1;
-	int rx_timestamp_valid_offset = -1;
-	int rx_timestamp_valid_mask = 0;
+	struct af_xdp_devargs devargs = {
+		.start_queue_idx = ETH_AF_XDP_DFLT_START_QUEUE_IDX,
+		.queue_cnt = ETH_AF_XDP_DFLT_QUEUE_COUNT,
+		.busy_budget = -1,
+		.rx_timestamp_offset = -1,
+		.rx_timestamp_valid_offset = -1,
+	};
 	struct rte_eth_dev *eth_dev = NULL;
 	const char *name = rte_vdev_device_name(dev);
+	struct rte_kvargs *kvlist;
+	int ret;
 
 	AF_XDP_LOG_LINE(INFO, "Initializing pmd_af_xdp for %s", name);
 
@@ -2885,97 +2891,98 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 		return -EINVAL;
 	}
 
-	if (parse_parameters(kvlist, if_name, &xsk_start_queue_idx,
-			     &xsk_queue_cnt, &shared_umem, prog_path,
-			     &busy_budget, &force_copy, &use_cni, &use_pinned_map,
-			     dp_path, &xdp_mode, &rx_timestamp_offset,
-			     &rx_timestamp_valid_offset, &rx_timestamp_valid_mask) < 0) {
+	ret = parse_parameters(kvlist, &devargs);
+	rte_kvargs_free(kvlist);
+	if (ret < 0) {
 		AF_XDP_LOG_LINE(ERR, "Invalid kvargs value");
 		return -EINVAL;
 	}
 
-	if (strlen(if_name) == 0) {
+	if (strlen(devargs.if_name) == 0) {
 		AF_XDP_LOG_LINE(ERR, "Network interface must be specified");
 		return -EINVAL;
 	}
 
-	if (rx_timestamp_offset >= 0) {
-		if (rx_timestamp_offset < (int)sizeof(uint64_t) ||
-		    rx_timestamp_offset > XDP_PACKET_HEADROOM) {
-			AF_XDP_LOG_LINE(ERR,
-				"Timestamp offset must be between %zu and %u bytes",
-				sizeof(uint64_t), XDP_PACKET_HEADROOM);
-			return -EINVAL;
-		}
+	/* The offsets are already bounded by XDP_PACKET_HEADROOM when parsed. */
+	if (devargs.rx_timestamp_offset >= 0 &&
+	    devargs.rx_timestamp_offset < (int)sizeof(uint64_t)) {
+		AF_XDP_LOG_LINE(ERR,
+			"Timestamp offset must be between %zu and %u bytes",
+			sizeof(uint64_t), XDP_PACKET_HEADROOM);
+		return -EINVAL;
 	}
 
-	if (rx_timestamp_valid_offset >= 0) {
-		if (rx_timestamp_offset < 0) {
+	if (devargs.rx_timestamp_valid_offset >= 0) {
+		if (devargs.rx_timestamp_offset < 0) {
 			AF_XDP_LOG_LINE(ERR,
 				"Timestamp offset must be configured when validity offset is configured");
 			return -EINVAL;
 		}
-		if (rx_timestamp_valid_offset < 1 ||
-		    rx_timestamp_valid_offset > XDP_PACKET_HEADROOM) {
+		if (devargs.rx_timestamp_valid_offset < 1) {
 			AF_XDP_LOG_LINE(ERR,
 				"Validity hint offset must be between 1 and %u bytes",
 				XDP_PACKET_HEADROOM);
 			return -EINVAL;
 		}
-		if (rx_timestamp_valid_offset > rx_timestamp_offset - (int)sizeof(uint64_t) &&
-		    rx_timestamp_valid_offset <= rx_timestamp_offset) {
+		if (devargs.rx_timestamp_valid_offset >
+				devargs.rx_timestamp_offset - (int)sizeof(uint64_t) &&
+		    devargs.rx_timestamp_valid_offset <= devargs.rx_timestamp_offset) {
 			AF_XDP_LOG_LINE(ERR,
 				"Validity hint offset %d overlaps with 8-byte timestamp at offset %d",
-				rx_timestamp_valid_offset, rx_timestamp_offset);
+				devargs.rx_timestamp_valid_offset,
+				devargs.rx_timestamp_offset);
 			return -EINVAL;
 		}
-		if (rx_timestamp_valid_mask == 0) {
+		if (devargs.rx_timestamp_valid_mask == 0) {
 			AF_XDP_LOG_LINE(ERR,
 				"Validity mask cannot be zero when validity offset is configured");
 			return -EINVAL;
 		}
 	}
 
-	if (use_cni && use_pinned_map) {
+	if (devargs.use_cni && devargs.use_pinned_map) {
 		AF_XDP_LOG_LINE(ERR, "When '%s' parameter is used, '%s' parameter is not valid",
 			ETH_AF_XDP_USE_CNI_ARG, ETH_AF_XDP_USE_PINNED_MAP_ARG);
 		return -EINVAL;
 	}
 
-	if ((use_cni || use_pinned_map) && busy_budget > 0) {
+	if ((devargs.use_cni || devargs.use_pinned_map) && devargs.busy_budget > 0) {
 		AF_XDP_LOG_LINE(ERR, "When '%s' or '%s' parameter is used, '%s' parameter is not valid",
 			ETH_AF_XDP_USE_CNI_ARG, ETH_AF_XDP_USE_PINNED_MAP_ARG,
 			ETH_AF_XDP_BUDGET_ARG);
 		return -EINVAL;
 	}
 
-	if ((use_cni || use_pinned_map) && strnlen(prog_path, PATH_MAX)) {
+	if ((devargs.use_cni || devargs.use_pinned_map) &&
+	    strnlen(devargs.prog_path, PATH_MAX)) {
 		AF_XDP_LOG_LINE(ERR, "When '%s' or '%s' parameter is used, '%s' parameter is not valid",
 			ETH_AF_XDP_USE_CNI_ARG, ETH_AF_XDP_USE_PINNED_MAP_ARG,
 			ETH_AF_XDP_PROG_ARG);
 		return -EINVAL;
 	}
 
-	if (use_cni && !strnlen(dp_path, PATH_MAX)) {
+	if (devargs.use_cni && !strnlen(devargs.dp_path, PATH_MAX)) {
 		/* The UDS path is bounded by sun_path, not by PATH_MAX. */
-		ret = get_dflt_dp_path(dp_path,
+		ret = get_dflt_dp_path(devargs.dp_path,
 				RTE_SIZEOF_FIELD(struct sockaddr_un, sun_path),
-				if_name, DP_UDS_SOCK);
+				devargs.if_name, DP_UDS_SOCK);
 		if (ret < 0)
 			return ret;
 		AF_XDP_LOG_LINE(INFO, "'%s' parameter not provided, setting value to '%s'",
-			ETH_AF_XDP_DP_PATH_ARG, dp_path);
+			ETH_AF_XDP_DP_PATH_ARG, devargs.dp_path);
 	}
 
-	if (use_pinned_map && !strnlen(dp_path, PATH_MAX)) {
-		ret = get_dflt_dp_path(dp_path, sizeof(dp_path), if_name, DP_XSK_MAP);
+	if (devargs.use_pinned_map && !strnlen(devargs.dp_path, PATH_MAX)) {
+		ret = get_dflt_dp_path(devargs.dp_path, sizeof(devargs.dp_path),
+				devargs.if_name, DP_XSK_MAP);
 		if (ret < 0)
 			return ret;
 		AF_XDP_LOG_LINE(INFO, "'%s' parameter not provided, setting value to '%s'",
-			ETH_AF_XDP_DP_PATH_ARG, dp_path);
+			ETH_AF_XDP_DP_PATH_ARG, devargs.dp_path);
 	}
 
-	if ((!use_cni && !use_pinned_map) && strnlen(dp_path, PATH_MAX)) {
+	if ((!devargs.use_cni && !devargs.use_pinned_map) &&
+	    strnlen(devargs.dp_path, PATH_MAX)) {
 		AF_XDP_LOG_LINE(ERR, "'%s' parameter is set, but '%s' or '%s' were not enabled",
 			ETH_AF_XDP_DP_PATH_ARG, ETH_AF_XDP_USE_CNI_ARG,
 			ETH_AF_XDP_USE_PINNED_MAP_ARG);
@@ -2986,10 +2993,10 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 	 * The socket address is copied into sun_path which is much shorter than
 	 * PATH_MAX, reject an oversized path instead of silently truncating it.
 	 */
-	if (use_cni && strnlen(dp_path, PATH_MAX) >=
+	if (devargs.use_cni && strnlen(devargs.dp_path, PATH_MAX) >=
 		       RTE_SIZEOF_FIELD(struct sockaddr_un, sun_path)) {
 		AF_XDP_LOG_LINE(ERR, "'%s' value '%s' is too long for a unix socket address",
-				ETH_AF_XDP_DP_PATH_ARG, dp_path);
+				ETH_AF_XDP_DP_PATH_ARG, devargs.dp_path);
 		return -ENAMETOOLONG;
 	}
 
@@ -2999,21 +3006,17 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 		char numa_path[PATH_MAX];
 
 		snprintf(numa_path, sizeof(numa_path), "/sys/class/net/%s/device/numa_node",
-			 if_name);
+			 devargs.if_name);
 		if (access(numa_path, R_OK) != 0 || eal_parse_sysfs_value(numa_path, &numa) != 0)
 			dev->device.numa_node = rte_socket_id();
 		else
 			dev->device.numa_node = numa;
 	}
 
-	busy_budget = busy_budget == -1 ? ETH_AF_XDP_DFLT_BUSY_BUDGET :
-					busy_budget;
+	if (devargs.busy_budget == -1)
+		devargs.busy_budget = ETH_AF_XDP_DFLT_BUSY_BUDGET;
 
-	eth_dev = init_internals(dev, if_name, xsk_start_queue_idx,
-				 xsk_queue_cnt, shared_umem, prog_path,
-				 busy_budget, force_copy, use_cni, use_pinned_map,
-				 dp_path, xdp_mode, rx_timestamp_offset,
-				 rx_timestamp_valid_offset, rx_timestamp_valid_mask);
+	eth_dev = init_internals(dev, &devargs);
 	if (eth_dev == NULL) {
 		AF_XDP_LOG_LINE(ERR, "Failed to init internals");
 		return -1;
