@@ -15,6 +15,7 @@
 #include "rte_mtr.h"
 
 #include "bnxt.h"
+#include "cfa_types.h"
 #include "ulp_template_db_enum.h"
 #include "ulp_tun.h"
 #include "bnxt_tf_common.h"
@@ -115,6 +116,8 @@ struct bnxt_ulp_vfr_rule_info {
 
 struct bnxt_ulp_data {
 	uint32_t			tbl_scope_id;
+	enum cfa_scope_type		tbl_scope_type; /* for deinit */
+	uint16_t			glb_tbl_scope_fid_cnt; /* only for GLOBAL scope */
 	struct bnxt_ulp_mark_tbl	*mark_tbl;
 	uint32_t			dev_id; /* Hardware device id */
 	uint32_t			ref_cnt;

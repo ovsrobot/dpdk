@@ -111,6 +111,64 @@ bnxt_ulp_cntxt_tbl_scope_max_pools_set(struct bnxt_ulp_context *ulp_ctx,
 	return 0;
 }
 
+int32_t
+bnxt_ulp_cntxt_tbl_scope_type_get(struct bnxt_ulp_context *ulp_ctx,
+				  enum cfa_scope_type *scope_type)
+{
+	if (ulp_ctx == NULL || ulp_ctx->cfg_data == NULL || scope_type == NULL)
+		return -EINVAL;
+	*scope_type = ulp_ctx->cfg_data->tbl_scope_type;
+	return 0;
+}
+
+int32_t
+bnxt_ulp_cntxt_tbl_scope_type_set(struct bnxt_ulp_context *ulp_ctx,
+				  enum cfa_scope_type scope_type)
+{
+	if (ulp_ctx == NULL || ulp_ctx->cfg_data == NULL)
+		return -EINVAL;
+	ulp_ctx->cfg_data->tbl_scope_type = scope_type;
+	return 0;
+}
+
+uint16_t
+bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_get(struct bnxt_ulp_context *ulp_ctx)
+{
+	if (ulp_ctx == NULL || ulp_ctx->cfg_data == NULL)
+		return 0;
+	return ulp_ctx->cfg_data->glb_tbl_scope_fid_cnt;
+}
+
+int32_t
+bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_set(struct bnxt_ulp_context *ulp_ctx,
+					 uint16_t fid_cnt)
+{
+	if (ulp_ctx == NULL || ulp_ctx->cfg_data == NULL)
+		return -EINVAL;
+	ulp_ctx->cfg_data->glb_tbl_scope_fid_cnt = fid_cnt;
+	return 0;
+}
+
+int32_t
+bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_inc(struct bnxt_ulp_context *ulp_ctx)
+{
+	if (ulp_ctx == NULL || ulp_ctx->cfg_data == NULL)
+		return -EINVAL;
+	ulp_ctx->cfg_data->glb_tbl_scope_fid_cnt++;
+	return 0;
+}
+
+int32_t
+bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_dec(struct bnxt_ulp_context *ulp_ctx)
+{
+	if (ulp_ctx == NULL || ulp_ctx->cfg_data == NULL)
+		return -EINVAL;
+	if (ulp_ctx->cfg_data->glb_tbl_scope_fid_cnt == 0)
+		return -EINVAL;
+	ulp_ctx->cfg_data->glb_tbl_scope_fid_cnt--;
+	return 0;
+}
+
 enum tfc_tbl_scope_bucket_factor
 bnxt_ulp_cntxt_em_mulitplier_get(struct bnxt_ulp_context *ulp_ctx)
 {
@@ -299,31 +357,65 @@ ulp_tfc_dparms_init(struct bnxt *bp,
 static void
 ulp_tfc_tbl_scope_deinit(struct bnxt *bp)
 {
-	uint16_t fid = 0, fid_cnt = 0;
-	struct tfc *tfcp;
+	uint16_t fid = 0;
+	uint16_t our_fid_cnt = 0;
+	struct tfc *tfcp = NULL;
 	uint8_t tsid = 0;
 	int32_t rc;
+	enum cfa_scope_type scope_type = CFA_SCOPE_TYPE_INVALID;
+	int32_t scope_rc;
+	bool have_scope = false;
 
 	tfcp = bnxt_ulp_cntxt_tfcp_get(bp->ulp_ctx);
 	if (tfcp == NULL)
-		return;
+		goto cleanup;
 
 	rc = bnxt_ulp_cntxt_tsid_get(bp->ulp_ctx, &tsid);
-	if (unlikely(rc))
-		BNXT_DRV_DBG(ERR, "Failed to get the table scope\n");
+	if (rc) {
+		BNXT_DRV_DBG(ERR, "tsid_get failed rc=%d, skipping table-scope deinit", rc);
+		goto cleanup;
+	}
 
 	rc = bnxt_ulp_cntxt_fid_get(bp->ulp_ctx, &fid);
-	if (rc)
+	if (rc) {
+		BNXT_DRV_DBG(ERR, "fid_get failed rc=%d, skipping table-scope deinit", rc);
+		goto cleanup;
+	}
+
+	have_scope = true;
+
+	if (bnxt_ulp_cntxt_acquire_fdb_lock(bp->ulp_ctx)) {
+		BNXT_DRV_DBG(ERR, "acquire_fdb_lock failed, proceeding with teardown using conservative fid_cnt");
+		our_fid_cnt = 1; /* Conservative: avoid invalidating shared scope in mem_free */
+	} else {
+		scope_rc = bnxt_ulp_cntxt_tbl_scope_type_get(bp->ulp_ctx, &scope_type);
+		if (scope_rc) {
+			BNXT_DRV_DBG(ERR,
+				     "tbl_scope_type_get failed rc=%d, proceeding with teardown using conservative fid_cnt",
+				     scope_rc);
+			our_fid_cnt = 1; /* avoid invalidating shared scope in mem_free */
+		} else if (scope_type == CFA_SCOPE_TYPE_GLOBAL) {
+			rc = bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_dec(bp->ulp_ctx);
+			if (rc) {
+				BNXT_DRV_DBG(WARNING,
+					     "glb_tbl_scope_fid_cnt dec failed (e.g. already 0), continuing teardown TSID:%d FID:%d",
+					     tsid, fid);
+				/* Pass 1 so mem_free won't treat as last FID & invalidate scope */
+				our_fid_cnt = 1;
+			} else {
+				our_fid_cnt = bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_get(bp->ulp_ctx);
+			}
+		} else {
+			our_fid_cnt = 0;
+		}
+		bnxt_ulp_cntxt_release_fdb_lock(bp->ulp_ctx);
+	}
+
+cleanup:
+	if (!have_scope)
 		return;
 
-	rc = tfc_tbl_scope_fid_rem(tfcp, fid, tsid, &fid_cnt);
-	if (rc)
-		BNXT_DRV_DBG(ERR, "Failed removing FID from TSID:%d FID:%d",
-			     tsid, fid);
-	else
-		BNXT_DRV_DBG(DEBUG, "Removed FID from TSID:%d FID:%d",
-			     tsid, fid);
-
+	/* Free this port's CPM before mem_free; mem_free invalidates tsid scope state */
 	rc = tfc_tbl_scope_cpm_free(tfcp, tsid);
 	if (rc)
 		BNXT_DRV_DBG(ERR, "Failed Freeing CPM TSID:%d FID:%d",
@@ -331,7 +423,16 @@ ulp_tfc_tbl_scope_deinit(struct bnxt *bp)
 	else
 		BNXT_DRV_DBG(DEBUG, "Freed CPM TSID:%d FID: %d", tsid, fid);
 
-	rc = tfc_tbl_scope_mem_free(tfcp, fid, tsid, fid_cnt);
+	rc = tfc_tbl_scope_fid_rem(tfcp, fid, tsid, NULL);
+	if (rc)
+		BNXT_DRV_DBG(ERR, "Failed removing FID from TSID:%d FID:%d",
+			     tsid, fid);
+	else
+		BNXT_DRV_DBG(DEBUG, "Removed FID from TSID:%d FID:%d, remaining FID count:%d",
+			     tsid, fid, our_fid_cnt);
+
+	/* Still attempt mem_free and fid_rem to avoid FW/driver state divergence. */
+	rc = tfc_tbl_scope_mem_free(tfcp, fid, tsid, our_fid_cnt);
 	if (rc)
 		BNXT_DRV_DBG(ERR, "Failed freeing tscope mem TSID:%d FID:%d",
 			     tsid, fid);
@@ -506,13 +607,42 @@ ulp_tfc_tbl_scope_init(struct bnxt *bp)
 	cparms.max_pools = max_pools;
 
 	rc = tfc_tbl_scope_cpm_alloc(tfcp, tsid, &cparms);
-	if (rc)
+	if (rc) {
 		BNXT_DRV_DBG(ERR, "Failed to allocate CPM TSID:%d FID:%d\n",
 			     tsid, fid);
-	else
+	} else {
 		BNXT_DRV_DBG(DEBUG, "Allocated CPM TSID:%d FID:%d\n", tsid, fid);
+		/* Inc before setting type so type==GLOBAL never without count incremented. */
+		if (bnxt_ulp_cntxt_acquire_fdb_lock(bp->ulp_ctx)) {
+			BNXT_DRV_DBG(ERR, "acquire_fdb_lock failed after CPM alloc, rolling back");
+			goto rollback;
+		}
+		if (scope_type == CFA_SCOPE_TYPE_GLOBAL) {
+			rc = bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_inc(bp->ulp_ctx);
+			if (rc) {
+				BNXT_DRV_DBG(ERR, "Failed to increment glb_tbl_scope_fid_cnt");
+				bnxt_ulp_cntxt_release_fdb_lock(bp->ulp_ctx);
+				return rc;
+			}
+		}
+		rc = bnxt_ulp_cntxt_tbl_scope_type_set(bp->ulp_ctx, scope_type);
+		bnxt_ulp_cntxt_release_fdb_lock(bp->ulp_ctx);
+	}
 
 	return rc;
+
+rollback:
+	/* Rollback: only FID in scope (glb_tbl_scope_fid_cnt_inc never ran). */
+	rc = tfc_tbl_scope_cpm_free(tfcp, tsid);
+	if (rc)
+		BNXT_DRV_DBG(INFO, "Rollback: cpm_free failed TSID:%d FID:%d rc=%d", tsid, fid, rc);
+	rc = tfc_tbl_scope_mem_free(tfcp, fid, tsid, 0);
+	if (rc)
+		BNXT_DRV_DBG(INFO, "Rollback: mem_free failed TSID:%d FID:%d rc=%d", tsid, fid, rc);
+	rc = tfc_tbl_scope_fid_rem(tfcp, fid, tsid, NULL);
+	if (rc)
+		BNXT_DRV_DBG(INFO, "Rollback: fid_rem failed TSID:%d FID:%d rc=%d", tsid, fid, rc);
+	return -1;
 }
 
 static int32_t
