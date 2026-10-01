@@ -34,6 +34,8 @@
 #include <bus_driver.h>
 #include <rte_mbuf_pool_ops.h>
 #include <rte_mbuf_dyn.h>
+#include <rte_kvargs.h>
+#include <rte_devargs.h>
 
 #include <dpaa_of.h>
 #include <bus_dpaa_driver.h>
@@ -66,7 +68,11 @@ struct rte_dpaa_bus_private {
 	uint32_t svr_ver;
 	uint16_t max_push_rxq_num;
 	RTE_ATOMIC(uint16_t) push_rxq_num;
+	int oldev_enabled;	/**< "drv_oldev" bus devarg */
 };
+
+/* Bus level device argument keys */
+#define DPAA_BUS_ARG_OLDEV	"drv_oldev"
 
 static struct rte_bus rte_dpaa_bus;
 static struct rte_dpaa_bus_private dpaa_bus;
@@ -77,6 +83,51 @@ static pthread_key_t dpaa_portal_key;
 /* dpaa lcore specific  portals */
 struct dpaa_portal *dpaa_portals[RTE_MAX_LCORE] = {NULL};
 static int dpaa_bus_global_init;
+
+/*
+ * Parse the bus-level device arguments (specified through the EAL bus
+ * arguments, e.g. "-a bus=dpaa_bus,drv_oldev=1") and cache the resulting
+ * flags in the bus private structure. Replaces the previous
+ * environment-variable based configuration.
+ *
+ * bus_str holds the whole bus layer including the "bus=" pair, so the
+ * kvargs list is parsed with a key list that accepts it alongside the
+ * DPAA specific keys.
+ */
+static int
+dpaa_bus_parse_bus_args(void)
+{
+	static const char * const bus_arg_keys[] = {
+		RTE_DEVARGS_KEY_BUS,
+		DPAA_BUS_ARG_OLDEV,
+		NULL,
+	};
+	struct rte_devargs *devargs;
+	struct rte_kvargs *kvlist;
+
+	RTE_EAL_DEVARGS_FOREACH(rte_dpaa_bus.name, devargs) {
+		if (devargs->bus_str == NULL)
+			continue;
+
+		kvlist = rte_kvargs_parse(devargs->bus_str, bus_arg_keys);
+		if (kvlist == NULL)
+			continue;
+
+		if (rte_kvargs_count(kvlist, DPAA_BUS_ARG_OLDEV))
+			dpaa_bus.oldev_enabled = 1;
+
+		rte_kvargs_free(kvlist);
+	}
+
+	return 0;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa_bus_oldev_enabled)
+int
+rte_dpaa_bus_oldev_enabled(void)
+{
+	return dpaa_bus.oldev_enabled;
+}
 
 RTE_EXPORT_INTERNAL_SYMBOL(per_lcore_dpaa_io)
 RTE_DEFINE_PER_LCORE(struct dpaa_portal *, dpaa_io);
@@ -201,13 +252,41 @@ static void dpaa_clean_device_list(void);
 static int
 dpaa_create_device_list(void)
 {
-	int i;
+	int i = 0;
 	int ret;
 	struct rte_dpaa_device *dev;
 	struct fm_eth_port_cfg *cfg;
 	struct fman_if *fman_intf;
 
 	dpaa_bus.device_count = 0;
+
+	if (!dpaa_netcfg && !dpaa_bus.oldev_enabled)
+		return 0;
+
+	/* Creating OL Device */
+	if (dpaa_bus.oldev_enabled) {
+		dev = calloc(1, sizeof(struct rte_dpaa_device));
+		if (!dev) {
+			DPAA_BUS_ERR("Failed to allocate OL devices");
+			return -ENOMEM;
+		}
+
+		dev->device_type = FSL_DPAA_OL;
+		dev->id.ol_id = 0;
+		dev->id.dev_id = dpaa_bus.device_count;
+
+		/* Create device name */
+		memset(dev->name, 0, RTE_ETH_NAME_MAX_LEN);
+		sprintf(dev->name, "oldev%d", (dev->id.ol_id + 1));
+		DPAA_BUS_INFO("%s oldev added", dev->name);
+		dev->device.name = dev->name;
+		dev->device.devargs = rte_bus_find_devargs(&rte_dpaa_bus, dev->name);
+		if (dev->device.devargs != NULL)
+			DPAA_BUS_INFO("**Devargs matched %s", dev->name);
+
+		dpaa_add_to_device_list(dev);
+		dpaa_bus.device_count++;
+	}
 
 	/* Creating Ethernet Devices */
 	for (i = 0; dpaa_netcfg && (i < dpaa_netcfg->num_ethports); i++) {
@@ -513,7 +592,7 @@ rte_dpaa_bus_parse(const char *name, void *out)
 	}
 
 	/* dev_delta points to the dev name (mac/oh/onic). Not valid for
-	 * dpaa_sec.
+	 * dpaa_sec and oldev.
 	 */
 	dev_delta = delta + sizeof("fm.-") - 1;
 
@@ -527,6 +606,10 @@ rte_dpaa_bus_parse(const char *name, void *out)
 				i < 1 || i > RTE_DPAA_QDMA_DEVICES)
 			return -EINVAL;
 		max_name_len = sizeof("dpaa_qdma-.") - 1;
+	} else if (strncmp("oldev", &name[delta], 5) == 0) {
+		if (sscanf(&name[delta], "oldev%u", &i) != 1 || i != 1)
+			return -EINVAL;
+		max_name_len = sizeof("oldev.") - 1;
 	} else if (strncmp("oh", &name[dev_delta], 2) == 0) {
 		if (sscanf(&name[delta], "fm%u-oh%u", &i, &j) != 2 ||
 				i >= 2 || j >= 16)
@@ -624,7 +707,7 @@ rte_dpaa_bus_dev_build(void)
 
 	/* Get the interface configurations from device-tree */
 	dpaa_netcfg = netcfg_acquire();
-	if (!dpaa_netcfg) {
+	if (!dpaa_netcfg && !dpaa_bus.oldev_enabled) {
 		DPAA_BUS_ERR("netcfg failed: /dev/fsl_usdpaa device not available");
 		DPAA_BUS_WARN("Check if you are using USDPAA based device tree");
 		return -EINVAL;
@@ -632,17 +715,20 @@ rte_dpaa_bus_dev_build(void)
 
 	DPAA_BUS_NOTICE("DPAA Bus Detected");
 
-	if (!dpaa_netcfg->num_ethports) {
-		DPAA_BUS_INFO("NO DPDK mapped net interfaces available");
-		/* This is not an error */
+	if (!dpaa_bus.oldev_enabled) {
+		if (!dpaa_netcfg->num_ethports) {
+			DPAA_BUS_INFO("NO DPDK mapped net interfaces available");
+			/* This is not an error */
+		}
 	}
 
 #ifdef RTE_LIBRTE_DPAA_DEBUG_DRIVER
 	dump_netcfg(dpaa_netcfg, stdout);
 #endif
-
-	DPAA_BUS_DEBUG("Number of ethernet devices = %d",
+	if (!dpaa_bus.oldev_enabled) {
+		DPAA_BUS_DEBUG("Number of ethernet devices = %d",
 			     dpaa_netcfg->num_ethports);
+	}
 	ret = dpaa_create_device_list();
 	if (ret) {
 		DPAA_BUS_ERR("Unable to create device list. (%d)", ret);
@@ -694,6 +780,11 @@ rte_dpaa_bus_scan(void)
 		return 0;
 
 	dpaa_bus.detected = 1;
+
+	/* Parse bus-level device arguments (drv_oldev) before building the
+	 * device list.
+	 */
+	dpaa_bus_parse_bus_args();
 
 	/* create the key, supplying a function that'll be invoked
 	 * when a portal affined thread will be deleted.
