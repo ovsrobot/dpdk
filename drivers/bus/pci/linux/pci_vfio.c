@@ -420,6 +420,10 @@ pci_vfio_is_ioport_bar(const struct rte_pci_device *dev, int vfio_dev_fd,
 static int
 pci_rte_vfio_setup_device(struct rte_pci_device *dev, int vfio_dev_fd)
 {
+	const int max_retries = 5;
+	const int retry_delay_ms = 20;
+	int i, ret;
+
 	if (pci_vfio_setup_interrupts(dev, vfio_dev_fd) != 0) {
 		PCI_LOG(ERR, "Error setting up interrupts!");
 		return -1;
@@ -439,12 +443,20 @@ pci_rte_vfio_setup_device(struct rte_pci_device *dev, int vfio_dev_fd)
 	 * Reset the device. If the device is not capable of resetting,
 	 * then it updates errno as EINVAL.
 	 */
-	if (ioctl(vfio_dev_fd, VFIO_DEVICE_RESET) && errno != EINVAL) {
-		PCI_LOG(ERR, "Unable to reset device! Error: %d (%s)", errno, strerror(errno));
-		return -1;
+	for (i = 0; i < max_retries; i++) {
+		errno = 0;
+		ret = ioctl(vfio_dev_fd, VFIO_DEVICE_RESET);
+		if (ret == 0 || errno == EINVAL)
+			return 0;
+		if (errno != EAGAIN || i + 1 == max_retries)
+			break;
+		PCI_LOG(DEBUG, "Device reset EAGAIN, retry %d/%d after %d ms",
+			i + 1, max_retries, retry_delay_ms);
+		usleep(retry_delay_ms * 1000);
 	}
 
-	return 0;
+	PCI_LOG(ERR, "Unable to reset device! Error: %d (%s)", errno, strerror(errno));
+	return -1;
 }
 
 static int
