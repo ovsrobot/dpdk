@@ -168,6 +168,7 @@ stop_capture(struct session *s)
 	rte_free(s->prm);
 	s->prm = NULL;
 	if (s->data.fd >= 0) {
+		tls_close(&s->data);
 		close(s->data.fd);
 		s->data.fd = -1;
 	}
@@ -312,6 +313,14 @@ handle_startcap(const struct conn *c, uint32_t plen, struct session *s)
 
 	s->data.fd = data_fd;
 
+	/* The client starts its handshake as soon as it has connected,
+	 * so promote before anything is sent.
+	 */
+	if (use_tls && tls_accept(&s->data) < 0) {
+		stop_capture(s);
+		return -1;
+	}
+
 	RPCAPD_LOG(NOTICE,
 		   "capture started on %s (snaplen %u, data port %u)",
 		   s->name, s->snaplen, data_port);
@@ -426,6 +435,12 @@ static int
 check_socket_status(const struct conn *ctrl)
 {
 	struct pollfd pfd = { .fd = ctrl->fd, .events = POLLIN };
+
+	/* A request may already be decrypted and waiting out of sight
+	 * of poll(), sharing a TLS record with an earlier one.
+	 */
+	if (tls_pending(ctrl))
+		return 1;
 
 	if (poll(&pfd, 1, 0) < 0) {
 		if (errno == EINTR)

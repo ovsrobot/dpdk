@@ -21,6 +21,7 @@
 struct rte_bpf_prm;
 struct rte_mempool;
 struct rte_ring;
+struct ssl_st;
 
 #define RTE_LOGTYPE_RPCAPD RTE_LOGTYPE_USER1
 #define RPCAPD_LOG(level, ...) \
@@ -36,9 +37,10 @@ struct rte_ring;
  */
 #define MAX_CAPTURE_LEN		(DEFAULT_SNAPLEN + 2 * sizeof(struct rte_vlan_hdr))
 
-/* A connection to the client. */
+/* A connection to the client; ssl is NULL when not encrypted. */
 struct conn {
 	int fd;
+	struct ssl_st *ssl;
 };
 
 /* Per-client capture session state. */
@@ -50,6 +52,7 @@ struct session {
 	uint32_t snaplen;
 	uint32_t npkt;				/* packet sequence for rpcap_pkthdr */
 	uint32_t pdump_flags;			/* direction bits handed to pdump */
+	bool     authenticated;			/* AUTH_REQ has succeeded */
 	bool     opened;			/* OPEN_REQ has selected a port */
 	bool     capture_on;
 	bool     promisc_set;			/* we enabled promiscuous mode */
@@ -64,12 +67,16 @@ extern RTE_ATOMIC(bool) quit_signal;
 /* Command-line settings needed outside of main.c */
 extern uint32_t ring_size;
 extern uint32_t send_timeout;		/* seconds; 0 means no limit */
+extern bool use_tls;			/* -S: encrypt both connections */
+extern bool null_auth_ok;		/* -n: permit null auth off loopback */
 
 /* Address the control socket is bound to; the data socket uses the same
  * address with an ephemeral port.
  */
 extern struct sockaddr_storage listen_addr;
 extern socklen_t               listen_addrlen;
+
+bool is_loopback(const struct sockaddr_storage *ss);
 
 /* sock.c: transport and message framing */
 int wait_readable(const struct conn *c, int timeout_ms);
@@ -85,8 +92,17 @@ int rpcap_discard(const struct conn *c, uint32_t plen);
 void set_sockaddr_port(struct sockaddr_storage *ss, uint16_t port);
 uint16_t get_sockaddr_port(const struct sockaddr_storage *ss);
 
+/* tls.c: TLS transport, stubbed out when built without OpenSSL */
+int tls_init(const char *certfile, const char *keyfile);
+int tls_accept(struct conn *c);
+void tls_close(struct conn *c);
+int tls_send(struct ssl_st *ssl, const void *buf, size_t len);
+int tls_recv(struct ssl_st *ssl, void *buf, size_t len);
+bool tls_pending(const struct conn *c);
+void tls_reject_handshake(int fd);
+
 /* session.c: control requests handled before a capture starts */
-int handle_auth(const struct conn *c, uint32_t plen);
+int handle_auth(const struct conn *c, uint32_t plen, struct session *s);
 int handle_findallif(const struct conn *c);
 int handle_open(const struct conn *c, uint32_t plen, struct session *s);
 

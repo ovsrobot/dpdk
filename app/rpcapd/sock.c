@@ -18,6 +18,7 @@
 
 #include <rte_byteorder.h>
 #include <rte_common.h>
+#include <rte_mbuf.h>
 #include <rte_stdatomic.h>
 
 #include "rpcap-protocol.h"
@@ -58,6 +59,10 @@ int
 wait_readable(const struct conn *c, int timeout_ms)
 {
 	struct pollfd pfd = { .fd = c->fd, .events = POLLIN };
+
+	/* Decrypted bytes buffered in the SSL object are invisible to poll() */
+	if (tls_pending(c))
+		return 1;
 
 	while (!rte_atomic_load_explicit(&quit_signal, rte_memory_order_relaxed)) {
 		int wait_ms = POLL_INTERVAL_MS;
@@ -207,13 +212,55 @@ recv_full(const struct conn *c, void *buf, size_t len)
 		if (wait_readable(c, -1) != 1)
 			return -1;
 
-		n = recv(c->fd, p, len, 0);
+		if (c->ssl != NULL)
+			n = tls_recv(c->ssl, p, len);
+		else
+			n = recv(c->fd, p, len, 0);
+
 		if (n < 0 && errno == EINTR)
 			continue;
 
 		if (n <= 0)
 			return -1;
 
+		p += n;
+		len -= n;
+	}
+	return 0;
+}
+
+/*
+ * No scatter/gather write in TLS, and SSL_write() gives each call its
+ * own record, so gather into one buffer rather than paying record
+ * overhead per piece.
+ */
+static int
+send_iov_tls(struct ssl_st *ssl, const struct iovec *iov, int iovcnt)
+{
+	uint8_t buf[sizeof(struct rpcap_header) + sizeof(struct rpcap_pkthdr) +
+		    MAX_CAPTURE_LEN];
+	const uint8_t *p = buf;
+	size_t len = 0;
+	int i;
+
+	for (i = 0; i < iovcnt; i++) {
+		if (len + iov[i].iov_len > sizeof(buf)) {
+			/* Cannot happen: buf is sized for both headers plus
+			 * MAX_CAPTURE_LEN.
+			 */
+			RPCAPD_LOG(ERR, "message too large for TLS buffer");
+			errno = EMSGSIZE;
+			return -1;
+		}
+		memcpy(buf + len, iov[i].iov_base, iov[i].iov_len);
+		len += iov[i].iov_len;
+	}
+
+	while (len > 0) {
+		int n = tls_send(ssl, p, len);
+
+		if (n <= 0)
+			return -1;
 		p += n;
 		len -= n;
 	}
@@ -232,6 +279,9 @@ send_iov_full(const struct conn *c, struct iovec *iov, int iovcnt, int flags)
 		.msg_iov    = iov,
 		.msg_iovlen = iovcnt,
 	};
+
+	if (c->ssl != NULL)
+		return send_iov_tls(c->ssl, iov, iovcnt);
 
 	while (msg.msg_iovlen > 0) {
 		ssize_t n = sendmsg(c->fd, &msg, flags | MSG_NOSIGNAL);

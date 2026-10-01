@@ -147,6 +147,8 @@ New Features
 
   Added the ``dpdk-rpcapd`` application, which implements the rpcap
   protocol to allow live capture in tcpdump and Wireshark.
+  Remote clients can be authenticated with a system username and password,
+  and connections encrypted with TLS when built with OpenSSL.
 
 
 Removed Items

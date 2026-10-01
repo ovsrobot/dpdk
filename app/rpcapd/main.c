@@ -62,13 +62,17 @@ static int bind_family = AF_UNSPEC;
 static const char *debug_file;		/* --debug-file argument */
 static unsigned int debug_log;		/* -D count: raise RPCAPD log verbosity */
 uint32_t send_timeout = DATA_SEND_TIMEOUT_SEC;	/* 0 means no limit */
+bool use_tls;				/* -S */
+bool null_auth_ok;			/* -n */
+static const char *tls_certfile;	/* -X argument */
+static const char *tls_keyfile;		/* -K argument */
 
 struct sockaddr_storage listen_addr;
 socklen_t               listen_addrlen;
 
 RTE_ATOMIC(bool) quit_signal;
 
-static bool
+bool
 is_loopback(const struct sockaddr_storage *ss)
 {
 	if (ss->ss_family == AF_INET) {
@@ -121,6 +125,62 @@ signal_handler(int sig __rte_unused)
 	rte_atomic_store_explicit(&quit_signal, true, rte_memory_order_relaxed);
 }
 
+/*
+ * TLS is not negotiated in the rpcap protocol, so a mismatch has to be
+ * detected from the first byte: an rpcap message starts with the
+ * protocol version 0, a TLS handshake with content type 22.
+ */
+#define TLS_RECORD_TYPE_HANDSHAKE	22
+
+/* How long a client has to send its first byte. */
+#define FIRST_BYTE_TIMEOUT_MS		(10 * 1000)
+
+static int
+setup_tls(struct conn *ctrl)
+{
+	uint8_t first;
+
+	/* Bounded wait: only one client is served at a time, so a peer
+	 * that connects and says nothing must not hold the daemon.
+	 */
+	switch (wait_readable(ctrl, FIRST_BYTE_TIMEOUT_MS)) {
+	case 1:
+		break;
+	case 0:
+		RPCAPD_LOG(NOTICE, "client sent nothing within %u seconds, closing",
+			FIRST_BYTE_TIMEOUT_MS / 1000);
+		return -1;
+	default:
+		return -1;
+	}
+
+	if (recv(ctrl->fd, &first, 1, MSG_PEEK) != 1)
+		return -1;
+
+	if (!use_tls) {
+		if (first == TLS_RECORD_TYPE_HANDSHAKE) {
+			tls_reject_handshake(ctrl->fd);
+			return -1;
+		}
+		return 0;
+	}
+
+	if (first != TLS_RECORD_TYPE_HANDSHAKE) {
+		struct rpcap_header hdr;
+
+		/* Reply in the clear; it is all the client will understand. */
+		RPCAPD_LOG(WARNING, "rejecting plaintext client: server requires TLS");
+		if (recv_full(ctrl, &hdr, sizeof(hdr)) == 0)
+			rpcap_discard(ctrl, rte_be_to_cpu_32(hdr.plen));
+
+		rpcap_send_error(ctrl, PCAP_ERR_TLS_REQUIRED,
+				 "TLS is required by this server; use rpcaps://");
+		return -1;
+	}
+
+	return tls_accept(ctrl);
+}
+
 /* Service a single client until it disconnects. */
 static void
 handle_client(int ctrl_fd)
@@ -134,12 +194,22 @@ handle_client(int ctrl_fd)
 	/* Remembered so the data connection can be restricted to this peer. */
 	if (getpeername(ctrl_fd, (struct sockaddr *)&peer, &peerlen) != 0) {
 		RPCAPD_LOG(ERR, "getpeername: %s", strerror(errno));
+		close(ctrl_fd);
 		return;
 	}
 	s.peer = peer;
 	getnameinfo((struct sockaddr *)&peer, peerlen,
 		    host, sizeof(host), NULL, 0, NI_NUMERICHOST);
 	RPCAPD_LOG(NOTICE, "client %s connected", host);
+
+	if (!use_tls && !is_loopback(&peer))
+		RPCAPD_LOG(ERR,
+			"remote client %s is connected without TLS; "
+			"captured traffic and any credentials are exposed to the network",
+			host);
+
+	if (setup_tls(&ctrl) < 0)
+		goto done;
 
 	while (!rte_atomic_load_explicit(&quit_signal, rte_memory_order_relaxed)) {
 		struct rpcap_header hdr;
@@ -165,12 +235,24 @@ handle_client(int ctrl_fd)
 			continue;
 		}
 
+		/* Nothing but authentication is served until it succeeds. */
+		if (!s.authenticated && hdr.type != RPCAP_MSG_AUTH_REQ &&
+		    hdr.type != RPCAP_MSG_CLOSE) {
+			RPCAPD_LOG(NOTICE, "request 0x%02x before authentication",
+				hdr.type);
+			if (rpcap_discard(&ctrl, plen) < 0 ||
+			    rpcap_send_error(&ctrl, PCAP_ERR_AUTH,
+					     "not authenticated") < 0)
+				goto done;
+			continue;
+		}
+
 		switch (hdr.type) {
 		case RPCAP_MSG_AUTH_REQ:
 			/* libpcap treats a zero-length AUTH_REPLY as "version
 			 * 0 only, same byte order".
 			 */
-			if (handle_auth(&ctrl, plen) < 0)
+			if (handle_auth(&ctrl, plen, &s) < 0)
 				goto done;
 			break;
 		case RPCAP_MSG_FINDALLIF_REQ:
@@ -210,6 +292,7 @@ handle_client(int ctrl_fd)
 	}
 done:
 	stop_capture(&s);
+	tls_close(&ctrl);
 	close(ctrl_fd);
 	RPCAPD_LOG(NOTICE, "client %s disconnected", host);
 }
@@ -239,10 +322,10 @@ open_listen_socket(uint16_t port)
 
 	RPCAPD_LOG(NOTICE, "listening on %s port %u", host, listen_port);
 
-	if (!is_loopback(&listen_addr))
-		RPCAPD_LOG(WARNING,
-			"non-loopback address %s; "
-			"rpcap is unauthenticated and unencrypted, captured traffic is exposed to the network",
+	if (!is_loopback(&listen_addr) && !use_tls)
+		RPCAPD_LOG(ERR,
+			"listening on non-loopback address %s without TLS; "
+			"captured traffic will be exposed to the network, use -S",
 			host);
 
 	if (listen(fd, 1) < 0)
@@ -261,6 +344,12 @@ usage(FILE *f, const char *progname)
 		"  -4                    use only IPv4\n"
 		"  -6                    use only IPv6\n"
 		"  -N <ring size>        ring size in packets (default %u)\n"
+#ifdef RTE_HAS_OPENSSL
+		"  -S, --tls             encrypt connections with TLS (rpcaps://)\n"
+		"  -X, --cert <file>     server certificate chain, PEM (needs -S)\n"
+		"  -K, --key <file>      server private key, PEM (needs -S)\n"
+#endif
+		"  -n, --null-auth       permit unauthenticated remote clients\n"
 		"  -D, --debug           increase log verbosity (-D info, -DD debug)\n"
 		"      --debug-file <f>  redirect log output to file <f> (append mode)\n"
 		"      --send-timeout <s> seconds a data send may block before the\n"
@@ -271,9 +360,9 @@ usage(FILE *f, const char *progname)
 		"      --lcore=<core>    CPU core to run on (default: any)\n"
 		"      --file-prefix=<p> prefix to use for multi-process\n"
 		"\n"
-		"WARNING: rpcap is unauthenticated and unencrypted.  Binding to\n"
-		"any non-loopback address exposes captured traffic to the\n"
-		"network.  Not for production use.\n",
+		"Remote clients must authenticate with a system username and\n"
+		"password, and must use TLS to send it.  Loopback clients may\n"
+		"connect unauthenticated.  Not for production use.\n",
 		RPCAP_DEFAULT_NETPORT, DEFAULT_RING_SIZE,
 		DATA_SEND_TIMEOUT_SEC);
 }
@@ -297,6 +386,12 @@ parse_opts(int argc, char **argv)
 	static const struct option long_options[] = {
 		{ "port",         required_argument, NULL, 'p' },
 		{ "bind",         required_argument, NULL, 'b' },
+		{ "null-auth",    no_argument,       NULL, 'n' },
+#ifdef RTE_HAS_OPENSSL
+		{ "tls",          no_argument,       NULL, 'S' },
+		{ "cert",         required_argument, NULL, 'X' },
+		{ "key",          required_argument, NULL, 'K' },
+#endif
 		{ "debug",        no_argument,       NULL, 'D' },
 		{ "help",         no_argument,       NULL, 'h' },
 		{ "version",      no_argument,       NULL, OPT_VERSION },
@@ -308,8 +403,11 @@ parse_opts(int argc, char **argv)
 	};
 	int option_index, c;
 
-	while ((c = getopt_long(argc, argv, "hD46p:b:N:",
-				long_options, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "hnD46p:b:N:"
+#ifdef RTE_HAS_OPENSSL
+				"SX:K:"
+#endif
+				, long_options, &option_index)) != -1) {
 		switch (c) {
 		case 'p': {
 			unsigned long u = strtoul(optarg, NULL, 0);
@@ -328,6 +426,20 @@ parse_opts(int argc, char **argv)
 		case '6':
 			bind_family = AF_INET6;
 			break;
+		case 'n':
+			null_auth_ok = true;
+			break;
+#ifdef RTE_HAS_OPENSSL
+		case 'S':
+			use_tls = true;
+			break;
+		case 'X':
+			tls_certfile = optarg;
+			break;
+		case 'K':
+			tls_keyfile = optarg;
+			break;
+#endif
 		case 'N': {
 			unsigned long u = strtoul(optarg, NULL, 0);
 
@@ -394,6 +506,22 @@ parse_opts(int argc, char **argv)
 
 	/* Resolve the bind address now that -4/-6/-b have been seen. */
 	parse_bind_addr();
+
+	/* There is no sensible default for either: libpcap's rpcapd looks
+	 * for cert.pem and key.pem in the current directory, which is not
+	 * something a daemon started as root should do.
+	 */
+	if (use_tls && (tls_certfile == NULL || tls_keyfile == NULL))
+		rte_exit(EXIT_FAILURE,
+			 "TLS needs both a certificate (-X) and a private key (-K)\n");
+
+	if (!use_tls && (tls_certfile != NULL || tls_keyfile != NULL))
+		rte_exit(EXIT_FAILURE,
+			 "A certificate or key was given without -S\n");
+
+	if (null_auth_ok && !is_loopback(&listen_addr))
+		RPCAPD_LOG(ERR,
+			"-n allows any client that can reach this port to capture traffic");
 }
 
 /*
@@ -547,6 +675,10 @@ main(int argc, char **argv)
 
 	if (rte_eth_dev_count_avail() == 0)
 		rte_exit(EXIT_FAILURE, "No Ethernet ports found\n");
+
+	/* Fail here rather than on the first client's handshake. */
+	if (use_tls && tls_init(tls_certfile, tls_keyfile) < 0)
+		rte_exit(EXIT_FAILURE, "TLS setup failed\n");
 
 	sigaction(SIGTERM, &action, NULL);
 	sigaction(SIGINT, &action, NULL);
