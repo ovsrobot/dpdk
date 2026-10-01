@@ -66,6 +66,11 @@ bool use_tls;				/* -S */
 bool null_auth_ok;			/* -n */
 static const char *tls_certfile;	/* -X argument */
 static const char *tls_keyfile;		/* -K argument */
+static const char *host_list;		/* -l argument; NULL means any host */
+
+/* -l resolved at startup; empty means no restriction. */
+static struct sockaddr_storage *allowed_hosts;
+static unsigned int num_allowed_hosts;
 
 struct sockaddr_storage listen_addr;
 socklen_t               listen_addrlen;
@@ -91,6 +96,114 @@ is_loopback(const struct sockaddr_storage *ss)
 
 		return IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr);
 	}
+	return false;
+}
+
+/* Separators in the -l argument, same set as libpcap's rpcapd. */
+#define HOST_LIST_SEP " ,;"
+
+/*
+ * A dual-stack socket reports a v4 peer as ::ffff:a.b.c.d, which
+ * same_host() will not match against an AF_INET entry.  Normalize both
+ * the peer and the list, since a resolver can also return a mapped
+ * address.
+ */
+static void
+unmap_v4(struct sockaddr_storage *ss)
+{
+	const struct sockaddr_in6 *sin6 = (const void *)ss;
+	struct sockaddr_in sin = {
+		.sin_family = AF_INET,
+		.sin_port   = sin6->sin6_port,
+	};
+
+	if (ss->ss_family != AF_INET6 || !IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr))
+		return;
+
+	memcpy(&sin.sin_addr, &sin6->sin6_addr.s6_addr[12], sizeof(sin.sin_addr));
+	memset(ss, 0, sizeof(*ss));
+	memcpy(ss, &sin, sizeof(sin));
+}
+
+/*
+ * Resolve the -l list at startup, so an unresolvable name fails here
+ * rather than when a client connects.  A name can have several
+ * addresses; all of them are accepted.
+ */
+static void
+parse_host_list(void)
+{
+	static const struct addrinfo hints = {
+		.ai_family   = AF_UNSPEC,
+		.ai_socktype = SOCK_STREAM,
+	};
+	char *copy, *token, *saveptr;
+
+	if (host_list == NULL)
+		return;
+
+	copy = strdup(host_list);
+	if (copy == NULL)
+		rte_exit(EXIT_FAILURE, "Cannot copy host list: %s\n", strerror(errno));
+
+	for (token = strtok_r(copy, HOST_LIST_SEP, &saveptr); token != NULL;
+	     token = strtok_r(NULL, HOST_LIST_SEP, &saveptr)) {
+		struct addrinfo *res, *ai;
+		unsigned int n = 0;
+		void *tmp;
+		int rc;
+
+		rc = getaddrinfo(token, NULL, &hints, &res);
+		if (rc != 0)
+			rte_exit(EXIT_FAILURE, "Invalid host '%s' in host list: %s\n",
+				 token, gai_strerror(rc));
+
+		for (ai = res; ai != NULL; ai = ai->ai_next)
+			n++;
+
+		tmp = realloc(allowed_hosts,
+			      (num_allowed_hosts + n) * sizeof(*allowed_hosts));
+		if (tmp == NULL)
+			rte_exit(EXIT_FAILURE, "Cannot grow host list: %s\n",
+				 strerror(errno));
+		allowed_hosts = tmp;
+
+		for (ai = res; ai != NULL; ai = ai->ai_next) {
+			struct sockaddr_storage *slot =
+				&allowed_hosts[num_allowed_hosts++];
+
+			memset(slot, 0, sizeof(*slot));
+			memcpy(slot, ai->ai_addr, ai->ai_addrlen);
+			unmap_v4(slot);
+		}
+
+		freeaddrinfo(res);
+	}
+	free(copy);
+
+	/* An empty list is a typo, not a request to allow everyone. */
+	if (num_allowed_hosts == 0)
+		rte_exit(EXIT_FAILURE, "Host list '%s' contains no hosts\n", host_list);
+}
+
+/* Only the control connection is checked; accept_from() pins the data
+ * connection to the same peer.
+ */
+static bool
+host_allowed(const struct sockaddr_storage *ss)
+{
+	struct sockaddr_storage peer = *ss;
+	unsigned int i;
+
+	if (num_allowed_hosts == 0)
+		return true;
+
+	unmap_v4(&peer);
+
+	for (i = 0; i < num_allowed_hosts; i++)
+		if (same_host(&peer, &allowed_hosts[i]))
+			return true;
+
 	return false;
 }
 
@@ -210,6 +323,17 @@ handle_client(int ctrl_fd)
 
 	if (setup_tls(&ctrl) < 0)
 		goto done;
+
+	/* After the handshake: a TLS client can only read an error sent
+	 * inside the session.
+	 */
+	if (!host_allowed(&peer)) {
+		RPCAPD_LOG(WARNING, "rejected client %s: not in the allowed host list",
+			host);
+		rpcap_send_error(&ctrl, PCAP_ERR_HOSTNOAUTH,
+				 "this host is not allowed to connect to this server");
+		goto done;
+	}
 
 	while (!rte_atomic_load_explicit(&quit_signal, rte_memory_order_relaxed)) {
 		struct rpcap_header hdr;
@@ -343,6 +467,8 @@ usage(FILE *f, const char *progname)
 		"  -b, --bind <addr>     bind address (default 127.0.0.1, ::1 with -6)\n"
 		"  -4                    use only IPv4\n"
 		"  -6                    use only IPv6\n"
+		"  -l, --hosts <list>    only accept clients from these hosts,\n"
+		"                        separated by ',' ';' or space\n"
 		"  -N <ring size>        ring size in packets (default %u)\n"
 #ifdef RTE_HAS_OPENSSL
 		"  -S, --tls             encrypt connections with TLS (rpcaps://)\n"
@@ -386,6 +512,7 @@ parse_opts(int argc, char **argv)
 	static const struct option long_options[] = {
 		{ "port",         required_argument, NULL, 'p' },
 		{ "bind",         required_argument, NULL, 'b' },
+		{ "hosts",        required_argument, NULL, 'l' },
 		{ "null-auth",    no_argument,       NULL, 'n' },
 #ifdef RTE_HAS_OPENSSL
 		{ "tls",          no_argument,       NULL, 'S' },
@@ -403,7 +530,7 @@ parse_opts(int argc, char **argv)
 	};
 	int option_index, c;
 
-	while ((c = getopt_long(argc, argv, "hnD46p:b:N:"
+	while ((c = getopt_long(argc, argv, "hnD46p:b:l:N:"
 #ifdef RTE_HAS_OPENSSL
 				"SX:K:"
 #endif
@@ -419,6 +546,9 @@ parse_opts(int argc, char **argv)
 		}
 		case 'b':
 			bind_addr = optarg;
+			break;
+		case 'l':
+			host_list = optarg;
 			break;
 		case '4':
 			bind_family = AF_INET;
@@ -506,6 +636,7 @@ parse_opts(int argc, char **argv)
 
 	/* Resolve the bind address now that -4/-6/-b have been seen. */
 	parse_bind_addr();
+	parse_host_list();
 
 	/* There is no sensible default for either: libpcap's rpcapd looks
 	 * for cert.pem and key.pem in the current directory, which is not
@@ -519,7 +650,7 @@ parse_opts(int argc, char **argv)
 		rte_exit(EXIT_FAILURE,
 			 "A certificate or key was given without -S\n");
 
-	if (null_auth_ok && !is_loopback(&listen_addr))
+	if (null_auth_ok && !is_loopback(&listen_addr) && num_allowed_hosts == 0)
 		RPCAPD_LOG(ERR,
 			"-n allows any client that can reach this port to capture traffic");
 }

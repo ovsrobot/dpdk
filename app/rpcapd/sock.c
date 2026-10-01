@@ -115,7 +115,7 @@ accept_timeout(int listen_fd, int timeout_ms)
 /* Compare the host part of two addresses, ignoring the port: the data
  * connection comes from an ephemeral port, not the control one.
  */
-static bool
+bool
 same_host(const struct sockaddr_storage *a, const struct sockaddr_storage *b)
 {
 	if (a->ss_family != b->ss_family)

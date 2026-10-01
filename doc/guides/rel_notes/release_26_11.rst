@@ -149,6 +149,7 @@ New Features
   protocol to allow live capture in tcpdump and Wireshark.
   Remote clients can be authenticated with a system username and password,
   and connections encrypted with TLS when built with OpenSSL.
+  Access can also be restricted to a list of allowed client hosts.
 
 
 Removed Items

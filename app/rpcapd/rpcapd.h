@@ -79,6 +79,7 @@ extern socklen_t               listen_addrlen;
 bool is_loopback(const struct sockaddr_storage *ss);
 
 /* sock.c: transport and message framing */
+bool same_host(const struct sockaddr_storage *a, const struct sockaddr_storage *b);
 int wait_readable(const struct conn *c, int timeout_ms);
 int accept_timeout(int listen_fd, int timeout_ms);
 int accept_from(int listen_fd, const struct sockaddr_storage *want,

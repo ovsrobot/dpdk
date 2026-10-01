@@ -60,6 +60,14 @@ The application has a small set of command-line options:
     Use only IPv6; an IPv4 argument to ``-b`` is rejected.  The default
     bind address becomes ``::1``.
 
+*   ``-l <host_list>``, ``--hosts <host_list>``
+
+    Only allow the hosts in ``<host_list>`` to connect.  The list is
+    host names or addresses separated by commas, semicolons or spaces,
+    and includes loopback, so ``127.0.0.1`` must be listed for a local
+    client.  Names are resolved at startup.  By default any host that
+    can reach the port may connect.
+
 *   ``-N <ring_size>``
 
     Size of the per-session capture ring in packets.  Default is 2048.

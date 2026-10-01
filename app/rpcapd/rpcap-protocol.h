@@ -43,6 +43,7 @@
 
 /* Error codes carried in the 'value' field of RPCAP_MSG_ERROR */
 #define PCAP_ERR_AUTH               3	/* generic authentication error */
+#define PCAP_ERR_HOSTNOAUTH        10	/* peer address is not in the allowed list */
 #define PCAP_ERR_WRONGVER          17
 #define PCAP_ERR_AUTH_FAILED       18	/* credentials were not accepted */
 #define PCAP_ERR_TLS_REQUIRED      19	/* server will only speak TLS */
