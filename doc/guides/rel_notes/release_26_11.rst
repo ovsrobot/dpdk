@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added pcapng API to read back a captured packet header.**
+
+  Added the experimental ``rte_pcapng_pkt_info()`` function to read back what
+  ``rte_pcapng_copy()`` records in a captured packet.
+
 * **Added API to get CPU socket ID.**
 
   Added the experimental ``rte_cpu_socket_id()`` function

@@ -672,6 +672,138 @@ fail:
 	return -1;
 }
 
+/*
+ * Check that rte_pcapng_pkt_info() reads back what rte_pcapng_copy()
+ * recorded.  The length before truncation and the capture time are
+ * only in the block header, so this is the only way a consumer that
+ * does not write a file can get at them.
+ */
+static int
+test_pkt_info(void)
+{
+	struct dummy_mbuf mbfs;
+	struct rte_mbuf *mc;
+	struct rte_pcapng_pkt pkt;
+	uint32_t pkt_len, snaplen, saved;
+	uint64_t before, after;
+	const uint8_t *data;
+	int ret;
+
+	mbuf1_prepare(&mbfs);
+	mbuf1_resize(&mbfs, 512);
+	pkt_len = rte_pktmbuf_pkt_len(&mbfs.mb[0]);
+
+	/* An untruncated copy reports the length it came in with. */
+	before = rte_get_tsc_cycles();
+	mc = rte_pcapng_copy(port_id, 0, &mbfs.mb[0], mp, pkt_len,
+			     RTE_PCAPNG_DIRECTION_IN, NULL);
+	TEST_ASSERT(mc != NULL, "rte_pcapng_copy failed");
+	after = rte_get_tsc_cycles();
+
+	ret = rte_pcapng_pkt_info(mc, &pkt);
+	TEST_ASSERT(ret == 0, "rte_pcapng_pkt_info failed: %d", ret);
+
+	TEST_ASSERT(pkt.original_len == pkt_len,
+		    "original_len is %u, expected %u", pkt.original_len, pkt_len);
+	TEST_ASSERT(pkt.captured_len == pkt_len,
+		    "captured_len is %u, expected %u", pkt.captured_len, pkt_len);
+	TEST_ASSERT(pkt.port == port_id,
+		    "port is %u, expected %u", pkt.port, port_id);
+
+	/* The copy was made between the two readings, so the recorded
+	 * cycle count has to fall between them.
+	 */
+	TEST_ASSERT(pkt.cycles >= before && pkt.cycles <= after,
+		    "cycles %"PRIu64" is outside [%"PRIu64", %"PRIu64"]",
+		    pkt.cycles, before, after);
+
+	/* data_offset points at the packet itself, not the block header. */
+	data = rte_pktmbuf_mtod_offset(mc, const uint8_t *, pkt.data_offset);
+	TEST_ASSERT(memcmp(data, rte_pktmbuf_mtod(&mbfs.mb[0], const void *),
+			   rte_pktmbuf_data_len(&mbfs.mb[0])) == 0,
+		    "packet data is not at data_offset");
+
+	/* A corrupt block is rejected rather than believed. */
+	{
+		struct pcapng_test_epb {
+			uint32_t block_type;
+			uint32_t block_length;
+		} *epb = rte_pktmbuf_mtod(mc, struct pcapng_test_epb *);
+
+		saved = epb->block_type;
+		epb->block_type = ~saved;
+		TEST_ASSERT(rte_pcapng_pkt_info(mc, &pkt) == -EINVAL,
+			    "bad block_type was accepted");
+		epb->block_type = saved;
+
+		saved = epb->block_length;
+		epb->block_length = saved + 1;
+		TEST_ASSERT(rte_pcapng_pkt_info(mc, &pkt) == -EINVAL,
+			    "bad block_length was accepted");
+		epb->block_length = saved;
+
+		/* and is fine again once put back */
+		TEST_ASSERT(rte_pcapng_pkt_info(mc, &pkt) == 0,
+			    "restored block was rejected");
+	}
+
+	TEST_ASSERT(rte_pcapng_pkt_info(NULL, &pkt) == -EINVAL,
+		    "NULL mbuf was accepted");
+	TEST_ASSERT(rte_pcapng_pkt_info(mc, NULL) == -EINVAL,
+		    "NULL result was accepted");
+
+	rte_pktmbuf_free(mc);
+
+	/*
+	 * Truncated copy.  This is the case that cannot be recovered
+	 * from the mbuf alone: captured_len shrinks to the snaplen
+	 * while original_len still describes the packet on the wire.
+	 */
+	snaplen = pkt_len / 2;
+	mc = rte_pcapng_copy(port_id, 0, &mbfs.mb[0], mp, snaplen,
+			     RTE_PCAPNG_DIRECTION_IN, NULL);
+	TEST_ASSERT(mc != NULL, "truncated rte_pcapng_copy failed");
+
+	ret = rte_pcapng_pkt_info(mc, &pkt);
+	TEST_ASSERT(ret == 0, "rte_pcapng_pkt_info failed on truncated: %d", ret);
+
+	TEST_ASSERT(pkt.captured_len == snaplen,
+		    "captured_len is %u, expected %u", pkt.captured_len, snaplen);
+	TEST_ASSERT(pkt.original_len == pkt_len,
+		    "original_len is %u, expected %u, truncation lost it",
+		    pkt.original_len, pkt_len);
+
+	rte_pktmbuf_free(mc);
+
+	/*
+	 * A stripped VLAN tag is put back by the copy, but is not
+	 * counted in the length reported by the hardware.  So the
+	 * captured packet is larger than the original, and a consumer
+	 * has to cope with that rather than assume it cannot happen.
+	 */
+	mbfs.mb[0].ol_flags |= RTE_MBUF_F_RX_VLAN_STRIPPED;
+	mbfs.mb[0].vlan_tci = 42;
+
+	mc = rte_pcapng_copy(port_id, 0, &mbfs.mb[0], mp, pkt_len,
+			     RTE_PCAPNG_DIRECTION_IN, NULL);
+	TEST_ASSERT(mc != NULL, "VLAN rte_pcapng_copy failed");
+
+	ret = rte_pcapng_pkt_info(mc, &pkt);
+	TEST_ASSERT(ret == 0, "rte_pcapng_pkt_info failed on VLAN: %d", ret);
+
+	TEST_ASSERT(pkt.captured_len == pkt_len + sizeof(struct rte_vlan_hdr),
+		    "captured_len is %u, expected %zu with the tag restored",
+		    pkt.captured_len, pkt_len + sizeof(struct rte_vlan_hdr));
+	TEST_ASSERT(pkt.original_len == pkt_len,
+		    "original_len is %u, expected %u", pkt.original_len, pkt_len);
+	TEST_ASSERT(pkt.captured_len > pkt.original_len,
+		    "restored VLAN tag did not make the capture longer");
+
+	rte_pktmbuf_free(mc);
+
+	return 0;
+}
+
 static void
 test_cleanup(void)
 {
@@ -688,6 +820,7 @@ unit_test_suite test_pcapng_suite  = {
 		TEST_CASE(test_add_interface),
 		TEST_CASE(test_write_packets),
 		TEST_CASE(test_write_before_open),
+		TEST_CASE(test_pkt_info),
 		TEST_CASES_END()
 	}
 };

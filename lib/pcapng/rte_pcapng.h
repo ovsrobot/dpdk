@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include <rte_compat.h>
+#include <rte_mbuf.h>
 #include <rte_mempool.h>
 
 #ifdef __cplusplus
@@ -140,6 +142,50 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		uint32_t length,
 		enum rte_pcapng_direction direction, const char *comment);
 
+/**
+ * Decoded header of an mbuf produced by rte_pcapng_copy().
+ *
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice.
+ */
+struct rte_pcapng_pkt {
+	uint64_t cycles;	/**< TSC value when the packet was captured */
+	uint32_t captured_len;	/**< bytes of packet data present */
+	uint32_t original_len;	/**< length of the packet on the wire */
+	uint32_t data_offset;	/**< offset of packet data in the mbuf */
+	uint16_t port;		/**< port recorded by rte_pcapng_copy() */
+};
+
+/**
+ * Extract info from mbuf created by rte_pcapng_copy().
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Only valid for packets created by rte_pcapng_copy().
+ * The mbuf is not modified.
+ * To reach the packet data, read *captured_len* bytes starting at *data_offset*.
+ *
+ * The capture time is reported as the raw TSC value recorded by
+ * rte_pcapng_copy(), since this has no capture file to take a reference
+ * point from.  To turn it into a time of day, sample rte_get_tsc_cycles()
+ * and the system clock together once, then scale the difference by
+ * rte_get_tsc_hz().
+ *
+ * @param m
+ *   An mbuf returned by rte_pcapng_copy().
+ * @param pkt
+ *   Filled in on success.
+ * @return
+ *   0 on success, -EINVAL if the mbuf is not a well formed enhanced
+ *   packet block.
+ *
+ * @note
+ *   Length may vary from the original because rte_pcapng_copy() inserts VLAN.
+ */
+__rte_experimental
+int
+rte_pcapng_pkt_info(const struct rte_mbuf *m, struct rte_pcapng_pkt *pkt);
 
 /**
  * Determine optimum mbuf data size.

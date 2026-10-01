@@ -707,6 +707,46 @@ fail:
 	return NULL;
 }
 
+/* Read back the block header put there by rte_pcapng_copy() */
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pcapng_pkt_info, 26.11)
+int
+rte_pcapng_pkt_info(const struct rte_mbuf *m, struct rte_pcapng_pkt *pkt)
+{
+	const struct pcapng_enhance_packet_block *epb;
+	struct pcapng_enhance_packet_block ebuf;
+
+	if (unlikely(m == NULL || pkt == NULL))
+		return -EINVAL;
+
+	epb = rte_pktmbuf_read(m, 0, sizeof(*epb), &ebuf);
+	if (unlikely(epb == NULL))
+		return -EINVAL;
+
+	if (unlikely(epb->block_type != PCAPNG_ENHANCED_PACKET_BLOCK))
+		return -EINVAL;
+
+	/*
+	 * rte_pcapng_copy() sets block_length to the whole mbuf length, and
+	 * the packet data has to fit in what is left after the header.
+	 */
+	if (unlikely(epb->block_length != rte_pktmbuf_pkt_len(m)))
+		return -EINVAL;
+
+	if (unlikely(epb->capture_length >
+		     epb->block_length - sizeof(*epb)))
+		return -EINVAL;
+
+	pkt->cycles = (uint64_t)epb->timestamp_hi << 32;
+	pkt->cycles += epb->timestamp_lo;
+
+	pkt->captured_len = epb->capture_length;
+	pkt->original_len = epb->original_length;
+	pkt->data_offset = sizeof(*epb);
+	pkt->port = m->port;
+
+	return 0;
+}
+
 /* Write pre-formatted packets to file. */
 RTE_EXPORT_SYMBOL(rte_pcapng_write_packets)
 ssize_t
