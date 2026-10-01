@@ -13,6 +13,7 @@ DPDK Tools User Guides
     proc_info
     pmdinfo
     dumpcap
+    rpcapd
     pdump
     telemetrywatcher
     dmaperf

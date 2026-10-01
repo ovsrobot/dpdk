@@ -17,6 +17,7 @@ apps = [
         'graph',
         'pdump',
         'proc-info',
+        'rpcapd',
         'test-acl',
         'test-bbdev',
         'test-cmdline',
