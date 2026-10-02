@@ -397,9 +397,6 @@ cdx_vfio_map_resource_primary(struct rte_cdx_device *dev)
 	struct cdx_map *maps;
 	int vfio_dev_fd, i, ret;
 
-	if (rte_intr_fd_set(dev->intr_handle, -1))
-		return -1;
-
 	ret = rte_vfio_setup_device(RTE_CDX_BUS_DEVICES_PATH, dev_name,
 				    &vfio_dev_fd, &device_info);
 	if (ret)
@@ -492,9 +489,6 @@ cdx_vfio_map_resource_secondary(struct rte_cdx_device *dev)
 		RTE_TAILQ_CAST(cdx_vfio_tailq.head, mapped_cdx_res_list);
 	const char *dev_name = dev->device.name;
 	struct cdx_map *maps;
-
-	if (rte_intr_fd_set(dev->intr_handle, -1))
-		return -1;
 
 	/* if we're in a secondary process, just find our tailq entry */
 	TAILQ_FOREACH(vfio_res, vfio_res_list, next) {
