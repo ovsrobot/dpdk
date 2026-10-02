@@ -97,8 +97,10 @@ New Features
 
 * **Updated Intel ixgbe driver.**
 
-  Added ``fdir_buffer_size`` devarg to select the Flow Director table size
-  (``64k``, ``128k`` or ``256k``) at probe time. The default remains ``64k``.
+  * Added ``fdir_buffer_size`` devarg to select the Flow Director table size
+    (``64k``, ``128k`` or ``256k``) at probe time. The default remains ``64k``.
+  * Added ``link_state_on_start`` devarg to keep the link down
+    when the device is started.
 
 * **Updated NXP DPAA2 ethernet driver.**
 

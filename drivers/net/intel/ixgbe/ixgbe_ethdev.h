@@ -491,6 +491,8 @@ struct ixgbe_adapter {
 
 	/* Used for limiting SDP3 TX_DISABLE checks */
 	uint8_t sdp3_no_tx_disable;
+	/* Keep the link down on device start */
+	bool link_down_on_start;
 	uint16_t max_vfs;
 
 	/* Used for VF link sync with PF's physical and logical (by checking

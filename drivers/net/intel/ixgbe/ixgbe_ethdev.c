@@ -129,10 +129,12 @@
 
 #define IXGBE_DEVARG_FIBER_SDP3_NOT_TX_DISABLE	"fiber_sdp3_no_tx_disable"
 #define IXGBE_DEVARG_FDIR_BUFFER_SIZE		"fdir_buffer_size"
+#define IXGBE_DEVARG_LINK_STATE_ON_START	"link_state_on_start"
 
 static const char * const ixgbe_valid_arguments[] = {
 	IXGBE_DEVARG_FIBER_SDP3_NOT_TX_DISABLE,
 	IXGBE_DEVARG_FDIR_BUFFER_SIZE,
+	IXGBE_DEVARG_LINK_STATE_ON_START,
 	NULL
 };
 
@@ -985,6 +987,27 @@ devarg_handle_fdir_buffer_size(const char *key, const char *value,
 }
 
 static int
+devarg_handle_link_state_on_start(const char *key, const char *value,
+				  void *extra_args)
+{
+	bool *link_down = extra_args;
+
+	if (value == NULL || extra_args == NULL)
+		return -EINVAL;
+
+	if (strcmp(value, "down") == 0) {
+		*link_down = true;
+	} else if (strcmp(value, "up") == 0) {
+		*link_down = false;
+	} else {
+		PMD_INIT_LOG(ERR, "invalid %s='%s', use down or up", key, value);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int
 ixgbe_parse_devargs(struct ixgbe_adapter *adapter,
 		      struct rte_devargs *devargs)
 {
@@ -1014,6 +1037,12 @@ ixgbe_parse_devargs(struct ixgbe_adapter *adapter,
 		else
 			adapter->fdir_conf.pballoc = pballoc;
 	}
+
+	if (rte_kvargs_count(kvlist, IXGBE_DEVARG_LINK_STATE_ON_START) != 0 &&
+	    rte_kvargs_process(kvlist, IXGBE_DEVARG_LINK_STATE_ON_START,
+			       devarg_handle_link_state_on_start,
+			       &adapter->link_down_on_start) != 0)
+		ret = -EINVAL;
 
 	rte_kvargs_free(kvlist);
 	return ret;
@@ -2719,8 +2748,11 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 	}
 
 	if (hw->mac.ops.get_media_type(hw) == ixgbe_media_type_copper) {
-		/* Turn on the copper */
+		/* Turn on the copper, the PHY is needed to set up the link */
 		ixgbe_set_phy_power(hw, true);
+	} else if (adapter->link_down_on_start) {
+		/* Keep the laser off */
+		ixgbe_disable_tx_laser(hw);
 	} else {
 		/* Turn on the laser */
 		ixgbe_enable_tx_laser(hw);
@@ -2804,6 +2836,13 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 	err = ixgbe_setup_link(hw, speed, link_up);
 	if (err)
 		goto error;
+
+	if (adapter->link_down_on_start) {
+		/* The link is brought up later by ixgbe_dev_set_link_up() */
+		err = ixgbe_dev_set_link_down(dev);
+		if (err)
+			goto error;
+	}
 
 skip_link_setup:
 
@@ -8616,7 +8655,8 @@ RTE_PMD_REGISTER_PCI_TABLE(net_ixgbe, pci_id_ixgbe_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ixgbe, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_ixgbe,
 			      IXGBE_DEVARG_FIBER_SDP3_NOT_TX_DISABLE "=<0|1>"
-			      IXGBE_DEVARG_FDIR_BUFFER_SIZE "=<64k|128k|256k>");
+			      IXGBE_DEVARG_FDIR_BUFFER_SIZE "=<64k|128k|256k>"
+			      IXGBE_DEVARG_LINK_STATE_ON_START "=<down|up>");
 RTE_PMD_REGISTER_PCI(net_ixgbe_vf, rte_ixgbevf_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_ixgbe_vf, pci_id_ixgbevf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ixgbe_vf, "* igb_uio | vfio-pci");

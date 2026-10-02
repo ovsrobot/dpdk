@@ -187,6 +187,19 @@ It must be passed as part of EAL arguments. For example,
   This value is read only at probe time.
   Changing it requires restarting the process with a new EAL argument.
 
+- ``link_state_on_start`` (default **up**)
+
+  The user can request that the link be kept down when the device is started,
+  so that the port does not show up on the link partner until the application
+  calls ``rte_eth_dev_set_link_up()``::
+
+    -a 81:00.0,link_state_on_start=<state>
+
+  Supported values for the ``<state>`` parameter:
+
+  * ``up``: Bring the link up.
+  * ``down``: Turn off the laser on fiber links or the PHY on copper links.
+
 .. note::
 
    The driver rejects Flow Director when DCB is enabled.
