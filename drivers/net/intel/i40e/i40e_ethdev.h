@@ -1203,6 +1203,8 @@ struct i40e_pf {
 	bool fw8_3gt;
 	/* MAC config needs re-applying when link first comes up */
 	bool mac_config_on_link_up;
+	/* Keep the link down on device start */
+	bool link_down_on_start;
 	/* true when interrupt path unavailable */
 	bool use_aq_polling;
 

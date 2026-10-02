@@ -74,6 +74,11 @@ New Features
     ``xdp_meta_rx_ts_valid_mask``.
   * Added ``read_clock`` operation to query the PTP hardware clock.
 
+* **Updated Intel i40e driver.**
+
+  * Added ``link_state_on_start`` devarg to keep the link down
+    when the device is started.
+
 * **Updated Intel iavf driver.**
 
   * Runtime Rx/Tx queue setup is now automatically disabled

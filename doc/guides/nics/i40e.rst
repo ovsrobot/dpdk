@@ -193,6 +193,19 @@ Runtime Configuration
   * ``segment``: Check number of mbuf segments not exceed hw limitation.
   * ``offload``: Check any unsupported offload flag.
 
+- ``Link state on start`` (default ``up``)
+
+  The user can request that the link be kept down when the device is started,
+  so that the port does not show up on the link partner until the application
+  calls ``rte_eth_dev_set_link_up()``::
+
+    -a 84:00.0,link_state_on_start=<state>
+
+  Supported values for the ``<state>`` parameter:
+
+  * ``up``: Bring the link up.
+  * ``down``: Bring (or keep) the link down.
+
 QinQ Configuration
 ~~~~~~~~~~~~~~~~~~
 

@@ -49,6 +49,7 @@
 #define ETH_I40E_QUEUE_NUM_PER_VF_ARG	"queue-num-per-vf"
 #define ETH_I40E_VF_MSG_CFG		"vf_msg_cfg"
 #define ETH_I40E_MBUF_CHECK_ARG       "mbuf_check"
+#define ETH_I40E_LINK_STATE_ON_START  "link_state_on_start"
 
 #define I40E_CLEAR_PXE_WAIT_MS     200
 #define I40E_VSI_TSR_QINQ_STRIP		0x4010
@@ -418,6 +419,7 @@ static const char *const valid_keys[] = {
 	ETH_I40E_QUEUE_NUM_PER_VF_ARG,
 	ETH_I40E_VF_MSG_CFG,
 	ETH_I40E_MBUF_CHECK_ARG,
+	ETH_I40E_LINK_STATE_ON_START,
 	NULL};
 
 static const struct rte_pci_id pci_id_i40e_map[] = {
@@ -1333,6 +1335,53 @@ i40e_support_multi_driver(struct rte_eth_dev *dev)
 }
 
 static int
+i40e_parse_link_state_on_start_handler(const char *key, const char *value,
+				       void *opaque)
+{
+	bool *link_down = opaque;
+
+	if (value == NULL || link_down == NULL)
+		return -EINVAL;
+
+	if (strcmp(value, "down") == 0) {
+		*link_down = true;
+	} else if (strcmp(value, "up") == 0) {
+		*link_down = false;
+	} else {
+		PMD_DRV_LOG(WARNING, "%s: Invalid value \"%s\", "
+			    "should be \"down\" or \"up\"", key, value);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int
+i40e_parse_link_state_on_start(struct rte_eth_dev *dev)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct rte_kvargs *kvlist;
+	int ret;
+
+	/* Bring the link up on device start by default */
+	pf->link_down_on_start = false;
+
+	if (!dev->device->devargs)
+		return 0;
+
+	kvlist = rte_kvargs_parse(dev->device->devargs->args, valid_keys);
+	if (!kvlist)
+		return -EINVAL;
+
+	ret = rte_kvargs_process(kvlist, ETH_I40E_LINK_STATE_ON_START,
+				 i40e_parse_link_state_on_start_handler,
+				 &pf->link_down_on_start);
+
+	rte_kvargs_free(kvlist);
+	return ret;
+}
+
+static int
 i40e_aq_debug_write_global_register(struct i40e_hw *hw,
 				    uint32_t reg_addr, uint64_t reg_val,
 				    struct i40e_asq_cmd_details *cmd_details)
@@ -1593,6 +1642,7 @@ eth_i40e_dev_init(struct rte_eth_dev *dev, void *init_params __rte_unused)
 	i40e_parse_mbuf_check(dev);
 	/* Check if need to support multi-driver */
 	i40e_support_multi_driver(dev);
+	i40e_parse_link_state_on_start(dev);
 
 	/* Make sure all is clean before doing PF reset */
 	i40e_clear_hw(hw);
@@ -2551,7 +2601,10 @@ i40e_dev_start(struct rte_eth_dev *dev)
 	}
 
 	/* Apply link configure */
-	ret = i40e_apply_link_speed(dev);
+	if (pf->link_down_on_start)
+		ret = i40e_dev_set_link_down(dev);
+	else
+		ret = i40e_apply_link_speed(dev);
 	if (I40E_SUCCESS != ret) {
 		PMD_DRV_LOG(ERR, "Fail to apply link setting");
 		goto tx_err;
@@ -12523,4 +12576,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_i40e,
 			      ETH_I40E_FLOATING_VEB_ARG "=1"
 			      ETH_I40E_FLOATING_VEB_LIST_ARG "=<string>"
 			      ETH_I40E_QUEUE_NUM_PER_VF_ARG "=1|2|4|8|16"
-			      ETH_I40E_SUPPORT_MULTI_DRIVER "=1");
+			      ETH_I40E_SUPPORT_MULTI_DRIVER "=1"
+			      ETH_I40E_LINK_STATE_ON_START "=<down|up>");
