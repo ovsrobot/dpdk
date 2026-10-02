@@ -1825,9 +1825,13 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 	}
 
 	if (cipher_mode == IMB_CIPHER_NULL && oop) {
-		memcpy(job->dst + job->cipher_start_src_offset_in_bytes,
-			job->src + job->cipher_start_src_offset_in_bytes,
-			job->msg_len_to_cipher_in_bytes);
+		if (!sgl) {
+			memcpy(job->dst + job->cipher_start_src_offset_in_bytes,
+				job->src + job->cipher_start_src_offset_in_bytes,
+				job->msg_len_to_cipher_in_bytes);
+		} else {
+			return -1;
+		}
 	}
 
 	/* Set user data to be crypto operation data struct */
