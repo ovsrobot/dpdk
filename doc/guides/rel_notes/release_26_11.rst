@@ -138,6 +138,12 @@ New Features
   Added ``rte_bbdev_queue_stats_get()`` function to retrieve statistics
   for a specific queue, complementing the existing device-level statistics API.
 
+* **Added a new mode for RIB and RIB6 traversal.**
+
+  ``rte_rib{,6}_get_nxt()`` now accept a new mode of traversal: ``RTE_RIB{,6}_GET_NXT_ALL_TOP``
+  which behaves like ``RTE_RIB{,6}_GET_NXT_ALL`` but also returns the top-level exact-match
+  route, if any.
+
 
 Removed Items
 -------------
