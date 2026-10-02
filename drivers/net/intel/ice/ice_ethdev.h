@@ -639,6 +639,7 @@ struct ice_devargs {
 	uint8_t source_prune;
 	uint32_t rl_burst_size;
 	int link_state_on_close;
+	bool link_down_on_start;
 	int xtr_field_offs;
 	uint8_t xtr_flag_offs[PROTO_XTR_MAX];
 	/* Name of the field. */

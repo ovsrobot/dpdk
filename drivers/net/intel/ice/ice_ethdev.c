@@ -45,6 +45,7 @@
 #define ICE_RL_BURST_SIZE_ARG     "rl_burst_size"
 #define ICE_SOURCE_PRUNE_ARG      "source-prune"
 #define ICE_LINK_STATE_ON_CLOSE   "link_state_on_close"
+#define ICE_LINK_STATE_ON_START   "link_state_on_start"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -64,6 +65,7 @@ static const char * const ice_valid_args[] = {
 	ICE_RL_BURST_SIZE_ARG,
 	ICE_SOURCE_PRUNE_ARG,
 	ICE_LINK_STATE_ON_CLOSE,
+	ICE_LINK_STATE_ON_START,
 	NULL
 };
 
@@ -2251,6 +2253,27 @@ parse_link_state_on_close(const char *key, const char *value, void *args)
 }
 
 static int
+parse_link_state_on_start(const char *key, const char *value, void *args)
+{
+	bool *link_down = args;
+
+	if (value == NULL || link_down == NULL)
+		return -EINVAL;
+
+	if (strcmp(value, "down") == 0) {
+		*link_down = true;
+	} else if (strcmp(value, "up") == 0) {
+		*link_down = false;
+	} else {
+		PMD_DRV_LOG(WARNING, "%s: Invalid value \"%s\", "
+				"should be \"down\" or \"up\"", key, value);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int
 lookup_pps_type(const char *pps_name)
 {
 	static struct {
@@ -2514,6 +2537,11 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_LINK_STATE_ON_CLOSE,
 				 &parse_link_state_on_close, &ad->devargs.link_state_on_close);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_LINK_STATE_ON_START,
+				 &parse_link_state_on_start, &ad->devargs.link_down_on_start);
 
 bail:
 	rte_kvargs_free(kvlist);
@@ -4646,7 +4674,10 @@ ice_dev_start(struct rte_eth_dev *dev)
 
 	ice_get_init_link_status(dev);
 
-	ice_dev_set_link_up(dev);
+	if (pf->adapter->devargs.link_down_on_start)
+		ice_dev_set_link_down(dev);
+	else
+		ice_dev_set_link_up(dev);
 
 	/* Call get_link_info aq command to enable/disable LSE */
 	ice_link_update(dev, 0);
@@ -7912,7 +7943,8 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_RL_BURST_SIZE_ARG "=<N>"
 			      ICE_SOURCE_PRUNE_ARG "=<0|1>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>"
-			      ICE_LINK_STATE_ON_CLOSE "=<down|up|initial>");
+			      ICE_LINK_STATE_ON_CLOSE "=<down|up|initial>"
+			      ICE_LINK_STATE_ON_START "=<down|up>");
 
 RTE_LOG_REGISTER_SUFFIX(ice_logtype_init, init, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(ice_logtype_driver, driver, NOTICE);

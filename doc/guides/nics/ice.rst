@@ -324,6 +324,19 @@ Runtime Configuration
   * ``up``: Leave the link in the up state.
   * ``initial``: Restore the link to the state it was in when the device started.
 
+- ``Link state on start`` (default ``up``)
+
+  The user can request that the link be kept down when the device is started,
+  so that the port does not show up on the link partner until the application
+  calls ``rte_eth_dev_set_link_up()``::
+
+    -a af:00.0,link_state_on_start=<state>
+
+  Supported values for the ``<state>`` parameter:
+
+  * ``up``: Bring the link up.
+  * ``down``: Bring (or keep) the link down.
+
 - ``Low Rx latency`` (default ``0``)
 
   vRAN workloads require low latency DPDK interface for the front haul
