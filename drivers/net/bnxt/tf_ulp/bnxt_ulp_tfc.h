@@ -7,6 +7,7 @@
 #define _BNXT_ULP_TFC_H_
 
 #include "bnxt.h"
+#include "cfa_types.h"
 #include <inttypes.h>
 
 bool
@@ -24,6 +25,28 @@ bnxt_ulp_cntxt_tbl_scope_max_pools_get(struct bnxt_ulp_context *ulp_ctx);
 int32_t
 bnxt_ulp_cntxt_tbl_scope_max_pools_set(struct bnxt_ulp_context *ulp_ctx,
 				       uint32_t max);
+
+int32_t
+bnxt_ulp_cntxt_tbl_scope_type_get(struct bnxt_ulp_context *ulp_ctx,
+				  enum cfa_scope_type *scope_type);
+
+int32_t
+bnxt_ulp_cntxt_tbl_scope_type_set(struct bnxt_ulp_context *ulp_ctx,
+				  enum cfa_scope_type scope_type);
+
+uint16_t
+bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_get(struct bnxt_ulp_context *ulp_ctx);
+
+int32_t
+bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_set(struct bnxt_ulp_context *ulp_ctx,
+					 uint16_t fid_cnt);
+
+int32_t
+bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_inc(struct bnxt_ulp_context *ulp_ctx);
+
+int32_t
+bnxt_ulp_cntxt_glb_tbl_scope_fid_cnt_dec(struct bnxt_ulp_context *ulp_ctx);
+
 enum tfc_tbl_scope_bucket_factor
 bnxt_ulp_cntxt_em_mulitplier_get(struct bnxt_ulp_context *ulp_ctx);
 
