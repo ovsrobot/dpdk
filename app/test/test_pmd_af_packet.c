@@ -914,6 +914,106 @@ test_af_packet_qdisc_bypass(void)
 }
 
 /*
+ * Test: capture_dir in/out/inout.
+ * Send packets; "in" must receive none, "out" and "inout" must receive them.
+ */
+static int
+test_af_packet_capture_dir(void)
+{
+	static const char * const modes[] = {"in", "out", "inout"};
+	static const char * const names[] = {
+		"net_af_packet_cap_in",
+		"net_af_packet_cap_out",
+		"net_af_packet_cap_inout",
+	};
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t tx_port, rx_ports[RTE_DIM(modes)], nb_tx;
+	unsigned int rx[RTE_DIM(modes)] = {0};
+	unsigned int m, i, n_rx = 0, allocated;
+	uint64_t elapsed = 0;
+	const char *err = NULL;
+	char args[128];
+	int ret;
+
+	if (!tap_created) {
+		printf("SKIPPED: TAP interface not available (need root)\n");
+		return TEST_SKIPPED;
+	}
+
+	/* qdisc_bypass=0 so the kernel TX tap sees the TX packets */
+	ret = create_af_packet_port("net_af_packet_cap_tx",
+				    "iface=" TAP_DEV_NAME ",qdisc_bypass=0",
+				    &tx_port);
+	TEST_ASSERT(ret == 0, "Failed to create TX af_packet port");
+	ret = configure_af_packet_port(tx_port, 1, 1);
+	if (ret != 0) {
+		err = "Failed to configure TX af_packet port";
+		goto out;
+	}
+
+	/* Create all three capture_dir variants: in, out, and inout */
+	for (m = 0; m < RTE_DIM(modes); m++) {
+		snprintf(args, sizeof(args), "iface=%s,capture_dir=%s",
+			 TAP_DEV_NAME, modes[m]);
+		ret = create_af_packet_port(names[m], args, &rx_ports[m]);
+		if (ret != 0) {
+			err = "Failed to create capture_dir port";
+			goto out;
+		}
+		n_rx++;
+		ret = configure_af_packet_port(rx_ports[m], 1, 1);
+		if (ret != 0) {
+			err = "Failed to configure capture_dir port";
+			goto out;
+		}
+	}
+
+	/* Drain stale packets */
+	for (m = 0; m < n_rx; m++)
+		while (do_rx_burst(rx_ports[m], 0, bufs, BURST_SIZE) > 0)
+			;
+
+	/* Inject packets */
+	allocated = alloc_tx_mbufs(bufs, 4);
+	nb_tx = do_tx_burst(tx_port, 0, bufs, allocated);
+	if (allocated == 0 || nb_tx == 0) {
+		err = "TX setup failed";
+		goto out;
+	}
+
+	while (elapsed < LOOPBACK_TIMEOUT_US) {
+		for (m = 0; m < n_rx; m++)
+			rx[m] += do_rx_burst(rx_ports[m], 0, bufs, BURST_SIZE);
+		if (rx[1] >= nb_tx && rx[2] >= nb_tx)
+			break;
+		rte_delay_us_block(STATS_POLL_INTERVAL_US);
+		elapsed += STATS_POLL_INTERVAL_US;
+	}
+
+out:
+	for (i = 0; i < n_rx; i++) {
+		rte_eth_dev_stop(rx_ports[i]);
+		rte_eth_dev_close(rx_ports[i]);
+		rte_vdev_uninit(names[i]);
+	}
+	rte_eth_dev_stop(tx_port);
+	rte_eth_dev_close(tx_port);
+	rte_vdev_uninit("net_af_packet_cap_tx");
+
+	TEST_ASSERT(err == NULL, "%s", err);
+
+	TEST_ASSERT(rx[0] == 0, "Expected no packets with capture_dir=in");
+	TEST_ASSERT(rx[1] > 0, "Expected packets with capture_dir=out");
+	TEST_ASSERT(rx[2] > 0, "Expected packets with capture_dir=inout");
+
+	ret = rte_vdev_init("net_af_packet_cap_bad",
+			    "iface=" TAP_DEV_NAME ",capture_dir=bogus");
+	TEST_ASSERT(ret != 0, "Expected failure with capture_dir=bogus");
+
+	return TEST_SUCCESS;
+}
+
+/*
  * Test: Multiple queue pairs
  */
 static int
@@ -1107,6 +1207,7 @@ static struct unit_test_suite af_packet_test_suite = {
 		TEST_CASE(test_af_packet_invalid_qpairs),
 		TEST_CASE(test_af_packet_frame_config),
 		TEST_CASE(test_af_packet_qdisc_bypass),
+		TEST_CASE(test_af_packet_capture_dir),
 		TEST_CASE(test_af_packet_multi_queue),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */

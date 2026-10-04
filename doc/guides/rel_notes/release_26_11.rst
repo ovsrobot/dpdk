@@ -64,6 +64,10 @@ New Features
 
   Added ``rte_vlan_insert_tpid()`` to the net library.
 
+* **Updated af_packet net driver.**
+
+  * Added ``capture_dir`` option to select ingress, egress, or both.
+
 * **Updated AF_XDP driver.**
 
   * Changed the default device plugin endpoint path used when
