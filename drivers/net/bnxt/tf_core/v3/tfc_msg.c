@@ -548,6 +548,11 @@ tfc_msg_idx_tbl_alloc_set(struct tfc *tfcp, uint16_t fid, uint16_t sid,
 	struct tfc_msg_dma_buf buf = { 0 };
 	uint8_t *data = NULL;
 
+	if (!dev_data) {
+		PMD_DRV_LOG_LINE(ERR, "invalid input");
+		return -EINVAL;
+	}
+
 	if (dir == CFA_DIR_RX)
 		req.flags |= HWRM_TFC_IDX_TBL_ALLOC_SET_INPUT_FLAGS_DIR_RX &
 			     HWRM_TFC_IDX_TBL_ALLOC_SET_INPUT_FLAGS_DIR;
@@ -613,6 +618,11 @@ tfc_msg_idx_tbl_set(struct tfc *tfcp, uint16_t fid,
 	struct tfc_msg_dma_buf buf = { 0 };
 	uint8_t *data = NULL;
 
+	if (!dev_data) {
+		PMD_DRV_LOG_LINE(ERR, "invalid input");
+		return -EINVAL;
+	}
+
 	if (dir == CFA_DIR_RX)
 		req.flags |= HWRM_TFC_IDX_TBL_SET_INPUT_FLAGS_DIR_RX &
 			     HWRM_TFC_IDX_TBL_SET_INPUT_FLAGS_DIR;
@@ -671,6 +681,11 @@ tfc_msg_idx_tbl_get(struct tfc *tfcp, uint16_t fid,
 	struct hwrm_tfc_idx_tbl_get_output resp = { 0 };
 	struct tfc_msg_dma_buf buf = { 0 };
 
+	if (!dev_data || !data_size) {
+		PMD_DRV_LOG_LINE(ERR, "invalid input");
+		return -EINVAL;
+	}
+
 	if (dir == CFA_DIR_RX)
 		req.flags |= HWRM_TFC_IDX_TBL_GET_INPUT_FLAGS_DIR_RX &
 			     HWRM_TFC_IDX_TBL_GET_INPUT_FLAGS_DIR;
@@ -702,8 +717,17 @@ tfc_msg_idx_tbl_get(struct tfc *tfcp, uint16_t fid,
 					 &req, sizeof(req), &resp, sizeof(resp));
 
 	if (rc == 0) {
-		memcpy(dev_data, buf.va_addr, resp.data_size);
-		*data_size = rte_le_to_cpu_16(resp.data_size);
+		uint16_t resp_data_size = rte_le_to_cpu_16(resp.data_size);
+
+		if (resp_data_size > *data_size) {
+			PMD_DRV_LOG_LINE(ERR,
+					 "FW resp data_size(%u) > caller buf(%u)",
+					 resp_data_size, *data_size);
+			rc = -EINVAL;
+			goto cleanup;
+		}
+		memcpy(dev_data, buf.va_addr, resp_data_size);
+		*data_size = resp_data_size;
 	}
 
 cleanup:
@@ -1289,10 +1313,10 @@ tfc_msg_if_tbl_get(struct tfc *tfcp, uint16_t fid, uint16_t sid,
 	if (*data_size < rte_le_to_cpu_16(resp.data_size)) {
 		PMD_DRV_LOG_LINE(ERR, "Table buffer is too small, rc:%s",
 				 strerror(EINVAL));
-		rc = -EINVAL;
+		return -EINVAL;
 	}
 
-	*data_size = resp.data_size;
+	*data_size = rte_le_to_cpu_16(resp.data_size);
 	memcpy(data, resp.data, *data_size);
 
 	return rc;
