@@ -437,7 +437,7 @@ int32_t ulp_fc_mgr_cntr_set(struct bnxt_ulp_context *ctxt, enum tf_dir dir,
 			    enum bnxt_ulp_session_type session_type)
 {
 	struct bnxt_ulp_fc_info *ulp_fc_info;
-	uint32_t sw_cntr_idx;
+	uint32_t sw_cntr_idx = 0;
 
 	ulp_fc_info = bnxt_ulp_cntxt_ptr2_fc_info_get(ctxt);
 	if (!ulp_fc_info)
@@ -473,7 +473,7 @@ int32_t ulp_fc_mgr_cntr_reset(struct bnxt_ulp_context *ctxt, uint8_t dir,
 			      uint32_t hw_cntr_id)
 {
 	struct bnxt_ulp_fc_info *ulp_fc_info;
-	uint32_t sw_cntr_idx;
+	uint32_t sw_cntr_idx = 0;
 
 	ulp_fc_info = bnxt_ulp_cntxt_ptr2_fc_info_get(ctxt);
 	if (!ulp_fc_info)
@@ -691,7 +691,7 @@ int32_t ulp_fc_mgr_cntr_parent_flow_set(struct bnxt_ulp_context *ctxt,
 					uint32_t pc_idx)
 {
 	struct bnxt_ulp_fc_info *ulp_fc_info;
-	uint32_t sw_cntr_idx;
+	uint32_t sw_cntr_idx = 0;
 	int32_t rc = 0;
 
 	ulp_fc_info = bnxt_ulp_cntxt_ptr2_fc_info_get(ctxt);
