@@ -388,9 +388,8 @@ static const char * const mpc_error_str[] = {
 static int32_t
 ulp_mapper_blob_block_swap(struct ulp_blob *blob, uint32_t block_sz)
 {
-	uint8_t data[block_sz]; /* size of a block for temp storage */
 	uint16_t num_words, data_sz;
-	uint8_t *pdata;
+	uint8_t *pdata, *data;
 	int i;
 
 	/* Shouldn't happen since it is internal function, but check anyway */
@@ -407,6 +406,12 @@ ulp_mapper_blob_block_swap(struct ulp_blob *blob, uint32_t block_sz)
 		return -EINVAL;
 	}
 
+	data = rte_zmalloc(NULL, block_sz, 0);
+	if (unlikely(!data)) {
+		BNXT_DRV_DBG(ERR, "Failed to allocate swap buffer");
+		return -ENOMEM;
+	}
+
 	num_words = data_sz / block_sz;
 	for (i = 0; i < num_words / 2; i++) {
 		memcpy(data, &pdata[i * block_sz], block_sz);
@@ -415,6 +420,7 @@ ulp_mapper_blob_block_swap(struct ulp_blob *blob, uint32_t block_sz)
 		memcpy(&pdata[(num_words - 1 - i) * block_sz],
 		       data, block_sz);
 	}
+	rte_free(data);
 	return 0;
 }
 
