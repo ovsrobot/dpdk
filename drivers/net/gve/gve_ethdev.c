@@ -211,6 +211,28 @@ gve_teardown_queue_page_list(struct gve_priv *priv,
 }
 
 static int
+gve_rss_update_cache(struct gve_priv *priv)
+{
+	if (priv->rss_cache_dirty) {
+		int err;
+
+		if (priv->ctrl_ops->query_rss == NULL) {
+			PMD_DRV_LOG(ERR,
+				    "No RSS query functionality present in ops table");
+			return -ENOENT;
+		}
+
+		err = priv->ctrl_ops->query_rss(priv);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Failed to query device for RSS info.");
+			return err;
+		}
+	}
+
+	return 0;
+}
+
+static int
 gve_dev_configure(struct rte_eth_dev *dev)
 {
 	struct gve_priv *priv = dev->data->dev_private;
@@ -233,19 +255,24 @@ gve_dev_configure(struct rte_eth_dev *dev)
 		}
 	}
 
-	/* Reset RSS RETA in case number of queues changed. */
+	/* Reset RSS RETA in case number of queues changed, but don't fail
+	 * configure if the cache cannot be updated.
+	 */
 	if (priv->rss_config.indir) {
-		struct gve_rss_config update_reta_config;
-		gve_init_rss_config_from_priv(priv, &update_reta_config);
-		gve_generate_rss_reta(dev, &update_reta_config);
+		err = gve_rss_update_cache(priv);
+		if (err == 0) {
+			struct gve_rss_config update_reta_config;
+			gve_init_rss_config_from_priv(priv, &update_reta_config);
+			gve_generate_rss_reta(dev, &update_reta_config);
 
-		err = priv->ctrl_ops->configure_rss(priv, &update_reta_config);
-		if (err)
-			PMD_DRV_LOG(ERR,
-				"Could not reconfigure RSS redirection table.");
+			err = priv->ctrl_ops->configure_rss(priv, &update_reta_config);
+			if (err)
+				PMD_DRV_LOG(ERR,
+					"Could not reconfigure RSS redirection table.");
 
-		gve_free_rss_config(&update_reta_config);
-		return err;
+			gve_free_rss_config(&update_reta_config);
+			return err;
+		}
 	}
 
 	return 0;
@@ -1093,7 +1120,6 @@ gve_xstats_get_names(struct rte_eth_dev *dev,
 	return count;
 }
 
-
 static int
 gve_rss_hash_update(struct rte_eth_dev *dev,
 			struct rte_eth_rss_conf *rss_conf)
@@ -1143,6 +1169,10 @@ gve_rss_hash_update(struct rte_eth_dev *dev,
 	if (err)
 		return err;
 
+	err = gve_rss_update_cache(priv);
+	if (err)
+		goto err;
+
 	gve_rss_conf.alg = GVE_RSS_HASH_TOEPLITZ;
 	err = gve_update_rss_hash_types(priv, &gve_rss_conf, rss_conf);
 	if (err)
@@ -1170,6 +1200,7 @@ gve_rss_hash_conf_get(struct rte_eth_dev *dev,
 			struct rte_eth_rss_conf *rss_conf)
 {
 	struct gve_priv *priv = dev->data->dev_private;
+	int err;
 
 	if (!(dev->data->dev_conf.rxmode.offloads &
 			RTE_ETH_RX_OFFLOAD_RSS_HASH)) {
@@ -1177,6 +1208,9 @@ gve_rss_hash_conf_get(struct rte_eth_dev *dev,
 		return -ENOTSUP;
 	}
 
+	err = gve_rss_update_cache(priv);
+	if (err)
+		return err;
 
 	gve_to_rte_rss_hf(priv->rss_config.hash_types, rss_conf);
 	rss_conf->rss_key_len = priv->rss_config.key_size;
@@ -1201,6 +1235,10 @@ gve_rss_reta_update(struct rte_eth_dev *dev,
 	int table_id;
 	int err;
 	int i;
+
+	err = gve_rss_update_cache(priv);
+	if (err)
+		return err;
 
 	/* RSS key must be set before the redirection table can be set. */
 	if (!priv->rss_config.key || priv->rss_config.key_size == 0) {
@@ -1246,6 +1284,7 @@ gve_rss_reta_query(struct rte_eth_dev *dev,
 {
 	struct gve_priv *priv = dev->data->dev_private;
 	int table_id;
+	int err;
 	int i;
 
 	if (!(dev->data->dev_conf.rxmode.offloads &
@@ -1254,10 +1293,13 @@ gve_rss_reta_query(struct rte_eth_dev *dev,
 		return -ENOTSUP;
 	}
 
-	/* RSS key must be set before the redirection table can be queried. */
-	if (!priv->rss_config.key) {
-		PMD_DRV_LOG(ERR, "RSS hash key must be set before the "
-			"redirection table can be initialized.");
+	err = gve_rss_update_cache(priv);
+	if (err != 0)
+		return err;
+
+	if (priv->ctrl_ops->query_rss == NULL && priv->rss_config.key == NULL) {
+		/* RSS key must be set before the redirection table can be queried. */
+		PMD_DRV_LOG(ERR, "RSS hash key must be set before the redirection table can be initialized.");
 		return -ENOTSUP;
 	}
 
@@ -1655,6 +1697,8 @@ gve_init_priv(struct gve_priv *priv, bool skip_describe_device)
 		    priv->max_nb_txq, priv->max_nb_rxq);
 
 setup_device:
+	if (priv->ctrl_ops->query_rss != NULL)
+		priv->rss_cache_dirty = true;
 	if (priv->max_flow_rules) {
 		err = gve_setup_flow_subsystem(priv);
 		if (err)
