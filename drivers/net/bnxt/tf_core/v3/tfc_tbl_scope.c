@@ -631,6 +631,7 @@ static int tbl_scope_pools_create(struct tfc *tfcp, uint8_t tsid,
 			rc = cfa_tim_tpm_inst_set(tim, tsid, region, dir, tpms[dir][region]);
 			if (rc)
 				goto cleanup;
+			tpms[dir][region] = NULL;
 		}
 	}
 

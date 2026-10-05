@@ -721,6 +721,7 @@ tf_rm_create_db(struct tf *tfp,
 	rm_db->module = parms->module;
 	*parms->rm_db = (void *)rm_db;
 
+	tfp_free((void *)query);
 	tfp_free((void *)req);
 	tfp_free((void *)resv);
 	tfp_free((void *)req_cnt);

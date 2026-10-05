@@ -710,6 +710,23 @@ int tf_sram_mgr_alloc(void *sram_handle,
 		}
 		block_id = index;
 		block = tf_sram_alloc_block(slice_list, block_id);
+		if (!block) {
+			fparms.rm_db = parms->rm_db;
+			fparms.subtype = parms->tbl_type;
+			fparms.index = block_id;
+			rc = tf_rm_free(&fparms);
+			if (rc)
+				TFP_DRV_LOG(ERR,
+					    "Free block_id(%d) failed rc:%d\n",
+					    block_id, rc);
+			fparms.index = next_index;
+			rc = tf_rm_free(&fparms);
+			if (rc)
+				TFP_DRV_LOG(ERR,
+					    "Free block_id(%d) failed rc:%d\n",
+					    next_index, rc);
+			return -ENOMEM;
+		}
 
 	} else {
 		/* Block exists

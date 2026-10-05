@@ -517,7 +517,10 @@ ulp_mapper_tfc_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 		align_len_bits = dparms->em_blk_align_bits - key_len;
 	}
 
-	ulp_blob_pad_push(&key, align_len_bits);
+	if (ulp_blob_pad_push(&key, align_len_bits) < 0) {
+		PMD_DRV_LOG_LINE(ERR, "Failed to pad EM key");
+		return -EINVAL;
+	}
 	key_len = ULP_BITS_2_BYTE(ulp_blob_data_len_get(&key));
 	ulp_blob_perform_byte_reverse(&key, key_len);
 	/* Create the result data blob */
