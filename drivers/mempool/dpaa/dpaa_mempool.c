@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- *   Copyright 2017,2019,2023-2025 NXP
+ *   Copyright 2017,2019,2023-2026 NXP
  *
  */
 
@@ -25,9 +25,23 @@
 #include <rte_eal.h>
 #include <rte_malloc.h>
 #include <rte_ring.h>
+#include <rte_common.h>
 
 #include <dpaa_mempool.h>
 #include <dpaax_iova_table.h>
+
+struct dpaa_bpid_flag {
+	uint32_t flags;
+	bool used;
+};
+
+/* Referenced from the destructor to release the BPIDs allocated by this
+ * process. The destructor cannot touch the bman_pool object because it lives
+ * in EAL memory that rte_eal_cleanup() may already have detached, so the ID
+ * is released from the recorded flags alone. This table is process-local
+ * static storage and therefore still valid at that point.
+ */
+static struct dpaa_bpid_flag s_dpaa_bpid_allocated_flag[DPAA_MAX_BPOOLS];
 
 #define FMAN_ERRATA_BOUNDARY ((uint64_t)4096)
 #define FMAN_ERRATA_BOUNDARY_MASK (~(FMAN_ERRATA_BOUNDARY - 1))
@@ -50,7 +64,7 @@ static int
 dpaa_mbuf_create_pool(struct rte_mempool *mp)
 {
 	struct bman_pool *bp;
-	struct bm_buffer bufs[8];
+	struct bm_buffer bufs[FSL_BM_BURST_MAX];
 	struct dpaa_bp_info *bp_info;
 	uint8_t bpid;
 	int num_bufs = 0, ret = 0;
@@ -83,8 +97,8 @@ dpaa_mbuf_create_pool(struct rte_mempool *mp)
 		 * then in 1s for the remainder.
 		 */
 		if (ret != 1)
-			ret = bman_acquire(bp, bufs, 8, 0);
-		if (ret < 8)
+			ret = bman_acquire(bp, bufs, FSL_BM_BURST_MAX, 0);
+		if (ret < FSL_BM_BURST_MAX)
 			ret = bman_acquire(bp, bufs, 1, 0);
 		if (ret > 0)
 			num_bufs += ret;
@@ -115,7 +129,7 @@ dpaa_mbuf_create_pool(struct rte_mempool *mp)
 	rte_dpaa_bpid_info[bpid].ptov_off = 0;
 	rte_dpaa_bpid_info[bpid].flags = 0;
 
-	bp_info = rte_malloc(NULL,
+	bp_info = rte_zmalloc(NULL,
 			     sizeof(struct dpaa_bp_info),
 			     RTE_CACHE_LINE_SIZE);
 	if (!bp_info) {
@@ -127,6 +141,8 @@ dpaa_mbuf_create_pool(struct rte_mempool *mp)
 	rte_memcpy(bp_info, (void *)&rte_dpaa_bpid_info[bpid],
 		   sizeof(struct dpaa_bp_info));
 	mp->pool_data = (void *)bp_info;
+	s_dpaa_bpid_allocated_flag[bpid].flags = params.flags;
+	s_dpaa_bpid_allocated_flag[bpid].used = true;
 
 	DPAA_MEMPOOL_INFO("BMAN pool created for bpid =%d", bpid);
 	return 0;
@@ -143,10 +159,25 @@ dpaa_mbuf_free_pool(struct rte_mempool *mp)
 		bman_free_pool(bp_info->bp);
 		DPAA_MEMPOOL_INFO("BMAN pool freed for bpid =%d",
 				  bp_info->bpid);
-		bp_info->bp = NULL;
+		if (rte_dpaa_bpid_info != NULL) {
+			rte_dpaa_bpid_info[bp_info->bpid].mp = NULL;
+			rte_dpaa_bpid_info[bp_info->bpid].bp = NULL;
+		}
+		s_dpaa_bpid_allocated_flag[bp_info->bpid].used = false;
 		rte_free(bp_info);
 		mp->pool_data = NULL;
 	}
+
+	/* rte_dpaa_bpid_info is not freed here, and not from the driver
+	 * destructor either. It is a single fixed-size array in EAL memory,
+	 * allocated once and referenced by every Rx queue via fq->bp_array;
+	 * in a secondary process the Rx path installs the primary's array
+	 * (see dpaa_rxtx.c). Releasing it when the last local mempool goes
+	 * away would leave those references dangling, and a destructor
+	 * cannot release it either because rte_eal_cleanup() detaches EAL
+	 * memory before the destructors run. It is therefore left to the
+	 * process teardown.
+	 */
 }
 
 static int
@@ -480,5 +511,27 @@ static const struct rte_mempool_ops dpaa_mpool_ops = {
 	.get_count = dpaa_mbuf_get_count,
 	.populate = dpaa_populate,
 };
+
+#define RTE_PRIORITY_104 104
+
+RTE_FINI_PRIO(dpaa_mpool_finish, RTE_PRIORITY_104)
+{
+	uint16_t bpid;
+
+	for (bpid = 0; bpid < DPAA_MAX_BPOOLS; bpid++) {
+		if (s_dpaa_bpid_allocated_flag[bpid].used) {
+			bman_free_bpid(bpid, s_dpaa_bpid_allocated_flag[bpid].flags);
+			s_dpaa_bpid_allocated_flag[bpid].used = false;
+		}
+	}
+
+	/* rte_dpaa_bpid_info is deliberately not freed here. It is EAL memory,
+	 * and rte_eal_cleanup() has already called rte_eal_memory_detach() by
+	 * the time the destructors run, so rte_free() would operate on an
+	 * unmapped mapping. In a secondary it is not even a local allocation:
+	 * the Rx path installs the primary's array (see dpaa_rxtx.c), so
+	 * freeing it would release the primary's live BPID table.
+	 */
+}
 
 RTE_MEMPOOL_REGISTER_OPS(dpaa_mpool_ops);
