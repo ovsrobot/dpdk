@@ -154,6 +154,10 @@ rte_devargs_layers_parse(struct rte_devargs *devargs,
 		}
 	}
 
+	/* No driver layer: match the legacy syntax, empty args. */
+	if (devargs->drv_str == NULL)
+		devargs->drv_str = "";
+
 	/* Resolve devargs name. */
 	if (devargs->bus != NULL && devargs->bus->devargs_parse != NULL)
 		ret = devargs->bus->devargs_parse(devargs);
