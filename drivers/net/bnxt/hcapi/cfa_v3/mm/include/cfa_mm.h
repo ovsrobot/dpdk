@@ -161,6 +161,29 @@ int cfa_mm_free(void *cmm, struct cfa_mm_free_parms *parms);
  */
 int cfa_mm_entry_size_get(void *cmm, uint32_t entry_id, uint8_t *size);
 
+/** CFA Memory Manager Free Block Count API
+ *
+ * Returns the number of unassigned blocks currently in the master
+ * free-block pool (list_0).  Each block can serve any size class up to
+ * max_contig_records, so this count is the maximum number of additional
+ * allocations (of any size) the CMM instance can still satisfy before its
+ * block pool is exhausted.
+ *
+ * This is an O(1) operation — a single field read of a counter maintained
+ * by cfa_mm_blk_alloc() and cfa_mm_blk_free() with no list traversal.
+ *
+ * Callers compare the return value against TFC_CPM_BLK_RECOVERY_THRESHOLD
+ * (defined in tfc_cpm.h) to decide whether a blk_sz_limited pool has
+ * recovered enough capacity to re-enter rotation.
+ *
+ * @param[in] cmm
+ *   Pointer to the CFA Memory Manager database
+ *
+ * @return
+ *   Number of free blocks in list_0; 0 on invalid input or empty pool
+ */
+uint32_t cfa_mm_free_blk_count(void *cmm);
+
 /**@}*/
 
 #endif /* _CFA_MM_H_ */

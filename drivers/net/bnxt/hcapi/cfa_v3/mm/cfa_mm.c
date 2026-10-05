@@ -124,6 +124,7 @@ int cfa_mm_open(void *cmm, struct cfa_mm_open_parms *parms)
 
 	context->blk_list_tbl[0].first_blk_idx = 0;
 	context->blk_list_tbl[0].last_blk_idx = 0;
+	context->free_blk_count = num_blocks;
 
 	for (i = 1; i < num_lists; i++) {
 		context->blk_list_tbl[i].first_blk_idx = CFA_MM_INVALID32;
@@ -196,6 +197,8 @@ static uint32_t cfa_mm_blk_alloc(struct cfa_mm *context)
 	context->blk_tbl[blk_idx].prev_blk_idx = CFA_MM_INVALID32;
 	context->blk_tbl[blk_idx].next_blk_idx = CFA_MM_INVALID32;
 
+	context->free_blk_count--;
+
 	return blk_idx;
 }
 
@@ -206,6 +209,7 @@ static void cfa_mm_blk_free(struct cfa_mm *context, uint32_t blk_idx)
 
 	context->blk_tbl[blk_idx].prev_blk_idx = CFA_MM_INVALID32;
 	context->blk_tbl[blk_idx].next_blk_idx = free_list->first_blk_idx;
+	context->free_blk_count++;
 	context->blk_tbl[blk_idx].num_free_records = context->records_per_block;
 	context->blk_tbl[blk_idx].first_free_record = 0;
 	context->blk_tbl[blk_idx].num_contig_records = 0;
@@ -385,6 +389,7 @@ static int cfa_mm_test_and_set_bits(uint8_t *bmap, uint16_t start,
 int cfa_mm_alloc(void *cmm, struct cfa_mm_alloc_parms *parms)
 {
 	int ret = 0;
+	bool free_list_empty = false;
 	uint16_t list_idx, num_records;
 	uint32_t i, cnt, blk_idx, record_idx;
 	struct cfa_mm_blk_list *blk_list;
@@ -422,6 +427,16 @@ int cfa_mm_alloc(void *cmm, struct cfa_mm_alloc_parms *parms)
 	if (blk_list->first_blk_idx == CFA_MM_INVALID32) {
 		blk_idx = cfa_mm_blk_alloc(context);
 		if (unlikely(blk_idx == CFA_MM_INVALID32)) {
+			/*
+			 * The master free-block pool is empty.
+			 * Records from other size-class lists cannot be
+			 * reclaimed for this request — each block is locked
+			 * to one size class until all its records are freed.
+			 * Signal the caller that this CMM instance is
+			 * effectively full so the CPM can retire it and
+			 * rotate to a new pool on the next allocation.
+			 */
+			free_list_empty = true;
 			ret = -ENOMEM;
 			goto cfa_mm_alloc_exit;
 		}
@@ -447,6 +462,7 @@ int cfa_mm_alloc(void *cmm, struct cfa_mm_alloc_parms *parms)
 		    !blk_info->num_free_records) {
 			blk_idx = cfa_mm_blk_alloc(context);
 			if (unlikely(blk_idx == CFA_MM_INVALID32)) {
+				free_list_empty = true;
 				ret = -ENOMEM;
 				goto cfa_mm_alloc_exit;
 			}
@@ -514,7 +530,15 @@ cfa_mm_alloc_exit:
 
 	parms->used_count = context->records_in_use;
 
-	parms->all_used = (context->records_in_use >= context->max_records);
+	/*
+	 * Mark the pool as fully used if the free-block pool ran dry even
+	 * when records_in_use < max_records.  An empty free-block pool means
+	 * no further allocations are possible: stranded records in size-class
+	 * lists cannot be reclaimed.  Setting all_used lets the caller (CPM)
+	 * retire this pool and rotate to a fresh one.
+	 */
+	parms->all_used = free_list_empty ||
+			  (context->records_in_use >= context->max_records);
 
 	return ret;
 }
@@ -600,6 +624,22 @@ int cfa_mm_free(void *cmm, struct cfa_mm_free_parms *parms)
 	parms->used_count = context->records_in_use;
 
 	return 0;
+}
+
+/** Return the number of unassigned blocks currently in the master free-block
+ *  pool (list_0).  This is an O(1) read of a counter maintained by
+ *  cfa_mm_blk_alloc() and cfa_mm_blk_free().  Callers compare the return
+ *  value against TFC_CPM_BLK_RECOVERY_THRESHOLD to decide whether a
+ *  blk_sz_limited pool has recovered enough capacity to re-enter rotation.
+ */
+uint32_t cfa_mm_free_blk_count(void *cmm)
+{
+	struct cfa_mm *context = (struct cfa_mm *)cmm;
+
+	if (unlikely(cmm == NULL || context->signature != CFA_MM_SIGNATURE))
+		return 0;
+
+	return context->free_blk_count;
 }
 
 int cfa_mm_entry_size_get(void *cmm, uint32_t entry_id, uint8_t *size)

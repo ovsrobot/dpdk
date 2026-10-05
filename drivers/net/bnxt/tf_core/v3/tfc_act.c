@@ -31,6 +31,104 @@
 /* Max additional data size in bytes */
 #define TFC_ACT_DISCARD_DATA_SIZE 128
 
+/*
+ * Select or create an ACT pool and return its pool_id and CMM instance.
+ *
+ * If the CPM has an available pool, its CMM is returned directly.
+ * Otherwise a new pool is allocated from the TPM, a fresh CMM is opened
+ * for it, and it is registered with the CPM before returning.
+ *
+ * Returns 0 on success, -ENOMEM if no pools remain (non-shared scope),
+ * -EINVAL on any other error.
+ */
+static int act_get_or_alloc_pool(struct tfc *tfcp,
+				 uint8_t tsid,
+				 struct tfc_cmm_info *cmm_info,
+				 struct tfc_cpm *cpm_act,
+				 enum cfa_scope_type scope_type,
+				 uint16_t max_pools,
+				 struct tfc_ts_mem_cfg *mem_cfg,
+				 struct tfc_ts_pool_info *pi,
+				 uint16_t *pool_id,
+				 struct tfc_cmm **cmm)
+{
+	int rc;
+	struct cfa_mm_query_parms qparms;
+	struct cfa_mm_open_parms oparms;
+	uint16_t fid;
+
+	rc = tfc_cpm_get_avail_pool(cpm_act, pool_id);
+	if (!rc) {
+		rc = tfc_cpm_get_cmm_inst(cpm_act, *pool_id, cmm);
+		if (unlikely(rc)) {
+			PMD_DRV_LOG_LINE(ERR, "tfc_cpm_get_cmm_inst() failed: %d", rc);
+			return -EINVAL;
+		}
+		return 0;
+	}
+
+	/* No pool available — allocate a new one from TPM */
+	if (unlikely(scope_type == CFA_SCOPE_TYPE_NON_SHARED)) {
+		PMD_DRV_LOG_LINE(ERR, "no records remain");
+		return -ENOMEM;
+	}
+
+	rc = tfc_get_fid(tfcp, &fid);
+	if (unlikely(rc))
+		return rc;
+
+	rc = tfc_tbl_scope_pool_alloc(tfcp, fid, tsid, CFA_REGION_TYPE_ACT,
+				      cmm_info->dir, NULL, pool_id);
+	if (unlikely(rc)) {
+		PMD_DRV_LOG_LINE(ERR, "table scope pool alloc failed: %s", strerror(-rc));
+		return -EINVAL;
+	}
+
+	if (max_pools > 0 && scope_type != CFA_SCOPE_TYPE_NON_SHARED)
+		qparms.max_records = mem_cfg->rec_cnt / max_pools;
+	else
+		qparms.max_records = mem_cfg->rec_cnt;
+	if (unlikely(qparms.max_records == 0)) {
+		PMD_DRV_LOG_LINE(WARNING,
+				 "rec_cnt=0 for tsid ACT, using min 1 record for CMM (max_pools=%u)",
+				 max_pools);
+		qparms.max_records = 1;
+	}
+	qparms.max_contig_records = 1U << next_pow2((uint32_t)pi->act_max_contig_rec);
+	rc = cfa_mm_query(&qparms);
+	if (unlikely(rc)) {
+		PMD_DRV_LOG_LINE(ERR, "cfa_mm_query() failed: %s", strerror(-rc));
+		return rc;
+	}
+
+	*cmm = rte_zmalloc("tf", qparms.db_size, 0);
+	if (unlikely(*cmm == NULL)) {
+		PMD_DRV_LOG_LINE(ERR, "rte_zmalloc() failed for CMM instance");
+		return -ENOMEM;
+	}
+	oparms.db_mem_size = qparms.db_size;
+	oparms.max_contig_records = qparms.max_contig_records;
+	oparms.max_records = qparms.max_records;
+	rc = cfa_mm_open(*cmm, &oparms);
+	if (unlikely(rc)) {
+		PMD_DRV_LOG_LINE(ERR, "cfa_mm_open() failed: %d", rc);
+		rte_free(*cmm);
+		*cmm = NULL;
+		return -EINVAL;
+	}
+
+	rc = tfc_cpm_set_cmm_inst(cpm_act, *pool_id, *cmm);
+	if (unlikely(rc)) {
+		PMD_DRV_LOG_LINE(ERR, "tfc_cpm_set_cmm_inst() failed: %d", rc);
+		rte_free(*cmm);
+		*cmm = NULL;
+		return -EINVAL;
+	}
+
+	tfo_ts_set_pool_info(tfcp->tfo, tsid, cmm_info->dir, pi);
+	return 0;
+}
+
 int tfc_act_alloc(struct tfc *tfcp,
 		  uint8_t tsid,
 		  struct tfc_cmm_info *cmm_info,
@@ -91,88 +189,53 @@ int tfc_act_alloc(struct tfc *tfcp,
 		return -EINVAL;
 	}
 
-	/* if no pool available locally or all pools full */
-	rc = tfc_cpm_get_avail_pool(cpm_act, &pool_id);
+	/* Select an available pool or allocate a new one from TPM */
+	rc = act_get_or_alloc_pool(tfcp, tsid, cmm_info, cpm_act, scope_type,
+				   max_pools, &mem_cfg, &pi, &pool_id, &cmm);
+	if (unlikely(rc))
+		return rc;
 
-	if (rc) {
-		/* Allocate a pool */
-		struct cfa_mm_query_parms qparms;
-		struct cfa_mm_open_parms oparms;
-		uint16_t fid;
+	aparms.num_contig_records = (num_contig_rec == 1) ?
+			1 : 1 << next_pow2(num_contig_rec);
 
-		/* There is only 1 pool for a non-shared table scope
-		 * and it is full.
-		 */
-		if (unlikely(scope_type == CFA_SCOPE_TYPE_NON_SHARED)) {
-			PMD_DRV_LOG_LINE(ERR, "%s: no records remain",
-					 __func__);
-			return -ENOMEM;
-		}
-		rc = tfc_get_fid(tfcp, &fid);
-		if (unlikely(rc))
-			return rc;
-
-		rc = tfc_tbl_scope_pool_alloc(tfcp,
-					      fid,
-					      tsid,
-					      CFA_REGION_TYPE_ACT,
-					      cmm_info->dir,
-					      NULL,
-					      &pool_id);
-
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "table scope pool alloc failed: %s",
-					 strerror(-rc));
-			return -EINVAL;
-		}
-
-		/* Create pool CMM instance */
-		qparms.max_records = mem_cfg.rec_cnt;
-		qparms.max_contig_records = pi.act_max_contig_rec;
-		rc = cfa_mm_query(&qparms);
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "cfa_mm_query() failed: %s", strerror(-rc));
-			return rc;
-		}
-
-		cmm = rte_zmalloc("tf", qparms.db_size, 0);
-		oparms.db_mem_size = qparms.db_size;
-		oparms.max_contig_records = qparms.max_contig_records;
-		oparms.max_records = qparms.max_records / max_pools;
-		rc = cfa_mm_open(cmm, &oparms);
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "cfa_mm_open() failed: %d", rc);
-			return -EINVAL;
-		}
-
-		/* Store CMM instance in the CPM */
-		rc = tfc_cpm_set_cmm_inst(cpm_act, pool_id, cmm);
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "tfc_cpm_set_cmm_inst() failed: %d", rc);
-			return -EINVAL;
-		}
-		/* store updated pool info */
-		tfo_ts_set_pool_info(tfcp->tfo, tsid, cmm_info->dir, &pi);
-
-	} else {
-		/* Get the pool instance and allocate an act rec index from the pool */
-		rc = tfc_cpm_get_cmm_inst(cpm_act, pool_id, &cmm);
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "tfc_cpm_get_cmm_inst() failed: %d", rc);
-			return -EINVAL;
-		}
-	}
-	aparms.num_contig_records = 1 << next_pow2(num_contig_rec);
 	rc = cfa_mm_alloc(cmm, &aparms);
+	if (unlikely(rc == -ENOMEM)) {
+		/*
+		 * The pool cannot serve this allocation — either its block
+		 * free-list is exhausted (fragmented) or the pool is nearly
+		 * full.  Mark it unavailable and rotate to a fresh pool so
+		 * the caller does not see a spurious failure.
+		 * Always force all_used=true here so the CPM pushes this pool
+		 * to the tail regardless of the actual records_in_use value.
+		 */
+		tfc_cpm_set_usage(cpm_act, pool_id, aparms.used_count, true, false);
+
+		rc = act_get_or_alloc_pool(tfcp, tsid, cmm_info, cpm_act,
+					   scope_type, max_pools, &mem_cfg,
+					   &pi, &pool_id, &cmm);
+		if (unlikely(rc)) {
+			PMD_DRV_LOG_LINE(ERR, "no pool available after rotation: %s",
+					 strerror(-rc));
+			return rc;
+		}
+		rc = cfa_mm_alloc(cmm, &aparms);
+	}
 	if (unlikely(rc)) {
 		PMD_DRV_LOG_LINE(ERR, "cfa_mm_alloc() failed: %d", rc);
-		return -EINVAL;
+		/* alloc path: recovery only occurs on free, pass false */
+		if (aparms.all_used)
+			tfc_cpm_set_usage(cpm_act, pool_id,
+					  aparms.used_count, true, false);
+		return rc;
 	}
 
-	/* Update CPM info so it will determine best pool to use next alloc */
-	rc = tfc_cpm_set_usage(pi.act_cpm, pool_id, aparms.used_count, aparms.all_used);
+	/* Update CPM so it determines the best pool for the next alloc.
+	 * Recovery (blk_sz_recovered) is not possible on the alloc path —
+	 * the free-block pool only replenishes when records are freed.
+	 */
+	rc = tfc_cpm_set_usage(cpm_act, pool_id, aparms.used_count, aparms.all_used, false);
 	if (unlikely(rc))
-		PMD_DRV_LOG_LINE(ERR, "EM insert tfc_cpm_set_usage() failed: %d", rc);
+		PMD_DRV_LOG_LINE(ERR, "ACT alloc tfc_cpm_set_usage() failed: %d", rc);
 
 	CREATE_OFFSET(&entry_offset, pi.act_pool_sz_exp, pool_id, aparms.record_offset);
 
@@ -800,7 +863,13 @@ int tfc_act_free(struct tfc *tfcp,
 		return -EINVAL;
 	}
 
-	rc = tfc_cpm_set_usage(cpm_act, pool_id, 0, false);
+	/* Update CPM with actual remaining used count so pool ordering stays correct.
+	 * Signal recovery only when free block count meets the threshold — a small
+	 * number of freed records may transiently return one block but the pool is
+	 * still heavily fragmented.
+	 */
+	rc = tfc_cpm_set_usage(cpm_act, pool_id, fparms.used_count, false,
+			       cfa_mm_free_blk_count(cmm) >= TFC_CPM_BLK_RECOVERY_THRESHOLD);
 	if (unlikely(rc))
 		PMD_DRV_LOG_LINE(ERR, "failed to set usage: %d", rc);
 

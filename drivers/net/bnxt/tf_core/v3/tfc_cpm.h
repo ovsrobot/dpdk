@@ -30,6 +30,21 @@ struct tfc_cpm;
 
 #define TFC_CPM_INVALID_POOL_ID 0xFFFF
 
+/*
+ * Minimum number of free blocks that must be present in a CMM instance's
+ * master free-block pool (list_0) before a blk_sz_limited pool is allowed to
+ * re-enter rotation.  The CMM guarantees at least 8 records per block
+ * (enforced internally via CFA_MM_MIN_RECORDS_PER_BLOCK), so this threshold
+ * ensures at least 64 usable records are available before recovery is
+ * signalled.
+ *
+ * A value of 1 is technically sufficient (one free block can serve any size
+ * class), but cleanup rollbacks from failed allocations can transiently return
+ * exactly 1 block, causing premature recovery and a tight exhaust/recover
+ * oscillation.  Using 8 prevents that transient from triggering recovery.
+ */
+#define TFC_CPM_BLK_RECOVERY_THRESHOLD 8
+
 /**
  * int tfc_cpm_open
  *
@@ -167,7 +182,12 @@ int tfc_cpm_get_avail_pool(struct tfc_cpm *cpm, uint16_t *pool_id);
 /**
  * int tfc_cpm_set_usage
  *
- * Set the usage_count and all_used fields for the specified pool_id
+ * Set the usage_count and all_used fields for the specified pool_id.
+ * Also handles blk_sz_limited flag set/clear logic:
+ *   - Sets blk_sz_limited when all_used=true but used_count < pool_size
+ *     (CMM block free-list exhausted before records ran out).
+ *   - Clears blk_sz_limited when blk_sz_recovered=true, allowing the pool
+ *     to re-enter the available rotation.
  *
  * @param[in] cpm
  *  Pointer to the CPM instance
@@ -181,11 +201,18 @@ int tfc_cpm_get_avail_pool(struct tfc_cpm *cpm, uint16_t *pool_id);
  * @param[in] all_used
  *  Set if all pool entries are used
  *
+ * @param[in] blk_sz_recovered
+ *  Pass true on free paths when cfa_mm_free_blk_count() returns a value
+ *  >= TFC_CPM_BLK_RECOVERY_THRESHOLD, indicating the CMM free-block pool
+ *  has recovered enough capacity for blk_sz_limited to be cleared.
+ *  Pass false on alloc paths and on free paths when the threshold is not met.
+ *
  * Returns:
  * 0 - Success
  * -EINVAL - Invalid argument
  */
-int tfc_cpm_set_usage(struct tfc_cpm *cpm, uint16_t pool_id, uint32_t used_count, bool all_used);
+int tfc_cpm_set_usage(struct tfc_cpm *cpm, uint16_t pool_id, uint32_t used_count,
+		      bool all_used, bool blk_sz_recovered);
 
 /**
  * int tfc_cpm_srchm_by_configured_pool

@@ -16,6 +16,16 @@ struct cpm_pool_entry {
 	struct tfc_cmm *cmm;
 	uint32_t used_count;
 	bool all_used;
+	/*
+	 * Set when the CMM block free-list (list_0) is exhausted before
+	 * records_in_use reaches pool_size.  Per-size-class block lists
+	 * strand records that cannot be reclaimed for a different size
+	 * class without fully freeing those blocks.  While set, this flag
+	 * forces all_used=true so the CPM skips this pool.  It is cleared
+	 * by tfc_cpm_set_usage() once list_0 has at least one free block
+	 * again, meaning any size class can be served immediately.
+	 */
+	bool blk_sz_limited;
 	struct cpm_pool_use *pool_use;
 };
 
@@ -312,6 +322,7 @@ int tfc_cpm_set_cmm_inst(struct tfc_cpm *cpm, uint16_t pool_id, struct tfc_cmm *
 	pool->cmm = cmm;
 	pool->used_count = 0;
 	pool->all_used = false;
+	pool->blk_sz_limited = false;
 	pool->pool_use = NULL;
 
 	if (cmm == NULL) {
@@ -369,7 +380,8 @@ int tfc_cpm_get_avail_pool(struct tfc_cpm *cpm, uint16_t *pool_id)
 	return 0;
 }
 
-int tfc_cpm_set_usage(struct tfc_cpm *cpm, uint16_t pool_id, uint32_t used_count, bool all_used)
+int tfc_cpm_set_usage(struct tfc_cpm *cpm, uint16_t pool_id, uint32_t used_count,
+		      bool all_used, bool blk_sz_recovered)
 {
 	struct cpm_pool_entry *pool;
 
@@ -395,6 +407,33 @@ int tfc_cpm_set_usage(struct tfc_cpm *cpm, uint16_t pool_id, uint32_t used_count
 				 used_count, cpm->pool_size);
 		return -EINVAL;
 	}
+
+	/*
+	 * Block-size-limited detection: all_used=true but records_in_use is
+	 * still below pool_size means the CMM block free-list (list_0) ran
+	 * dry before all records were consumed.  This happens because
+	 * per-size-class block lists strand records that cannot be reclaimed
+	 * for a different size class.  Mark the pool blk_sz_limited so the
+	 * CPM skips it until list_0 recovers.
+	 */
+	if (all_used && used_count < cpm->pool_size && !pool->blk_sz_limited)
+		pool->blk_sz_limited = true;
+
+	/*
+	 * Recovery: if the caller has confirmed that list_0 has at least one
+	 * free block (sufficient to serve any size class), clear the flag and
+	 * let all_used be evaluated normally so the pool re-enters rotation.
+	 */
+	if (pool->blk_sz_limited && blk_sz_recovered)
+		pool->blk_sz_limited = false;
+
+	/*
+	 * While blk_sz_limited is set keep all_used=true so the pool stays
+	 * at the tail of the sorted list and is never returned by
+	 * tfc_cpm_get_avail_pool().
+	 */
+	if (pool->blk_sz_limited)
+		all_used = true;
 
 	pool->all_used = all_used;
 	pool->used_count = used_count;

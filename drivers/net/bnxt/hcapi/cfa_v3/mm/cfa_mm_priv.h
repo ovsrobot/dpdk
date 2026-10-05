@@ -62,6 +62,11 @@ struct cfa_mm {
 	uint32_t max_records;
 	/* Number of CFA Records in use*/
 	uint32_t records_in_use;
+	/* Number of unassigned blocks currently in the master free-block pool (list_0).
+	 * Maintained O(1) by cfa_mm_blk_alloc / cfa_mm_blk_free.
+	 * Read by cfa_mm_free_blk_count() for the CPM recovery threshold check.
+	 */
+	uint32_t free_blk_count;
 	/* Number of Records per block */
 	uint16_t records_per_block;
 	/* Maximum number of contiguous records */

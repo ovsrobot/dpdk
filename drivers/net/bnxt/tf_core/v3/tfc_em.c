@@ -108,6 +108,99 @@ static int tfc_em_insert_response(struct cfa_bld_mpcinfo *mpc_info,
 	return rc;
 }
 
+/*
+ * Select or create a LKUP pool and return its pool_id and CMM instance.
+ *
+ * If the CPM has an available pool, its CMM is returned directly.
+ * Otherwise a new pool is allocated from the TPM, a fresh CMM is opened
+ * for it, and it is registered with the CPM before returning.
+ *
+ * Returns 0 on success, -ENOMEM if no pools remain (non-shared scope),
+ * -EINVAL on any other error.
+ */
+static int em_get_or_alloc_pool(struct tfc *tfcp,
+				uint8_t tsid,
+				enum cfa_dir dir,
+				struct tfc_cpm *cpm_lkup,
+				enum cfa_scope_type scope_type,
+				uint16_t max_pools,
+				struct tfc_ts_mem_cfg *mem_cfg,
+				struct tfc_ts_pool_info *pi,
+				uint16_t *pool_id,
+				struct tfc_cmm **cmm)
+{
+	int rc;
+	struct cfa_mm_query_parms qparms;
+	struct cfa_mm_open_parms oparms;
+	uint16_t fid;
+
+	rc = tfc_cpm_get_avail_pool(cpm_lkup, pool_id);
+	if (!rc) {
+		rc = tfc_cpm_get_cmm_inst(cpm_lkup, *pool_id, cmm);
+		if (unlikely(rc)) {
+			PMD_DRV_LOG_LINE(ERR, "tfc_cpm_get_cmm_inst() failed: %s", strerror(-rc));
+			return -EINVAL;
+		}
+		return 0;
+	}
+
+	/* No pool available — allocate a new one from TPM */
+	if (scope_type == CFA_SCOPE_TYPE_NON_SHARED) {
+		PMD_DRV_LOG_LINE(ERR, "no records remain");
+		return -ENOMEM;
+	}
+
+	rc = tfc_get_fid(tfcp, &fid);
+	if (unlikely(rc))
+		return rc;
+
+	rc = tfc_tbl_scope_pool_alloc(tfcp, fid, tsid, CFA_REGION_TYPE_LKUP,
+				      dir, NULL, pool_id);
+	if (unlikely(rc)) {
+		PMD_DRV_LOG_LINE(ERR, "table scope pool alloc failed: %s", strerror(-rc));
+		return -EINVAL;
+	}
+
+	/*
+	 * rec_cnt includes static buckets; subtract lkup_rec_start_offset to
+	 * get the number of usable lookup records for this pool.
+	 */
+	qparms.max_records = (mem_cfg->rec_cnt - mem_cfg->lkup_rec_start_offset) / max_pools;
+	qparms.max_contig_records = 1U << next_pow2((uint32_t)pi->lkup_max_contig_rec);
+	rc = cfa_mm_query(&qparms);
+	if (unlikely(rc)) {
+		PMD_DRV_LOG_LINE(ERR, "cfa_mm_query() failed: %s", strerror(-rc));
+		return -EINVAL;
+	}
+
+	*cmm = rte_zmalloc("tf", qparms.db_size, 0);
+	if (unlikely(*cmm == NULL)) {
+		PMD_DRV_LOG_LINE(ERR, "rte_zmalloc() failed for CMM instance");
+		return -ENOMEM;
+	}
+	oparms.db_mem_size = qparms.db_size;
+	oparms.max_contig_records = qparms.max_contig_records;
+	oparms.max_records = qparms.max_records;
+	rc = cfa_mm_open(*cmm, &oparms);
+	if (unlikely(rc)) {
+		PMD_DRV_LOG_LINE(ERR, "cfa_mm_open() failed: %s", strerror(-rc));
+		rte_free(*cmm);
+		*cmm = NULL;
+		return -EINVAL;
+	}
+
+	rc = tfc_cpm_set_cmm_inst(cpm_lkup, *pool_id, *cmm);
+	if (unlikely(rc)) {
+		PMD_DRV_LOG_LINE(ERR, "tfc_cpm_set_cmm_inst() failed: %s", strerror(-rc));
+		rte_free(*cmm);
+		*cmm = NULL;
+		return -EINVAL;
+	}
+
+	tfo_ts_set_pool_info(tfcp->tfo, tsid, dir, pi);
+	return 0;
+}
+
 int tfc_em_insert(struct tfc *tfcp, uint8_t tsid,
 		  struct tfc_em_insert_parms *parms)
 {
@@ -189,92 +282,36 @@ int tfc_em_insert(struct tfc *tfcp, uint8_t tsid,
 
 	tfo_ts_get_pool_info(tfcp->tfo, tsid, parms->dir, &pi);
 
-	rc = tfc_cpm_get_avail_pool(cpm_lkup, &pool_id);
-
-	/* if no pool available locally or all pools full */
-	if (rc) {
-		/* Allocate a pool */
-		struct cfa_mm_query_parms qparms;
-		struct cfa_mm_open_parms oparms;
-		uint16_t fid;
-
-		/* There is only 1 pool for a non-shared table scope and
-		 * it is full.
-		 */
-		if (scope_type == CFA_SCOPE_TYPE_NON_SHARED) {
-			PMD_DRV_LOG_LINE(ERR, "%s: no records remain",
-					 __func__);
-			return -ENOMEM;
-		}
-
-		rc = tfc_get_fid(tfcp, &fid);
-		if (unlikely(rc))
-			return rc;
-
-		rc = tfc_tbl_scope_pool_alloc(tfcp,
-					      fid,
-					      tsid,
-					      CFA_REGION_TYPE_LKUP,
-					      parms->dir,
-					      NULL,
-					      &pool_id);
-
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "table scope pool alloc failed: %s",
-					 strerror(-rc));
-			return -EINVAL;
-		}
-
-		/*
-		 * Create pool CMM instance.
-		 * rec_cnt is the total number of records which includes static buckets,
-		 */
-		qparms.max_records = (mem_cfg.rec_cnt - mem_cfg.lkup_rec_start_offset) / max_pools;
-		qparms.max_contig_records = pi.lkup_max_contig_rec;
-		rc = cfa_mm_query(&qparms);
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "cfa_mm_query() failed: %s", strerror(-rc));
-			rte_free(cmm);
-			return -EINVAL;
-		}
-
-		cmm = rte_zmalloc("tf", qparms.db_size, 0);
-		oparms.db_mem_size = qparms.db_size;
-		oparms.max_contig_records = qparms.max_contig_records;
-		oparms.max_records = qparms.max_records;
-		rc = cfa_mm_open(cmm, &oparms);
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "cfa_mm_open() failed: %s", strerror(-rc));
-			rte_free(cmm);
-			return -EINVAL;
-		}
-
-		/* Store CMM instance in the CPM */
-		rc = tfc_cpm_set_cmm_inst(cpm_lkup, pool_id, cmm);
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "tfc_cpm_set_cmm_inst() failed: %s",
-					 strerror(-rc));
-			return -EINVAL;
-		}
-
-		/* Store the updated pool information */
-		tfo_ts_set_pool_info(tfcp->tfo, tsid, parms->dir, &pi);
-
-	} else {
-		/* Get the pool instance and allocate an lkup rec index from the pool */
-		rc = tfc_cpm_get_cmm_inst(cpm_lkup, pool_id, &cmm);
-		if (unlikely(rc)) {
-			PMD_DRV_LOG_LINE(ERR, "tfc_cpm_get_cmm_inst() failed: %s",
-					 strerror(-rc));
-			return -EINVAL;
-		}
-	}
+	/* Select an available pool or allocate a new one from TPM */
+	rc = em_get_or_alloc_pool(tfcp, tsid, parms->dir, cpm_lkup, scope_type,
+				  max_pools, &mem_cfg, &pi, &pool_id, &cmm);
+	if (unlikely(rc))
+		return rc;
 
 	aparms.num_contig_records = num_contig_records;
 	rc = cfa_mm_alloc(cmm, &aparms);
+	if (unlikely(rc == -ENOMEM)) {
+		/*
+		 * The pool cannot serve this allocation, either its block
+		 * free-list is exhausted (fragmented) or the pool is nearly
+		 * full.  Mark it unavailable and rotate to a fresh pool so
+		 * the caller does not see a spurious failure.
+		 */
+		tfc_cpm_set_usage(cpm_lkup, pool_id, aparms.used_count, true, false);
+
+		rc = em_get_or_alloc_pool(tfcp, tsid, parms->dir, cpm_lkup,
+					  scope_type, max_pools, &mem_cfg,
+					  &pi, &pool_id, &cmm);
+		if (unlikely(rc)) {
+			PMD_DRV_LOG_LINE(ERR, "no pool available after rotation: %s",
+					 strerror(-rc));
+			return rc;
+		}
+		rc = cfa_mm_alloc(cmm, &aparms);
+	}
 	if (unlikely(rc)) {
 		PMD_DRV_LOG_LINE(ERR, "cfa_mm_alloc() failed: %s", strerror(-rc));
-		return -EINVAL;
+		return rc;
 	}
 
 #if TFC_EM_DYNAMIC_BUCKET_EN
@@ -381,8 +418,11 @@ int tfc_em_insert(struct tfc *tfcp, uint8_t tsid,
 						     entry_offset,
 						     hash);
 
-	/* Update CPM info so it will determine best pool to use next alloc */
-	rc = tfc_cpm_set_usage(cpm_lkup, pool_id, aparms.used_count, aparms.all_used);
+	/* Update CPM info so it will determine best pool to use next alloc.
+	 * Recovery (blk_sz_recovered) is not possible on the alloc path —
+	 * the free-block pool only replenishes when records are freed.
+	 */
+	rc = tfc_cpm_set_usage(cpm_lkup, pool_id, aparms.used_count, aparms.all_used, false);
 	if (unlikely(rc)) {
 		PMD_DRV_LOG_LINE(ERR,
 				 "EM insert tfc_cpm_set_usage() failed: %d",
@@ -416,7 +456,10 @@ int tfc_em_insert(struct tfc *tfcp, uint8_t tsid,
 	if (cleanup_rc != 0)
 		PMD_DRV_LOG_LINE(ERR, "failed to free entry: %s", strerror(-rc));
 
-	cleanup_rc = tfc_cpm_set_usage(cpm_lkup, pool_id, fparms.used_count, false);
+	cleanup_rc = tfc_cpm_set_usage(cpm_lkup, pool_id, fparms.used_count,
+				       false,
+				       cfa_mm_free_blk_count(cmm) >=
+				       TFC_CPM_BLK_RECOVERY_THRESHOLD);
 	if (cleanup_rc != 0)
 		PMD_DRV_LOG_LINE(ERR, "failed to set usage: %s", strerror(-rc));
 
@@ -692,10 +735,10 @@ int tfc_em_delete(struct tfc *tfcp, struct tfc_em_delete_parms *parms)
 		return -EINVAL;
 	}
 
-	rc = tfc_cpm_set_usage(cpm_lkup, pool_id, fparms.used_count, false);
+	rc = tfc_cpm_set_usage(cpm_lkup, pool_id, fparms.used_count, false,
+			       cfa_mm_free_blk_count(cmm) >= TFC_CPM_BLK_RECOVERY_THRESHOLD);
 	if (rc != 0)
-		PMD_DRV_LOG_LINE(ERR, "failed to set usage: %s",
-				 strerror(-rc));
+		PMD_DRV_LOG_LINE(ERR, "failed to set usage: %s", strerror(-rc));
 
 	return rc;
 }
