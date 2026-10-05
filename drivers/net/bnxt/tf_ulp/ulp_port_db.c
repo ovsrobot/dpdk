@@ -159,6 +159,11 @@ int32_t	ulp_port_db_port_update(struct bnxt_ulp_context *ulp_ctxt,
 	intf->drv_func_id = bnxt_pmd_get_fw_func_id(port_id,
 						BNXT_ULP_INTF_TYPE_INVALID);
 
+	if (intf->drv_func_id >= BNXT_PORT_DB_MAX_FUNC) {
+		BNXT_DRV_DBG(ERR, "Invalid drv_func_id %d", intf->drv_func_id);
+		return -EINVAL;
+	}
+
 	func = &port_db->ulp_func_id_tbl[intf->drv_func_id];
 	if (!func->func_valid) {
 		func->func_svif = bnxt_pmd_get_svif(port_id, true,
@@ -179,6 +184,11 @@ int32_t	ulp_port_db_port_update(struct bnxt_ulp_context *ulp_ctxt,
 	if (intf->type == BNXT_ULP_INTF_TYPE_VF_REP) {
 		intf->vf_func_id =
 			bnxt_pmd_get_fw_func_id(port_id, BNXT_ULP_INTF_TYPE_VF_REP);
+
+		if (intf->vf_func_id >= BNXT_PORT_DB_MAX_FUNC) {
+			BNXT_DRV_DBG(ERR, "Invalid vf_func_id %d", intf->vf_func_id);
+			return -EINVAL;
+		}
 
 		func = &port_db->ulp_func_id_tbl[intf->vf_func_id];
 		func->func_svif =
@@ -205,6 +215,11 @@ int32_t	ulp_port_db_port_update(struct bnxt_ulp_context *ulp_ctxt,
 	func->func_parent_vnic = tfp_cpu_to_be_16(func->func_parent_vnic);
 	bnxt_pmd_get_iface_mac(port_id, intf->type, func->func_mac,
 			   func->func_parent_mac);
+
+	if (func->phy_port_id >= port_db->phy_port_cnt) {
+		BNXT_DRV_DBG(ERR, "Invalid phy_port_id %d", func->phy_port_id);
+		return -EINVAL;
+	}
 
 	port_data = &port_db->phy_port_list[func->phy_port_id];
 	if (!port_data->port_valid) {
