@@ -64,6 +64,12 @@ New Features
 
   Added ``rte_vlan_insert_tpid()`` to the net library.
 
+* **Updated AF_PACKET driver.**
+
+  Added ``ignore_outgoing`` vdev argument to enable ``PACKET_IGNORE_OUTGOING``,
+  so the PMD does not receive packets transmitted by the host on the same
+  interface. Requires Linux kernel >= 4.20.
+
 * **Updated AF_XDP driver.**
 
   * Changed the default device plugin endpoint path used when

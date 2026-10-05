@@ -39,6 +39,7 @@
 #define ETH_AF_PACKET_FRAMECOUNT_ARG	"framecnt"
 #define ETH_AF_PACKET_QDISC_BYPASS_ARG	"qdisc_bypass"
 #define ETH_AF_PACKET_FANOUT_MODE_ARG	"fanout_mode"
+#define ETH_AF_PACKET_IGNORE_OUTGOING_ARG	"ignore_outgoing"
 
 #define DFLT_FRAME_SIZE		(1 << 11)
 #define DFLT_FRAME_COUNT	(1 << 9)
@@ -103,6 +104,7 @@ static const char *valid_arguments[] = {
 	ETH_AF_PACKET_FRAMECOUNT_ARG,
 	ETH_AF_PACKET_QDISC_BYPASS_ARG,
 	ETH_AF_PACKET_FANOUT_MODE_ARG,
+	ETH_AF_PACKET_IGNORE_OUTGOING_ARG,
 	NULL
 };
 
@@ -877,6 +879,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		       unsigned int framecnt,
 		       unsigned int qdisc_bypass,
 		       const char *fanout_mode,
+		       unsigned int ignore_outgoing,
 		       struct pmd_internals **internals,
 		       struct rte_eth_dev **eth_dev,
 		       struct rte_kvargs *kvlist)
@@ -1019,6 +1022,19 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 			if (rc == -1) {
 				PMD_LOG_ERRNO(ERR,
 					"%s: could not set PACKET_QDISC_BYPASS on AF_PACKET socket for %s",
+					name, pair->value);
+				goto error;
+			}
+#endif
+		}
+
+		if (ignore_outgoing) {
+#if defined(PACKET_IGNORE_OUTGOING)
+			rc = setsockopt(qsockfd, SOL_PACKET, PACKET_IGNORE_OUTGOING,
+					&ignore_outgoing, sizeof(ignore_outgoing));
+			if (rc == -1) {
+				PMD_LOG_ERRNO(ERR,
+					"%s: could not set PACKET_IGNORE_OUTGOING on AF_PACKET socket for %s",
 					name, pair->value);
 				goto error;
 			}
@@ -1206,6 +1222,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	unsigned int qpairs = 1;
 	unsigned int qdisc_bypass = 1;
 	const char *fanout_mode = NULL;
+	unsigned int ignore_outgoing = 0;
 
 	/* do some parameter checking */
 	if (*sockfd < 0)
@@ -1272,6 +1289,11 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 			fanout_mode = pair->value;
 			continue;
 		}
+		if (strstr(pair->key, ETH_AF_PACKET_IGNORE_OUTGOING_ARG) != NULL) {
+			if (parse_uint(pair->key, pair->value, &ignore_outgoing, 1) < 0)
+				return -1;
+			continue;
+		}
 	}
 
 	if (framesize > blocksize) {
@@ -1298,12 +1320,14 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 		PMD_LOG(DEBUG, "%s:\tfanout mode %s", name, fanout_mode);
 	else
 		PMD_LOG(DEBUG, "%s:\tfanout mode %s", name, "default PACKET_FANOUT_HASH");
+	PMD_LOG(DEBUG, "%s:\tignore outgoing %d", name, ignore_outgoing);
 
 	if (rte_pmd_init_internals(dev, *sockfd, qpairs,
 				   blocksize, blockcount,
 				   framesize, framecount,
 				   qdisc_bypass,
 				   fanout_mode,
+				   ignore_outgoing,
 				   &internals, &eth_dev,
 				   kvlist) < 0)
 		return -1;
@@ -1401,4 +1425,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_af_packet,
 	"framesz=<int> "
 	"framecnt=<int> "
 	"qdisc_bypass=<0|1> "
-	"fanout_mode=<hash|lb|cpu|rollover|rnd|qm>");
+	"fanout_mode=<hash|lb|cpu|rollover|rnd|qm> "
+	"ignore_outgoing=<0|1>");
