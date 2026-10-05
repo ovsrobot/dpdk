@@ -18,6 +18,7 @@ int tfc_mpc_table_write_zero(struct tfc *tfcp,
 			     uint8_t words,
 			     uint8_t *data);
 const char *get_lrec_opcode_str(uint8_t opcode);
+size_t tfc_str_append(char *buf, size_t size, const char *fmt, ...);
 void act_show(FILE *fd, struct act_info_t *act_info, uint32_t offset);
 int tfc_em_show(FILE *fd, struct tfc *tfcp, uint8_t tsid, enum cfa_dir dir);
 int tfc_wc_show(FILE *fd, struct tfc *tfcp, uint8_t tsid, enum cfa_dir dir);

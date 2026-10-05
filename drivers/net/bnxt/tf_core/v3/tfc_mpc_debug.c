@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 #include <stdio.h>
+#include <stdarg.h>
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>
@@ -23,6 +24,33 @@
 #include "sys_util.h"
 #include "cfa_bld.h"
 #include "tfc_util.h"
+
+/* Helper function to append a formatted string to a buffer of a given size.
+ * Returns the number of chars appended (excluding the NUL terminator).
+ * If size is exceeded, a "<truncated>" marker is appended at the tail
+ * of the buffer.
+ */
+size_t tfc_str_append(char *buf, size_t size, const char *fmt, ...)
+{
+	const char *mark = "<truncated>";
+	size_t marklen = strlen(mark);
+	va_list ap;
+	int n;
+
+	if (size == 0)
+		return 0;
+	va_start(ap, fmt);
+	n = vsnprintf(buf, size, fmt, ap);
+	va_end(ap);
+	if (n < 0)
+		return 0;
+	if ((size_t)n >= size) {
+		if (size > marklen)
+			snprintf(buf + (size - 1 - marklen), marklen + 1, "%s", mark);
+		return size - 1;
+	}
+	return (size_t)n;
+}
 
 int tfc_mpc_table_read(struct tfc *tfcp,
 		       uint8_t tsid,
@@ -577,6 +605,7 @@ static void em_show(FILE *fd, struct em_info_t *em_info)
 	char *line2 = NULL;
 	char *line3 = NULL;
 	char *line4 = NULL;
+	size_t off1, off2, off3, off4;
 	char tmp1[TFC_STRING_LENGTH_64];
 	char tmp2[TFC_STRING_LENGTH_64];
 	char tmp3[TFC_STRING_LENGTH_64];
@@ -598,17 +627,17 @@ static void em_show(FILE *fd, struct em_info_t *em_info)
 
 	fprintf(fd, ":LREC: opcode:%s\n", get_lrec_opcode_str(em_info->opcode));
 
-	snprintf(line1, TFC_STRING_LENGTH_256, "+-+--+-Epoch-+--+--+--+");
-	snprintf(line2, TFC_STRING_LENGTH_256, " V|rs|  0  1 |Op|St|ah|");
-	snprintf(line3, TFC_STRING_LENGTH_256, "+-+--+----+--+--+--+--+");
-	snprintf(line4, TFC_STRING_LENGTH_256, " %1d %2d %4d %2d %2d %2d %2d ",
-		 em_info->valid,
-		 em_info->rec_size,
-		 em_info->epoch0,
-		 em_info->epoch1,
-		 em_info->opcode,
-		 em_info->strength,
-		 em_info->act_hint);
+	off1 = tfc_str_append(line1, TFC_STRING_LENGTH_256, "+-+--+-Epoch-+--+--+--+");
+	off2 = tfc_str_append(line2, TFC_STRING_LENGTH_256, " V|rs|  0  1 |Op|St|ah|");
+	off3 = tfc_str_append(line3, TFC_STRING_LENGTH_256, "+-+--+----+--+--+--+--+");
+	off4 = tfc_str_append(line4, TFC_STRING_LENGTH_256, " %1d %2d %4d %2d %2d %2d %2d ",
+			em_info->valid,
+			em_info->rec_size,
+			em_info->epoch0,
+			em_info->epoch1,
+			em_info->opcode,
+			em_info->strength,
+			em_info->act_hint);
 
 	if (em_info->opcode != 2 && em_info->opcode != 3) {
 		/* All but FAST */
@@ -626,10 +655,10 @@ static void em_show(FILE *fd, struct em_info_t *em_info)
 			 em_info->destination);
 	}
 
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
 
 	if (em_info->opcode == 4 || em_info->opcode == 6) {
 		/* CT only */
@@ -668,10 +697,10 @@ static void em_show(FILE *fd, struct em_info_t *em_info)
 			 em_info->metadata);
 	}
 
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
 
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-----Range-+\n");
 	snprintf(tmp2, TFC_STRING_LENGTH_64, "Prof|  Idx |\n");
@@ -680,10 +709,10 @@ static void em_show(FILE *fd, struct em_info_t *em_info)
 		 em_info->range_profile,
 		 em_info->range_index);
 
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
 
 	fprintf(fd, "%s%s%s%s",
 		   line1,
@@ -756,6 +785,7 @@ static void mod_decode(uint32_t *data, char *mod_str)
 	int32_t read_offset;
 	int32_t row = 0;
 	uint32_t val[8];
+	size_t mod_off;
 	char str[256];
 	int16_t vect;
 	uint16_t bit = 0x8000;
@@ -763,14 +793,16 @@ static void mod_decode(uint32_t *data, char *mod_str)
 	row_offset -= 16;
 	read_offset = row_offset;
 	mod_vector = tfc_getbits(data, read_offset, 16);
-	snprintf(mod_str,
-		 TFC_MOD_STRING_LENGTH,
-		 "\nModify Record: Vector:0x%08x\n", mod_vector);
+	mod_off = tfc_str_append(mod_str,
+				  TFC_MOD_STRING_LENGTH,
+				  "\nModify Record: Vector:0x%08x\n", mod_vector);
 
 	for (vect = 15; vect >= 0; vect--) {
 		if (mod_vector & bit) {
 			snprintf(str, TFC_STRING_LENGTH_256, "%s: ", mod_data[vect].name);
-			strcat(mod_str, str);
+			mod_off += tfc_str_append(mod_str + mod_off,
+						   TFC_MOD_STRING_LENGTH - mod_off,
+						   "%s", str);
 
 			for (i = 0; i < mod_data[vect].num_fields; i++) {
 				row_offset -= mod_data[vect].field[i].num_bits;
@@ -796,7 +828,9 @@ static void mod_decode(uint32_t *data, char *mod_str)
 					 TFC_STRING_LENGTH_256,
 					 "%s:0x",
 					 mod_data[vect].field[i].name);
-				strcat(mod_str, str);
+				mod_off += tfc_str_append(mod_str + mod_off,
+							   TFC_MOD_STRING_LENGTH - mod_off,
+							   "%s", str);
 
 				switch (mod_data[vect].field[i].num_bits) {
 				case 128:
@@ -805,44 +839,61 @@ static void mod_decode(uint32_t *data, char *mod_str)
 							 TFC_STRING_LENGTH_256,
 							 "%08x",
 							 val[k]);
-						strcat(mod_str, str);
+						mod_off += tfc_str_append(mod_str + mod_off,
+									   TFC_MOD_STRING_LENGTH -
+									   mod_off,
+									   "%s", str);
 					}
 					break;
 				case 48:
 					snprintf(str, TFC_STRING_LENGTH_256, "%08x", val[0]);
-					strcat(mod_str, str);
+					mod_off += tfc_str_append(mod_str + mod_off,
+								   TFC_MOD_STRING_LENGTH - mod_off,
+								   "%s", str);
 					snprintf(str,
 						 TFC_STRING_LENGTH_256,
 						 "%04x",
 						 (val[1] & 0xffff));
-					strcat(mod_str, str);
+					mod_off += tfc_str_append(mod_str + mod_off,
+								   TFC_MOD_STRING_LENGTH - mod_off,
+								   "%s", str);
 					break;
 				case 32:
 					snprintf(str, TFC_STRING_LENGTH_256, "%08x ", val[0]);
-					strcat(mod_str, str);
+					mod_off += tfc_str_append(mod_str + mod_off,
+								   TFC_MOD_STRING_LENGTH - mod_off,
+								   "%s", str);
 					break;
 				case 16:
 					snprintf(str, TFC_STRING_LENGTH_256, "%04x ", val[0]);
-					strcat(mod_str, str);
+					mod_off += tfc_str_append(mod_str + mod_off,
+								   TFC_MOD_STRING_LENGTH - mod_off,
+								   "%s", str);
 					break;
 				default:
 					snprintf(str, TFC_STRING_LENGTH_256, "%04x ",
 						 (val[0] &
 						  ((1 << mod_data[vect].field[i].num_bits) - 1)));
-					strcat(mod_str, str);
+					mod_off += tfc_str_append(mod_str + mod_off,
+								   TFC_MOD_STRING_LENGTH - mod_off,
+								   "%s", str);
 					break;
 				}
 			}
 
 			snprintf(str, TFC_STRING_LENGTH_256, "\n");
-			strcat(mod_str, str);
+			mod_off += tfc_str_append(mod_str + mod_off,
+						   TFC_MOD_STRING_LENGTH - mod_off,
+						   "%s", str);
 		}
 
 		bit = bit >> 1;
 	}
 
 	snprintf(str, TFC_STRING_LENGTH_256, "\n");
-	strcat(mod_str, str);
+	mod_off += tfc_str_append(mod_str + mod_off,
+				   TFC_MOD_STRING_LENGTH - mod_off,
+				   "%s", str);
 }
 
 static void enc_decode(uint32_t *data, char *enc_str)
@@ -856,6 +907,7 @@ static void enc_decode(uint32_t *data, char *enc_str)
 	uint8_t l3;
 	uint8_t l4;
 	uint8_t tunnel;
+	size_t off_s;
 
 	vector = tfc_getbits(data, offset, 16);
 	offset += 16;
@@ -866,9 +918,9 @@ static void enc_decode(uint32_t *data, char *enc_str)
 	l4 = ((vector >> 10) & 0x7);
 	tunnel = ((vector >> 13) & 0x7);
 
-	snprintf(enc_str,
-		 TFC_ENC_STRING_LENGTH,
-		 "Encap Record: vector:0x%04x\n", vector);
+	off_s = tfc_str_append(enc_str,
+				TFC_ENC_STRING_LENGTH,
+				"Encap Record: vector:0x%04x\n", vector);
 
 	snprintf(str, TFC_STRING_LENGTH_64,
 		 "Valid:%d EC:%d VTAG:0x%01x L2:%d L3:0x%01x L4:0x%01x Tunnel:0x%01x\n",
@@ -880,11 +932,11 @@ static void enc_decode(uint32_t *data, char *enc_str)
 		 l4,
 		 tunnel);
 
-	strcat(enc_str, str);
+	off_s += tfc_str_append(enc_str + off_s, TFC_ENC_STRING_LENGTH - off_s, "%s", str);
 
 	if (l2) { /* L2 */
 		snprintf(str, TFC_STRING_LENGTH_64, "L2:\n");
-		strcat(enc_str, str);
+		off_s += tfc_str_append(enc_str + off_s, TFC_ENC_STRING_LENGTH - off_s, "%s", str);
 
 		val[0] = tfc_getbits(data, offset, 32);
 		offset += 32;
@@ -892,22 +944,22 @@ static void enc_decode(uint32_t *data, char *enc_str)
 		offset += 16;
 
 		snprintf(str, TFC_STRING_LENGTH_64, "DMAC:0x%08x%04x\n", val[0], val[1]);
-		strcat(enc_str, str);
+		off_s += tfc_str_append(enc_str + off_s, TFC_ENC_STRING_LENGTH - off_s, "%s", str);
 	}
 
 	if (l3) { /* L3 */
 		snprintf(str, TFC_STRING_LENGTH_64, "L3:\n");
-		strcat(enc_str, str);
+		off_s += tfc_str_append(enc_str + off_s, TFC_ENC_STRING_LENGTH - off_s, "%s", str);
 	}
 
 	if (l4) { /* L4 */
 		snprintf(str, TFC_STRING_LENGTH_64, "L4:\n");
-		strcat(enc_str, str);
+		off_s += tfc_str_append(enc_str + off_s, TFC_ENC_STRING_LENGTH - off_s, "%s", str);
 	}
 
 	if (tunnel) { /* Tunnel */
 		snprintf(str, TFC_STRING_LENGTH_64, "Tunnel:\n");
-		strcat(enc_str, str);
+		off_s += tfc_str_append(enc_str + off_s, TFC_ENC_STRING_LENGTH - off_s, "%s", str);
 	}
 }
 
@@ -1161,13 +1213,14 @@ static void stat_decode(char *str,
 	uint64_t meter_pkt_cnt;
 	uint64_t meter_byte_cnt;
 	uint32_t timestamp;
+	size_t str_off;
 	char tmp0[96];
 
 	/* Common fields */
-	snprintf(str,
-		 TFC_STAT_STRING_LENGTH,
-		 STATS_COMMON_FMT,
-		 stat_num, stats->pkt_cnt, stats->byte_cnt);
+	str_off = tfc_str_append(str,
+				  TFC_STAT_STRING_LENGTH,
+				  STATS_COMMON_FMT,
+				  stat_num, stats->pkt_cnt, stats->byte_cnt);
 
 	switch (stat_ctr_type) {
 	case CFA_BLD_STAT_COUNTER_SIZE_16B:
@@ -1180,7 +1233,9 @@ static void stat_decode(char *str,
 			 STATS_TCP_FLAGS_FMT,
 			 stats->t.c_24b.tcp_flags,
 			 timestamp);
-		strcat(str, tmp0);
+		str_off += tfc_str_append(str + str_off,
+					   TFC_STAT_STRING_LENGTH - str_off,
+					   "%s", tmp0);
 		break;
 	case CFA_BLD_STAT_COUNTER_SIZE_32B:
 		snprintf(tmp0,
@@ -1188,7 +1243,9 @@ static void stat_decode(char *str,
 			 STATS_METER_FMT,
 			 stats->t.c_32b.meter_pkt_cnt,
 			 stats->t.c_32b.meter_byte_cnt);
-		strcat(str, tmp0);
+		str_off += tfc_str_append(str + str_off,
+					   TFC_STAT_STRING_LENGTH - str_off,
+					   "%s", tmp0);
 		break;
 	case CFA_BLD_STAT_COUNTER_SIZE_32B_ALL:
 		meter_pkt_cnt = stats->t.c_32b_all.meter_pkt_cnt;
@@ -1201,14 +1258,18 @@ static void stat_decode(char *str,
 			 meter_byte_cnt,
 			 stats->t.c_32b_all.tcp_flags,
 			 timestamp);
-		strcat(str, tmp0);
+		str_off += tfc_str_append(str + str_off,
+					   TFC_STAT_STRING_LENGTH - str_off,
+					   "%s", tmp0);
 		break;
 	default:
 		       /* Should never happen since type is 2 bits in size */
 		snprintf(tmp0,
 			 TFC_STRING_LENGTH_96,
 			 "Unknown counter type %d\n", stat_ctr_type);
-		strcat(str, tmp0);
+		str_off += tfc_str_append(str + str_off,
+					   TFC_STAT_STRING_LENGTH - str_off,
+					   "%s", tmp0);
 		break;
 	}
 }

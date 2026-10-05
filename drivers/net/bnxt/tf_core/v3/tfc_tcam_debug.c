@@ -1003,6 +1003,7 @@ static void prof_tcam_show(FILE *fd,
 			   struct prof_tcam_key_t *ptmask_info,
 			   struct prof_tcam_remap_t *ptrmp_info)
 {
+	size_t offh = 0, off1 = 0, off2 = 0, off3 = 0, off4 = 0, off5 = 0;
 	char tmph[TFC_STRING_LENGTH_64];
 	char tmp1[TFC_STRING_LENGTH_64];
 	char tmp2[TFC_STRING_LENGTH_64];
@@ -1034,13 +1035,13 @@ static void prof_tcam_show(FILE *fd,
 		return;
 	}
 
-	snprintf(line1, TFC_STRING_LENGTH_256, "+-+--+----+----+----+---------+------"
+	tfc_str_append(line1, TFC_STRING_LENGTH_256, "+-+--+----+----+----+---------+------"
 		 "+--------+-------+-----+---+---+---+\n");
-	snprintf(line2, TFC_STRING_LENGTH_256, "|V|Sp|lpbk|ptyp|rcyc|    MD   |aggerr"
+	tfc_str_append(line2, TFC_STRING_LENGTH_256, "|V|Sp|lpbk|ptyp|rcyc|    MD   |aggerr"
 		 "|l2ipfunc|profunc|hrnxt|IHT|IHG|IIT|\n");
-	snprintf(line3, TFC_STRING_LENGTH_256, "+-+--+----+----+----+---------+------"
+	tfc_str_append(line3, TFC_STRING_LENGTH_256, "+-+--+----+----+----+---------+------"
 		 "+--------+-------+-----+---+---+---+\n");
-	snprintf(line4, TFC_STRING_LENGTH_256, " %01x x%01x   %01x   x%01x  x%01x  x%08x"
+	tfc_str_append(line4, TFC_STRING_LENGTH_256, " %01x x%01x   %01x   x%01x  x%01x  x%08x"
 		 "    %01x     x%02x      x%02x     x%01x   x%01x  x%01x   %01x  key\n",
 		 ptkey_info->valid,
 		 ptkey_info->spare,
@@ -1055,7 +1056,7 @@ static void prof_tcam_show(FILE *fd,
 		 ptkey_info->int_hdr_type,
 		 ptkey_info->int_hdr_group,
 		 ptkey_info->int_ifa_tail);
-	snprintf(line5, TFC_STRING_LENGTH_256, " %01x x%01x   %01x   x%01x  x%01x  x%08x"
+	tfc_str_append(line5, TFC_STRING_LENGTH_256, " %01x x%01x   %01x   x%01x  x%01x  x%08x"
 		 "    %01x     x%02x      x%02x     x%01x   x%01x  x%01x   %01x  mask\n",
 		 ptmask_info->valid,
 		 ptmask_info->spare,
@@ -1077,22 +1078,22 @@ static void prof_tcam_show(FILE *fd,
 		line5,
 		line4);
 
-	snprintf(lineh, TFC_STRING_LENGTH_256, "|OTL2 hdr       |");
-	snprintf(line1, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
-	snprintf(line2, TFC_STRING_LENGTH_256, "|V|HT|UMB|VT|2VT|");
-	snprintf(line3, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
-	snprintf(line4, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
-		 ptkey_info->otl2_hdr_valid,
-		 ptkey_info->otl2_hdr_type,
-		 ptkey_info->otl2_uc_mc_bc,
-		 ptkey_info->otl2_vtag_present,
-		 ptkey_info->otl2_two_vtags);
-	snprintf(line5, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
-		 ptmask_info->otl2_hdr_valid,
-		 ptmask_info->otl2_hdr_type,
-		 ptmask_info->otl2_uc_mc_bc,
-		 ptmask_info->otl2_vtag_present,
-		 ptmask_info->otl2_two_vtags);
+	offh = tfc_str_append(lineh, TFC_STRING_LENGTH_256, "|OTL2 hdr       |");
+	off1 = tfc_str_append(line1, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
+	off2 = tfc_str_append(line2, TFC_STRING_LENGTH_256, "|V|HT|UMB|VT|2VT|");
+	off3 = tfc_str_append(line3, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
+	off4 = tfc_str_append(line4, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
+			ptkey_info->otl2_hdr_valid,
+			ptkey_info->otl2_hdr_type,
+			ptkey_info->otl2_uc_mc_bc,
+			ptkey_info->otl2_vtag_present,
+			ptkey_info->otl2_two_vtags);
+	off5 = tfc_str_append(line5, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
+			ptmask_info->otl2_hdr_valid,
+			ptmask_info->otl2_hdr_type,
+			ptmask_info->otl2_uc_mc_bc,
+			ptmask_info->otl2_vtag_present,
+			ptmask_info->otl2_two_vtags);
 
 	snprintf(tmph, TFC_STRING_LENGTH_64, "OTL3 hdr  |");
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-+--+--+--+");
@@ -1109,12 +1110,12 @@ static void prof_tcam_show(FILE *fd,
 		 ptmask_info->otl3_hdr_type,
 		 ptmask_info->otl3_hdr_isip);
 
-	strcat(lineh, tmph);
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
-	strcat(line5, tmp5);
+	offh += tfc_str_append(lineh + offh, TFC_STRING_LENGTH_256 - offh, "%s", tmph);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
+	off5 += tfc_str_append(line5 + off5, TFC_STRING_LENGTH_256 - off5, "%s", tmp5);
 
 	snprintf(tmph, TFC_STRING_LENGTH_64, "OTL4 hdr  |");
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-+--+--+--+");
@@ -1131,12 +1132,12 @@ static void prof_tcam_show(FILE *fd,
 		 ptmask_info->otl4_hdr_type,
 		 ptmask_info->otl4_hdr_is_udp_tcp);
 
-	strcat(lineh, tmph);
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
-	strcat(line5, tmp5);
+	offh += tfc_str_append(lineh + offh, TFC_STRING_LENGTH_256 - offh, "%s", tmph);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
+	off5 += tfc_str_append(line5 + off5, TFC_STRING_LENGTH_256 - off5, "%s", tmp5);
 
 	snprintf(tmph, TFC_STRING_LENGTH_64, "OT hdr      |\n");
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-+--+---+---+\n");
@@ -1153,12 +1154,12 @@ static void prof_tcam_show(FILE *fd,
 		 ptmask_info->ot_hdr_type,
 		 ptmask_info->ot_hdr_flags);
 
-	strcat(lineh, tmph);
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
-	strcat(line5, tmp5);
+	offh += tfc_str_append(lineh + offh, TFC_STRING_LENGTH_256 - offh, "%s", tmph);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
+	off5 += tfc_str_append(line5 + off5, TFC_STRING_LENGTH_256 - off5, "%s", tmp5);
 
 	fprintf(fd, "%s%s%s%s%s%s",
 		lineh,
@@ -1168,22 +1169,22 @@ static void prof_tcam_show(FILE *fd,
 		line5,
 		line4);
 
-	snprintf(lineh, TFC_STRING_LENGTH_256, "|TL2 hdr        |");
-	snprintf(line1, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
-	snprintf(line2, TFC_STRING_LENGTH_256, "|V|HT|UMB|VT|2VT|");
-	snprintf(line3, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
-	snprintf(line4, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
-		 ptkey_info->tl2_hdr_valid,
-		 ptkey_info->tl2_hdr_type,
-		 ptkey_info->tl2_uc_mc_bc,
-		 ptkey_info->tl2_vtag_present,
-		 ptkey_info->tl2_two_vtags);
-	snprintf(line5, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
-		 ptmask_info->tl2_hdr_valid,
-		 ptmask_info->tl2_hdr_type,
-		 ptmask_info->tl2_uc_mc_bc,
-		 ptmask_info->tl2_vtag_present,
-		 ptmask_info->tl2_two_vtags);
+	offh = tfc_str_append(lineh, TFC_STRING_LENGTH_256, "|TL2 hdr        |");
+	off1 = tfc_str_append(line1, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
+	off2 = tfc_str_append(line2, TFC_STRING_LENGTH_256, "|V|HT|UMB|VT|2VT|");
+	off3 = tfc_str_append(line3, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
+	off4 = tfc_str_append(line4, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
+			ptkey_info->tl2_hdr_valid,
+			ptkey_info->tl2_hdr_type,
+			ptkey_info->tl2_uc_mc_bc,
+			ptkey_info->tl2_vtag_present,
+			ptkey_info->tl2_two_vtags);
+	off5 = tfc_str_append(line5, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
+			ptmask_info->tl2_hdr_valid,
+			ptmask_info->tl2_hdr_type,
+			ptmask_info->tl2_uc_mc_bc,
+			ptmask_info->tl2_vtag_present,
+			ptmask_info->tl2_two_vtags);
 
 	snprintf(tmph, TFC_STRING_LENGTH_64, "TL3 hdr   |");
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-+--+--+--+");
@@ -1200,12 +1201,12 @@ static void prof_tcam_show(FILE *fd,
 		 ptmask_info->tl3_hdr_type,
 		 ptmask_info->tl3_hdr_isip);
 
-	strcat(lineh, tmph);
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
-	strcat(line5, tmp5);
+	offh += tfc_str_append(lineh + offh, TFC_STRING_LENGTH_256 - offh, "%s", tmph);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
+	off5 += tfc_str_append(line5 + off5, TFC_STRING_LENGTH_256 - off5, "%s", tmp5);
 
 	snprintf(tmph, TFC_STRING_LENGTH_64, "TL4 hdr   |");
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-+--+--+--+");
@@ -1222,12 +1223,12 @@ static void prof_tcam_show(FILE *fd,
 		 ptmask_info->tl4_hdr_type,
 		 ptmask_info->tl4_hdr_is_udp_tcp);
 
-	strcat(lineh, tmph);
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
-	strcat(line5, tmp5);
+	offh += tfc_str_append(lineh + offh, TFC_STRING_LENGTH_256 - offh, "%s", tmph);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
+	off5 += tfc_str_append(line5 + off5, TFC_STRING_LENGTH_256 - off5, "%s", tmp5);
 
 	snprintf(tmph, TFC_STRING_LENGTH_64, "T hdr       |\n");
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-+--+---+---+\n");
@@ -1244,12 +1245,12 @@ static void prof_tcam_show(FILE *fd,
 		 ptmask_info->t_hdr_type,
 		 ptmask_info->t_hdr_flags);
 
-	strcat(lineh, tmph);
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
-	strcat(line5, tmp5);
+	offh += tfc_str_append(lineh + offh, TFC_STRING_LENGTH_256 - offh, "%s", tmph);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
+	off5 += tfc_str_append(line5 + off5, TFC_STRING_LENGTH_256 - off5, "%s", tmp5);
 
 	fprintf(fd, "%s%s%s%s%s%s",
 		lineh,
@@ -1259,22 +1260,22 @@ static void prof_tcam_show(FILE *fd,
 		line5,
 		line4);
 
-	snprintf(lineh, TFC_STRING_LENGTH_256, "|L2 hdr         |");
-	snprintf(line1, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
-	snprintf(line2, TFC_STRING_LENGTH_256, "|V|HT|UMB|VT|2VT|");
-	snprintf(line3, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
-	snprintf(line4, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
-		 ptkey_info->l2_hdr_valid,
-		 ptkey_info->l2_hdr_type,
-		 ptkey_info->l2_uc_mc_bc,
-		 ptkey_info->l2_vtag_present,
-		 ptkey_info->l2_two_vtags);
-	snprintf(line5, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
-		 ptmask_info->l2_hdr_valid,
-		 ptmask_info->l2_hdr_type,
-		 ptmask_info->l2_uc_mc_bc,
-		 ptmask_info->l2_vtag_present,
-		 ptmask_info->l2_two_vtags);
+	offh = tfc_str_append(lineh, TFC_STRING_LENGTH_256, "|L2 hdr         |");
+	off1 = tfc_str_append(line1, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
+	off2 = tfc_str_append(line2, TFC_STRING_LENGTH_256, "|V|HT|UMB|VT|2VT|");
+	off3 = tfc_str_append(line3, TFC_STRING_LENGTH_256, "+-+--+---+--+---+");
+	off4 = tfc_str_append(line4, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
+			ptkey_info->l2_hdr_valid,
+			ptkey_info->l2_hdr_type,
+			ptkey_info->l2_uc_mc_bc,
+			ptkey_info->l2_vtag_present,
+			ptkey_info->l2_two_vtags);
+	off5 = tfc_str_append(line5, TFC_STRING_LENGTH_256, " %01x x%01x  x%01x  %01x  %01x ",
+			ptmask_info->l2_hdr_valid,
+			ptmask_info->l2_hdr_type,
+			ptmask_info->l2_uc_mc_bc,
+			ptmask_info->l2_vtag_present,
+			ptmask_info->l2_two_vtags);
 
 	snprintf(tmph, TFC_STRING_LENGTH_64, "L3 hdr         |");
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-+--+--+--+----+");
@@ -1293,12 +1294,12 @@ static void prof_tcam_show(FILE *fd,
 		 ptmask_info->l3_hdr_isip,
 		 ptmask_info->l3_protocol);
 
-	strcat(lineh, tmph);
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
-	strcat(line5, tmp5);
+	offh += tfc_str_append(lineh + offh, TFC_STRING_LENGTH_256 - offh, "%s", tmph);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
+	off5 += tfc_str_append(line5 + off5, TFC_STRING_LENGTH_256 - off5, "%s", tmp5);
 
 	snprintf(tmph, TFC_STRING_LENGTH_64, "L4 hdr                 |\n");
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-+--+--+--+---+----+---+\n");
@@ -1321,12 +1322,12 @@ static void prof_tcam_show(FILE *fd,
 		 ptmask_info->l4_flags,
 		 ptmask_info->l4_dcn_present);
 
-	strcat(lineh, tmph);
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
-	strcat(line5, tmp5);
+	offh += tfc_str_append(lineh + offh, TFC_STRING_LENGTH_256 - offh, "%s", tmph);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
+	off5 += tfc_str_append(line5 + off5, TFC_STRING_LENGTH_256 - off5, "%s", tmp5);
 
 	fprintf(fd, "%s%s%s%s%s%s",
 		lineh,
@@ -1337,10 +1338,10 @@ static void prof_tcam_show(FILE *fd,
 		line4);
 
 	fputs("\n:Profile TCAM: remap\n", fd);
-	snprintf(line1, TFC_STRING_LENGTH_256, "+-+--+---+---+---+--+---+---+---+\n");
-	snprintf(line2, TFC_STRING_LENGTH_256, "|B|EM|PID|KId|Scp|WC|PID|KId|Scp|\n");
-	snprintf(line3, TFC_STRING_LENGTH_256, "+-+--+---+---+---+--+---+---+---+\n");
-	snprintf(line4, TFC_STRING_LENGTH_256, " %c  %c x%02x x%02x x%02x  %c x%02x x%02x x%02x\n",
+	tfc_str_append(line1, TFC_STRING_LENGTH_256, "+-+--+---+---+---+--+---+---+---+\n");
+	tfc_str_append(line2, TFC_STRING_LENGTH_256, "|B|EM|PID|KId|Scp|WC|PID|KId|Scp|\n");
+	tfc_str_append(line3, TFC_STRING_LENGTH_256, "+-+--+---+---+---+--+---+---+---+\n");
+	tfc_str_append(line4, TFC_STRING_LENGTH_256, " %c  %c x%02x x%02x x%02x  %c x%02x x%02x x%02x\n",
 		 ptrmp_info->pl_byp_lkup_en ? 'Y' : 'N',
 		 ptrmp_info->em_search_en ? 'Y' : 'N',
 		 ptrmp_info->em_profile_id,
@@ -1451,6 +1452,7 @@ static void wc_tcam_show(FILE *fd, struct wc_lrec_t *wc_info)
 	char *line2 = NULL;
 	char *line3 = NULL;
 	char *line4 = NULL;
+	size_t off1, off2, off3, off4;
 	char tmp1[TFC_STRING_LENGTH_64];
 	char tmp2[TFC_STRING_LENGTH_64];
 	char tmp3[TFC_STRING_LENGTH_64];
@@ -1472,17 +1474,17 @@ static void wc_tcam_show(FILE *fd, struct wc_lrec_t *wc_info)
 
 	fprintf(fd, ":LREC: opcode:%s\n", get_lrec_opcode_str(wc_info->opcode));
 
-	snprintf(line1, TFC_STRING_LENGTH_256, "+-+--+-Epoch-+--+--+--+");
-	snprintf(line2, TFC_STRING_LENGTH_256, " V|rs|  0  1 |Op|St|ah|");
-	snprintf(line3, TFC_STRING_LENGTH_256, "+-+--+----+--+--+--+--+");
-	snprintf(line4, TFC_STRING_LENGTH_256, " %1d %2d %4d %2d %2d %2d %2d ",
-		 wc_info->valid,
-		 wc_info->rec_size,
-		 wc_info->epoch0,
-		 wc_info->epoch1,
-		 wc_info->opcode,
-		 wc_info->strength,
-		 wc_info->act_hint);
+	off1 = tfc_str_append(line1, TFC_STRING_LENGTH_256, "+-+--+-Epoch-+--+--+--+");
+	off2 = tfc_str_append(line2, TFC_STRING_LENGTH_256, " V|rs|  0  1 |Op|St|ah|");
+	off3 = tfc_str_append(line3, TFC_STRING_LENGTH_256, "+-+--+----+--+--+--+--+");
+	off4 = tfc_str_append(line4, TFC_STRING_LENGTH_256, " %1d %2d %4d %2d %2d %2d %2d ",
+			wc_info->valid,
+			wc_info->rec_size,
+			wc_info->epoch0,
+			wc_info->epoch1,
+			wc_info->opcode,
+			wc_info->strength,
+			wc_info->act_hint);
 
 	if (wc_info->opcode != 2 && wc_info->opcode != 3) {
 		/* All but FAST */
@@ -1500,10 +1502,10 @@ static void wc_tcam_show(FILE *fd, struct wc_lrec_t *wc_info)
 			 wc_info->destination);
 	}
 
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
 
 	if (wc_info->opcode == 4 || wc_info->opcode == 6) {
 		/* CT only */
@@ -1542,10 +1544,10 @@ static void wc_tcam_show(FILE *fd, struct wc_lrec_t *wc_info)
 			 wc_info->metadata);
 	}
 
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
 
 	snprintf(tmp1, TFC_STRING_LENGTH_64, "-----Range-+\n");
 	snprintf(tmp2, TFC_STRING_LENGTH_64, "Prof|  Idx |\n");
@@ -1554,10 +1556,10 @@ static void wc_tcam_show(FILE *fd, struct wc_lrec_t *wc_info)
 		 wc_info->range_profile,
 		 wc_info->range_index);
 
-	strcat(line1, tmp1);
-	strcat(line2, tmp2);
-	strcat(line3, tmp3);
-	strcat(line4, tmp4);
+	off1 += tfc_str_append(line1 + off1, TFC_STRING_LENGTH_256 - off1, "%s", tmp1);
+	off2 += tfc_str_append(line2 + off2, TFC_STRING_LENGTH_256 - off2, "%s", tmp2);
+	off3 += tfc_str_append(line3 + off3, TFC_STRING_LENGTH_256 - off3, "%s", tmp3);
+	off4 += tfc_str_append(line4 + off4, TFC_STRING_LENGTH_256 - off4, "%s", tmp4);
 
 	fprintf(fd, "%s%s%s%s",
 		line1,
