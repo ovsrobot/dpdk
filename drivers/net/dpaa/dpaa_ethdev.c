@@ -2259,6 +2259,8 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 		if (num_rx_fqs < 0) {
 			DPAA_PMD_ERR("%s FMC initializes failed!",
 				dpaa_intf->name);
+			ret = num_rx_fqs;
+			num_rx_fqs = 0;
 			goto free_rx;
 		}
 		if (!num_rx_fqs) {
