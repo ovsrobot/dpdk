@@ -24,6 +24,11 @@ DPDK Release 26.11
 New Features
 ------------
 
+* **Updated AESNI_MB crypto driver.**
+
+  * Added support for SHA3-224, SHA3-256, SHA3-384, and SHA3-512 hash
+    algorithms and their HMAC variants.
+
 .. This section should contain new features added in this release.
    Sample format:
 
