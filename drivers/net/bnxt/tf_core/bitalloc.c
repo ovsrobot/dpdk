@@ -470,3 +470,84 @@ ba_find_next_inuse_free(struct bitalloc *pool, int index)
 
 	return ba_find_next_helper(pool, 0, 1, 32, &index, 1);
 }
+
+static int
+ba_find_prev_helper(struct bitalloc *pool,
+		    int              offset,
+		    int              words,
+		    unsigned int     size,
+		    int             *index,
+		    int              free)
+{
+	bitalloc_word_t *storage = &pool->storage[offset];
+	int       loc, r, bottom = 0;
+
+	if (pool->size > size)
+		r = ba_find_prev_helper(pool,
+					offset + words + 1,
+					storage[words],
+					size * 32,
+					index,
+					free);
+	else
+		bottom = 1; /* Bottom of tree */
+
+	loc = (*index % 32);
+	*index = *index / 32;
+
+	if (bottom) {
+		int bit_index = *index * 32;
+
+		loc = ba_fls(~storage[*index] & ((bitalloc_word_t)-1 >> (31 - loc)));
+		if (loc > 0) {
+			loc--;
+			r = (bit_index + loc);
+		} else {
+			/* Loop over array at bottom of tree */
+			r = -1;
+			bit_index -= 32;
+			*index = *index - 1;
+			while (bit_index >= 0) {
+				loc = ba_fls(~storage[*index]);
+
+				if (loc > 0) {
+					loc--;
+					r = (bit_index + loc);
+					break;
+				}
+				bit_index -= 32;
+				*index = *index - 1;
+			}
+		}
+	}
+
+	if (r >= 0 && (free)) {
+		if (bottom)
+			pool->free_count++;
+		storage[*index] |= (1 << loc);
+	}
+
+	return r;
+}
+
+int
+ba_find_prev_inuse(struct bitalloc *pool, int index)
+{
+	if (index < 0 ||
+	    index >= (int)pool->size ||
+	    pool->free_count == pool->size)
+		return -1;
+
+	return ba_find_prev_helper(pool, 0, 1, 32, &index, 0);
+}
+
+int
+ba_find_prev_inuse_free(struct bitalloc *pool, int index)
+{
+	if (index < 0 ||
+	    index >= (int)pool->size ||
+	    pool->free_count == pool->size)
+		return -1;
+
+	return ba_find_prev_helper(pool, 0, 1, 32, &index, 1);
+}

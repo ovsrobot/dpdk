@@ -107,6 +107,20 @@ int ba_find_next_inuse(struct bitalloc *pool, int idx);
 int ba_find_next_inuse_free(struct bitalloc *pool, int idx);
 
 /**
+ * Find prev index that is in use, start checking at index 'idx'
+ *
+ * Returns prev index that is in use on success, or
+ * -1 if no in use index is found
+ */
+int ba_find_prev_inuse(struct bitalloc *pool, int idx);
+
+/**
+ * Variant of ba_find_prev_inuse that also frees the prev in use index,
+ * same return codes as ba_find_prev_inuse
+ */
+int ba_find_prev_inuse_free(struct bitalloc *pool, int idx);
+
+/**
  * Multiple freeing of the same index has no negative side effects,
  * but will return -1.  returns -1 on failure, 0 on success.
  */
