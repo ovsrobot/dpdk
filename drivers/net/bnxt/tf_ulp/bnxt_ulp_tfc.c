@@ -957,10 +957,10 @@ ulp_tfc_deinit(struct bnxt *bp,
 	/* Delete the Port database */
 	ulp_port_db_deinit(bp->ulp_ctx);
 
+	ulp_tfc_tbl_scope_deinit(bp);
+
 	/* free the flow db lock */
 	pthread_mutex_destroy(&bp->ulp_ctx->cfg_data->flow_db_lock);
-
-	ulp_tfc_tbl_scope_deinit(bp);
 
 	rc = tfc_session_fid_rem(&bp->tfcp, bp->fw_fid, &fid_cnt);
 	if (rc)
