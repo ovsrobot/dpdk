@@ -272,6 +272,10 @@ rte_kvargs_parse(const char *args, const char * const valid_keys[])
 		return NULL;
 	memset(kvlist, 0, sizeof(*kvlist));
 
+	/* Treat NULL as empty string */
+	if (args == NULL)
+		return kvlist;
+
 	if (rte_kvargs_tokenize(kvlist, args) < 0) {
 		rte_kvargs_free(kvlist);
 		return NULL;
@@ -294,7 +298,7 @@ rte_kvargs_parse_delim(const char *args, const char * const valid_keys[],
 	char *copy;
 	size_t len;
 
-	if (valid_ends == NULL)
+	if (args == NULL || valid_ends == NULL)
 		return rte_kvargs_parse(args, valid_keys);
 
 	copy = strdup(args);
