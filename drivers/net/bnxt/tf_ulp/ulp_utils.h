@@ -699,18 +699,18 @@ ulp_bs_pull_lsb(uint8_t *src, uint8_t *dst, uint32_t size,
 {
 	uint32_t idx;
 	uint32_t cnt = ULP_BITS_2_BYTE_NR(len);
+	uint32_t rem = len % ULP_BLOB_BYTE;
 
 	/* iterate bytewise to get data */
-	for (idx = 0; idx < cnt; idx++) {
+	for (idx = 0; idx < cnt && idx < size; idx++) {
 		ulp_bs_get_lsb(src, offset, ULP_BLOB_BYTE,
 			       &dst[size - 1 - idx]);
 		offset += ULP_BLOB_BYTE;
-		len -= ULP_BLOB_BYTE;
 	}
 
 	/* Extract the last reminder data that is not 8 byte boundary */
-	if (len)
-		ulp_bs_get_lsb(src, offset, len, &dst[size - 1 - idx]);
+	if (rem && idx < size)
+		ulp_bs_get_lsb(src, offset, rem, &dst[size - 1 - idx]);
 }
 
 /*
@@ -764,17 +764,17 @@ ulp_bs_pull_msb(uint8_t *src, uint8_t *dst,
 {
 	uint32_t idx;
 	uint32_t cnt = ULP_BITS_2_BYTE_NR(len);
+	uint32_t rem = len % ULP_BLOB_BYTE;
 
 	/* iterate bytewise to get data */
 	for (idx = 0; idx < cnt; idx++) {
 		ulp_bs_get_msb(src, offset, ULP_BLOB_BYTE, &dst[idx]);
 		offset += ULP_BLOB_BYTE;
-		len -= ULP_BLOB_BYTE;
 	}
 
 	/* Extract the last reminder data that is not 8 byte boundary */
-	if (len)
-		ulp_bs_get_msb(src, offset, len, &dst[idx]);
+	if (rem)
+		ulp_bs_get_msb(src, offset, rem, &dst[idx]);
 }
 
 /*
