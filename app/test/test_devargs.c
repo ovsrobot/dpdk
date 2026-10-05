@@ -179,14 +179,14 @@ test_invalid_devargs(void)
 	struct rte_devargs da;
 	uint32_t i;
 	int ret;
-	int fail = 0;
+	int fail = TEST_SUCCESS;
 
 	for (i = 0; i < RTE_DIM(list); i++) {
 		ret = rte_devargs_parse(&da, list[i]);
 		if (ret >= 0) {
 			printf("rte_devargs_parse(%s) returned %d (but should not)\n",
 			       list[i], ret);
-			fail = ret;
+			fail = TEST_FAILED;
 		}
 		rte_devargs_reset(&da);
 	}
@@ -233,7 +233,7 @@ test_valid_devargs_parsing(void)
 	struct rte_eth_devargs eth_da[RTE_MAX_ETHPORTS];
 	uint32_t i;
 	int ret;
-	int fail = 0;
+	int fail = TEST_SUCCESS;
 
 	for (i = 0; i < RTE_DIM(list); i++) {
 		memset(eth_da, 0, RTE_MAX_ETHPORTS * sizeof(*eth_da));
@@ -241,7 +241,7 @@ test_valid_devargs_parsing(void)
 		if (ret <= 0) {
 			printf("rte_devargs_parse(%s) returned %d (but should not)\n",
 			       list[i].devargs, ret);
-			fail = ret;
+			fail = TEST_FAILED;
 			break;
 		}
 
@@ -249,7 +249,7 @@ test_valid_devargs_parsing(void)
 		if (ret != list[i].devargs_count) {
 			printf("Devargs returned count %d != expected count %d\n", ret,
 			       list[i].devargs_count);
-			fail = -1;
+			fail = TEST_FAILED;
 			break;
 		}
 	}
@@ -278,7 +278,7 @@ test_invalid_devargs_parsing(void)
 	struct rte_eth_devargs eth_da[RTE_MAX_ETHPORTS];
 	uint32_t i;
 	int ret;
-	int fail = 0;
+	int fail = TEST_SUCCESS;
 
 	for (i = 0; i < RTE_DIM(list); i++) {
 		memset(eth_da, 0, RTE_MAX_ETHPORTS * sizeof(*eth_da));
@@ -286,29 +286,30 @@ test_invalid_devargs_parsing(void)
 		if (ret > 0) {
 			printf("rte_devargs_parse(%s) returned %d (but should not)\n",
 			       list[i], ret);
-			fail = ret;
+			fail = TEST_FAILED;
 			break;
 		}
 	}
 	return fail;
 }
 
+static struct unit_test_suite devargs_test_suite = {
+	.suite_name = "Devargs Unit Test Suite",
+	.setup = NULL,
+	.teardown = NULL,
+	.unit_test_cases = {
+		TEST_CASE(test_valid_devargs),
+		TEST_CASE(test_invalid_devargs),
+		TEST_CASE(test_valid_devargs_parsing),
+		TEST_CASE(test_invalid_devargs_parsing),
+		TEST_CASES_END() /**< NULL terminate unit test array */
+	}
+};
+
 static int
 test_devargs(void)
 {
-	printf("== test valid case ==\n");
-	if (test_valid_devargs() < 0)
-		return -1;
-	printf("== test invalid case ==\n");
-	if (test_invalid_devargs() < 0)
-		return -1;
-	printf("== test devargs parsing valid case ==\n");
-	if (test_valid_devargs_parsing() < 0)
-		return -1;
-	printf("== test devargs parsing invalid case ==\n");
-	if (test_invalid_devargs_parsing() < 0)
-		return -1;
-	return 0;
+	return unit_test_suite_runner(&devargs_test_suite);
 }
 
 REGISTER_FAST_TEST(devargs_autotest, NOHUGE_OK, ASAN_OK, test_devargs);
