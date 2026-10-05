@@ -193,6 +193,65 @@ test_invalid_devargs(void)
 	return fail;
 }
 
+/*
+ * Global device syntax without a driver layer must still leave args set,
+ * as the legacy syntax does.  Drivers pass it straight to
+ * rte_kvargs_parse(), which used to crash on NULL.
+ */
+static int
+test_devargs_no_driver_layer(void)
+{
+	static const char * const list[] = {
+		"bus=vdev,name=net_null0",
+		"bus=vdev,name=net_null0/class=eth",
+		"class=eth",
+	};
+	struct rte_kvargs *kvlist;
+	struct rte_devargs da;
+	uint32_t i;
+	int ret;
+	int fail = TEST_SUCCESS;
+
+	if (rte_bus_find_by_name("vdev") == NULL ||
+	    rte_class_find_by_name("eth") == NULL) {
+		printf("vdev bus or eth class missing, skipping\n");
+		return TEST_SKIPPED;
+	}
+
+	for (i = 0; i < RTE_DIM(list); i++) {
+		memset(&da, 0, sizeof(da));
+		ret = rte_devargs_parse(&da, list[i]);
+		if (ret < 0) {
+			printf("rte_devargs_parse(%s) returned %d (but should not)\n",
+			       list[i], ret);
+			fail = TEST_FAILED;
+			goto cleanup;
+		}
+		if (da.args == NULL) {
+			printf("rte_devargs_parse(%s) left args NULL\n", list[i]);
+			fail = TEST_FAILED;
+			goto cleanup;
+		}
+		if (da.args[0] != '\0') {
+			printf("rte_devargs_parse(%s) args (%s) not empty\n",
+			       list[i], da.args);
+			fail = TEST_FAILED;
+			goto cleanup;
+		}
+		/* What a driver does with it. */
+		kvlist = rte_kvargs_parse(da.args, NULL);
+		if (kvlist == NULL) {
+			printf("rte_kvargs_parse(%s args) failed\n", list[i]);
+			fail = TEST_FAILED;
+			goto cleanup;
+		}
+		rte_kvargs_free(kvlist);
+cleanup:
+		rte_devargs_reset(&da);
+	}
+	return fail;
+}
+
 struct devargs_parse_case {
 	const char *devargs;
 	uint8_t devargs_count;
@@ -300,6 +359,7 @@ static struct unit_test_suite devargs_test_suite = {
 	.unit_test_cases = {
 		TEST_CASE(test_valid_devargs),
 		TEST_CASE(test_invalid_devargs),
+		TEST_CASE(test_devargs_no_driver_layer),
 		TEST_CASE(test_valid_devargs_parsing),
 		TEST_CASE(test_invalid_devargs_parsing),
 		TEST_CASES_END() /**< NULL terminate unit test array */

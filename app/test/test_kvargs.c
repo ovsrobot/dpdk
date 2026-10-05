@@ -328,6 +328,21 @@ static int test_invalid_kvargs(void)
 	return -1;
 }
 
+/* NULL means no arguments, and must give an empty list rather than crash. */
+static int
+test_parse_null_args(void)
+{
+	struct rte_kvargs *kvlist;
+
+	kvlist = rte_kvargs_parse(NULL, NULL);
+	TEST_ASSERT_NOT_NULL(kvlist, "rte_kvargs_parse(NULL) returned NULL");
+	TEST_ASSERT_EQUAL(kvlist->count, 0, "rte_kvargs_parse(NULL) count %u, not 0",
+			  kvlist->count);
+	rte_kvargs_free(kvlist);
+
+	return 0;
+}
+
 static struct unit_test_suite kvargs_test_suite  = {
 	.suite_name = "Kvargs Unit Test Suite",
 	.setup = NULL,
@@ -353,6 +368,7 @@ static struct unit_test_suite kvargs_test_suite  = {
 		TEST_CASE(test_parse_list_value),
 		TEST_CASE(test_parse_empty_elements),
 		TEST_CASE(test_parse_with_only_key),
+		TEST_CASE(test_parse_null_args),
 		TEST_CASE(test_invalid_kvargs),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
