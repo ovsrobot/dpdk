@@ -138,6 +138,11 @@ New Features
   Added ``rte_bbdev_queue_stats_get()`` function to retrieve statistics
   for a specific queue, complementing the existing device-level statistics API.
 
+* **Added division round up macro.**
+
+  Added the ``RTE_DIV_ROUND_UP`` macro in ``rte_common.h`` to divide dividend
+  by divisor, rounding up to the nearest integer.
+
 
 Removed Items
 -------------
