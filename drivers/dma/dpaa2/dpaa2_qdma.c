@@ -965,15 +965,17 @@ dpaa2_qdma_dq_fd(const struct qbman_fd *fd,
 	}
 	if (type == DPAA2_QDMA_FD_SG) {
 		fle_sdd = (void *)(uintptr_t)DPAA2_GET_FD_FLC(fd);
-		qdma_vq->fle_elem[*fle_elem_nb] = fle_sdd;
-		(*fle_elem_nb)++;
 		cntx_sg = container_of(fle_sdd,
 				struct qdma_cntx_sg, fle_sdd);
 		ret = qdma_cntx_idx_ring_eq(qdma_vq->ring_cntx_idx,
 				cntx_sg->cntx_idx,
 				cntx_sg->job_nb, free_space);
-		if (unlikely(ret < cntx_sg->job_nb))
+		if (unlikely(ret < cntx_sg->job_nb)) {
+			rte_mempool_put(qdma_vq->fle_pool, fle_sdd);
 			return -ENOSPC;
+		}
+		qdma_vq->fle_elem[*fle_elem_nb] = fle_sdd;
+		(*fle_elem_nb)++;
 
 		return 0;
 	}
