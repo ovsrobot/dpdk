@@ -114,6 +114,9 @@ enum {
 
 #define DPAA_DEFAULT_RXQ_VSP_ID		1
 
+/* Device argument to name the offline (O/H) port back-half port */
+#define DRIVER_OL_BH_PORT		"drv_bh_port"
+
 #define FMC_FILE "/tmp/fmc.bin"
 
 struct dpaa_if_vsp {
