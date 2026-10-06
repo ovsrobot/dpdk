@@ -1331,6 +1331,35 @@ dpaa2_qdma_vchan_rbp_set(struct qdma_virt_queue *vq,
 	return 0;
 }
 
+struct dpaa2_qdma_fle_pool_check {
+	uint64_t iova2va_offset;
+	int bad_map;
+	int bad_offset;
+};
+
+static void
+dpaa2_qdma_fle_pool_iova_check(struct rte_mempool *mp __rte_unused,
+	void *opaque, struct rte_mempool_memhdr *memhdr,
+	unsigned int mem_idx __rte_unused)
+{
+	struct dpaa2_qdma_fle_pool_check *check = opaque;
+
+	if (DPAA2_VADDR_TO_IOVA_AND_CHECK(memhdr->addr,
+			memhdr->len) == RTE_BAD_IOVA) {
+		check->bad_map = 1;
+		return;
+	}
+
+	/* The enqueue path converts every FLE address with a single
+	 * subtraction of iova2va_offset, so that offset has to hold for
+	 * every chunk the objects are taken from. With IOVA as PA and
+	 * fragmented hugepages a pool can span chunks with different
+	 * VA to IOVA deltas, which would silently produce wrong IOVAs.
+	 */
+	if (((uint64_t)memhdr->addr - memhdr->iova) != check->iova2va_offset)
+		check->bad_offset = 1;
+}
+
 static int
 dpaa2_qdma_vchan_setup(struct rte_dma_dev *dev, uint16_t vchan,
 	const struct rte_dma_vchan_conf *conf,
@@ -1338,6 +1367,7 @@ dpaa2_qdma_vchan_setup(struct rte_dma_dev *dev, uint16_t vchan,
 {
 	struct dpaa2_dpdmai_dev *dpdmai_dev = dev->data->dev_private;
 	struct qdma_device *qdma_dev = dpdmai_dev->qdma_dev;
+	struct dpaa2_qdma_fle_pool_check fle_check = {0};
 	uint32_t pool_size;
 	char pool_name[64];
 	int ret;
@@ -1380,6 +1410,20 @@ dpaa2_qdma_vchan_setup(struct rte_dma_dev *dev, uint16_t vchan,
 	iova = qdma_dev->vqs[vchan].fle_pool->mz->iova;
 	va = qdma_dev->vqs[vchan].fle_pool->mz->addr_64;
 	qdma_dev->vqs[vchan].fle_iova2va_offset = va - iova;
+
+	fle_check.iova2va_offset = qdma_dev->vqs[vchan].fle_iova2va_offset;
+	rte_mempool_mem_iter(qdma_dev->vqs[vchan].fle_pool,
+		dpaa2_qdma_fle_pool_iova_check, &fle_check);
+	if (fle_check.bad_map || fle_check.bad_offset) {
+		if (fle_check.bad_map)
+			DPAA2_QDMA_ERR("No IOMMU map for %s", pool_name);
+		else
+			DPAA2_QDMA_ERR("%s spans inconsistent IOVA offsets",
+				pool_name);
+		rte_mempool_free(qdma_dev->vqs[vchan].fle_pool);
+		qdma_dev->vqs[vchan].fle_pool = NULL;
+		return -ENOMEM;
+	}
 
 	if (qdma_dev->is_silent) {
 		ret = rte_mempool_get_bulk(qdma_dev->vqs[vchan].fle_pool,
