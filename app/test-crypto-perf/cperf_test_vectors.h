@@ -111,23 +111,23 @@ struct cperf_mlkem_test_data {
 	const char *name;
 	enum rte_crypto_ml_kem_type type;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} dk;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} ek;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} message;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} cipher;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} sk;
 };
@@ -192,31 +192,31 @@ struct cperf_mldsa_test_data {
 	const char *name;
 	enum rte_crypto_ml_dsa_type type;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} privkey;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} pubkey;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} message;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} sign;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} ctx;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} seed;
 	struct {
-		uint8_t *data;
+		const uint8_t *data;
 		uint32_t length;
 	} mu;
 	enum rte_crypto_auth_algorithm hash;
@@ -252,5 +252,8 @@ extern struct cperf_mlkem_test_data mlkem_encap_perf_data[];
 extern struct cperf_mlkem_test_data mlkem_decap_perf_data[];
 extern struct cperf_mldsa_test_data mldsa_sign_perf_data[];
 extern struct cperf_mldsa_test_data mldsa_verify_perf_data[];
+extern struct cperf_mldsa_test_data mldsa_sign_perf_data_1_iter[];
+extern struct cperf_mldsa_test_data mldsa_sign_perf_data_5_iter[];
+extern struct cperf_mldsa_test_data mldsa_sign_perf_data_10_iter[];
 
 #endif
