@@ -914,6 +914,102 @@ test_af_packet_qdisc_bypass(void)
 }
 
 /*
+ * Test: Ignore outgoing packets configuration
+ * TX on the TAP with qdisc_bypass=0 produces PACKET_OUTGOING frames.
+ * A peer with ignore_outgoing=0 should see them; ignore_outgoing=1 must not.
+ */
+static int
+test_af_packet_ignore_outgoing(void)
+{
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t tx_port, rx_port_ign_out_off, rx_port_ign_out_on, nb_tx;
+	unsigned int rx_off = 0, rx_on = 0, allocated;
+	uint64_t elapsed = 0;
+	const char *err = NULL;
+	int ret;
+
+	if (!tap_created) {
+		printf("SKIPPED: TAP interface not available (need root)\n");
+		return TEST_SKIPPED;
+	}
+
+	ret = create_af_packet_port("net_af_packet_ign_on",
+			"iface=" TAP_DEV_NAME ",ignore_outgoing=1",
+			&rx_port_ign_out_on);
+	if (ret != 0) {
+		err = "Failed to create ignore_outgoing=1 port";
+		goto fail_rx_ign_on;
+	}
+
+	ret = create_af_packet_port("net_af_packet_ign_off",
+			"iface=" TAP_DEV_NAME ",ignore_outgoing=0",
+			&rx_port_ign_out_off);
+	if (ret != 0) {
+		err = "Failed to create ignore_outgoing=0 port";
+		goto fail_rx_ign_off;
+	}
+
+	/* qdisc_bypass=0 so the kernel TX tap sees the TX packets */
+	ret = create_af_packet_port("net_af_packet_ign_tx",
+			"iface=" TAP_DEV_NAME ",qdisc_bypass=0", &tx_port);
+	if (ret != 0) {
+		err = "Failed to create TX af_packet port";
+		goto fail_tx;
+	}
+
+	if (configure_af_packet_port(rx_port_ign_out_on, 1, 1) != 0 ||
+	    configure_af_packet_port(rx_port_ign_out_off, 1, 1) != 0 ||
+	    configure_af_packet_port(tx_port, 1, 1) != 0) {
+		err = "Failed to configure ports";
+		goto fail_setup;
+	}
+
+	while (do_rx_burst(rx_port_ign_out_off, 0, bufs, BURST_SIZE) > 0)
+		;
+	while (do_rx_burst(rx_port_ign_out_on, 0, bufs, BURST_SIZE) > 0)
+		;
+
+	allocated = alloc_tx_mbufs(bufs, 4);
+	nb_tx = do_tx_burst(tx_port, 0, bufs, allocated);
+	if (allocated == 0 || nb_tx == 0) {
+		err = "TX setup failed";
+		goto fail_setup;
+	}
+
+	while (elapsed < LOOPBACK_TIMEOUT_US) {
+		rx_off += do_rx_burst(rx_port_ign_out_off, 0, bufs, BURST_SIZE);
+		rx_on += do_rx_burst(rx_port_ign_out_on, 0, bufs, BURST_SIZE);
+		if (rx_off >= nb_tx)
+			break;
+		rte_delay_us_block(STATS_POLL_INTERVAL_US);
+		elapsed += STATS_POLL_INTERVAL_US;
+	}
+
+fail_setup:
+	rte_eth_dev_stop(tx_port);
+	rte_eth_dev_close(tx_port);
+	rte_vdev_uninit("net_af_packet_ign_tx");
+fail_tx:
+	rte_eth_dev_stop(rx_port_ign_out_off);
+	rte_eth_dev_close(rx_port_ign_out_off);
+	rte_vdev_uninit("net_af_packet_ign_off");
+fail_rx_ign_off:
+	rte_eth_dev_stop(rx_port_ign_out_on);
+	rte_eth_dev_close(rx_port_ign_out_on);
+	rte_vdev_uninit("net_af_packet_ign_on");
+fail_rx_ign_on:
+	TEST_ASSERT(err == NULL, "%s", err);
+	TEST_ASSERT(rx_off > 0, "Expected packets with ignore_outgoing=0");
+	TEST_ASSERT(rx_on == 0, "Expected no packets with ignore_outgoing=1");
+
+	ret = rte_vdev_init("net_af_packet_ign_bad",
+			    "iface=" TAP_DEV_NAME ",ignore_outgoing=2");
+	TEST_ASSERT(ret != 0, "Expected failure with ignore_outgoing=2");
+
+	return TEST_SUCCESS;
+}
+
+/*
  * Test: Multiple queue pairs
  */
 static int
@@ -1107,6 +1203,7 @@ static struct unit_test_suite af_packet_test_suite = {
 		TEST_CASE(test_af_packet_invalid_qpairs),
 		TEST_CASE(test_af_packet_frame_config),
 		TEST_CASE(test_af_packet_qdisc_bypass),
+		TEST_CASE(test_af_packet_ignore_outgoing),
 		TEST_CASE(test_af_packet_multi_queue),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
