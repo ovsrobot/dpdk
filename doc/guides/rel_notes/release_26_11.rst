@@ -20,6 +20,11 @@ DPDK Release 26.11
       ninja -C build doc
       xdg-open build/doc/guides/html/rel_notes/release_26_11.html
 
+* **Updated NXP DPAA2 net driver.**
+
+  * Added Tx queue based flow control and confirmation queue handling.
+  * Added software parser based packet dump for debugging.
+  * Added support for traffic metering and policing (rte_mtr API).
 
 New Features
 ------------
