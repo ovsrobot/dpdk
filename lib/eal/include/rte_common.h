@@ -1156,9 +1156,6 @@ uint64_t
 rte_str_to_size(const char *str);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Converts the uint64_t value provided to a human-readable string.
  * It null-terminates the string, truncating the data if needed.
  * An optional unit (like "B") can be provided as a string. It will be
@@ -1186,7 +1183,6 @@ rte_str_to_size(const char *str);
  * @return
  *     buf on success, NULL if the buffer is too small.
  */
-__rte_experimental
 char *
 rte_size_to_str(char *buf, int buf_size, uint64_t count, bool use_iec, const char *unit);
 
