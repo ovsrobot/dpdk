@@ -140,9 +140,6 @@ rte_str_skip_leading_spaces(const char *src)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Provides the final component of a path, similar to POSIX basename function.
  *
  * This API provides the similar behaviour on all platforms, Linux, BSD, Windows,
@@ -167,7 +164,6 @@ rte_str_skip_leading_spaces(const char *src)
  *   If the return value is >= buflen, truncation occurred.
  *   Return (size_t)-1 on error (Windows only)
  */
-__rte_experimental
 size_t
 rte_basename(const char *path, char *buf, size_t buflen);
 

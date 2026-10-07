@@ -10,7 +10,7 @@
 #include <eal_export.h>
 #include <rte_string_fns.h>
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_basename, 25.11)
+RTE_EXPORT_SYMBOL(rte_basename)
 size_t
 rte_basename(const char *path, char *buf, size_t buflen)
 {
