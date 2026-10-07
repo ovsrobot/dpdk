@@ -128,6 +128,37 @@ New Features
   * Added Tx pause support for the ENETC4 VF via Rx congestion mode.
   * Added WRR Tx scheduler devarg (``enetc4_txq_wrr``) for ENETC4 VF ring weights.
 
+* **Updated NXP DPAA drivers.**
+
+  * Added support for the DPAA Offline/Host-command (O/H) port, allowing
+    a DPDK application to use an offline port for packet processing.
+    The feature is selected through the ``drv_oldev`` bus device argument.
+    The port is configured through the new experimental functions
+    ``rte_pmd_dpaa_ol_set_classif_info()``,
+    ``rte_pmd_dpaa_ol_reset_classif_info()``,
+    ``rte_pmd_dpaa_ol_set_lgw_info()`` and
+    ``rte_pmd_dpaa_ol_reset_lgw_info()``, declared in
+    ``rte_pmd_dpaa_oldev.h``.
+  * Added ``drv_rx_taildrop`` and ``drv_tx_taildrop`` device arguments
+    to configure per-port frame queue taildrop congestion thresholds
+    at device probe time.
+  * Added ``drv_fmcless_rxq`` device argument to set the number of
+    Rx queues when running without FMC configuration. When the argument
+    is not given, the default number of Rx queues in FMCLESS mode is now
+    the maximum supported per port instead of the number of lcores,
+    because several queues may be processed on the same core.
+  * Added ``drv_sh_if_name`` device argument to provide the Linux kernel
+    interface name of a shared MAC interface when it differs from the
+    ``fmX-macY`` style name used by DPDK.
+  * Added device arguments to the DPAA QDMA driver to control existing
+    driver behaviour at runtime: ``dpaa_dma_sg_disable`` submits each
+    descriptor as an individual single-entry transfer instead of the
+    default scatter-gather batching, ``dpaa_dma_data_validation`` enables
+    the post-transfer data validation helper for debugging, and, when the
+    driver is built with ``RTE_DMA_DPAA_ERRATA_ERR050757``,
+    ``dpaa_dma_pci_read_disable`` skips the ERR050757 source
+    read-transaction programming.
+
 * **Updated Solarflare network driver.**
 
   * Added VF support on AMD Solarflare X45xx adapters.
