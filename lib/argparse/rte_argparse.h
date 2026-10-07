@@ -30,7 +30,6 @@
 #include <stdint.h>
 
 #include <rte_bitops.h>
-#include <rte_compat.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -181,9 +180,6 @@ struct rte_argparse {
 #define ARGPARSE_ARG_END() { NULL }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Parse parameters passed until all are processed,
  * or until a "--" parameter is encountered.
  *
@@ -198,13 +194,9 @@ struct rte_argparse {
  *   number of arguments parsed (>= 0) on success.
  *   Otherwise negative error code is returned.
  */
-__rte_experimental
 int rte_argparse_parse(const struct rte_argparse *obj, int argc, char **argv);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Output the help text information for the given argparse object.
  *
  * @param stream
@@ -212,13 +204,9 @@ int rte_argparse_parse(const struct rte_argparse *obj, int argc, char **argv);
  * @param obj
  *   Parser object.
  */
-__rte_experimental
 void rte_argparse_print_help(FILE *stream, const struct rte_argparse *obj);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Parse the value from the input string based on the value type.
  *
  * @param str
@@ -231,7 +219,6 @@ void rte_argparse_print_help(FILE *stream, const struct rte_argparse *obj);
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_argparse_parse_type(const char *str, enum rte_argparse_value_type val_type, void *val);
 
 #ifdef __cplusplus

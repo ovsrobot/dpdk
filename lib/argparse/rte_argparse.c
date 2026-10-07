@@ -899,7 +899,7 @@ show_args_opt_help(FILE *stream, const struct rte_argparse *obj, uint32_t align)
 	}
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_argparse_print_help, 25.11)
+RTE_EXPORT_SYMBOL(rte_argparse_print_help)
 void
 rte_argparse_print_help(FILE *stream, const struct rte_argparse *obj)
 {
@@ -918,7 +918,7 @@ rte_argparse_print_help(FILE *stream, const struct rte_argparse *obj)
 		fprintf(stream, "\n");
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_argparse_parse, 24.03)
+RTE_EXPORT_SYMBOL(rte_argparse_parse)
 int
 rte_argparse_parse(const struct rte_argparse *obj, int argc, char **argv)
 {
@@ -960,7 +960,7 @@ error:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_argparse_parse_type, 24.03)
+RTE_EXPORT_SYMBOL(rte_argparse_parse_type)
 int
 rte_argparse_parse_type(const char *str, enum rte_argparse_value_type val_type, void *val)
 {

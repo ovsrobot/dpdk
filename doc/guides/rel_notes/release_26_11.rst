@@ -226,6 +226,8 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* argparse: Promoted the whole library API from experimental to stable.
+
 * cmdline: Promoted ``cmdline_token_bool_ops`` from experimental to stable.
 
 * dispatcher: Promoted the whole library API from experimental to stable.
