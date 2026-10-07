@@ -4,8 +4,10 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <eal_export.h>
 #include <rte_string_fns.h>
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_basename, 25.11)
 size_t
 rte_basename(const char *path, char *buf, size_t buflen)
 {
