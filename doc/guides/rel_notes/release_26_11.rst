@@ -353,6 +353,13 @@ API Changes
   functions in pipeline, the ``rte_swx_table_*`` symbols in table and
   the ``rte_swx_port_*`` symbols in port.
 
+* power: Promoted the following API from experimental to stable:
+
+  * PM QoS: ``rte_power_qos_set_cpu_resume_latency`` and
+    ``rte_power_qos_get_cpu_resume_latency``
+  * uncore: ``rte_power_set_uncore_env``, ``rte_power_unset_uncore_env``,
+    ``rte_power_get_uncore_env`` and ``rte_power_uncore_freqs``
+
 * reorder: Promoted the following API from experimental to stable:
   ``rte_reorder_seqn``, ``rte_reorder_drain_up_to_seqn``,
   ``rte_reorder_min_seqn_set`` and ``rte_reorder_memory_footprint_get``.

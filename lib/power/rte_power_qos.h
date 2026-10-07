@@ -7,8 +7,6 @@
 
 #include <stdint.h>
 
-#include <rte_compat.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -36,9 +34,6 @@ extern "C" {
 #define RTE_POWER_QOS_RESUME_LATENCY_NO_CONSTRAINT	INT32_MAX
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * @param lcore_id
  *   target logical core id
  *
@@ -48,13 +43,9 @@ extern "C" {
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_power_qos_set_cpu_resume_latency(uint16_t lcore_id, int latency);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Get the current resume latency of this logical core.
  * The default value in kernel is @see RTE_POWER_QOS_RESUME_LATENCY_NO_CONSTRAINT
  * if don't set it.
@@ -63,7 +54,6 @@ int rte_power_qos_set_cpu_resume_latency(uint16_t lcore_id, int latency);
  *   Negative value on failure.
  *   >= 0 means the actual resume latency limit on this core.
  */
-__rte_experimental
 int rte_power_qos_get_cpu_resume_latency(uint16_t lcore_id);
 
 #ifdef __cplusplus
