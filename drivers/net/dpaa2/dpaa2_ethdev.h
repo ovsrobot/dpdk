@@ -667,7 +667,6 @@ int dpaa2_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 int dpaa2_dev_recycle_config(struct rte_eth_dev *eth_dev);
 int dpaa2_dev_recycle_deconfig(struct rte_eth_dev *eth_dev);
 int dpaa2_mtr_ops_get(struct rte_eth_dev *dev, void *ops);
-int dpaa2_soft_parser_loaded(void);
 
 void
 dpaa2_dev_mac_setup_stats(struct rte_eth_dev *dev);

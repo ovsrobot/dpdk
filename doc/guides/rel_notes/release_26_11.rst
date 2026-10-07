@@ -168,6 +168,15 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Removed soft parser support from the dpaa2 net driver.**
+
+  The DPAA2 soft parser (SP) blob has to be loaded by the boot firmware
+  before Linux starts, so loading it at run time from the PMD never took
+  effect. The unused SP loader has been removed, together with the rte_flow
+  VXLAN and eCPRI pattern items that were only accepted while an SP image
+  was believed to be loaded. Those two items are no longer advertised in
+  the dpaa2 feature matrix.
+
 * Removed deprecated symbols:
 
   * eal: ``__rte_packed``
