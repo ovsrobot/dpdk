@@ -1966,9 +1966,6 @@ struct rte_mempool_mem_range_info {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Get information about the memory range used to store objects in the mempool.
  *
  * @param[in] mp
@@ -1980,15 +1977,11 @@ struct rte_mempool_mem_range_info {
  * @return
  *   0 on success, -EINVAL if mempool is not valid or mem_range is NULL.
  */
-__rte_experimental
 int
 rte_mempool_get_mem_range(const struct rte_mempool *mp,
 	struct rte_mempool_mem_range_info *mem_range);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Return alignment of objects stored in the mempool.
  *
  * @param[in] mp
@@ -1996,7 +1989,6 @@ rte_mempool_get_mem_range(const struct rte_mempool *mp,
  * @return
  *   Object alignment if mp is valid. 0 if mp is NULL.
  */
-__rte_experimental
 size_t
 rte_mempool_get_obj_alignment(const struct rte_mempool *mp);
 

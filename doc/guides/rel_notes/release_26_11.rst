@@ -361,6 +361,9 @@ API Changes
 * hash: Promoted ``rte_hash_rcu_qsbr_dq_reclaim`` and ``rte_thash_gen_key``
   from experimental to stable.
 
+* mempool: Promoted ``rte_mempool_get_mem_range`` and
+  ``rte_mempool_get_obj_alignment`` from experimental to stable.
+
 * node: Promoted the whole library API from experimental to stable.
   The ``rte_node_*`` control path functions date from 23.07 to 25.07 and
   are used by the graph application and the l3fwd-graph example.
