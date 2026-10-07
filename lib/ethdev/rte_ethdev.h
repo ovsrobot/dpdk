@@ -3075,9 +3075,6 @@ int rte_eth_link_get_nowait(uint16_t port_id, struct rte_eth_link *link)
 const char *rte_eth_link_speed_to_str(uint32_t link_speed);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * This function converts an Ethernet link type to a string.
  *
  * @param link_connector
@@ -3085,7 +3082,6 @@ const char *rte_eth_link_speed_to_str(uint32_t link_speed);
  * @return
  *   NULL for invalid link connector values otherwise the string representation of the link type.
  */
-__rte_experimental
 const char *rte_eth_link_connector_to_str(enum rte_eth_link_connector link_connector);
 
 /**

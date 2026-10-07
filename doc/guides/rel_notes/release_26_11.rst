@@ -305,7 +305,8 @@ API Changes
   * utility functions:
     ``rte_eth_get_monitor_addr``, ``rte_eth_representor_info_get``,
     ``rte_eth_buffer_split_get_supported_hdr_ptypes``,
-    ``rte_eth_timesync_adjust_freq`` and ``rte_tm_node_query``
+    ``rte_eth_timesync_adjust_freq``, ``rte_tm_node_query``,
+    and ``rte_eth_link_connector_to_str``
   * buffer split and error handling types:
     ``rte_eth_rxseg_split``, ``rte_eth_rxseg``, ``rte_eth_rxseg_capa``
     and ``rte_eth_err_handle_mode``

@@ -3329,7 +3329,7 @@ rte_eth_link_to_str(char *str, size_t len, const struct rte_eth_link *eth_link)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_link_connector_to_str, 25.11)
+RTE_EXPORT_SYMBOL(rte_eth_link_connector_to_str)
 const char *
 rte_eth_link_connector_to_str(enum rte_eth_link_connector link_connector)
 {
