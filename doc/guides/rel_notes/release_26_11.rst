@@ -364,6 +364,11 @@ API Changes
   ``rte_reorder_seqn``, ``rte_reorder_drain_up_to_seqn``,
   ``rte_reorder_min_seqn_set`` and ``rte_reorder_memory_footprint_get``.
 
+* ring: Promoted the staged ordered ring (soring) API from experimental
+  to stable, except the peek and dump functions.
+  The peek API added in 26.07 and the ``rte_soring_dump`` and
+  ``rte_ring_headtail_dump`` debug functions remain experimental.
+
 * telemetry: Promoted the following API from experimental to stable:
 
   * ``rte_tel_data_add_array_uint_hex``

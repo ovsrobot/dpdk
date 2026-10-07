@@ -68,9 +68,6 @@ struct rte_soring_param {
 struct rte_soring;
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Calculate the memory size needed for a soring
  *
  * This function returns the number of bytes needed for a soring, given
@@ -85,14 +82,10 @@ struct rte_soring;
  *   - The memory size needed for the soring on success.
  *   - -EINVAL if provided parameter values are invalid.
  */
-__rte_experimental
 ssize_t
 rte_soring_get_memsize(const struct rte_soring_param *prm);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Initialize a soring structure.
  *
  * Initialize a soring structure in memory pointed by "r".
@@ -108,14 +101,10 @@ rte_soring_get_memsize(const struct rte_soring_param *prm);
  * @return
  *   - 0 on success, or a negative error code.
  */
-__rte_experimental
 int
 rte_soring_init(struct rte_soring *r,  const struct rte_soring_param *prm);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Return the total number of filled entries in a soring.
  *
  * @param r
@@ -123,14 +112,10 @@ rte_soring_init(struct rte_soring *r,  const struct rte_soring_param *prm);
  * @return
  *   The number of entries in the soring.
  */
-__rte_experimental
 unsigned int
 rte_soring_count(const struct rte_soring *r);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Return the total number of unfilled entries in a soring.
  *
  * @param r
@@ -138,7 +123,6 @@ rte_soring_count(const struct rte_soring *r);
  * @return
  *   The number of free entries in the soring.
  */
-__rte_experimental
 unsigned int
 rte_soring_free_count(const struct rte_soring *r);
 
@@ -158,9 +142,6 @@ void
 rte_soring_dump(FILE *f, const struct rte_soring *r);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Enqueue several objects on the soring.
  * Enqueues exactly requested number of objects or none.
  *
@@ -178,15 +159,11 @@ rte_soring_dump(FILE *f, const struct rte_soring *r);
  * @return
  *   - Actual number of objects enqueued, either 0 or n.
  */
-__rte_experimental
 uint32_t
 rte_soring_enqueue_bulk(struct rte_soring *r, const void *objs,
 	uint32_t n, uint32_t *free_space);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Enqueue several objects plus metadata on the soring.
  * Enqueues exactly requested number of objects or none.
  *
@@ -212,15 +189,11 @@ rte_soring_enqueue_bulk(struct rte_soring *r, const void *objs,
  * @return
  *   - Actual number of objects enqueued, either 0 or n.
  */
-__rte_experimental
 uint32_t
 rte_soring_enqueux_bulk(struct rte_soring *r, const void *objs,
 	const void *meta, uint32_t n, uint32_t *free_space);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Enqueue several objects on the soring.
  * Enqueues up to requested number of objects.
  *
@@ -238,15 +211,11 @@ rte_soring_enqueux_bulk(struct rte_soring *r, const void *objs,
  * @return
  *   - Actual number of objects enqueued.
  */
-__rte_experimental
 uint32_t
 rte_soring_enqueue_burst(struct rte_soring *r, const void *objs,
 	uint32_t n, uint32_t *free_space);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Enqueue several objects plus metadata on the soring.
  * Enqueues up to requested number of objects.
  *
@@ -272,15 +241,11 @@ rte_soring_enqueue_burst(struct rte_soring *r, const void *objs,
  * @return
  *   - Actual number of objects enqueued.
  */
-__rte_experimental
 uint32_t
 rte_soring_enqueux_burst(struct rte_soring *r, const void *objs,
 	const void *meta, uint32_t n, uint32_t *free_space);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Dequeue several objects from the soring.
  * Dequeues exactly requested number of objects or none.
  *
@@ -298,15 +263,11 @@ rte_soring_enqueux_burst(struct rte_soring *r, const void *objs,
  * @return
  *   - Actual number of objects dequeued, either 0 or 'num'.
  */
-__rte_experimental
 uint32_t
 rte_soring_dequeue_bulk(struct rte_soring *r, void *objs,
 	uint32_t num, uint32_t *available);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Dequeue several objects plus metadata from the soring.
  * Dequeues exactly requested number of objects or none.
  *
@@ -332,15 +293,11 @@ rte_soring_dequeue_bulk(struct rte_soring *r, void *objs,
  * @return
  *   - Actual number of objects dequeued, either 0 or 'num'.
  */
-__rte_experimental
 uint32_t
 rte_soring_dequeux_bulk(struct rte_soring *r, void *objs, void *meta,
 	uint32_t num, uint32_t *available);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Dequeue several objects from the soring.
  * Dequeues up to requested number of objects.
  *
@@ -358,15 +315,11 @@ rte_soring_dequeux_bulk(struct rte_soring *r, void *objs, void *meta,
  * @return
  *   - Actual number of objects dequeued.
  */
-__rte_experimental
 uint32_t
 rte_soring_dequeue_burst(struct rte_soring *r, void *objs,
 	uint32_t num, uint32_t *available);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Dequeue several objects plus metadata from the soring.
  * Dequeues up to requested number of objects.
  *
@@ -392,15 +345,11 @@ rte_soring_dequeue_burst(struct rte_soring *r, void *objs,
  * @return
  *   - Actual number of objects dequeued.
  */
-__rte_experimental
 uint32_t
 rte_soring_dequeux_burst(struct rte_soring *r, void *objs, void *meta,
 	uint32_t num, uint32_t *available);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Acquire several objects from the soring for given stage.
  * Acquires exactly requested number of objects or none.
  *
@@ -424,15 +373,11 @@ rte_soring_dequeux_burst(struct rte_soring *r, void *objs, void *meta,
  * @return
  *   - Actual number of objects acquired, either 0 or 'num'.
  */
-__rte_experimental
 uint32_t
 rte_soring_acquire_bulk(struct rte_soring *r, void *objs,
 	uint32_t stage, uint32_t num, uint32_t *ftoken, uint32_t *available);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Acquire several objects plus metadata from the soring for given stage.
  * Acquires exactly requested number of objects or none.
  *
@@ -464,15 +409,11 @@ rte_soring_acquire_bulk(struct rte_soring *r, void *objs,
  * @return
  *   - Actual number of objects acquired, either 0 or 'num'.
  */
-__rte_experimental
 uint32_t
 rte_soring_acquirx_bulk(struct rte_soring *r, void *objs, void *meta,
 	uint32_t stage, uint32_t num, uint32_t *ftoken, uint32_t *available);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Acquire several objects from the soring for given stage.
  * Acquires up to requested number of objects.
  *
@@ -496,15 +437,11 @@ rte_soring_acquirx_bulk(struct rte_soring *r, void *objs, void *meta,
  * @return
  *   - Actual number of objects acquired.
  */
-__rte_experimental
 uint32_t
 rte_soring_acquire_burst(struct rte_soring *r, void *objs,
 	uint32_t stage, uint32_t num, uint32_t *ftoken, uint32_t *available);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Acquire several objects plus metadata from the soring for given stage.
  * Acquires up to requested number of objects.
  *
@@ -536,15 +473,11 @@ rte_soring_acquire_burst(struct rte_soring *r, void *objs,
  * @return
  *   - Actual number of objects acquired.
  */
-__rte_experimental
 uint32_t
 rte_soring_acquirx_burst(struct rte_soring *r, void *objs, void *meta,
 	uint32_t stage, uint32_t num, uint32_t *ftoken, uint32_t *available);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Release several objects for given stage back to the soring.
  * Note that it means these objects become available for next stage or
  * dequeue.
@@ -565,15 +498,11 @@ rte_soring_acquirx_burst(struct rte_soring *r, void *objs, void *meta,
  * @param ftoken
  *   Opaque 'token' value obtained from acquire() op.
  */
-__rte_experimental
 void
 rte_soring_release(struct rte_soring *r, const void *objs,
 	uint32_t stage, uint32_t n, uint32_t ftoken);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Release several objects plus metadata for given stage back to the soring.
  * Note that it means these objects become available for next stage or
  * dequeue.
@@ -602,7 +531,6 @@ rte_soring_release(struct rte_soring *r, const void *objs,
  * @param ftoken
  *   Opaque 'token' value obtained from acquire() op.
  */
-__rte_experimental
 void
 rte_soring_releasx(struct rte_soring *r, const void *objs,
 	const void *meta, uint32_t stage, uint32_t n, uint32_t ftoken);

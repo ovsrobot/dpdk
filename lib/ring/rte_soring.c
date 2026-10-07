@@ -120,7 +120,7 @@ rte_soring_dump(FILE *f, const struct rte_soring *r)
 	}
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_get_memsize, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_get_memsize)
 ssize_t
 rte_soring_get_memsize(const struct rte_soring_param *prm)
 {
@@ -154,7 +154,7 @@ soring_compilation_checks(void)
 		offsetof(struct soring_stage_headtail, unused));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_init, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_init)
 int
 rte_soring_init(struct rte_soring *r, const struct rte_soring_param *prm)
 {

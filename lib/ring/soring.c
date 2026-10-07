@@ -635,7 +635,7 @@ soring_release(struct rte_soring *r, const void *objs,
  * Public functions (data-path) start here.
  */
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_release, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_release)
 void
 rte_soring_release(struct rte_soring *r, const void *objs,
 	uint32_t stage, uint32_t n, uint32_t ftoken)
@@ -644,7 +644,7 @@ rte_soring_release(struct rte_soring *r, const void *objs,
 }
 
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_releasx, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_releasx)
 void
 rte_soring_releasx(struct rte_soring *r, const void *objs,
 	const void *meta, uint32_t stage, uint32_t n, uint32_t ftoken)
@@ -652,7 +652,7 @@ rte_soring_releasx(struct rte_soring *r, const void *objs,
 	soring_release(r, objs, meta, stage, n, ftoken);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_enqueue_bulk, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_enqueue_bulk)
 uint32_t
 rte_soring_enqueue_bulk(struct rte_soring *r, const void *objs, uint32_t n,
 	uint32_t *free_space)
@@ -661,7 +661,7 @@ rte_soring_enqueue_bulk(struct rte_soring *r, const void *objs, uint32_t n,
 			free_space);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_enqueux_bulk, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_enqueux_bulk)
 uint32_t
 rte_soring_enqueux_bulk(struct rte_soring *r, const void *objs,
 	const void *meta, uint32_t n, uint32_t *free_space)
@@ -670,7 +670,7 @@ rte_soring_enqueux_bulk(struct rte_soring *r, const void *objs,
 			free_space);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_enqueue_burst, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_enqueue_burst)
 uint32_t
 rte_soring_enqueue_burst(struct rte_soring *r, const void *objs, uint32_t n,
 	uint32_t *free_space)
@@ -679,7 +679,7 @@ rte_soring_enqueue_burst(struct rte_soring *r, const void *objs, uint32_t n,
 			free_space);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_enqueux_burst, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_enqueux_burst)
 uint32_t
 rte_soring_enqueux_burst(struct rte_soring *r, const void *objs,
 	const void *meta, uint32_t n, uint32_t *free_space)
@@ -688,7 +688,7 @@ rte_soring_enqueux_burst(struct rte_soring *r, const void *objs,
 			free_space);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_dequeue_bulk, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_dequeue_bulk)
 uint32_t
 rte_soring_dequeue_bulk(struct rte_soring *r, void *objs, uint32_t num,
 	uint32_t *available)
@@ -697,7 +697,7 @@ rte_soring_dequeue_bulk(struct rte_soring *r, void *objs, uint32_t num,
 			available);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_dequeux_bulk, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_dequeux_bulk)
 uint32_t
 rte_soring_dequeux_bulk(struct rte_soring *r, void *objs, void *meta,
 	uint32_t num, uint32_t *available)
@@ -706,7 +706,7 @@ rte_soring_dequeux_bulk(struct rte_soring *r, void *objs, void *meta,
 			available);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_dequeue_burst, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_dequeue_burst)
 uint32_t
 rte_soring_dequeue_burst(struct rte_soring *r, void *objs, uint32_t num,
 	uint32_t *available)
@@ -715,7 +715,7 @@ rte_soring_dequeue_burst(struct rte_soring *r, void *objs, uint32_t num,
 			available);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_dequeux_burst, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_dequeux_burst)
 uint32_t
 rte_soring_dequeux_burst(struct rte_soring *r, void *objs, void *meta,
 	uint32_t num, uint32_t *available)
@@ -724,7 +724,7 @@ rte_soring_dequeux_burst(struct rte_soring *r, void *objs, void *meta,
 			available);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_acquire_bulk, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_acquire_bulk)
 uint32_t
 rte_soring_acquire_bulk(struct rte_soring *r, void *objs,
 	uint32_t stage, uint32_t num, uint32_t *ftoken, uint32_t *available)
@@ -733,7 +733,7 @@ rte_soring_acquire_bulk(struct rte_soring *r, void *objs,
 			RTE_RING_QUEUE_FIXED, ftoken, available);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_acquirx_bulk, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_acquirx_bulk)
 uint32_t
 rte_soring_acquirx_bulk(struct rte_soring *r, void *objs, void *meta,
 	uint32_t stage, uint32_t num, uint32_t *ftoken, uint32_t *available)
@@ -742,7 +742,7 @@ rte_soring_acquirx_bulk(struct rte_soring *r, void *objs, void *meta,
 			RTE_RING_QUEUE_FIXED, ftoken, available);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_acquire_burst, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_acquire_burst)
 uint32_t
 rte_soring_acquire_burst(struct rte_soring *r, void *objs,
 	uint32_t stage, uint32_t num, uint32_t *ftoken, uint32_t *available)
@@ -751,7 +751,7 @@ rte_soring_acquire_burst(struct rte_soring *r, void *objs,
 			RTE_RING_QUEUE_VARIABLE, ftoken, available);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_acquirx_burst, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_acquirx_burst)
 uint32_t
 rte_soring_acquirx_burst(struct rte_soring *r, void *objs, void *meta,
 	uint32_t stage, uint32_t num, uint32_t *ftoken, uint32_t *available)
@@ -760,7 +760,7 @@ rte_soring_acquirx_burst(struct rte_soring *r, void *objs, void *meta,
 			RTE_RING_QUEUE_VARIABLE, ftoken, available);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_count, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_count)
 unsigned int
 rte_soring_count(const struct rte_soring *r)
 {
@@ -770,7 +770,7 @@ rte_soring_count(const struct rte_soring *r)
 	return (count > r->capacity) ? r->capacity : count;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_soring_free_count, 25.03)
+RTE_EXPORT_SYMBOL(rte_soring_free_count)
 unsigned int
 rte_soring_free_count(const struct rte_soring *r)
 {
