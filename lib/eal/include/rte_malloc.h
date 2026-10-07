@@ -53,9 +53,6 @@ rte_free(void *ptr);
 
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Frees the memory space pointed to by the provided pointer
  * and guarantees it will be zero'd before reuse.
  * This function is slower than simple rte_free() it should only
@@ -70,7 +67,6 @@ rte_free(void *ptr);
  * @param ptr
  *   The pointer to memory to be freed.
  */
-__rte_experimental
 void
 rte_free_sensitive(void *ptr);
 
