@@ -12,9 +12,6 @@
 /**
  * @file: rte_node_mbuf_dynfield.h
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Defines rte_node specific mbuf dynamic field region [rte_node_mbuf_dynfield_t]
  * which can be used by both DPDK built-in and out-of-tree nodes
  * for storing per-mbuf fields for graph walk.
@@ -102,7 +99,6 @@ typedef struct rte_node_mbuf_dynfield {
  * @return
  *  Pointer to node specific mbuf dynamic field structure
  */
-__rte_experimental
 static __rte_always_inline rte_node_mbuf_dynfield_t *
 rte_node_mbuf_dynfield_get(struct rte_mbuf *m, const int offset)
 {
@@ -120,7 +116,6 @@ rte_node_mbuf_dynfield_get(struct rte_mbuf *m, const int offset)
  * @return
  * Pointer to node mbuf overloadable fields
  */
-__rte_experimental
 static __rte_always_inline rte_node_mbuf_overload_fields_t *
 rte_node_mbuf_overload_fields_get(struct rte_mbuf *m, const int offset)
 {
@@ -148,7 +143,6 @@ rte_node_mbuf_overload_fields_get(struct rte_mbuf *m, const int offset)
  *    - ENOMEM - no memory
  *   >=0 on success: dynamic field offset
  */
-__rte_experimental
 int rte_node_mbuf_dynfield_register(void);
 
 #ifdef __cplusplus

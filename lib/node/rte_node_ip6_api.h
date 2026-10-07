@@ -8,15 +8,10 @@
 /**
  * @file rte_node_ip6_api.h
  *
- * @warning
- * @b EXPERIMENTAL:
- * All functions in this file may be changed or removed without prior notice.
- *
  * This API allows performing control path functions of ip6_* nodes
  * like ip6_lookup, ip6_rewrite.
  */
 #include <rte_common.h>
-#include <rte_compat.h>
 #include <rte_fib6.h>
 #include <rte_ip6.h>
 
@@ -49,7 +44,6 @@ enum rte_node_ip6_lookup_next {
  * @return
  *   0 on success, negative otherwise.
  */
-__rte_experimental
 int rte_node_ip6_route_add(const struct rte_ipv6_addr *ip, uint8_t depth, uint16_t next_hop,
 			   enum rte_node_ip6_lookup_next next_node);
 
@@ -68,7 +62,6 @@ int rte_node_ip6_route_add(const struct rte_ipv6_addr *ip, uint8_t depth, uint16
  * @return
  *   0 on success, negative otherwise.
  */
-__rte_experimental
 int rte_node_ip6_rewrite_add(uint16_t next_hop, uint8_t *rewrite_data,
 			     uint8_t rewrite_len, uint16_t dst_port);
 
@@ -83,7 +76,6 @@ int rte_node_ip6_rewrite_add(uint16_t next_hop, uint8_t *rewrite_data,
  * @return
  *   0 on success, negative otherwise.
  */
-__rte_experimental
 int rte_node_ip6_fib_create(int socket, struct rte_fib6_conf *conf);
 
 /**
@@ -101,7 +93,6 @@ int rte_node_ip6_fib_create(int socket, struct rte_fib6_conf *conf);
  * @return
  *   0 on success, negative otherwise.
  */
-__rte_experimental
 int rte_node_ip6_fib_route_add(const struct rte_ipv6_addr *ip, uint8_t depth, uint16_t next_hop,
 			       enum rte_node_ip6_lookup_next next_node);
 

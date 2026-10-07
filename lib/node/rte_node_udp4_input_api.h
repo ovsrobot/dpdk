@@ -8,16 +8,10 @@
 /**
  * @file rte_node_udp4_input_api.h
  *
- * @warning
- * @b EXPERIMENTAL:
- * All functions in this file may be changed or removed without prior notice.
- *
  * This API allows performing control path functions of udp4_* nodes
  * like udp4_input.
  */
 #include <rte_common.h>
-#include <rte_compat.h>
-
 #include "rte_graph.h"
 
 #ifdef __cplusplus
@@ -37,7 +31,6 @@ enum rte_node_udp4_input_next {
  * @param usr_node
  * Node registered by user to receive data.
  */
-__rte_experimental
 int rte_node_udp4_usr_node_add(const char *usr_node);
 
 /**
@@ -50,7 +43,6 @@ int rte_node_udp4_usr_node_add(const char *usr_node);
  * @return
  *   0 on success, negative otherwise.
  */
-__rte_experimental
 int rte_node_udp4_dst_port_add(uint32_t dst_port, rte_edge_t next_node);
 
 #ifdef __cplusplus

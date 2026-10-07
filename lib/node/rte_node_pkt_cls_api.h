@@ -8,10 +8,6 @@
 /**
  * @file rte_node_pkt_cls_api.h
  *
- * @warning
- * @b EXPERIMENTAL:
- * All functions in this file may be changed or removed without prior notice.
- *
  * This API allows performing control path functions of pkt_cls node.
  */
 

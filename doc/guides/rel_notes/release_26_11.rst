@@ -354,6 +354,10 @@ API Changes
     ``rte_event_port_profile_links_get`` and
     ``rte_event_port_profile_unlink``
 
+* node: Promoted the whole library API from experimental to stable.
+  The ``rte_node_*`` control path functions date from 23.07 to 25.07 and
+  are used by the graph application and the l3fwd-graph example.
+
 * pipeline: Promoted the SWX API from experimental to stable:
   the ``rte_swx_pipeline_*``, ``rte_swx_ctl_*`` and ``rte_swx_ipsec_*``
   functions in pipeline, the ``rte_swx_table_*`` symbols in table and

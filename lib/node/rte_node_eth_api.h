@@ -8,15 +8,10 @@
 /**
  * @file rte_node_eth_api.h
  *
- * @warning
- * @b EXPERIMENTAL:
- * All functions in this file may be changed or removed without prior notice.
- *
  * This API allows setting up ethdev_rx and ethdev_tx nodes
  * and its queue associations.
  */
 
-#include <rte_compat.h>
 #include <rte_common.h>
 #include <rte_graph.h>
 #include <rte_mempool.h>
@@ -72,7 +67,6 @@ int rte_node_eth_config(struct rte_node_ethdev_config *cfg,
  *   - ENOMEM: If memory allocation failed
  *   - 0 on successful initialization.
  */
-__rte_experimental
 int rte_node_ethdev_rx_next_update(rte_node_t id, const char *edge_name);
 
 #ifdef __cplusplus

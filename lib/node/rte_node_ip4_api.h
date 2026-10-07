@@ -8,16 +8,10 @@
 /**
  * @file rte_node_ip4_api.h
  *
- * @warning
- * @b EXPERIMENTAL:
- * All functions in this file may be changed or removed without prior notice.
- *
  * This API allows performing control path functions of ip4_* nodes
  * like ip4_lookup, ip4_rewrite.
  */
 #include <rte_common.h>
-#include <rte_compat.h>
-
 #include <rte_fib.h>
 #include <rte_graph.h>
 
@@ -119,7 +113,6 @@ int rte_node_ip4_rewrite_add(uint16_t next_hop, uint8_t *rewrite_data,
  * @return
  *   0 on success, negative otherwise.
  */
-__rte_experimental
 int rte_node_ip4_reassembly_configure(struct rte_node_ip4_reassembly_cfg *cfg, uint16_t cnt);
 
 /**
@@ -133,7 +126,6 @@ int rte_node_ip4_reassembly_configure(struct rte_node_ip4_reassembly_cfg *cfg, u
  * @return
  *   0 on success, negative otherwise.
  */
-__rte_experimental
 int rte_node_ip4_fib_create(int socket, struct rte_fib_conf *conf);
 
 /**
@@ -151,7 +143,6 @@ int rte_node_ip4_fib_create(int socket, struct rte_fib_conf *conf);
  * @return
  *   0 on success, negative otherwise.
  */
-__rte_experimental
 int rte_node_ip4_fib_route_add(uint32_t ip, uint8_t depth, uint16_t next_hop,
 			       enum rte_node_ip4_lookup_next next_node);
 
