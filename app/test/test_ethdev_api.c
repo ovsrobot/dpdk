@@ -2,8 +2,11 @@
  * Copyright (C) 2023, Advanced Micro Devices, Inc.
  */
 
+#include <string.h>
+
 #include <rte_log.h>
 #include <rte_ethdev.h>
+#include <rte_flow.h>
 
 #include <rte_test.h>
 #include "test.h"
@@ -14,6 +17,125 @@
 #define NUM_TXD 512
 #define NUM_MBUF 1024
 #define MBUF_CACHE_SIZE 256
+
+static int32_t
+ethdev_api_flow_conv_pattern_masked(void)
+{
+	const struct rte_flow_item_eth spec = {
+		.hdr.dst_addr.addr_bytes = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 },
+		.hdr.src_addr.addr_bytes = { 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f },
+		.hdr.ether_type = RTE_BE16(0x1234),
+	};
+	const struct rte_flow_item_eth last = {
+		.hdr.dst_addr.addr_bytes = { 0x11, 0x12, 0x13, 0x14, 0x15, 0x16 },
+		.hdr.src_addr.addr_bytes = { 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f },
+		.hdr.ether_type = RTE_BE16(0x5678),
+	};
+	const struct rte_flow_item_eth mask = {
+		.hdr.dst_addr.addr_bytes = { 0xff, 0xff, 0x00, 0x00, 0xff, 0xff },
+		.hdr.src_addr.addr_bytes = { 0xff, 0x00, 0xff, 0x00, 0xff, 0x00 },
+		.hdr.ether_type = RTE_BE16(0xffff),
+	};
+	const uint8_t raw_pattern[] = { 0xaa, 0xbb, 0xcc, 0xdd };
+	const struct rte_flow_item_raw raw_spec = {
+		.relative = 1,
+		.search = 1,
+		.offset = 8,
+		.limit = 4,
+		.length = sizeof(raw_pattern),
+		.pattern = raw_pattern,
+	};
+	const struct rte_flow_item_raw raw_mask = {
+		.relative = 1,
+		.search = 0,
+		.reserved = 0x3fffffff,
+		.offset = 0xffffffff,
+		.limit = 0xffff,
+		.length = 0xffff,
+		.pattern = NULL,
+	};
+	const struct rte_flow_item pattern[] = {
+		{
+			.type = RTE_FLOW_ITEM_TYPE_ETH,
+			.spec = &spec,
+			.last = &last,
+			.mask = &mask,
+		},
+		{
+			.type = RTE_FLOW_ITEM_TYPE_RAW,
+			.spec = &raw_spec,
+			.mask = &raw_mask,
+		},
+		{ .type = RTE_FLOW_ITEM_TYPE_END },
+	};
+	union {
+		struct rte_flow_item item;
+		struct rte_flow_item_eth eth;
+		struct rte_flow_item_raw raw;
+		double align;
+		uint8_t buf[256];
+	} dst;
+	const struct rte_flow_item *item;
+	const struct rte_flow_item_eth *conv_spec;
+	const struct rte_flow_item_eth *conv_last;
+	const struct rte_flow_item_raw *conv_raw_spec;
+	int ret;
+
+	ret = rte_flow_conv(RTE_FLOW_CONV_OP_PATTERN_MASKED, NULL, 0, pattern, NULL);
+	TEST_ASSERT(ret > 0, "Masked pattern conversion size query failed");
+	TEST_ASSERT((size_t)ret <= sizeof(dst.buf),
+		    "Masked pattern conversion needs too much storage");
+
+	memset(&dst, 0, sizeof(dst));
+	ret = rte_flow_conv(RTE_FLOW_CONV_OP_PATTERN_MASKED, dst.buf,
+			    sizeof(dst.buf), pattern, NULL);
+	TEST_ASSERT(ret > 0, "Masked pattern conversion failed");
+
+	item = (const struct rte_flow_item *)dst.buf;
+	conv_spec = item[0].spec;
+	conv_last = item[0].last;
+	TEST_ASSERT_NOT_NULL(conv_spec, "Converted spec must be set");
+	TEST_ASSERT_NOT_NULL(conv_last, "Converted last must be set");
+
+	TEST_ASSERT_EQUAL(conv_spec->hdr.dst_addr.addr_bytes[0], 0x01,
+			  "Masked spec dst byte 0 mismatch");
+	TEST_ASSERT_EQUAL(conv_spec->hdr.dst_addr.addr_bytes[2], 0x00,
+			  "Masked spec dst byte 2 mismatch");
+	TEST_ASSERT_EQUAL(conv_spec->hdr.src_addr.addr_bytes[1], 0x00,
+			  "Masked spec src byte 1 mismatch");
+	TEST_ASSERT_EQUAL(conv_spec->hdr.ether_type, RTE_BE16(0x1234),
+			  "Masked spec ether type mismatch");
+	TEST_ASSERT_EQUAL(conv_last->hdr.dst_addr.addr_bytes[0], 0x11,
+			  "Masked last dst byte 0 mismatch");
+	TEST_ASSERT_EQUAL(conv_last->hdr.dst_addr.addr_bytes[2], 0x00,
+			  "Masked last dst byte 2 mismatch");
+	TEST_ASSERT_EQUAL(conv_last->hdr.src_addr.addr_bytes[1], 0x00,
+			  "Masked last src byte 1 mismatch");
+	TEST_ASSERT_EQUAL(conv_last->hdr.ether_type, RTE_BE16(0x5678),
+			  "Masked last ether type mismatch");
+
+	conv_raw_spec = item[1].spec;
+	TEST_ASSERT_NOT_NULL(conv_raw_spec, "Converted RAW spec must be set");
+	TEST_ASSERT_NOT_NULL(conv_raw_spec->pattern,
+			     "Converted RAW pattern pointer must be set");
+	TEST_ASSERT(conv_raw_spec->pattern != raw_pattern,
+		    "Converted RAW pattern must be deep-copied");
+	TEST_ASSERT_EQUAL(conv_raw_spec->relative, 1,
+			  "Masked RAW relative mismatch");
+	TEST_ASSERT_EQUAL(conv_raw_spec->search, 0,
+			  "Masked RAW search mismatch");
+	TEST_ASSERT_EQUAL(conv_raw_spec->offset, raw_spec.offset,
+			  "Masked RAW offset mismatch");
+	TEST_ASSERT_EQUAL(conv_raw_spec->limit, raw_spec.limit,
+			  "Masked RAW limit mismatch");
+	TEST_ASSERT_EQUAL(conv_raw_spec->length, raw_spec.length,
+			  "Masked RAW length mismatch");
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(conv_raw_spec->pattern, raw_pattern,
+				      sizeof(raw_pattern),
+				      "Converted RAW pattern mismatch");
+
+	return TEST_SUCCESS;
+}
 
 static int32_t
 ethdev_api_queue_status(void)
@@ -167,6 +289,7 @@ static struct unit_test_suite ethdev_api_testsuite = {
 	.setup = NULL,
 	.teardown = NULL,
 	.unit_test_cases = {
+		TEST_CASE(ethdev_api_flow_conv_pattern_masked),
 		TEST_CASE(ethdev_api_queue_status),
 		/* TODO: Add deferred_start queue status test */
 		TEST_CASES_END() /**< NULL terminate unit test array */
