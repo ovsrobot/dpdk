@@ -495,6 +495,9 @@ idpf_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		idpf_qc_single_tx_queue_reset(txq);
 	} else {
 		txq->desc_ring = mz->addr;
+		ret = idpf_qc_split_tx_pending_alloc(txq, socket_id);
+		if (ret != 0)
+			goto err_pending_alloc;
 		idpf_qc_split_tx_descq_reset(txq);
 
 		/* Setup tx completion queue if split model */
@@ -512,6 +515,8 @@ idpf_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	return 0;
 
 err_complq_setup:
+	idpf_qc_split_tx_pending_free(txq);
+err_pending_alloc:
 	rte_free(txq->rs_last_id);
 err_rs_last_id_alloc:
 	rte_free(txq->sw_ring);

@@ -166,7 +166,6 @@ struct ci_tx_queue;
 struct ci_tx_entry {
 	struct rte_mbuf *mbuf; /* mbuf associated with TX desc, if any. */
 	uint16_t next_id; /* Index of next descriptor in ring. */
-	uint16_t first_id; /* Split-queue: first sw_id of packet at EOP entry. */
 };
 
 /**
@@ -262,6 +261,13 @@ struct ci_tx_queue {
 				uint16_t sw_nb_desc;
 				uint16_t sw_tail;
 				uint16_t rs_compl_count;
+				/* Split-Tx completion tracking: shadow ring indexed by a
+				 * rolling compl_tag decouples RS-completion mbuf lifetime
+				 * from sw_ring[] slot reuse. Sized nb_tx_desc.
+				 */
+				struct rte_mbuf **tx_pending_pkts;
+				uint16_t tx_pending_size;
+				uint16_t tx_next_compl_tag;
 		};
 	};
 };
