@@ -226,6 +226,8 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* cmdline: Promoted ``cmdline_token_bool_ops`` from experimental to stable.
+
 * eal: Improved pointer arithmetic macros.
 
   * ``RTE_PTR_ADD``, ``RTE_PTR_SUB``, ``RTE_PTR_ALIGN``, ``RTE_PTR_ALIGN_CEIL``,

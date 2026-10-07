@@ -18,7 +18,7 @@ cmdline_get_help_bool(cmdline_parse_token_hdr_t *tk, char *dstbuf,
 		unsigned int size);
 
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(cmdline_token_bool_ops, 25.03)
+RTE_EXPORT_SYMBOL(cmdline_token_bool_ops)
 struct cmdline_token_ops cmdline_token_bool_ops = {
 	.parse = cmdline_parse_bool,
 	.complete_get_nb = NULL,
