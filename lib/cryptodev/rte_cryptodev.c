@@ -407,7 +407,7 @@ rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_cipher_algo_string, 23.03)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_cipher_algo_string)
 const char *
 rte_cryptodev_get_cipher_algo_string(enum rte_crypto_cipher_algorithm algo_enum)
 {
@@ -421,7 +421,7 @@ rte_cryptodev_get_cipher_algo_string(enum rte_crypto_cipher_algorithm algo_enum)
 	return alg_str;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_auth_algo_string, 23.03)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_auth_algo_string)
 const char *
 rte_cryptodev_get_auth_algo_string(enum rte_crypto_auth_algorithm algo_enum)
 {
@@ -435,7 +435,7 @@ rte_cryptodev_get_auth_algo_string(enum rte_crypto_auth_algorithm algo_enum)
 	return alg_str;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_aead_algo_string, 23.03)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_aead_algo_string)
 const char *
 rte_cryptodev_get_aead_algo_string(enum rte_crypto_aead_algorithm algo_enum)
 {
@@ -449,7 +449,7 @@ rte_cryptodev_get_aead_algo_string(enum rte_crypto_aead_algorithm algo_enum)
 	return alg_str;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_asym_get_xform_string, 23.03)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_get_xform_string)
 const char *
 rte_cryptodev_asym_get_xform_string(enum rte_crypto_asym_xform_type xform_enum)
 {
@@ -731,7 +731,7 @@ rte_cryptodev_asym_xform_capability_check_hash(
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_asym_xform_capability_check_opcap, 24.11)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_xform_capability_check_opcap)
 int
 rte_cryptodev_asym_xform_capability_check_opcap(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,

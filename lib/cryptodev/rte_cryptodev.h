@@ -372,9 +372,6 @@ rte_cryptodev_asym_xform_capability_check_hash(
 	enum rte_crypto_auth_algorithm hash);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Check if op capability is supported
  *
  * @param	capability	Description of the asymmetric crypto capability.
@@ -385,7 +382,6 @@ rte_cryptodev_asym_xform_capability_check_hash(
  *   - Return 1 if the op capability is supported
  *   - Return 0 if unsupported
  */
-__rte_experimental
 int
 rte_cryptodev_asym_xform_capability_check_opcap(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
@@ -460,7 +456,6 @@ rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
  * - Return NULL if enum is not valid
  * - Return algo_string corresponding to enum
  */
-__rte_experimental
 const char *
 rte_cryptodev_get_cipher_algo_string(enum rte_crypto_cipher_algorithm algo_enum);
 
@@ -473,7 +468,6 @@ rte_cryptodev_get_cipher_algo_string(enum rte_crypto_cipher_algorithm algo_enum)
  * - Return NULL if enum is not valid
  * - Return algo_string corresponding to enum
  */
-__rte_experimental
 const char *
 rte_cryptodev_get_auth_algo_string(enum rte_crypto_auth_algorithm algo_enum);
 
@@ -486,7 +480,6 @@ rte_cryptodev_get_auth_algo_string(enum rte_crypto_auth_algorithm algo_enum);
  * - Return NULL if enum is not valid
  * - Return algo_string corresponding to enum
  */
-__rte_experimental
 const char *
 rte_cryptodev_get_aead_algo_string(enum rte_crypto_aead_algorithm algo_enum);
 
@@ -499,7 +492,6 @@ rte_cryptodev_get_aead_algo_string(enum rte_crypto_aead_algorithm algo_enum);
  * - Return NULL, if enum is not valid.
  * - Return xform string, for valid enum.
  */
-__rte_experimental
 const char *
 rte_cryptodev_asym_get_xform_string(enum rte_crypto_asym_xform_type xform_enum);
 
@@ -1690,7 +1682,6 @@ rte_cryptodev_raw_enqueue_burst(struct rte_crypto_raw_dp_ctx *ctx,
  *        until rte_cryptodev_raw_enqueue_done() is called.
  *   - negative integer: failure.
  */
-__rte_experimental
 static __rte_always_inline int
 rte_cryptodev_raw_enqueue(struct rte_crypto_raw_dp_ctx *ctx,
 	struct rte_crypto_vec *data_vec, uint16_t n_data_vecs,
@@ -1790,7 +1781,6 @@ rte_cryptodev_raw_dequeue_burst(struct rte_crypto_raw_dp_ctx *ctx,
  *   - The user data pointer retrieved from device queue or NULL if no
  *     operation is ready for dequeue.
  */
-__rte_experimental
 static __rte_always_inline void *
 rte_cryptodev_raw_dequeue(struct rte_crypto_raw_dp_ctx *ctx,
 		int *dequeue_status, enum rte_crypto_op_status *op_status)

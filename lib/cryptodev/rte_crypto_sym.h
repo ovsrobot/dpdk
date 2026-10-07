@@ -16,7 +16,6 @@
 
 #include <string.h>
 
-#include <rte_compat.h>
 #include <rte_mbuf.h>
 #include <rte_memory.h>
 #include <rte_mempool.h>
@@ -983,7 +982,6 @@ __rte_crypto_sym_op_attach_sym_session(struct rte_crypto_sym_op *sym_op, void *s
  *   - number of successfully filled entries in *vec* array.
  *   - negative number of elements in *vec* array required.
  */
-__rte_experimental
 static inline int
 rte_crypto_mbuf_to_vec(const struct rte_mbuf *mb, uint32_t ofs, uint32_t len,
 	struct rte_crypto_vec vec[], uint32_t num)

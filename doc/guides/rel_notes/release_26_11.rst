@@ -230,6 +230,10 @@ API Changes
 
 * cmdline: Promoted ``cmdline_token_bool_ops`` from experimental to stable.
 
+* cryptodev: Promoted the algorithm name helpers and the asymmetric
+  capability check from experimental to stable, along with the inline
+  raw enqueue/dequeue and mbuf-to-vec helpers.
+
 * dispatcher: Promoted the whole library API from experimental to stable.
   The ``rte_dispatcher_*`` functions are unchanged since the library was
   added in 23.11.
