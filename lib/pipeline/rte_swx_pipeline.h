@@ -12,8 +12,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include <rte_compat.h>
-
 #include "rte_swx_port.h"
 #include "rte_swx_table.h"
 #include "rte_swx_extern.h"
@@ -52,7 +50,6 @@ struct rte_swx_pipeline;
  * @return
  *   Valid pipeline handle if found or NULL otherwise.
  */
-__rte_experimental
 struct rte_swx_pipeline *
 rte_swx_pipeline_find(const char *name);
 
@@ -72,7 +69,6 @@ rte_swx_pipeline_find(const char *name);
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Pipeline with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_config(struct rte_swx_pipeline **p,
 			const char *name,
@@ -97,7 +93,6 @@ rte_swx_pipeline_config(struct rte_swx_pipeline **p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Input port type with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_port_in_type_register(struct rte_swx_pipeline *p,
 				       const char *name,
@@ -120,7 +115,6 @@ rte_swx_pipeline_port_in_type_register(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -ENODEV: Input port object creation error.
  */
-__rte_experimental
 int
 rte_swx_pipeline_port_in_config(struct rte_swx_pipeline *p,
 				uint32_t port_id,
@@ -146,7 +140,6 @@ rte_swx_pipeline_port_in_config(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Output port type with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_port_out_type_register(struct rte_swx_pipeline *p,
 					const char *name,
@@ -169,7 +162,6 @@ rte_swx_pipeline_port_out_type_register(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -ENODEV: Output port object creation error.
  */
-__rte_experimental
 int
 rte_swx_pipeline_port_out_config(struct rte_swx_pipeline *p,
 				 uint32_t port_id,
@@ -211,7 +203,6 @@ struct rte_swx_pipeline_mirroring_params {
  *   -ENOMEM: Not enough memory;
  *   -EEXIST: Pipeline was already built successfully.
  */
-__rte_experimental
 int
 rte_swx_pipeline_mirroring_config(struct rte_swx_pipeline *p,
 				  struct rte_swx_pipeline_mirroring_params *params);
@@ -242,7 +233,6 @@ rte_swx_pipeline_mirroring_config(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Extern type with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_extern_type_register(struct rte_swx_pipeline *p,
 	const char *name,
@@ -268,7 +258,6 @@ rte_swx_pipeline_extern_type_register(struct rte_swx_pipeline *p,
  *   -EEXIST: Member function with this name already exists for this type;
  *   -ENOSPC: Maximum number of member functions reached for this type.
  */
-__rte_experimental
 int
 rte_swx_pipeline_extern_type_member_func_register(struct rte_swx_pipeline *p,
 	const char *extern_type_name,
@@ -295,7 +284,6 @@ rte_swx_pipeline_extern_type_member_func_register(struct rte_swx_pipeline *p,
  *   -EEXIST: Extern object with this name already exists;
  *   -ENODEV: Extern object constructor error.
  */
-__rte_experimental
 int
 rte_swx_pipeline_extern_object_config(struct rte_swx_pipeline *p,
 				      const char *extern_type_name,
@@ -321,7 +309,6 @@ rte_swx_pipeline_extern_object_config(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Extern function with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_extern_func_register(struct rte_swx_pipeline *p,
 				      const char *name,
@@ -346,7 +333,6 @@ rte_swx_pipeline_extern_func_register(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Hash function with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_hash_func_register(struct rte_swx_pipeline *p,
 				    const char *name,
@@ -369,7 +355,6 @@ rte_swx_pipeline_hash_func_register(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: RSS object with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_rss_config(struct rte_swx_pipeline *p,
 			    const char *name);
@@ -425,7 +410,6 @@ struct rte_swx_field_params {
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Struct type with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_struct_type_register(struct rte_swx_pipeline *p,
 				      const char *name,
@@ -449,7 +433,6 @@ rte_swx_pipeline_struct_type_register(struct rte_swx_pipeline *p,
  *   -EEXIST: Header with this name already exists;
  *   -ENOSPC: Maximum number of headers reached for the pipeline.
  */
-__rte_experimental
 int
 rte_swx_pipeline_packet_header_register(struct rte_swx_pipeline *p,
 					const char *name,
@@ -466,7 +449,6 @@ rte_swx_pipeline_packet_header_register(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_pipeline_packet_metadata_register(struct rte_swx_pipeline *p,
 					  const char *struct_type_name);
@@ -601,7 +583,6 @@ rte_swx_pipeline_packet_metadata_register(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Action with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_action_config(struct rte_swx_pipeline *p,
 			       const char *name,
@@ -630,7 +611,6 @@ rte_swx_pipeline_action_config(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Table type with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_table_type_register(struct rte_swx_pipeline *p,
 				     const char *name,
@@ -739,7 +719,6 @@ struct rte_swx_pipeline_table_params {
  *   -EEXIST: Table with this name already exists;
  *   -ENODEV: Table creation error.
  */
-__rte_experimental
 int
 rte_swx_pipeline_table_config(struct rte_swx_pipeline *p,
 			      const char *name,
@@ -793,7 +772,6 @@ struct rte_swx_pipeline_selector_params {
  *   -EEXIST: Selector table with this name already exists;
  *   -ENODEV: Selector table creation error.
  */
-__rte_experimental
 int
 rte_swx_pipeline_selector_config(struct rte_swx_pipeline *p,
 				 const char *name,
@@ -881,7 +859,6 @@ struct rte_swx_pipeline_learner_params {
  *   -EEXIST: Learner table with this name already exists;
  *   -ENODEV: Learner table creation error.
  */
-__rte_experimental
 int
 rte_swx_pipeline_learner_config(struct rte_swx_pipeline *p,
 				const char *name,
@@ -907,7 +884,6 @@ rte_swx_pipeline_learner_config(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Register array with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_regarray_config(struct rte_swx_pipeline *p,
 				 const char *name,
@@ -930,7 +906,6 @@ rte_swx_pipeline_regarray_config(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Meter array with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_metarray_config(struct rte_swx_pipeline *p,
 				 const char *name,
@@ -950,7 +925,6 @@ rte_swx_pipeline_metarray_config(struct rte_swx_pipeline *p,
  *   -EINVAL: Invalid argument;
  *   -ENOMEM: Not enough space/cannot allocate memory.
  */
-__rte_experimental
 int
 rte_swx_pipeline_instructions_config(struct rte_swx_pipeline *p,
 				     const char **instructions,
@@ -971,7 +945,6 @@ rte_swx_pipeline_instructions_config(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Pipeline was already built successfully.
  */
-__rte_experimental
 int
 rte_swx_pipeline_build(struct rte_swx_pipeline *p);
 
@@ -993,7 +966,6 @@ rte_swx_pipeline_build(struct rte_swx_pipeline *p);
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Resource with the same name already exists.
  */
-__rte_experimental
 int
 rte_swx_pipeline_codegen(FILE *spec_file,
 			 FILE *code_file,
@@ -1026,7 +998,6 @@ rte_swx_pipeline_codegen(FILE *spec_file,
  *   -EEXIST: Pipeline with this name already exists;
  *   -ENODEV: Extern object or table creation error.
  */
-__rte_experimental
 int
 rte_swx_pipeline_build_from_lib(struct rte_swx_pipeline **p,
 				const char *name,
@@ -1042,7 +1013,6 @@ rte_swx_pipeline_build_from_lib(struct rte_swx_pipeline **p,
  * @param[in] n_instructions
  *   Number of instructions to execute.
  */
-__rte_experimental
 void
 rte_swx_pipeline_run(struct rte_swx_pipeline *p,
 		     uint32_t n_instructions);
@@ -1056,7 +1026,6 @@ rte_swx_pipeline_run(struct rte_swx_pipeline *p,
  *   Pipeline handle.
  *   If p is NULL, no operation is performed.
  */
-__rte_experimental
 void
 rte_swx_pipeline_flush(struct rte_swx_pipeline *p);
 
@@ -1066,7 +1035,6 @@ rte_swx_pipeline_flush(struct rte_swx_pipeline *p);
  * @param[in] p
  *   Pipeline handle.
  */
-__rte_experimental
 void
 rte_swx_pipeline_free(struct rte_swx_pipeline *p);
 

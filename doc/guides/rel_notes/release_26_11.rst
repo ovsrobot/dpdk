@@ -348,6 +348,11 @@ API Changes
     ``rte_event_port_profile_links_get`` and
     ``rte_event_port_profile_unlink``
 
+* pipeline: Promoted the SWX API from experimental to stable:
+  the ``rte_swx_pipeline_*``, ``rte_swx_ctl_*`` and ``rte_swx_ipsec_*``
+  functions in pipeline, the ``rte_swx_table_*`` symbols in table and
+  the ``rte_swx_port_*`` symbols in port.
+
 * reorder: Promoted the following API from experimental to stable:
   ``rte_reorder_seqn``, ``rte_reorder_drain_up_to_seqn``,
   ``rte_reorder_min_seqn_set`` and ``rte_reorder_memory_footprint_get``.
