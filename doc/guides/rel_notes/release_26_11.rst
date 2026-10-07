@@ -25,6 +25,10 @@ DPDK Release 26.11
   * Added Tx queue based flow control and confirmation queue handling.
   * Added software parser based packet dump for debugging.
   * Added support for traffic metering and policing (rte_mtr API).
+  * Removed ``DPAA2_FLOW_CONTROL_MISS_FLOW`` environment variable. The
+    per-device FS table miss flow id is now fixed at 0. Users who
+    previously redirected unmatched frames to a specific queue via this
+    variable must use the rte_flow API instead.
 
 New Features
 ------------
