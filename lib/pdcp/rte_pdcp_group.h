@@ -37,9 +37,6 @@ struct rte_pdcp_group {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Take crypto-op as an input and extract pointer to related PDCP entity.
  * @param cop
  *   The address of an input *rte_crypto_op* structure.
@@ -56,9 +53,6 @@ rte_pdcp_en_from_cop(const struct rte_crypto_op *cop)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Take as input completed crypto ops, extract related mbufs and group them by
  * *rte_pdcp_entity* they belong to. Mbuf for which the crypto operation has
  * failed would be flagged using *RTE_MBUF_F_RX_SEC_OFFLOAD_FAILED* flag

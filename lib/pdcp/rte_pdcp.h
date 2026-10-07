@@ -13,7 +13,6 @@
  * A framework for PDCP protocol processing.
  */
 
-#include <rte_compat.h>
 #include <rte_common.h>
 #include <rte_mempool.h>
 #include <rte_pdcp_hdr.h>
@@ -161,9 +160,6 @@ struct rte_pdcp_entity_conf {
 /* >8 End of structure rte_pdcp_entity_conf. */
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * 5.1.1 PDCP entity establishment
  *
  * Establish PDCP entity based on provided input configuration.
@@ -174,14 +170,10 @@ struct rte_pdcp_entity_conf {
  *   - Valid handle if success
  *   - NULL in case of failure. rte_errno will be set to error code.
  */
-__rte_experimental
 struct rte_pdcp_entity *
 rte_pdcp_entity_establish(const struct rte_pdcp_entity_conf *conf);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * 5.1.3 PDCP entity release
  *
  * Release PDCP entity.
@@ -204,15 +196,11 @@ rte_pdcp_entity_establish(const struct rte_pdcp_entity_conf *conf);
  *   - >0: Success and the number of packets returned in out_mb
  *   - <0: Error code in case of failures
  */
-__rte_experimental
 int
 rte_pdcp_entity_release(struct rte_pdcp_entity *pdcp_entity,
 			struct rte_mbuf *out_mb[]);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * 5.1.4 PDCP entity suspend
  *
  * Suspend PDCP entity.
@@ -233,15 +221,11 @@ rte_pdcp_entity_release(struct rte_pdcp_entity *pdcp_entity,
  *   - >0: Success and the number of packets returned in out_mb.
  *   - <0: Error code in case of failures.
  */
-__rte_experimental
 int
 rte_pdcp_entity_suspend(struct rte_pdcp_entity *pdcp_entity,
 			struct rte_mbuf *out_mb[]);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Create control PDU packet of the `type` specified. The control PDU packet
  * would be allocated from *rte_pdcp_entity_conf.ctrl_pdu_pool* by lib PDCP.
  *
@@ -253,15 +237,11 @@ rte_pdcp_entity_suspend(struct rte_pdcp_entity *pdcp_entity,
  *   - Control PDU generated, in case of success.
  *   - NULL in case of failure. rte_errno will be set to error code.
  */
-__rte_experimental
 struct rte_mbuf *
 rte_pdcp_control_pdu_create(struct rte_pdcp_entity *pdcp_entity,
 			    enum rte_pdcp_ctrl_pdu_type type);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * For input mbufs and given PDCP entity pre-process the mbufs and prepare
  * crypto ops that can be enqueued to the cryptodev associated with given
  * session. Only error packets would be moved returned in the input buffer,
@@ -284,7 +264,6 @@ rte_pdcp_control_pdu_create(struct rte_pdcp_entity *pdcp_entity,
  * @return
  *   Count of crypto_ops prepared.
  */
-__rte_experimental
 static inline uint16_t
 rte_pdcp_pkt_pre_process(const struct rte_pdcp_entity *entity,
 			 struct rte_mbuf *mb[], struct rte_crypto_op *cop[],
@@ -294,9 +273,6 @@ rte_pdcp_pkt_pre_process(const struct rte_pdcp_entity *entity,
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * For input mbufs and given PDCP entity, perform PDCP post-processing of the mbufs.
  *
  * Input mbufs are the ones retrieved from rte_crypto_ops dequeued from cryptodev
@@ -325,7 +301,6 @@ rte_pdcp_pkt_pre_process(const struct rte_pdcp_entity *entity,
  * @return
  *   Count of packets returned in *out_mb* buffer.
  */
-__rte_experimental
 static inline uint16_t
 rte_pdcp_pkt_post_process(const struct rte_pdcp_entity *entity,
 			  struct rte_mbuf *in_mb[],
@@ -336,9 +311,6 @@ rte_pdcp_pkt_post_process(const struct rte_pdcp_entity *entity,
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * 5.2.2.2 Actions when a t-Reordering expires
  *
  * When t-Reordering timer expires, PDCP is required to slide the reception
@@ -358,7 +330,6 @@ rte_pdcp_pkt_post_process(const struct rte_pdcp_entity *entity,
  * @return
  *   Number of packets returned in *out_mb* buffer.
  */
-__rte_experimental
 uint16_t
 rte_pdcp_t_reordering_expiry_handle(const struct rte_pdcp_entity *entity,
 				    struct rte_mbuf *out_mb[]);
