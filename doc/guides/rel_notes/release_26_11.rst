@@ -228,6 +228,10 @@ API Changes
 
 * cmdline: Promoted ``cmdline_token_bool_ops`` from experimental to stable.
 
+* dispatcher: Promoted the whole library API from experimental to stable.
+  The ``rte_dispatcher_*`` functions are unchanged since the library was
+  added in 23.11.
+
 * eal: Improved pointer arithmetic macros.
 
   * ``RTE_PTR_ADD``, ``RTE_PTR_SUB``, ``RTE_PTR_ALIGN``, ``RTE_PTR_ALIGN_CEIL``,

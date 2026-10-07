@@ -10,10 +10,6 @@
  *
  * RTE Dispatcher
  *
- * @warning
- * @b EXPERIMENTAL:
- * All functions in this file may be changed or removed without prior notice.
- *
  * The purpose of the dispatcher is to help decouple different parts
  * of an application (e.g., modules), sharing the same underlying
  * event device.
@@ -22,7 +18,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <rte_compat.h>
 #include <rte_eventdev.h>
 
 #ifdef __cplusplus
@@ -127,7 +122,6 @@ struct rte_dispatcher_stats {
  *   A pointer to a new dispatcher instance, or NULL on failure, in which
  *   case rte_errno is set.
  */
-__rte_experimental
 struct rte_dispatcher *
 rte_dispatcher_create(uint8_t event_dev_id);
 
@@ -141,7 +135,6 @@ rte_dispatcher_create(uint8_t event_dev_id);
  *  - 0: Success
  *  - <0: Error code on failure
  */
-__rte_experimental
 int
 rte_dispatcher_free(struct rte_dispatcher *dispatcher);
 
@@ -154,7 +147,6 @@ rte_dispatcher_free(struct rte_dispatcher *dispatcher);
  * @return
  *  The dispatcher service's id.
  */
-__rte_experimental
 uint32_t
 rte_dispatcher_service_id_get(const struct rte_dispatcher *dispatcher);
 
@@ -199,7 +191,6 @@ rte_dispatcher_service_id_get(const struct rte_dispatcher *dispatcher);
  *  - -EEXISTS: Event port is already configured.
  *  - -EINVAL: Invalid arguments.
  */
-__rte_experimental
 int
 rte_dispatcher_bind_port_to_lcore(struct rte_dispatcher *dispatcher,
 	uint8_t event_port_id, uint16_t batch_size, uint64_t timeout,
@@ -225,7 +216,6 @@ rte_dispatcher_bind_port_to_lcore(struct rte_dispatcher *dispatcher,
  *  - 0: Success
  *  - -ENOENT: Event port id not bound to this @c lcore_id.
  */
-__rte_experimental
 int
 rte_dispatcher_unbind_port_from_lcore(struct rte_dispatcher *dispatcher,
 	uint8_t event_port_id, unsigned int lcore_id);
@@ -289,7 +279,6 @@ rte_dispatcher_unbind_port_from_lcore(struct rte_dispatcher *dispatcher,
  *  - >= 0: The identifier for this registration.
  *  - -ENOMEM: Unable to allocate sufficient resources.
  */
-__rte_experimental
 int
 rte_dispatcher_register(struct rte_dispatcher *dispatcher,
 	rte_dispatcher_match_t match_fun, void *match_cb_data,
@@ -313,7 +302,6 @@ rte_dispatcher_register(struct rte_dispatcher *dispatcher,
  *  - 0: Success
  *  - -EINVAL: The @c handler_id parameter was invalid.
  */
-__rte_experimental
 int
 rte_dispatcher_unregister(struct rte_dispatcher *dispatcher, int handler_id);
 
@@ -355,7 +343,6 @@ rte_dispatcher_unregister(struct rte_dispatcher *dispatcher, int handler_id);
  *  - >= 0: The identifier for this registration.
  *  - -ENOMEM: Unable to allocate sufficient resources.
  */
-__rte_experimental
 int
 rte_dispatcher_finalize_register(struct rte_dispatcher *dispatcher,
 	rte_dispatcher_finalize_t finalize_fun, void *finalize_data);
@@ -378,7 +365,6 @@ rte_dispatcher_finalize_register(struct rte_dispatcher *dispatcher,
  *  - 0: Success
  *  - -EINVAL: The @c reg_id parameter was invalid.
  */
-__rte_experimental
 int
 rte_dispatcher_finalize_unregister(struct rte_dispatcher *dispatcher, int reg_id);
 
@@ -403,7 +389,6 @@ rte_dispatcher_finalize_unregister(struct rte_dispatcher *dispatcher, int reg_id
  * @param dispatcher
  *  The dispatcher instance.
  */
-__rte_experimental
 void
 rte_dispatcher_start(struct rte_dispatcher *dispatcher);
 
@@ -415,7 +400,6 @@ rte_dispatcher_start(struct rte_dispatcher *dispatcher);
  * @param dispatcher
  *  The dispatcher instance.
  */
-__rte_experimental
 void
 rte_dispatcher_stop(struct rte_dispatcher *dispatcher);
 
@@ -430,7 +414,6 @@ rte_dispatcher_stop(struct rte_dispatcher *dispatcher);
  * @param[out] stats
  *   A pointer to a structure to fill with statistics.
  */
-__rte_experimental
 void
 rte_dispatcher_stats_get(const struct rte_dispatcher *dispatcher,
 	struct rte_dispatcher_stats *stats);
@@ -445,7 +428,6 @@ rte_dispatcher_stats_get(const struct rte_dispatcher *dispatcher,
  * @param dispatcher
  *  The dispatcher instance.
  */
-__rte_experimental
 void
 rte_dispatcher_stats_reset(struct rte_dispatcher *dispatcher);
 
