@@ -46,7 +46,6 @@
 #include <stdio.h>
 #include <netinet/in.h>
 
-#include <rte_compat.h>
 #include <rte_crypto_sym.h>
 #include <rte_ip6.h>
 
@@ -125,7 +124,6 @@ struct rte_swx_ipsec_input_packet_metadata {
  * @return
  *   Valid IPsec instance handle if found or NULL otherwise.
  */
-__rte_experimental
 struct rte_swx_ipsec *
 rte_swx_ipsec_find(const char *name);
 
@@ -147,7 +145,6 @@ rte_swx_ipsec_find(const char *name);
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Pipeline with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_ipsec_create(struct rte_swx_ipsec **ipsec,
 		     const char *name,
@@ -160,7 +157,6 @@ rte_swx_ipsec_create(struct rte_swx_ipsec **ipsec,
  * @param[in] ipsec
  *   IPsec instance handle.
  */
-__rte_experimental
 void
 rte_swx_ipsec_free(struct rte_swx_ipsec *ipsec);
 
@@ -174,7 +170,6 @@ rte_swx_ipsec_free(struct rte_swx_ipsec *ipsec);
  * @param[in] ipsec
  *   IPsec instance handle.
  */
-__rte_experimental
 void
 rte_swx_ipsec_run(struct rte_swx_ipsec *ipsec);
 
@@ -297,7 +292,6 @@ struct rte_swx_ipsec_sa_params {
  * @return
  *   0 on success or error code otherwise.
  */
-__rte_experimental
 int
 rte_swx_ipsec_sa_add(struct rte_swx_ipsec *ipsec,
 		     struct rte_swx_ipsec_sa_params *sa_params,
@@ -314,7 +308,6 @@ rte_swx_ipsec_sa_add(struct rte_swx_ipsec *ipsec,
  * @param[in] sa_id
  *   The SA ID.
  */
-__rte_experimental
 void
 rte_swx_ipsec_sa_delete(struct rte_swx_ipsec *ipsec,
 			uint32_t sa_id);
@@ -367,7 +360,6 @@ rte_swx_ipsec_sa_delete(struct rte_swx_ipsec *ipsec,
  * @return
  *   Pointer to valid IPsec SA parameters data structure on success or NULL on error.
  */
-__rte_experimental
 struct rte_swx_ipsec_sa_params *
 rte_swx_ipsec_sa_read(struct rte_swx_ipsec *ipsec,
 		      const char *string,
