@@ -700,7 +700,6 @@ int rte_hash_rcu_qsbr_add(struct rte_hash *h, struct rte_hash_rcu_config *cfg);
  *   Possible rte_errno codes are:
  *   - EINVAL - invalid pointer
  */
-__rte_experimental
 int rte_hash_rcu_qsbr_dq_reclaim(struct rte_hash *h, unsigned int *freed,
 		unsigned int *pending, unsigned int *available);
 

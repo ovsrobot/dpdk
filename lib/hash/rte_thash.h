@@ -465,9 +465,6 @@ rte_thash_adjust_tuple(struct rte_thash_ctx *ctx,
 	rte_thash_check_tuple_t fn, void *userdata);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Modify RSS hash key such that subtuple bits corresponding to `entropy_sz`
  * bits starting from `entropy_start` will have the most even distribution with
  * this key with a given ReTa size.
@@ -488,7 +485,6 @@ rte_thash_adjust_tuple(struct rte_thash_ctx *ctx,
  * @return
  *  0 on success negative otherwise
  */
-__rte_experimental
 int
 rte_thash_gen_key(uint8_t *key, size_t key_len, size_t reta_sz_log,
 	uint32_t entropy_start, size_t entropy_sz);
