@@ -245,6 +245,10 @@ API Changes
   are now declared with an alignment of 1 on all architectures.
   The compiler may generate narrower loads and stores than before.
 
+* eal: Promoted ``rte_memzero_explicit``, ``rte_free_sensitive``,
+  ``rte_basename``, ``rte_size_to_str`` and the lcore variables API
+  from experimental to stable.
+
 * ethdev: Updated VMDq related API.
 
   * At port configuration time, the number of VMDq pools advertised by a driver

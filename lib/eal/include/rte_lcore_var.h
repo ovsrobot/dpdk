@@ -15,8 +15,6 @@
  *
  * Please refer to the lcore variables' programmer's guide
  * for an overview of this API and its implementation.
- *
- * EXPERIMENTAL: this API may change, or be removed, without prior notice.
  */
 
 #include <stddef.h>
@@ -199,7 +197,6 @@ rte_lcore_var_lcore(unsigned int lcore_id, void *handle)
  *   The variable's handle, stored in a void pointer value.
  *   The value is always non-NULL.
  */
-__rte_experimental
 void *
 rte_lcore_var_alloc(size_t size, size_t align)
 	__rte_alloc_align(2);
