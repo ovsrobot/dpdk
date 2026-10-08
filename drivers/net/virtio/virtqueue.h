@@ -474,14 +474,14 @@ static inline void
 vq_update_avail_idx(struct virtqueue *vq)
 {
 	if (vq->hw->weak_barriers) {
-	/* x86 prefers to using rte_smp_wmb over rte_atomic_store_explicit as
-	 * it reports a slightly better perf, which comes from the
-	 * saved branch by the compiler.
-	 * The if and else branches are identical with the smp and
-	 * io barriers both defined as compiler barriers on x86.
+	/* x86 prefers rte_io_wmb over rte_atomic_store_explicit as it
+	 * reports a slightly better perf, which comes from the saved
+	 * branch by the compiler: on x86 this makes the two branches
+	 * identical, since rte_io_wmb() is only a compiler barrier and
+	 * stores are not reordered with other stores.
 	 */
 #ifdef RTE_ARCH_X86_64
-		rte_smp_wmb();
+		rte_io_wmb();
 		vq->vq_split.ring.avail->idx = vq->vq_avail_idx;
 #else
 		rte_atomic_store_explicit(&vq->vq_split.ring.avail->idx,
