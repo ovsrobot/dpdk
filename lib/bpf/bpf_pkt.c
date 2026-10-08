@@ -36,10 +36,6 @@ struct __rte_cache_aligned bpf_eth_cbi {
 	uint16_t queue;
 };
 
-/*
- * Odd number means that callback is used by datapath.
- * Even number means that callback is not used by datapath.
- */
 #define BPF_ETH_CBI_INUSE  1
 
 /*
@@ -75,14 +71,33 @@ static struct bpf_eth_cbh tx_cbh = {
 };
 
 /*
+ * Removing an rx/tx callback involves two steps (similar to RCU).
+ * The callback is first removed from the ethdev queue so that
+ * it will not be used by later burst.
+ * But the callback may still be in process or the core may have
+ * raced and seen the old callback.
+ * The use counter is used to indicate that it is not safe to
+ * free the BPF program yet.
+ * The datapath makes the counter odd on entry and even on exit.
+ * During unload, if the counter is odd then it indicates
+ * we must wait.
+ * This assumes that only one thread at a time may do rx/tx burst
+ * on a queue. Therefore the counter has a single writer and the
+ * increment need not be atomic.
+ */
+
+/*
  * Marks given callback as used by datapath.
  */
 static __rte_always_inline void
 bpf_eth_cbi_inuse(struct bpf_eth_cbi *cbi)
 {
-	cbi->use++;
-	/* make sure no store/load reordering could happen */
-	rte_smp_mb();
+	rte_atomic_store_explicit(&cbi->use,
+		rte_atomic_load_explicit(&cbi->use, rte_memory_order_relaxed) + 1,
+		rte_memory_order_relaxed);
+
+	/* full barrier: count must be visible before cb is read */
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
 }
 
 /*
@@ -91,9 +106,10 @@ bpf_eth_cbi_inuse(struct bpf_eth_cbi *cbi)
 static __rte_always_inline void
 bpf_eth_cbi_unuse(struct bpf_eth_cbi *cbi)
 {
-	/* make sure all previous loads are completed */
-	rte_smp_rmb();
-	cbi->use++;
+	/* release: pairs with the acquire bpf_eth_cbi_wait() */
+	rte_atomic_store_explicit(&cbi->use,
+		rte_atomic_load_explicit(&cbi->use, rte_memory_order_relaxed) + 1,
+		rte_memory_order_release);
 }
 
 /*
@@ -104,15 +120,15 @@ bpf_eth_cbi_wait(const struct bpf_eth_cbi *cbi)
 {
 	uint32_t puse;
 
-	/* make sure all previous loads and stores are completed */
-	rte_smp_mb();
+	/* full barrier: cleared cb must be visible before counter is read */
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
 
-	puse = cbi->use;
+	puse = rte_atomic_load_explicit(&cbi->use, rte_memory_order_acquire);
 
 	/* in use, busy wait till current RX/TX iteration is finished */
 	if ((puse & BPF_ETH_CBI_INUSE) != 0) {
 		RTE_WAIT_UNTIL_MASKED((__rte_atomic uint32_t *)(uintptr_t)&cbi->use,
-			UINT32_MAX, !=, puse, rte_memory_order_relaxed);
+			UINT32_MAX, !=, puse, rte_memory_order_acquire);
 	}
 }
 
@@ -439,7 +455,6 @@ bpf_eth_cbi_unload(struct bpf_eth_cbi *bc)
 {
 	/* mark this cbi as empty */
 	bc->cb = NULL;
-	rte_smp_mb();
 
 	/* make sure datapath doesn't use bpf anymore, then destroy bpf */
 	bpf_eth_cbi_wait(bc);
