@@ -1368,7 +1368,7 @@ F: doc/guides/compressdevs/features/zsda.ini
 DMAdev Drivers
 --------------
 
-Intel IDXD - EXPERIMENTAL
+Intel IDXD
 M: Bruce Richardson <bruce.richardson@intel.com>
 M: Kevin Laatz <kevin.laatz@intel.com>
 F: drivers/dma/idxd/
