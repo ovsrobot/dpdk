@@ -19,7 +19,7 @@
 #include <rte_malloc.h>
 #include <rte_errno.h>
 #include <rte_memory.h>
-#include <rte_bus_vmbus.h>
+#include <vmbus_api.h>
 
 #include "private.h"
 
@@ -129,7 +129,7 @@ free_intr:
  * all registered drivers that have a matching entry in its id_table
  * for discovered devices.
  */
-RTE_EXPORT_SYMBOL(rte_vmbus_probe)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_probe)
 int
 rte_vmbus_probe(void)
 {

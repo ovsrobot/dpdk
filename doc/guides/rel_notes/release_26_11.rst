@@ -235,6 +235,12 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* bus/vmbus: Made the vmbus bus API internal.
+  The ``rte_bus_vmbus.h`` and ``rte_vmbus_reg.h`` headers are no longer installed;
+  their contents moved to the driver only headers
+  ``vmbus_api.h`` and ``vmbus_reg.h``.
+  All ``rte_vmbus_*`` functions are now internal to DPDK.
+
 * eal: Improved pointer arithmetic macros.
 
   * ``RTE_PTR_ADD``, ``RTE_PTR_SUB``, ``RTE_PTR_ALIGN``, ``RTE_PTR_ALIGN_CEIL``,

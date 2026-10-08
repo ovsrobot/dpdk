@@ -16,7 +16,7 @@
 #include <rte_memory.h>
 #include <rte_common.h>
 #include <rte_malloc.h>
-#include <rte_bus_vmbus.h>
+#include <vmbus_api.h>
 #include <rte_string_fns.h>
 
 #include "private.h"

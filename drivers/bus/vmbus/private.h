@@ -13,7 +13,7 @@
 #include <bus_vmbus_driver.h>
 #include <rte_log.h>
 #include <rte_eal_paging.h>
-#include <rte_vmbus_reg.h>
+#include <vmbus_reg.h>
 
 extern struct rte_bus rte_vmbus_bus;
 

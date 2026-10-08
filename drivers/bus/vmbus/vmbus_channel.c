@@ -15,7 +15,7 @@
 #include <rte_malloc.h>
 #include <rte_atomic.h>
 #include <rte_memory.h>
-#include <rte_bus_vmbus.h>
+#include <vmbus_api.h>
 
 #include "private.h"
 
@@ -65,7 +65,7 @@ vmbus_set_event(struct rte_vmbus_device *dev, const struct vmbus_channel *chan)
 /*
  * Set the wait between when hypervisor examines the trigger.
  */
-RTE_EXPORT_SYMBOL(rte_vmbus_set_latency)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_set_latency)
 void
 rte_vmbus_set_latency(const struct rte_vmbus_device *dev,
 		      const struct vmbus_channel *chan,
@@ -98,7 +98,7 @@ rte_vmbus_set_latency(const struct rte_vmbus_device *dev,
  * Since this in userspace, rely on the monitor page.
  * Can't do a hypercall from userspace.
  */
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_signal_tx)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_signal_tx)
 void
 rte_vmbus_chan_signal_tx(struct rte_vmbus_device *dev, const struct vmbus_channel *chan)
 {
@@ -116,7 +116,7 @@ rte_vmbus_chan_signal_tx(struct rte_vmbus_device *dev, const struct vmbus_channe
 
 
 /* Do a simple send directly using transmit ring. */
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_send)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_send)
 int rte_vmbus_chan_send(struct rte_vmbus_device *dev,
 			struct vmbus_channel *chan, uint16_t type, void *data,
 			uint32_t dlen, uint64_t xactid, uint32_t flags,
@@ -161,7 +161,7 @@ int rte_vmbus_chan_send(struct rte_vmbus_device *dev,
 }
 
 /* Do a scatter/gather send where the descriptor points to data. */
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_send_sglist)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_send_sglist)
 int rte_vmbus_chan_send_sglist(struct rte_vmbus_device *dev,
 			       struct vmbus_channel *chan,
 			       struct vmbus_gpa sg[], uint32_t sglen,
@@ -206,7 +206,7 @@ int rte_vmbus_chan_send_sglist(struct rte_vmbus_device *dev,
 	return error;
 }
 
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_rx_empty)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_rx_empty)
 bool rte_vmbus_chan_rx_empty(const struct vmbus_channel *channel)
 {
 	const struct vmbus_br *br = &channel->rxbr;
@@ -216,7 +216,7 @@ bool rte_vmbus_chan_rx_empty(const struct vmbus_channel *channel)
 }
 
 /* Signal host after reading N bytes */
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_signal_read)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_signal_read)
 void rte_vmbus_chan_signal_read(struct rte_vmbus_device *dev,
 				struct vmbus_channel *chan,
 				uint32_t bytes_read)
@@ -249,7 +249,7 @@ void rte_vmbus_chan_signal_read(struct rte_vmbus_device *dev,
 	vmbus_set_event(dev, chan);
 }
 
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_recv)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_recv)
 int rte_vmbus_chan_recv(struct rte_vmbus_device *dev,
 			struct vmbus_channel *chan, void *data, uint32_t *len,
 			uint64_t *request_id)
@@ -298,7 +298,7 @@ int rte_vmbus_chan_recv(struct rte_vmbus_device *dev,
 }
 
 /* TODO: replace this with inplace ring buffer (no copy) */
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_recv_raw)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_recv_raw)
 int rte_vmbus_chan_recv_raw(struct vmbus_channel *chan,
 			    void *data, uint32_t *len)
 {
@@ -369,7 +369,7 @@ int vmbus_chan_create(const struct rte_vmbus_device *device,
 }
 
 /* Setup the primary channel */
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_open)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_open)
 int rte_vmbus_chan_open(struct rte_vmbus_device *device,
 			struct vmbus_channel **new_chan)
 {
@@ -390,7 +390,7 @@ int rte_vmbus_chan_open(struct rte_vmbus_device *device,
 	return err;
 }
 
-RTE_EXPORT_SYMBOL(rte_vmbus_max_channels)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_max_channels)
 int rte_vmbus_max_channels(const struct rte_vmbus_device *device)
 {
 	if (vmbus_uio_subchannels_supported(device, device->primary))
@@ -400,7 +400,7 @@ int rte_vmbus_max_channels(const struct rte_vmbus_device *device)
 }
 
 /* Setup secondary channel */
-RTE_EXPORT_SYMBOL(rte_vmbus_subchan_open)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_subchan_open)
 int rte_vmbus_subchan_open(struct vmbus_channel *primary,
 			   struct vmbus_channel **new_chan)
 {
@@ -416,13 +416,13 @@ int rte_vmbus_subchan_open(struct vmbus_channel *primary,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vmbus_sub_channel_index)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_sub_channel_index)
 uint16_t rte_vmbus_sub_channel_index(const struct vmbus_channel *chan)
 {
 	return chan->subchannel_id;
 }
 
-RTE_EXPORT_SYMBOL(rte_vmbus_chan_close)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_close)
 void rte_vmbus_chan_close(struct vmbus_channel *chan)
 {
 	const struct rte_vmbus_device *device = chan->device;
@@ -459,6 +459,7 @@ static void vmbus_dump_ring(FILE *f, const char *id, const struct vmbus_br *br)
 			pkt.flags, pkt.xactid);
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_chan_dump)
 void rte_vmbus_chan_dump(FILE *f, const struct vmbus_channel *chan)
 {
 	fprintf(f, "channel[%u] relid=%u monitor=%u\n",

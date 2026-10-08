@@ -3,8 +3,8 @@
  * All Rights Reserved.
  */
 
-#ifndef _VMBUS_H_
-#define _VMBUS_H_
+#ifndef VMBUS_API_H
+#define VMBUS_API_H
 
 /**
  * @file
@@ -19,10 +19,11 @@
 #include <stdint.h>
 #include <inttypes.h>
 
+#include <rte_compat.h>
 #include <rte_uuid.h>
 #include <rte_debug.h>
 #include <rte_interrupts.h>
-#include <rte_vmbus_reg.h>
+#include <vmbus_reg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +41,7 @@ struct vmbus_channel;
  * @return
  *  0 on success, negative on error
  */
+__rte_internal
 int rte_vmbus_scan(void);
 
 /**
@@ -49,6 +51,7 @@ int rte_vmbus_scan(void);
  *   - 0 on success.
  *   - !0 on error.
  */
+__rte_internal
 int rte_vmbus_probe(void);
 
 /**
@@ -62,6 +65,7 @@ int rte_vmbus_probe(void);
  *   0 on success, negative on error and positive if no driver
  *   is found for the device.
  */
+__rte_internal
 int rte_vmbus_map_device(struct rte_vmbus_device *dev);
 
 /**
@@ -71,6 +75,7 @@ int rte_vmbus_map_device(struct rte_vmbus_device *dev);
  *   A pointer to a rte_vmbus_device structure describing the device
  *   to use
  */
+__rte_internal
 void rte_vmbus_unmap_device(struct rte_vmbus_device *dev);
 
 /**
@@ -85,6 +90,7 @@ void rte_vmbus_unmap_device(struct rte_vmbus_device *dev);
  *   - -ENOMEM: Not enough memory available.
  *   - -EINVAL: Regions could not be mapped.
  */
+__rte_internal
 int rte_vmbus_chan_open(struct rte_vmbus_device *device,
 			struct vmbus_channel **chan);
 
@@ -94,6 +100,7 @@ int rte_vmbus_chan_open(struct rte_vmbus_device *device,
  * @param chan
  *    VMBUS channel
  */
+__rte_internal
 void rte_vmbus_chan_close(struct vmbus_channel *chan);
 
 /**
@@ -104,6 +111,7 @@ void rte_vmbus_chan_close(struct vmbus_channel *chan);
  * @return
  *   Number of channels available.
  */
+__rte_internal
 int rte_vmbus_max_channels(const struct rte_vmbus_device *device);
 
 /**
@@ -118,6 +126,7 @@ int rte_vmbus_max_channels(const struct rte_vmbus_device *device);
  *   - -ENOMEM: Not enough memory available.
  *   - -EINVAL: Regions could not be mapped.
  */
+__rte_internal
 int rte_vmbus_subchan_open(struct vmbus_channel *primary,
 			   struct vmbus_channel **new_chan);
 
@@ -127,6 +136,7 @@ int rte_vmbus_subchan_open(struct vmbus_channel *primary,
  * @param device
  *    VMBUS device
  */
+__rte_internal
 void rte_vmbus_irq_mask(struct rte_vmbus_device *device);
 
 /**
@@ -135,6 +145,7 @@ void rte_vmbus_irq_mask(struct rte_vmbus_device *device);
  * @param device
  *    VMBUS device
  */
+__rte_internal
 void rte_vmbus_irq_unmask(struct rte_vmbus_device *device);
 
 /**
@@ -143,6 +154,7 @@ void rte_vmbus_irq_unmask(struct rte_vmbus_device *device);
  * @param device
  *    VMBUS device
  */
+__rte_internal
 int rte_vmbus_irq_read(struct rte_vmbus_device *device);
 
 /**
@@ -153,6 +165,7 @@ int rte_vmbus_irq_read(struct rte_vmbus_device *device);
  * @return
  *	Return true if no data present in incoming ring.
  */
+__rte_internal
 bool rte_vmbus_chan_rx_empty(const struct vmbus_channel *channel);
 
 /**
@@ -176,6 +189,7 @@ bool rte_vmbus_chan_rx_empty(const struct vmbus_channel *channel);
  *
  * Sends data in buffer directly to hyper-v via the vmbus
  */
+__rte_internal
 int rte_vmbus_chan_send(struct rte_vmbus_device *dev,
 			struct vmbus_channel *channel, uint16_t type,
 			void *data, uint32_t dlen,
@@ -190,6 +204,7 @@ int rte_vmbus_chan_send(struct rte_vmbus_device *dev,
  * Used when batching multiple sends and only signaling host
  * after the last send.
  */
+__rte_internal
 void rte_vmbus_chan_signal_tx(struct rte_vmbus_device *dev,
 			      const struct vmbus_channel *channel);
 
@@ -225,6 +240,7 @@ struct iova_list {
  *
  * Sends data in buffer directly to hyper-v via the vmbus
  */
+__rte_internal
 int rte_vmbus_chan_send_sglist(struct rte_vmbus_device *dev,
 			       struct vmbus_channel *channel,
 			       struct vmbus_gpa gpa[], uint32_t gpacnt,
@@ -246,6 +262,7 @@ int rte_vmbus_chan_send_sglist(struct rte_vmbus_device *dev,
  *   On success, returns 0
  *   On failure, returns negative errno.
  */
+__rte_internal
 int rte_vmbus_chan_recv(struct rte_vmbus_device *dev,
 			struct vmbus_channel *chan,
 			void *data, uint32_t *len,
@@ -265,6 +282,7 @@ int rte_vmbus_chan_recv(struct rte_vmbus_device *dev,
  *   On success, returns number of bytes read.
  *   On failure, returns negative errno.
  */
+__rte_internal
 int rte_vmbus_chan_recv_raw(struct vmbus_channel *chan,
 			    void *data, uint32_t *len);
 
@@ -277,6 +295,7 @@ int rte_vmbus_chan_recv_raw(struct vmbus_channel *chan,
  * @param bytes_read
  *	Number of bytes read since last signal
  */
+__rte_internal
 void rte_vmbus_chan_signal_read(struct rte_vmbus_device *dev,
 				struct vmbus_channel *chan,
 				uint32_t bytes_read);
@@ -289,6 +308,7 @@ void rte_vmbus_chan_signal_read(struct rte_vmbus_device *dev,
  * @return
  *   Sub channel index (0 for primary)
  */
+__rte_internal
 uint16_t rte_vmbus_sub_channel_index(const struct vmbus_channel *chan);
 
 /**
@@ -302,6 +322,7 @@ uint16_t rte_vmbus_sub_channel_index(const struct vmbus_channel *chan);
  *	Approximate wait period between hypervisor examinations of
  *	the trigger page (in nanoseconds).
  */
+__rte_internal
 void rte_vmbus_set_latency(const struct rte_vmbus_device *dev,
 			   const struct vmbus_channel *chan,
 			   uint32_t latency);
@@ -312,10 +333,11 @@ void rte_vmbus_set_latency(const struct rte_vmbus_device *dev,
  * @param channel
  *	Pointer to vmbus_channel structure.
  */
+__rte_internal
 void rte_vmbus_chan_dump(FILE *f, const struct vmbus_channel *chan);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _VMBUS_H_ */
+#endif /* VMBUS_API_H */
