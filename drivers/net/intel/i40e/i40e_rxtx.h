@@ -108,6 +108,30 @@ enum i40e_header_split_mode {
 
 #define I40E_TX_VECTOR_OFFLOADS RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE
 
+/* Function to check and set the ieee1588 timesync index and get the
+ * appropriate flags.
+ */
+#ifdef RTE_LIBRTE_IEEE1588
+static inline uint64_t
+i40e_get_iee15888_flags(struct rte_mbuf *mb, uint64_t qword)
+{
+	uint64_t pkt_flags = 0;
+	uint16_t tsyn = (qword & (I40E_RXD_QW1_STATUS_TSYNVALID_MASK
+				  | I40E_RXD_QW1_STATUS_TSYNINDX_MASK))
+				    >> I40E_RX_DESC_STATUS_TSYNINDX_SHIFT;
+
+	if ((mb->packet_type & RTE_PTYPE_L2_MASK)
+			== RTE_PTYPE_L2_ETHER_TIMESYNC)
+		pkt_flags = RTE_MBUF_F_RX_IEEE1588_PTP;
+	if (tsyn & 0x04) {
+		pkt_flags |= RTE_MBUF_F_RX_IEEE1588_TMST;
+		mb->timesync = tsyn & 0x03;
+	}
+
+	return pkt_flags;
+}
+#endif
+
 int i40e_dev_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id);
 int i40e_dev_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id);
 int i40e_dev_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id);

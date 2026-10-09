@@ -194,30 +194,6 @@ i40e_rxd_error_to_pkt_flags(uint64_t qword)
 	return flags;
 }
 
-/* Function to check and set the ieee1588 timesync index and get the
- * appropriate flags.
- */
-#ifdef RTE_LIBRTE_IEEE1588
-static inline uint64_t
-i40e_get_iee15888_flags(struct rte_mbuf *mb, uint64_t qword)
-{
-	uint64_t pkt_flags = 0;
-	uint16_t tsyn = (qword & (I40E_RXD_QW1_STATUS_TSYNVALID_MASK
-				  | I40E_RXD_QW1_STATUS_TSYNINDX_MASK))
-				    >> I40E_RX_DESC_STATUS_TSYNINDX_SHIFT;
-
-	if ((mb->packet_type & RTE_PTYPE_L2_MASK)
-			== RTE_PTYPE_L2_ETHER_TIMESYNC)
-		pkt_flags = RTE_MBUF_F_RX_IEEE1588_PTP;
-	if (tsyn & 0x04) {
-		pkt_flags |= RTE_MBUF_F_RX_IEEE1588_TMST;
-		mb->timesync = tsyn & 0x03;
-	}
-
-	return pkt_flags;
-}
-#endif
-
 static inline uint64_t
 i40e_rxd_build_fdir(volatile union ci_rx_desc *rxdp, struct rte_mbuf *mb)
 {

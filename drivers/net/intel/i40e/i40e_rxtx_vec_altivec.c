@@ -122,6 +122,9 @@ _recv_raw_pkts_vec(struct ci_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		   uint16_t nb_pkts, uint8_t *split_packet)
 {
 	volatile union ci_rx_desc *rxdp;
+#ifdef RTE_LIBRTE_IEEE1588
+	volatile union ci_rx_desc *rxdp_burst;
+#endif
 	struct ci_rx_entry *sw_ring;
 	uint16_t nb_pkts_recd;
 	int pos;
@@ -145,6 +148,9 @@ _recv_raw_pkts_vec(struct ci_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	 * going to cost about 7 cycles
 	 */
 	rxdp = rxq->rx_ring + rxq->rx_tail;
+#ifdef RTE_LIBRTE_IEEE1588
+	rxdp_burst = rxdp;
+#endif
 
 	rte_prefetch0(rxdp);
 
@@ -364,6 +370,10 @@ _recv_raw_pkts_vec(struct ci_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	rxq->rx_tail = (uint16_t)(rxq->rx_tail + nb_pkts_recd);
 	rxq->rx_tail = (uint16_t)(rxq->rx_tail & (rxq->nb_rx_desc - 1));
 	rxq->rxrearm_nb = (uint16_t)(rxq->rxrearm_nb + nb_pkts_recd);
+
+#ifdef RTE_LIBRTE_IEEE1588
+	i40e_rx_vec_desc_to_timesync(rxdp_burst, rx_pkts, nb_pkts_recd);
+#endif
 
 	return nb_pkts_recd;
 }

@@ -114,6 +114,9 @@ _recv_raw_pkts_vec_avx2(struct ci_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 			0, rxq->mbuf_initializer);
 	struct ci_rx_entry *sw_ring = &rxq->sw_ring[rxq->rx_tail];
 	volatile union ci_rx_desc *rxdp = rxq->rx_ring + rxq->rx_tail;
+#ifdef RTE_LIBRTE_IEEE1588
+	volatile union ci_rx_desc *rxdp_burst = rxdp;
+#endif
 	const int avx_aligned = ((rxq->rx_tail & 1) == 0);
 	rte_prefetch0(rxdp);
 
@@ -601,6 +604,11 @@ _recv_raw_pkts_vec_avx2(struct ci_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		received--;
 	}
 	rxq->rxrearm_nb += received;
+
+#ifdef RTE_LIBRTE_IEEE1588
+	i40e_rx_vec_desc_to_timesync(rxdp_burst, rx_pkts, received);
+#endif
+
 	return received;
 }
 

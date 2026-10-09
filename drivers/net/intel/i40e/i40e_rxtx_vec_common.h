@@ -50,10 +50,28 @@ _i40e_rx_queue_release_mbufs_vec(struct ci_rx_queue *rxq)
 	memset(rxq->sw_ring, 0, sizeof(rxq->sw_ring[0]) * rxq->nb_rx_desc);
 }
 
+#ifdef RTE_LIBRTE_IEEE1588
+/* The hardware latches Rx timestamps into one of four registers and only
+ * reports the register index in the descriptor, so there is nothing to
+ * extract in SIMD and this is done one descriptor at a time.
+ */
+static inline void
+i40e_rx_vec_desc_to_timesync(volatile union ci_rx_desc *rxdp,
+		struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
+{
+	for (uint16_t i = 0; i < nb_pkts; i++) {
+		struct rte_mbuf *mb = rx_pkts[i];
+		const uint64_t qword1 =
+			rte_le_to_cpu_64(rxdp[i].wb.qword1.status_error_len);
+
+		mb->ol_flags |= i40e_get_iee15888_flags(mb, qword1);
+	}
+}
+#endif
+
 static inline int
 i40e_rx_vec_dev_conf_condition_check_default(struct rte_eth_dev *dev)
 {
-#ifndef RTE_LIBRTE_IEEE1588
 	/**
 	 * Vector mode is allowed only when number of Rx queue
 	 * descriptor is power of 2.
@@ -67,10 +85,6 @@ i40e_rx_vec_dev_conf_condition_check_default(struct rte_eth_dev *dev)
 	}
 
 	return 0;
-#else
-	RTE_SET_USED(dev);
-	return -1;
-#endif
 }
 
 #endif
