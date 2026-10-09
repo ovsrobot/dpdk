@@ -80,7 +80,8 @@ New Features
 * **Updated AF_PACKET driver.**
 
   Added ``ignore_outgoing`` vdev argument to prevent `rte_eth_rx_burst()` from
-  returning transmitted packets.
+  returning transmitted packets. The single-queue scenario is accelerated,
+  as the kernel does the filtering.
 
 * **Updated AF_XDP driver.**
 
