@@ -21,6 +21,8 @@
 
 /** OPENSSL PMD LOGTYPE DRIVER */
 extern int openssl_logtype_driver;
+/** Initialize filtered capability list based on legacy provider availability */
+extern void openssl_pmd_caps_init(void);
 #define RTE_LOGTYPE_OPENSSL_DRIVER openssl_logtype_driver
 #define OPENSSL_LOG(level, ...)  \
 	RTE_LOG_LINE_PREFIX(level, OPENSSL_DRIVER, "%s() line %u: ", \

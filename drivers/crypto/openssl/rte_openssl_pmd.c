@@ -37,7 +37,7 @@ static void ossl_legacy_provider_load(void)
 	/* Load Multiple providers into the default (NULL) library context */
 	legacy = OSSL_PROVIDER_load(NULL, "legacy");
 	if (legacy == NULL) {
-		OPENSSL_LOG(ERR, "Failed to load Legacy provider");
+		OPENSSL_LOG(WARNING, "Failed to load Legacy provider");
 		return;
 	}
 
@@ -3941,6 +3941,7 @@ cryptodev_openssl_create(const char *name,
 	 * unless the legacy provider explicitly loaded. e.g. DES
 	 */
 	ossl_legacy_provider_load();
+	openssl_pmd_caps_init();
 
 	return 0;
 
