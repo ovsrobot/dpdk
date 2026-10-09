@@ -929,6 +929,7 @@ static const struct rte_cryptodev_capabilities openssl_pmd_capabilities[] = {
 	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
 };
 
+static struct rte_cryptodev_capabilities openssl_pmd_caps_active[RTE_DIM(openssl_pmd_capabilities)];
 const char *ml_kem_type_names[] = {
 	NULL,
 	"ML-KEM-512",
@@ -942,6 +943,29 @@ const char *ml_dsa_type_names[] = {
 	"ML-DSA-65",
 	"ML-DSA-87",
 };
+
+/** Initialize active capability list, filtering unsupported entries. */
+void
+openssl_pmd_caps_init(void)
+{
+	uint32_t i, j = 0;
+
+	for (i = 0; openssl_pmd_capabilities[i].op != RTE_CRYPTO_OP_TYPE_UNDEFINED; i++) {
+		const struct rte_cryptodev_capabilities *cap = &openssl_pmd_capabilities[i];
+
+		if (cap->op == RTE_CRYPTO_OP_TYPE_SYMMETRIC &&
+				cap->sym.xform_type == RTE_CRYPTO_SYM_XFORM_CIPHER &&
+				(cap->sym.cipher.algo == RTE_CRYPTO_CIPHER_DES_CBC ||
+				 cap->sym.cipher.algo == RTE_CRYPTO_CIPHER_DES_DOCSISBPI)) {
+			EVP_CIPHER *des_cbc = EVP_CIPHER_fetch(NULL, "DES-CBC", "provider=legacy");
+			if (des_cbc == NULL)
+				continue;
+			EVP_CIPHER_free(des_cbc);
+		}
+		openssl_pmd_caps_active[j++] = *cap;
+	}
+	openssl_pmd_caps_active[j] = openssl_pmd_capabilities[i];
+}
 
 /** Configure device */
 static int
@@ -1014,7 +1038,10 @@ openssl_pmd_info_get(struct rte_cryptodev *dev,
 	if (dev_info != NULL) {
 		dev_info->driver_id = dev->driver_id;
 		dev_info->feature_flags = dev->feature_flags;
-		dev_info->capabilities = openssl_pmd_capabilities;
+		if (openssl_pmd_caps_active[0].op == RTE_CRYPTO_OP_TYPE_UNDEFINED)
+			dev_info->capabilities = openssl_pmd_capabilities;
+		else
+			dev_info->capabilities = openssl_pmd_caps_active;
 		dev_info->max_nb_queue_pairs = internals->max_nb_qpairs;
 		/* No limit of number of sessions */
 		dev_info->sym.max_nb_sessions = 0;
