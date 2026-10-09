@@ -1083,6 +1083,153 @@ test_af_packet_multithread(void)
 	return TEST_SUCCESS;
 }
 
+/*
+ * Test: Ignore outgoing configuration
+ */
+static int
+test_af_packet_ignore_outgoing_queues(uint16_t nb_queues, bool ignore_outgoing)
+{
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t tx_port, rx_port, nb_tx, q;
+	unsigned int rx_pkts = 0, allocated;
+	uint64_t elapsed = 0;
+	const char *err = NULL;
+	bool have_rx = false;
+	bool have_tx = false;
+	char args[128];
+	int ret;
+
+	if (!tap_created) {
+		printf("SKIPPED: TAP interface not available (need root)\n");
+		return TEST_SKIPPED;
+	}
+
+	snprintf(args, sizeof(args),
+		 "iface=%s,qpairs=%u,ignore_outgoing=%u",
+		 TAP_DEV_NAME, nb_queues, ignore_outgoing ? 1 : 0);
+	ret = create_af_packet_port("net_af_packet_ign_rx", args, &rx_port);
+	if (ret != 0) {
+		err = "Failed to create RX af_packet port";
+		goto out;
+	}
+	have_rx = true;
+
+	/* qdisc_bypass=0 so the kernel TX path sees the TX packets */
+	ret = create_af_packet_port("net_af_packet_ign_tx",
+			"iface=" TAP_DEV_NAME ",qdisc_bypass=0", &tx_port);
+	if (ret != 0) {
+		err = "Failed to create TX af_packet port";
+		goto out;
+	}
+	have_tx = true;
+
+	if (configure_af_packet_port(rx_port, nb_queues, nb_queues) != 0 ||
+	    configure_af_packet_port(tx_port, 1, 1) != 0) {
+		err = "Failed to configure ports";
+		goto out;
+	}
+
+	/* flush the RX port */
+	for (q = 0; q < nb_queues; q++)
+		while (do_rx_burst(rx_port, q, bufs, BURST_SIZE) > 0)
+			;
+
+	/* send packets */
+	allocated = alloc_tx_mbufs(bufs, 4);
+	nb_tx = do_tx_burst(tx_port, 0, bufs, allocated);
+	if (allocated == 0 || nb_tx == 0) {
+		err = "TX setup failed";
+		goto out;
+	}
+
+	/* receive packets */
+	while (elapsed < LOOPBACK_TIMEOUT_US) {
+		for (q = 0; q < nb_queues; q++)
+			rx_pkts += do_rx_burst(rx_port, q, bufs, BURST_SIZE);
+		if (ignore_outgoing) {
+			if (rx_pkts != 0)
+				break;
+		} else if (rx_pkts >= nb_tx)
+			break;
+		rte_delay_us_block(STATS_POLL_INTERVAL_US);
+		elapsed += STATS_POLL_INTERVAL_US;
+	}
+
+out:
+	if (have_tx) {
+		rte_eth_dev_stop(tx_port);
+		rte_eth_dev_close(tx_port);
+		rte_vdev_uninit("net_af_packet_ign_tx");
+	}
+	if (have_rx) {
+		rte_eth_dev_stop(rx_port);
+		rte_eth_dev_close(rx_port);
+		rte_vdev_uninit("net_af_packet_ign_rx");
+	}
+
+	TEST_ASSERT(err == NULL, "%s", err);
+	if (ignore_outgoing)
+		TEST_ASSERT(rx_pkts == 0,
+			"ignore_outgoing port with %u queues saw outgoing packets",
+			nb_queues);
+	else
+		TEST_ASSERT(rx_pkts > 0,
+			"port with %u queues and ignore_outgoing=0 saw no packets",
+			nb_queues);
+
+	return TEST_SUCCESS;
+}
+
+/*
+ * Test: invalid ignore_outgoing value
+ */
+static int
+test_af_packet_invalid_ignore_outgoing(void)
+{
+	int ret;
+
+	if (!tap_created) {
+		printf("SKIPPED: TAP interface not available (need root)\n");
+		return TEST_SKIPPED;
+	}
+
+	ret = rte_vdev_init("net_af_packet_ign_bad",
+			    "iface=" TAP_DEV_NAME ",ignore_outgoing=2");
+	TEST_ASSERT(ret != 0, "Expected failure with ignore_outgoing=2");
+
+	return TEST_SUCCESS;
+}
+
+/*
+ * Test: Ignore outgoing for one queue
+ */
+static int
+test_af_packet_ignore_outgoing(void)
+{
+	int ret;
+
+	ret = test_af_packet_ignore_outgoing_queues(1, true);
+	if (ret != TEST_SUCCESS)
+		return ret;
+
+	return test_af_packet_ignore_outgoing_queues(1, false);
+}
+
+/*
+ * Test: Ignore outgoing for multiple queues
+ */
+static int
+test_af_packet_ignore_outgoing_multi_queue(void)
+{
+	int ret;
+
+	ret = test_af_packet_ignore_outgoing_queues(2, true);
+	if (ret != TEST_SUCCESS)
+		return ret;
+
+	return test_af_packet_ignore_outgoing_queues(2, false);
+}
+
 static struct unit_test_suite af_packet_test_suite = {
 	.suite_name = "AF_PACKET PMD Unit Test Suite",
 	.setup = test_af_packet_setup,
@@ -1108,6 +1255,9 @@ static struct unit_test_suite af_packet_test_suite = {
 		TEST_CASE(test_af_packet_frame_config),
 		TEST_CASE(test_af_packet_qdisc_bypass),
 		TEST_CASE(test_af_packet_multi_queue),
+		TEST_CASE(test_af_packet_invalid_ignore_outgoing),
+		TEST_CASE(test_af_packet_ignore_outgoing),
+		TEST_CASE(test_af_packet_ignore_outgoing_multi_queue),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
