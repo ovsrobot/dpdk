@@ -77,6 +77,11 @@ New Features
 
   Added ``rte_vlan_insert_tpid()`` to the net library.
 
+* **Updated AF_PACKET driver.**
+
+  Added ``ignore_outgoing`` vdev argument to prevent `rte_eth_rx_burst()` from
+  returning transmitted packets.
+
 * **Updated AF_XDP driver.**
 
   * Changed the default device plugin endpoint path used when
