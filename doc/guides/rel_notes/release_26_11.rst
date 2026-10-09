@@ -100,6 +100,8 @@ New Features
   * Added Tx context descriptor support to the AVX2 and AVX512 vector Tx paths,
     enabling QinQ tag insertion and outer IPv4/UDP checksum offloads on those paths.
   * Added support for Tx rate limiting per queue.
+  * Added support for the Rx hardware timestamp offload
+    (``RTE_ETH_RX_OFFLOAD_TIMESTAMP``) in the AVX2 and AVX512 vector Rx paths.
 
 * **Updated Intel ixgbe driver.**
 
