@@ -540,6 +540,24 @@ hinic3_init_default_cos(struct hinic3_nic_dev *nic_dev)
 }
 
 /**
+ * Get cmdq ops for the given NIC device.
+ *
+ * @param[in] nic_dev
+ * Pointer to NIC device structure.
+ *
+ * @return
+ * Pointer to cmdq ops structure.
+ */
+const struct hinic3_nic_cmdq_ops *
+hinic3_cmdq_get_ops(struct hinic3_nic_dev *nic_dev)
+{
+	if (nic_dev->feature_cap & NIC_F_HTN_CMDQ)
+		return &hinic3_htn_cmdq_ops;
+	else
+		return &hinic3_stn_cmdq_ops;
+}
+
+/**
  * Initialize Class of Service (CoS). For PF devices, it also sync the link
  * status with the physical port.
  *
@@ -3670,13 +3688,6 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 		goto alloc_eth_addr_fail;
 	}
 
-	nic_dev->cmdq_ops = rte_zmalloc("cmdq_ops", sizeof(struct hinic3_nic_cmdq_ops), 0);
-	if (!nic_dev->cmdq_ops) {
-		PMD_DRV_LOG(ERR, "Allocate cmdq_ops memory failed");
-		err = -ENOMEM;
-		goto alloc_cmdq_ops_fail;
-	}
-
 	nic_dev->rx_ops = rte_zmalloc("rx_ops", sizeof(struct hinic3_nic_rx_ops), 0);
 	if (!nic_dev->rx_ops) {
 		PMD_DRV_LOG(ERR, "Allocate rx_ops memory failed");
@@ -3743,11 +3754,6 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 			    eth_dev->data->name);
 		goto get_cap_fail;
 	}
-
-	if (!(nic_dev->feature_cap & NIC_F_HTN_CMDQ))
-		nic_dev->cmdq_ops = hinic3_nic_cmdq_get_stn_ops();
-	else
-		nic_dev->cmdq_ops = hinic3_nic_cmdq_get_htn_ops();
 
 	hinic3_nic_tx_rx_ops_init(nic_dev);
 
@@ -3847,10 +3853,6 @@ alloc_tx_ops_fail:
 	nic_dev->rx_ops = NULL;
 
 alloc_rx_ops_fail:
-	rte_free(nic_dev->cmdq_ops);
-	nic_dev->cmdq_ops = NULL;
-
-alloc_cmdq_ops_fail:
 	rte_free(eth_dev->data->mac_addrs);
 	eth_dev->data->mac_addrs = NULL;
 

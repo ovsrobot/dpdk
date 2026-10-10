@@ -79,6 +79,20 @@ struct hinic3_nic_cmdq_ops {
 	cmd_buf_to_rss_indir_table_t			cmd_buf_to_rss_indir_table;
 };
 
+/* Forward declaration */
+struct hinic3_nic_dev;
+
+/**
+ * Get cmdq ops for the given NIC device.
+ *
+ * @param[in] nic_dev
+ * Pointer to NIC device structure.
+ *
+ * @return
+ * Pointer to cmdq ops structure.
+ */
+const struct hinic3_nic_cmdq_ops *hinic3_cmdq_get_ops(struct hinic3_nic_dev *nic_dev);
+
 /* Doorbell info. */
 struct hinic3_db {
 	uint32_t db_info;
