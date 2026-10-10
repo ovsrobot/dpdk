@@ -18,6 +18,26 @@
 	(HINIC3_NONTSO_PKT_MAX_SGE - HINIC3_NON_COPY_SGE_NUM)
 #define HINIC3_TSO_MBUF_NUM_MAX			(HINIC3_TSO_PKT_MAX_SGE - HINIC3_NON_COPY_SGE_NUM)
 
+/* Tx offload info */
+struct hinic3_tx_offload_info {
+	uint8_t outer_l2_len;
+	uint8_t outer_l3_type;
+	uint16_t outer_l3_len;
+
+	uint8_t inner_l2_len;
+	uint8_t inner_l3_type;
+	uint16_t inner_l3_len;
+
+	uint8_t tunnel_length;
+	uint8_t tunnel_type;
+	uint8_t inner_l4_type;
+	uint8_t inner_l4_len;
+
+	uint16_t payload_offset;
+	uint8_t inner_l4_tcp_udp;
+	uint8_t rsvd0;
+};
+
 /* Tx wqe queue info */
 struct hinic3_queue_info {
 	uint8_t pri;
@@ -55,10 +75,10 @@ struct hinic3_wqe_info {
 	uint16_t sge_cnt;
 
 	uint8_t offload;
-	uint8_t rsvd0; /**< Reserved field 0. */
+	uint8_t wrapped;
 	uint16_t payload_offset;
 
-	uint8_t rsvd1; /**< Reserved field 1. */
+	uint32_t queue_info_sp600;
 	uint8_t owner;
 	uint16_t pi;
 
@@ -381,6 +401,7 @@ struct __rte_cache_aligned hinic3_txq {
 	uint64_t sq_bot_sge_addr;
 	uint32_t cos;
 	uint8_t tx_wqe_compact_task;
+	uint16_t tx_free_loop;
 	uint32_t non_tso_max_pkt_len;
 	struct hinic3_txq_stats txq_stats;
 #ifdef HINIC3_XSTAT_PROF_TX
@@ -388,41 +409,14 @@ struct __rte_cache_aligned hinic3_txq {
 #endif
 };
 
-/* Tx WQE offload set callback function */
-typedef void  (*nic_tx_set_wqe_offload_t)(struct hinic3_wqe_info *wqe_info,
-					  struct hinic3_sq_wqe_combo *wqe_combo);
-
-struct hinic3_nic_tx_ops {
-	nic_tx_set_wqe_offload_t	nic_tx_set_wqe_offload;
-};
-
 void hinic3_flush_txqs(struct hinic3_nic_dev *nic_dev);
 void hinic3_free_txq_mbufs(struct hinic3_txq *txq);
 void hinic3_free_all_txq_mbufs(struct hinic3_nic_dev *nic_dev);
+uint16_t hinic3_xmit_pkts_compact_cqe(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 uint16_t hinic3_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 int hinic3_stop_sq(struct hinic3_txq *txq);
 int hinic3_start_all_sqs(struct rte_eth_dev *eth_dev);
 int hinic3_tx_done_cleanup(void *txq, uint32_t free_cnt);
-
-/**
- * Set wqe task section
- *
- * @param[in] wqe_info
- * Packet info parsed according to mbuf
- * @param[in] wqe_combo
- * Wqe need to format
- */
-void hinic3_tx_set_normal_task_offload(struct hinic3_wqe_info *wqe_info,
-				       struct hinic3_sq_wqe_combo *wqe_combo);
-
-/**
- * Set compact wqe task section
- *
- * @param[in] wqe_info
- * Packet info parsed according to mbuf
- * @param[in] wqe_combo
- * Wqe need to format
- */
-void hinic3_tx_set_compact_task_offload(struct hinic3_wqe_info *wqe_info,
-					struct hinic3_sq_wqe_combo *wqe_combo);
+int hinic3_tx_burst_mode_get(struct rte_eth_dev *dev, uint16_t tx_queue_id,
+			     struct rte_eth_burst_mode *mode);
 #endif /**< _HINIC3_TX_H_ */

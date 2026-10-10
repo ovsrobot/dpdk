@@ -15,6 +15,11 @@
 
 #define HINIC3_PMD_DRV_VERSION "B106"
 
+#define HINIC3_MAX_QUEUE_DEPTH         16384
+#define HINIC3_MIN_QUEUE_DEPTH         128
+
+#define HINIC3_QUEUE_STAT_CNTRS        256
+
 #define PCI_DEV_TO_INTR_HANDLE(pci_dev) ((pci_dev)->intr_handle)
 
 #define HINIC3_PKT_RX_L4_CKSUM_BAD	RTE_MBUF_F_RX_L4_CKSUM_BAD
@@ -112,7 +117,7 @@ enum nic_feature_cap {
 
 };
 
-#define DEFAULT_DRV_FEATURE		0x3FC3FFF
+#define DEFAULT_DRV_FEATURE		0x0BFC3FFF
 
 TAILQ_HEAD(hinic3_ethertype_filter_list, rte_flow);
 TAILQ_HEAD(hinic3_fdir_rule_filter_list, rte_flow);
@@ -152,6 +157,7 @@ struct hinic3_nic_dev {
 	uint16_t max_rqs;
 
 	uint16_t rxq_depth;
+	uint16_t txq_depth;
 	uint16_t rx_buff_len;
 	uint16_t mtu_size;
 
@@ -189,7 +195,6 @@ struct hinic3_nic_dev {
 	struct hinic3_fdir_rule_filter_list filter_fdir_rule_list;
 	uint8_t cos_map[HINIC3_COS_NUM_MAX];
 	struct hinic3_ptype_table *ptype_tbl;
-	struct hinic3_nic_tx_ops *tx_ops;
 	uint32_t fec_mode;  /**< Current FEC mode for ethdev. */
 	enum nic_type nic_type; /**< NIC type. */
 
@@ -204,6 +209,7 @@ struct hinic3_nic_dev {
 
 extern const struct rte_flow_ops hinic3_flow_ops;
 
+bool is_sp230_pci_dev(struct rte_pci_device *pci_dev);
 /**
  * Enable interrupt for the specified RX queue.
  *

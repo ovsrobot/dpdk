@@ -288,6 +288,8 @@ static const struct hinic3_xstats_name_off hinic3_txq_stats_strings[] = {
 	HINIC3_TXQ_STAT(burst_pkts),
 	HINIC3_TXQ_STAT(sge_len0),
 	HINIC3_TXQ_STAT(mbuf_null),
+	HINIC3_TXQ_STAT(cpy_pkts),
+	HINIC3_TXQ_STAT(sge_len_too_large),
 
 #ifdef HINIC3_XSTAT_PROF_TX
 	HINIC3_TXQ_STAT(app_tsc),
@@ -1399,6 +1401,14 @@ hinic3_tx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 
 	nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
 	hwdev = nic_dev->hwdev;
+	/* Queue depth must be equal to first queue */
+	if (nic_dev->txq_depth == 0) {
+		nic_dev->txq_depth = nb_desc;
+	} else if (nb_desc != nic_dev->txq_depth) {
+		PMD_DRV_LOG(WARNING, "txq%u depth:%u is not equal to first queue depth:%u.",
+			qid, nb_desc, nic_dev->txq_depth);
+		nb_desc = nic_dev->txq_depth;
+	}
 
 	/* Queue depth must be power of 2, otherwise will be aligned up. */
 	sq_depth = (nb_desc & (nb_desc - 1))
@@ -1456,6 +1466,7 @@ hinic3_tx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 	txq->owner = 1;
 	txq->non_tso_max_pkt_len =
 		HINIC3_IS_SP230_NIC(nic_dev) ? MAX_SINGLE_SGE_SIZE : HINIC3_MAX_JUMBO_FRAME_SIZE;
+	txq->tx_free_loop = nic_dev->config.tx_free_loop;
 
 	if (!ODD_NUMBER_QUEUE_ID(qid) &&
 		hinic3_cmd_vf_lag(nic_dev->hwdev, hinic3_global_func_id(nic_dev->hwdev),
@@ -1464,9 +1475,11 @@ hinic3_tx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 	else
 		txq->cos = nic_dev->default_cos;
 
-	txq->cos = nic_dev->cos_map[(int)(txq->cos) & nic_dev->cos_mask];
+	if (HINIC3_IS_SP230_NIC(nic_dev))
+		txq->cos = nic_dev->cos_map[(int)(txq->cos) & nic_dev->cos_mask];
 
 	txq->tx_deferred_start = tx_conf->tx_deferred_start;
+
 	txq->tx_wqe_compact_task = HINIC3_SUPPORT_TX_WQE_COMPACT_TASK(nic_dev);
 
 	ci_mz = hinic3_dma_zone_reserve(dev, "hinic3_sq_ci", qid,
@@ -2300,7 +2313,13 @@ hinic3_dev_stop(struct rte_eth_dev *dev)
 	/* Free mempool. */
 	hinic3_copy_mempool_uninit(nic_dev);
 
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++)
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	for (uint16_t i = 0; i < dev->data->nb_tx_queues; i++)
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+
 	nic_dev->rxq_depth = 0;
+	nic_dev->txq_depth = 0;
 	return 0;
 }
 
@@ -2356,6 +2375,9 @@ hinic3_dev_close(struct rte_eth_dev *eth_dev)
 {
 	struct hinic3_nic_dev *nic_dev =
 		HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
 	int ret;
 
 	if (hinic3_test_and_set_bit(HINIC3_DEV_CLOSE, &nic_dev->dev_status)) {
@@ -3012,6 +3034,26 @@ hinic3_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 		}
 	}
 
+	if (HINIC3_IS_VF(nic_dev->hwdev) && HINIC3_IS_SP230_NIC(nic_dev)) {
+		for (uint32_t i = 0; i < nic_dev->num_rqs; i++) {
+			struct hinic3_rxq *rxq = nic_dev->rxqs[i];
+			if (rxq == NULL)
+				continue;
+			stats->ipackets += rxq->rxq_stats.packets;
+			stats->ibytes += rxq->rxq_stats.bytes;
+			stats->imissed += rxq->rxq_stats.dropped;
+		}
+
+		for (uint32_t i = 0; i < nic_dev->num_sqs; i++) {
+			struct hinic3_txq *txq = nic_dev->txqs[i];
+			if (txq == NULL)
+				continue;
+			stats->opackets += txq->txq_stats.packets;
+			stats->obytes += txq->txq_stats.bytes;
+		}
+		return 0;
+	}
+
 	/* Vport stats. */
 	stats->oerrors += vport_stats.tx_discard_vport;
 
@@ -3082,14 +3124,16 @@ get_port_cir_drop(struct hinic3_nic_dev *nic_dev,
 
 	memset(&port_stats, 0, sizeof(port_stats));
 
-	err = hinic3_get_cir_drop(nic_dev->hwdev, &port_stats);
-	if (err) {
-		PMD_DRV_LOG(ERR, "Failed to get CPB cir drops from fw.");
+	if (HINIC3_IS_SP620_NIC(nic_dev)) {
+		err = hinic3_get_cir_drop(nic_dev->hwdev, &port_stats);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Failed to get CPB cir drops from fw.");
 
-		for (i = 0; i < RTE_DIM(hinic3_cir_drop_stats_strings); i++)
-			xstats[i].value = 0;
+			for (i = 0; i < RTE_DIM(hinic3_cir_drop_stats_strings); i++)
+				xstats[i].value = 0;
 
-		return RTE_DIM(hinic3_cir_drop_stats_strings);
+			return RTE_DIM(hinic3_cir_drop_stats_strings);
+		}
 	}
 
 	for (i = 0; i < RTE_DIM(hinic3_cir_drop_stats_strings); i++) {
@@ -3695,6 +3739,7 @@ static const struct eth_dev_ops hinic3_pmd_ops = {
 	.mac_addr_add                  = hinic3_mac_addr_add,
 	.set_mc_addr_list              = hinic3_set_mc_addr_list,
 	.flow_ops_get                  = hinic3_dev_filter_ctrl,
+	.tx_burst_mode_get             = hinic3_tx_burst_mode_get,
 	.fec_get_capability            = hinic3_fec_capability_get,
 	.fec_get                       = hinic3_fec_get,
 	.fec_set                       = hinic3_fec_set,
@@ -3747,15 +3792,8 @@ static const struct eth_dev_ops hinic3_pmd_vf_ops = {
 	.mac_addr_add                  = hinic3_mac_addr_add,
 	.set_mc_addr_list              = hinic3_set_mc_addr_list,
 	.flow_ops_get                  = hinic3_dev_filter_ctrl,
+	.tx_burst_mode_get             = hinic3_tx_burst_mode_get,
 };
-
-static void hinic3_nic_tx_rx_ops_init(struct hinic3_nic_dev *nic_dev)
-{
-	if (HINIC3_SUPPORT_TX_WQE_COMPACT_TASK(nic_dev))
-		nic_dev->tx_ops->nic_tx_set_wqe_offload = hinic3_tx_set_compact_task_offload;
-	else
-		nic_dev->tx_ops->nic_tx_set_wqe_offload = hinic3_tx_set_normal_task_offload;
-}
 
 /**
  * Initialize the network function, including hardware configuration, memory
@@ -3785,6 +3823,25 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 		PMD_DRV_LOG(INFO, "Initialize %s in secondary process",
 			    eth_dev->data->name);
 
+		char name[RTE_ETH_NAME_MAX_LEN];
+		snprintf(name, sizeof(name), "%s", eth_dev->data->name);
+		eth_dev = rte_eth_dev_attach_secondary(name);
+		if (eth_dev == NULL) {
+			PMD_DRV_LOG(ERR, "can not attach rte ethdev, dev_name: %s", name);
+			return -ENOMEM;
+		}
+
+		nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+		if (nic_dev == NULL) {
+			PMD_DRV_LOG(ERR, "nic_dev hwdev is NULL, dev_name: %s", name);
+			return -ENOMEM;
+		}
+
+		if (HINIC3_FUNC_TYPE(nic_dev->hwdev) == TYPE_VF)
+			eth_dev->dev_ops = &hinic3_pmd_vf_ops;
+		else
+			eth_dev->dev_ops = &hinic3_pmd_ops;
+
 		return 0;
 	}
 
@@ -3804,13 +3861,6 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 			    eth_dev->data->name);
 		err = -ENOMEM;
 		goto alloc_eth_addr_fail;
-	}
-
-	nic_dev->tx_ops = rte_zmalloc("tx_ops", sizeof(struct hinic3_nic_tx_ops), 0);
-	if (!nic_dev->tx_ops) {
-		PMD_DRV_LOG(ERR, "Allocate tx_ops memory failed");
-		err = -ENOMEM;
-		goto alloc_tx_ops_fail;
 	}
 
 	nic_dev->mc_list = rte_zmalloc("hinic3_mc",
@@ -3865,8 +3915,6 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 			    eth_dev->data->name);
 		goto get_cap_fail;
 	}
-
-	hinic3_nic_tx_rx_ops_init(nic_dev);
 
 	/* Read wqe type from kernel parameter. */
 	if (hinic3_read_module_param(nic_dev, "rq_wqe_type", &compact_cqe) != 0) {
@@ -3970,10 +4018,6 @@ alloc_hwdev_mem_fail:
 	nic_dev->mc_list = NULL;
 
 alloc_mc_list_fail:
-	rte_free(nic_dev->tx_ops);
-	nic_dev->tx_ops = NULL;
-
-alloc_tx_ops_fail:
 	rte_free(eth_dev->data->mac_addrs);
 	eth_dev->data->mac_addrs = NULL;
 
@@ -4113,12 +4157,13 @@ hinic3_dev_init(struct rte_eth_dev *eth_dev)
 
 	hinic3_nic_feature_init(nic_dev);
 
-	if (nic_dev->config.rx_cqe_compact_en != HINIC3_RX_CQE_COMPACT_EN)
+	if (nic_dev->config.rx_cqe_compact_en != HINIC3_RX_CQE_COMPACT_EN) {
 		eth_dev->rx_pkt_burst = hinic3_recv_pkts;
-	else
+		eth_dev->tx_pkt_burst = hinic3_xmit_pkts;
+	} else {
 		eth_dev->rx_pkt_burst = hinic3_recv_pkts_compact_cqe;
-
-	eth_dev->tx_pkt_burst = hinic3_xmit_pkts;
+		eth_dev->tx_pkt_burst = hinic3_xmit_pkts_compact_cqe;
+	}
 
 	return err;
 }
