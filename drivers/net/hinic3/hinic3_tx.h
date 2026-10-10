@@ -408,6 +408,17 @@ struct __rte_cache_aligned hinic3_txq {
 	uint64_t prof_tx_end_tsc;
 #endif
 };
+#define IPV4_VERSION 4
+#define IPV6_VERSION 6
+#define FIXED_EXT_HDR_LEN  8
+#define UNIT_BYTES_U  8
+#define UNIT_BYTES_AH  4
+#define IPV6_MAX_EXT_HDRS 9
+
+struct hinic3_ipv6_ext_hdr {
+	uint8_t next_hdr;
+	uint8_t len;
+};
 
 void hinic3_flush_txqs(struct hinic3_nic_dev *nic_dev);
 void hinic3_free_txq_mbufs(struct hinic3_txq *txq);
