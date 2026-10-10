@@ -7,6 +7,8 @@
 #include <x86intrin.h>
 #endif
 #endif
+#include <errno.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <rte_bitops.h>
@@ -219,7 +221,6 @@ rte_drand(void)
 static uint64_t
 __rte_random_initial_seed(void)
 {
-#ifdef RTE_LIBEAL_USE_GETENTROPY
 	int ge_rc;
 	uint64_t ge_seed;
 
@@ -227,7 +228,6 @@ __rte_random_initial_seed(void)
 
 	if (ge_rc == 0)
 		return ge_seed;
-#endif
 #ifdef __RDSEED__
 	unsigned int rdseed_low;
 	unsigned int rdseed_high;
@@ -238,6 +238,8 @@ __rte_random_initial_seed(void)
 		return (uint64_t)rdseed_low | ((uint64_t)rdseed_high << 32);
 #endif
 	/* second fallback: seed using rdtsc */
+	EAL_LOG(ERR, "getentropy() failed (%s), seeding PRNG from TSC: seed has low entropy",
+		strerror(errno));
 	return rte_get_tsc_cycles();
 }
 

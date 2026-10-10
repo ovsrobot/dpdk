@@ -158,6 +158,10 @@ New Features
   Added ``rte_bbdev_queue_stats_get()`` function to retrieve statistics
   for a specific queue, complementing the existing device-level statistics API.
 
+* **Updated random number generation.**
+
+  * The initial seed is now always taken from ``getentropy()``.
+
 
 Removed Items
 -------------
