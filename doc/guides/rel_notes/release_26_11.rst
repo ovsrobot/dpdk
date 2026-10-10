@@ -95,6 +95,7 @@ New Features
 * **Updated Huawei hinic3 ethernet driver.**
 
   * Added CIR drop statistics and VF link aggregation (LAG) support.
+  * Added FEC mode get and set support.
 
 * **Updated Intel iavf driver.**
 

@@ -158,6 +158,7 @@ struct hinic3_hwdev {
 
 	uint16_t max_vfs;
 	uint16_t link_status;
+	uint32_t speed;
 	uint64_t features[HINIC3_MAX_FEATURE_QWORD];
 };
 

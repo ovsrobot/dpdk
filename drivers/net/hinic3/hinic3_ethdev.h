@@ -152,6 +152,7 @@ struct hinic3_nic_dev {
 	struct hinic3_nic_cmdq_ops *cmdq_ops;
 	struct hinic3_nic_rx_ops *rx_ops;
 	struct hinic3_nic_tx_ops *tx_ops;
+	uint32_t fec_mode;  /**< Current FEC mode for ethdev. */
 
 };
 

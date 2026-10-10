@@ -1752,6 +1752,116 @@ hinic3_set_link_status_follow(struct hinic3_hwdev *hwdev,
 	return follow.head.status;
 }
 
+static void
+hinic3_fec_param_covert(uint32_t opcode, uint8_t in_fec_param, uint8_t *out_fec_param)
+{
+	uint8_t fec_value_table_length;
+	uint8_t i;
+
+	struct hinic3_fec_param_value_map fec_value_table[] = {
+		{HINIC3_PORT_FEC_NOT_SET, RTE_BIT32(HINIC3_PORT_FEC_NOT_SET), HINIC3_FEC_MODE_NONE},
+		{HINIC3_PORT_FEC_RSFEC, RTE_BIT32(HINIC3_PORT_FEC_RSFEC), HINIC3_FEC_MODE_RS},
+		{HINIC3_PORT_FEC_BASEFEC, RTE_BIT32(HINIC3_PORT_FEC_BASEFEC),
+		 HINIC3_FEC_MODE_BASER},
+		{HINIC3_PORT_FEC_NOFEC, RTE_BIT32(HINIC3_PORT_FEC_NOFEC), HINIC3_FEC_MODE_OFF},
+		{HINIC3_PORT_FEC_LLRSFEC, RTE_BIT32(HINIC3_PORT_FEC_LLRSFEC), HINIC3_FEC_MODE_LLRS},
+		{HINIC3_PORT_FEC_AUTO, RTE_BIT32(HINIC3_PORT_FEC_AUTO), HINIC3_FEC_MODE_AUTO}
+	};
+
+	*out_fec_param = 0;
+	fec_value_table_length =
+		(uint8_t)(sizeof(fec_value_table) / sizeof(struct hinic3_fec_param_value_map));
+
+	if (opcode == HINIC3_FEC_MODE_OPCODE_SET) {
+		for (i = 0; i < fec_value_table_length; i++) {
+			if ((in_fec_param & fec_value_table[i].ethtool_fec_value) != 0)
+				*out_fec_param = fec_value_table[i].fec_offset;
+		}
+	}
+
+	if (opcode == HINIC3_FEC_MODE_OPCODE_GET) {
+		for (i = 0; i < fec_value_table_length; i++) {
+			if ((in_fec_param & fec_value_table[i].hinic3_fec_value) != 0)
+				*out_fec_param |= fec_value_table[i].ethtool_fec_value;
+		}
+	}
+}
+
+int
+hinic3_set_fec_mode(struct hinic3_hwdev *hwdev, uint8_t fecparam)
+{
+	struct mag_cmd_cfg_fec_mode fec_msg = { 0 };
+	uint16_t out_size = sizeof(fec_msg);
+	uint8_t advertised_fec = 0;
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	hinic3_fec_param_covert(HINIC3_FEC_MODE_OPCODE_SET, fecparam, &advertised_fec);
+	fec_msg.opcode = HINIC3_FEC_MODE_OPCODE_SET;
+	fec_msg.port_id = hinic3_physical_port_id(hwdev);
+	fec_msg.advertised_fec = advertised_fec;
+
+	err = hinic3_msg_to_mgmt_sync(hwdev, HINIC3_MOD_HILINK,
+				      MAG_CMD_CFG_FEC_MODE,
+				      &fec_msg, sizeof(fec_msg),
+				      &fec_msg, &out_size);
+
+	if (fec_msg.head.status != 0 || err) {
+		PMD_DRV_LOG(ERR, "Failed to set fec mode failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, fec_msg.head.status, out_size);
+		return -EINVAL;
+	}
+
+	PMD_DRV_LOG(INFO, "Set fec mode success, active fec capa mode: %d", fecparam);
+	return 0;
+}
+
+int
+hinic3_get_fec_mode(struct hinic3_hwdev *hwdev, uint8_t *advertised_fec,
+		    uint8_t *supported_fec)
+{
+	struct mag_cmd_cfg_fec_mode fec_msg = { 0 };
+	uint16_t out_size = sizeof(fec_msg);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	if (advertised_fec != NULL)
+		*advertised_fec = 0;
+
+	if (supported_fec != NULL)
+		*supported_fec = 0;
+
+	fec_msg.opcode = HINIC3_FEC_MODE_OPCODE_GET;
+	fec_msg.port_id = hinic3_physical_port_id(hwdev);
+
+	err = hinic3_msg_to_mgmt_sync(hwdev, HINIC3_MOD_HILINK,
+				      MAG_CMD_CFG_FEC_MODE,
+				      &fec_msg, sizeof(fec_msg),
+				      &fec_msg, &out_size);
+
+	if (fec_msg.head.status != 0 || err) {
+		PMD_DRV_LOG(ERR, "Failed to get fec mode failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, fec_msg.head.status, out_size);
+		return -EINVAL;
+	}
+
+	if (advertised_fec != NULL)
+		hinic3_fec_param_covert(HINIC3_FEC_MODE_OPCODE_GET,
+					RTE_BIT32(fec_msg.advertised_fec),
+					advertised_fec);
+
+	if (supported_fec != NULL)
+		hinic3_fec_param_covert(HINIC3_FEC_MODE_OPCODE_GET,
+					fec_msg.supported_fec,
+					supported_fec);
+
+	return 0;
+}
+
 uint8_t
 hinic3_cmd_vf_lag(void *hwdev, uint16_t func_id, uint8_t opcode)
 {

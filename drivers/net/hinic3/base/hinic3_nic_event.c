@@ -57,6 +57,7 @@ hinic3_get_link_port_info(struct hinic3_hwdev *hwdev, uint8_t link_state,
 				port_speed[port_info.speed % LINK_SPEED_LEVELS];
 			link->link_duplex = port_info.duplex;
 			link->link_autoneg = port_info.autoneg_state;
+			hwdev->speed = link->link_speed;
 		}
 	}
 }
