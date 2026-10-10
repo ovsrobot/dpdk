@@ -161,6 +161,10 @@ New Features
 * **Updated random number generation.**
 
   * The initial seed is now always taken from ``getentropy()``.
+  * Improved the expansion of the seed into the generator state. All
+    64 bits of the value passed to ``rte_srand()`` now affect the state,
+    so a given seed produces a different sequence than in previous
+    releases.
 
 
 Removed Items
