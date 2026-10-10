@@ -32,6 +32,8 @@
 #define HINIC3_DEFAULT_RX_FREE_THRESH 32u
 #define HINIC3_DEFAULT_TX_FREE_THRESH 32u
 
+#define HINIC3_RX_EMPTY_THRESHOLD   3
+#define HINIC3_DEFAULT_TX_FREE_LOOP 1000
 #define HINIC3_RX_WAIT_CYCLE_THRESH 150
 
 /**
@@ -3956,9 +3958,97 @@ alloc_eth_addr_fail:
 }
 
 static int
+hinic3_nic_common_args_check_handler(const char *key, const char *val, void *opaque)
+{
+	struct hinic3_nic_common_dev_config *config = opaque;
+	signed long tmp;
+
+	if (val == NULL || *val == '\0') {
+		PMD_DRV_LOG(ERR, "Key %s is missing value.", key);
+		return -EINVAL;
+	}
+
+	errno = 0;
+	tmp = strtol(val, NULL, 0);
+	if (errno) {
+		rte_errno = errno;
+		PMD_DRV_LOG(WARNING, "%s: \"%s\" is an invalid integer.", key, val);
+		return -rte_errno;
+	}
+
+	if (strcmp(key, "rx_empty_threshold") == 0) {
+		config->rx_empty_threshold = tmp;
+	} else if (strcmp(key, "tx_free_loop") == 0) {
+		config->tx_free_loop = tmp;
+	} else if (strcmp(key, "tx_pending_limit") == 0) {
+		config->tx_pending_limit = tmp / HINIC3_CI_PENDING_LIMIT_UNIT;
+	} else if (strcmp(key, "tx_coalescing_time") == 0) {
+		config->tx_coalescing_time = tmp / HINIC3_CI_COALESCING_TIME_UNIT;
+	} else if (strcmp(key, "rx_cqe_compact_en") == 0) {
+		config->rx_cqe_compact_en = !!tmp;
+	} else if (strcmp(key, "rx_cqe_coalesce_num") == 0) {
+		config->rx_cqe_coalesce_num = tmp / HINIC3_CI_PENDING_LIMIT_UNIT;
+	} else if (strcmp(key, "rx_cqe_timer_loop") == 0) {
+		config->rx_cqe_timer_loop = tmp / HINIC3_CI_COALESCING_TIME_UNIT;
+	} else if (strcmp(key, "rx_empty_loop") == 0) {
+		config->rx_empty_loop = (unsigned int)tmp;
+	} else {
+		PMD_DRV_LOG(ERR, "Unknown parameter: %s", key);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int
+hinic3_nic_common_config_get(struct rte_pci_device *pci_dev,
+			     struct hinic3_nic_common_dev_config *config)
+{
+	int ret = 0;
+	struct rte_kvargs *kvlist;
+	struct rte_device *eal_dev = &pci_dev->device;
+
+	/* Set private param defaults. */
+	config->rx_empty_threshold = HINIC3_RX_EMPTY_THRESHOLD;
+	config->tx_free_loop = HINIC3_DEFAULT_TX_FREE_LOOP;
+	config->tx_pending_limit = HINIC3_DEFAULT_TX_CI_PENDING_LIMIT;
+	config->tx_coalescing_time = HINIC3_DEFAULT_TX_CI_COALESCING_TIME;
+	config->rx_cqe_compact_en = HINIC3_RX_CQE_COMPACT_EN;
+	config->rx_cqe_coalesce_num = HINIC3_RX_CQE_COALESCE_NUM;
+	config->rx_cqe_timer_loop = HINIC3_RX_CQE_TIMER_LOOP;
+	config->rx_empty_loop = 0;	/* disabled by default */
+
+	if (eal_dev->devargs == NULL)
+		return 0;
+
+	kvlist = rte_kvargs_parse(eal_dev->devargs->args, NULL);
+	if (kvlist == NULL) {
+		PMD_DRV_LOG(ERR, "nic private parameter err, the format must be '-a dev,[key]=[value]'.");
+		return -EINVAL;
+	}
+
+	ret = rte_kvargs_process(kvlist, NULL, hinic3_nic_common_args_check_handler, config);
+	if (ret)
+		ret = -rte_errno;
+
+	rte_kvargs_free(kvlist);
+
+	PMD_DRV_LOG(INFO,
+		"tx_pending_limit:%upkt, tx_coalescing_time:%uus, rx_cqe_coalesce_num:%upkt, rx_cqe_timer_loop:%uus, rx_empty_loop:%u.",
+		config->tx_pending_limit * HINIC3_CI_PENDING_LIMIT_UNIT,
+		config->tx_coalescing_time * HINIC3_CI_COALESCING_TIME_UNIT,
+		config->rx_cqe_coalesce_num * HINIC3_CI_PENDING_LIMIT_UNIT,
+		config->rx_cqe_timer_loop * HINIC3_CI_COALESCING_TIME_UNIT,
+		config->rx_empty_loop);
+	return ret;
+}
+
+static int
 hinic3_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct rte_pci_device *pci_dev;
+	struct hinic3_nic_dev *nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+	int err = 0;
 
 	pci_dev = RTE_CLASS_TO_BUS_DEVICE(eth_dev, *pci_dev);
 
@@ -3971,10 +4061,21 @@ hinic3_dev_init(struct rte_eth_dev *eth_dev)
 	PMD_DRV_LOG(DEBUG, "Network Interface pmd driver version: %s",
 		    HINIC3_PMD_DRV_VERSION);
 
+	err = hinic3_func_init(eth_dev);
+	if (err)
+		return err;
+
+	err = hinic3_nic_common_config_get(pci_dev, &nic_dev->config);
+	if (err < 0) {
+		PMD_DRV_LOG(ERR, "Failed to get nic device arguments: %s",
+			strerror(rte_errno));
+		return err;
+	}
+
 	eth_dev->rx_pkt_burst = hinic3_recv_pkts;
 	eth_dev->tx_pkt_burst = hinic3_xmit_pkts;
 
-	return hinic3_func_init(eth_dev);
+	return err;
 }
 
 static int

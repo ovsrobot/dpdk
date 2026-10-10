@@ -99,6 +99,7 @@ New Features
   * Added Class of Service (COS) mask and map support.
   * Updated RSS hash type configuration.
   * Added support for the SP560 NIC.
+  * Added device parameters for runtime configuration.
 
 * **Updated Intel iavf driver.**
 
