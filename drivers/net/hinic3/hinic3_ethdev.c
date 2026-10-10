@@ -1454,6 +1454,8 @@ hinic3_tx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 	txq->wqebb_size = (uint16_t)RTE_BIT32(txq->wqebb_shift);
 	txq->tx_free_thresh = tx_free_thresh;
 	txq->owner = 1;
+	txq->non_tso_max_pkt_len =
+		HINIC3_IS_SP230_NIC(nic_dev) ? MAX_SINGLE_SGE_SIZE : HINIC3_MAX_JUMBO_FRAME_SIZE;
 
 	if (!ODD_NUMBER_QUEUE_ID(qid) &&
 		hinic3_cmd_vf_lag(nic_dev->hwdev, hinic3_global_func_id(nic_dev->hwdev),
