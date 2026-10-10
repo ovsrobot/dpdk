@@ -472,6 +472,67 @@ hinic3_pf_get_default_cos(struct hinic3_hwdev *hwdev, uint8_t *cos_id)
 	return 0;
 }
 
+static int
+hinic3_parse_sysfs_value(const char *filename, unsigned long *val)
+{
+	FILE *f;
+	char buf[BUFSIZ];
+	char *end = NULL;
+
+	f = fopen(filename, "r");
+	if (f == NULL) {
+		PMD_DRV_LOG(ERR, "Cannot open sysfs value %s", filename);
+		return -1;
+	}
+
+	if (fgets(buf, sizeof(buf), f) == NULL) {
+		PMD_DRV_LOG(ERR, "Cannot read sysfs value %s", filename);
+		fclose(f);
+		return -1;
+	}
+	*val = strtoul(buf, &end, 0);
+	if ((buf[0] == '\0') || end == NULL || (*end != '\n')) {
+		PMD_DRV_LOG(ERR, "Cannot parse sysfs value %s", filename);
+		fclose(f);
+		return -1;
+	}
+	fclose(f);
+	return 0;
+}
+
+/*
+ * Try to read sysfs parameter from kernel module.
+ * SP620 NIC uses "hinic3" kernel driver, other NICs (e.g. BP/SP560/SP230)
+ * use "hinic5" kernel driver.
+ * The module name could be either "driver_name" or "driver_name_nic".
+ * Returns 0 on success, -1 on failure.
+ */
+static int
+hinic3_read_module_param(struct hinic3_nic_dev *nic_dev, const char *param_name,
+			 unsigned long *val)
+{
+	const char *driver_name = HINIC3_IS_SP620_NIC(nic_dev) ?
+				  "hinic3" : "hinic5";
+	char path[PATH_MAX];
+	int ret;
+
+	snprintf(path, sizeof(path), "/sys/module/%s/parameters/%s",
+		 driver_name, param_name);
+	ret = hinic3_parse_sysfs_value(path, val);
+	if (ret == 0)
+		return 0;
+
+	snprintf(path, sizeof(path), "/sys/module/%s_nic/parameters/%s",
+		 driver_name, param_name);
+	ret = hinic3_parse_sysfs_value(path, val);
+	if (ret == 0)
+		return 0;
+
+	PMD_DRV_LOG(ERR, "Failed to read parameter %s from module %s or %s_nic",
+		    param_name, driver_name, driver_name);
+	return -1;
+}
+
 static void
 hinic3_get_cos_mask(struct hinic3_hwdev *hwdev, uint8_t *cos_mask)
 {
@@ -539,6 +600,26 @@ hinic3_init_default_cos(struct hinic3_nic_dev *nic_dev)
 	return 0;
 }
 
+static enum nic_type
+hinic3_get_nic_type(struct rte_pci_device *pci_dev)
+{
+	switch (pci_dev->id.device_id) {
+	case HINIC3_DEV_ID_SP620:
+	case HINIC3_DEV_ID_VF_SP620:
+	case HINIC3_DEV_ID_SP920: /* SP920 is the DPU card of SP620. */
+		return NIC_SP620;
+	case HINIC3_DEV_ID_SP560:
+	case HINIC3_DEV_ID_VF_SP560:
+	case HINIC3_DEV_ID_HYPER_VF_SP560:
+		return NIC_SP560;
+	case HINIC3_DEV_ID_SP230:
+	case HINIC3_DEV_ID_VF_SP230:
+		return NIC_SP230;
+	default:
+		return NIC_UNKNOWN;
+	}
+}
+
 /**
  * Get cmdq ops for the given NIC device.
  *
@@ -551,10 +632,18 @@ hinic3_init_default_cos(struct hinic3_nic_dev *nic_dev)
 const struct hinic3_nic_cmdq_ops *
 hinic3_cmdq_get_ops(struct hinic3_nic_dev *nic_dev)
 {
-	if (nic_dev->feature_cap & NIC_F_HTN_CMDQ)
-		return &hinic3_htn_cmdq_ops;
-	else
-		return &hinic3_stn_cmdq_ops;
+	static const struct hinic3_nic_cmdq_ops *cmdq_ops[] = {
+		[NIC_SP620]  = &hinic3_stn_cmdq_ops,
+		[NIC_SP560]  = &hinic3_stn_cmdq_ops,
+		[NIC_SP230]  = &hinic3_htn_cmdq_ops,
+		[NIC_UNKNOWN] = &hinic3_stn_cmdq_ops,
+	};
+	static const struct hinic3_nic_cmdq_ops *cached_ops;
+
+	if (cached_ops == NULL)
+		cached_ops = cmdq_ops[nic_dev->nic_type];
+
+	return cached_ops;
 }
 
 /**
@@ -3652,6 +3741,7 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 	struct hinic3_tcam_info *tcam_info = NULL;
 	struct hinic3_nic_dev *nic_dev = NULL;
 	struct rte_pci_device *pci_dev = NULL;
+	unsigned long compact_cqe = 0;
 	int err;
 
 	pci_dev = RTE_CLASS_TO_BUS_DEVICE(eth_dev, *pci_dev);
@@ -3666,6 +3756,7 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 
 	nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
 	memset(nic_dev, 0, sizeof(*nic_dev));
+	nic_dev->nic_type = hinic3_get_nic_type(pci_dev);
 	snprintf(nic_dev->dev_name, sizeof(nic_dev->dev_name),
 		"dbdf-%.4x:%.2x:%.2x.%x", pci_dev->addr.domain,
 		pci_dev->addr.bus, pci_dev->addr.devid,
@@ -3749,6 +3840,15 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 	}
 
 	hinic3_nic_tx_rx_ops_init(nic_dev);
+
+	/* Read wqe type from kernel parameter. */
+	if (hinic3_read_module_param(nic_dev, "rq_wqe_type", &compact_cqe) != 0) {
+		err = -EINVAL;
+		goto get_cap_fail;
+	}
+
+	if (compact_cqe == 1)
+		nic_dev->feature_cap &= ~(NIC_F_RX_SW_COMPACT_CQE | NIC_F_RX_HW_COMPACT_CQE);
 
 	err = hinic3_init_sw_rxtxqs(nic_dev);
 	if (err) {
@@ -3899,6 +3999,9 @@ static const struct rte_pci_id pci_id_hinic3_map[] = {
 	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_VF_SP230)},
 
 	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_SP920)},
+	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_SP560)},
+	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_VF_SP560)},
+	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_HYPER_VF_SP560)},
 
 	{.vendor_id = 0},
 };

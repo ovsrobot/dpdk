@@ -98,6 +98,7 @@ New Features
   * Added FEC mode get and set support.
   * Added Class of Service (COS) mask and map support.
   * Updated RSS hash type configuration.
+  * Added support for the SP560 NIC.
 
 * **Updated Intel iavf driver.**
 
