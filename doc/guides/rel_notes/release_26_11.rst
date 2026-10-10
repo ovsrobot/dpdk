@@ -100,6 +100,7 @@ New Features
   * Updated RSS hash type configuration.
   * Added support for the SP560 NIC.
   * Added device parameters for runtime configuration.
+  * Added a compact CQE receive data path.
 
 * **Updated Intel iavf driver.**
 

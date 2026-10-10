@@ -1162,11 +1162,13 @@ hinic3_rx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 
 	nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
 
-	/* Queue depth must be equal to queue 0 */
-	if (qid != 0 && nb_desc != nic_dev->rxqs[0]->q_depth) {
-		PMD_DRV_LOG(WARNING, "rxq%u depth:%u is not equal to queue0 depth:%u.",
-			    qid, nb_desc, nic_dev->rxqs[0]->q_depth);
-		nb_desc = nic_dev->rxqs[0]->q_depth;
+	/* Queue depth must be equal to first queue */
+	if (nic_dev->rxq_depth == 0) {
+		nic_dev->rxq_depth = nb_desc;
+	} else if (nb_desc != nic_dev->rxq_depth) {
+		PMD_DRV_LOG(WARNING, "rxq%u depth:%u is not equal to first queue depth:%u.",
+			    qid, nb_desc, nic_dev->rxq_depth);
+		nb_desc = nic_dev->rxq_depth;
 	}
 
 	/* Queue depth must be power of 2, otherwise will be aligned up. */
@@ -1229,6 +1231,7 @@ hinic3_rx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 	rxq->port_id = dev->data->port_id;
 	rxq->wait_time_cycle = HINIC3_RX_WAIT_CYCLE_THRESH;
 	rxq->rx_deferred_start = rx_conf->rx_deferred_start;
+	rxq->rx_empty_loop = nic_dev->config.rx_empty_loop;
 	/* If buf_len used for function table, need to translated. */
 	rx_buf_size = rte_pktmbuf_data_room_size(rxq->mb_pool) - RTE_PKTMBUF_HEADROOM;
 	err = hinic3_convert_rx_buf_size(rx_buf_size, &buf_size);
@@ -1239,7 +1242,7 @@ hinic3_rx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 	}
 
 	/* If NIC support compact CQE, use compact wqe as default. */
-	if (HINIC3_SUPPORT_RX_HW_COMPACT_CQE(nic_dev)) {
+	if (nic_dev->config.rx_cqe_compact_en) {
 		rxq->wqe_type = HINIC3_COMPACT_RQ_WQE;
 	} else {
 		if (buf_size >= HINIC3_RX_BUF_SIZE_4K &&
@@ -1299,7 +1302,7 @@ hinic3_rx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 		goto alloc_rx_info_fail;
 	}
 
-	if (HINIC3_SUPPORT_RX_HW_COMPACT_CQE(nic_dev)) {
+	if (nic_dev->config.rx_cqe_compact_en) {
 		ci_mz = hinic3_dma_zone_reserve(dev, "hinic3_ci_mz", qid,
 						sizeof(*rxq->rq_ci),
 						RTE_CACHE_LINE_SIZE, (int)socket_id);
@@ -1351,6 +1354,7 @@ alloc_rx_info_fail:
 	hinic3_memzone_free(rxq->rq_mz);
 
 alloc_rq_mz_fail:
+	rxq->db_addr = NULL;
 alloc_db_err_fail:
 	hinic3_memzone_free(rxq->pi_mz);
 
@@ -1536,7 +1540,7 @@ hinic3_rx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id)
 
 	hinic3_free_rxq_mbufs(rxq);
 
-	if (HINIC3_SUPPORT_RX_HW_COMPACT_CQE(nic_dev))
+	if (nic_dev->config.rx_cqe_compact_en)
 		hinic3_memzone_free(rxq->ci_mz);
 	else
 		hinic3_memzone_free(rxq->cqe_mz);
@@ -1697,6 +1701,9 @@ hinic3_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 	uint16_t msix_intr;
 
 	if (!rte_intr_dp_is_en(intr_handle) || !intr_handle->intr_vec)
+		return 0;
+
+	if (HINIC3_IS_SP230_NIC(nic_dev) && !dev->data->dev_conf.intr_conf.rxq)
 		return 0;
 
 	msix_intr = (uint16_t)intr_handle->intr_vec[queue_id];
@@ -2003,7 +2010,8 @@ hinic3_init_rxq_intr(struct rte_eth_dev *dev)
 
 	intr_handle = dev->intr_handle;
 	nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
-	if (!dev->data->dev_conf.intr_conf.rxq)
+
+	if (!HINIC3_IS_SP230_NIC(nic_dev) && !dev->data->dev_conf.intr_conf.rxq)
 		return 0;
 
 	if (!rte_intr_cap_multiple(intr_handle)) {
@@ -2289,6 +2297,8 @@ hinic3_dev_stop(struct rte_eth_dev *dev)
 
 	/* Free mempool. */
 	hinic3_copy_mempool_uninit(nic_dev);
+
+	nic_dev->rxq_depth = 0;
 	return 0;
 }
 
@@ -2326,6 +2336,8 @@ hinic3_dev_release(struct rte_eth_dev *eth_dev)
 
 	rte_free(nic_dev->hwdev);
 	nic_dev->hwdev = NULL;
+	rte_free(nic_dev->ptype_tbl);
+	nic_dev->ptype_tbl = NULL;
 }
 
 /**
@@ -3300,6 +3312,32 @@ hinic3_dev_xstats_get_names(struct rte_eth_dev *dev,
 	return count;
 }
 
+static const uint32_t *
+hinic3_dev_supported_ptypes_get(__rte_unused struct rte_eth_dev *dev, size_t *no_of_elements)
+{
+	static const uint32_t ptypes[] = {
+		RTE_PTYPE_L3_IPV4_EXT_UNKNOWN,
+		RTE_PTYPE_L3_IPV6_EXT_UNKNOWN,
+		RTE_PTYPE_L4_TCP,
+		RTE_PTYPE_L4_UDP,
+		RTE_PTYPE_L4_SCTP,
+		RTE_PTYPE_L4_NONFRAG,
+		RTE_PTYPE_TUNNEL_IP,
+		RTE_PTYPE_TUNNEL_GRE,
+		RTE_PTYPE_TUNNEL_VXLAN,
+		RTE_PTYPE_TUNNEL_VXLAN_GPE,
+		RTE_PTYPE_TUNNEL_GENEVE,
+		RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN,
+		RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN,
+		RTE_PTYPE_INNER_L4_TCP,
+		RTE_PTYPE_INNER_L4_UDP,
+		RTE_PTYPE_INNER_L4_SCTP,
+		RTE_PTYPE_INNER_L4_NONFRAG,
+	};
+	*no_of_elements = RTE_DIM(ptypes);
+	return ptypes;
+}
+
 static void
 hinic3_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 		    struct rte_eth_rxq_info *qinfo)
@@ -3611,6 +3649,7 @@ hinic3_fec_capability_get(struct rte_eth_dev *dev,
 static const struct eth_dev_ops hinic3_pmd_ops = {
 	.dev_configure                 = hinic3_dev_configure,
 	.dev_infos_get                 = hinic3_dev_infos_get,
+	.dev_supported_ptypes_get      = hinic3_dev_supported_ptypes_get,
 	.fw_version_get                = hinic3_fw_version_get,
 	.dev_set_link_up               = hinic3_dev_set_link_up,
 	.dev_set_link_down             = hinic3_dev_set_link_down,
@@ -3662,6 +3701,7 @@ static const struct eth_dev_ops hinic3_pmd_ops = {
 static const struct eth_dev_ops hinic3_pmd_vf_ops = {
 	.dev_configure                 = hinic3_dev_configure,
 	.dev_infos_get                 = hinic3_dev_infos_get,
+	.dev_supported_ptypes_get      = hinic3_dev_supported_ptypes_get,
 	.fw_version_get                = hinic3_fw_version_get,
 	.dev_set_link_up               = hinic3_dev_set_link_up,
 	.dev_set_link_down             = hinic3_dev_set_link_down,
@@ -3713,16 +3753,6 @@ static void hinic3_nic_tx_rx_ops_init(struct hinic3_nic_dev *nic_dev)
 		nic_dev->tx_ops->nic_tx_set_wqe_offload = hinic3_tx_set_compact_task_offload;
 	else
 		nic_dev->tx_ops->nic_tx_set_wqe_offload = hinic3_tx_set_normal_task_offload;
-
-	if (HINIC3_SUPPORT_RX_HW_COMPACT_CQE(nic_dev)) {
-		nic_dev->rx_ops->nic_rx_get_cqe_info = hinic3_rx_get_compact_cqe_info;
-		nic_dev->rx_ops->nic_rx_cqe_done = hinic3_rx_integrated_cqe_done;
-		nic_dev->rx_ops->nic_rx_poll_rq_empty = hinic3_poll_integrated_cqe_rq_empty;
-	} else {
-		nic_dev->rx_ops->nic_rx_get_cqe_info = hinic3_rx_get_cqe_info;
-		nic_dev->rx_ops->nic_rx_cqe_done = hinic3_rx_separate_cqe_done;
-		nic_dev->rx_ops->nic_rx_poll_rq_empty = hinic3_poll_rq_empty;
-	}
 }
 
 /**
@@ -3772,13 +3802,6 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 			    eth_dev->data->name);
 		err = -ENOMEM;
 		goto alloc_eth_addr_fail;
-	}
-
-	nic_dev->rx_ops = rte_zmalloc("rx_ops", sizeof(struct hinic3_nic_rx_ops), 0);
-	if (!nic_dev->rx_ops) {
-		PMD_DRV_LOG(ERR, "Allocate rx_ops memory failed");
-		err = -ENOMEM;
-		goto alloc_rx_ops_fail;
 	}
 
 	nic_dev->tx_ops = rte_zmalloc("tx_ops", sizeof(struct hinic3_nic_tx_ops), 0);
@@ -3891,6 +3914,11 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 			    eth_dev->data->name);
 		goto enable_intr_fail;
 	}
+
+	err = hinic3_init_rx_ptype_table(eth_dev);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to create ptype_table.");
+
 	tcam_info = &nic_dev->tcam;
 	memset(tcam_info, 0, sizeof(struct hinic3_tcam_info));
 	TAILQ_INIT(&tcam_info->tcam_list);
@@ -3944,10 +3972,6 @@ alloc_mc_list_fail:
 	nic_dev->tx_ops = NULL;
 
 alloc_tx_ops_fail:
-	rte_free(nic_dev->rx_ops);
-	nic_dev->rx_ops = NULL;
-
-alloc_rx_ops_fail:
 	rte_free(eth_dev->data->mac_addrs);
 	eth_dev->data->mac_addrs = NULL;
 
@@ -4043,6 +4067,19 @@ hinic3_nic_common_config_get(struct rte_pci_device *pci_dev,
 	return ret;
 }
 
+static void hinic3_nic_feature_init(struct hinic3_nic_dev *nic_dev)
+{
+	if ((HINIC3_SUPPORT_RX_HW_COMPACT_CQE(nic_dev) ||
+	     HINIC3_SUPPORT_RX_SW_COMPACT_CQE(nic_dev)) &&
+	    nic_dev->config.rx_cqe_compact_en == HINIC3_RX_CQE_COMPACT_EN) {
+		nic_dev->config.rx_cqe_compact_en = HINIC3_RX_CQE_COMPACT_EN;
+		PMD_DRV_LOG(INFO, "nic compact_cqe is on.");
+	} else {
+		nic_dev->config.rx_cqe_compact_en = 0;
+		PMD_DRV_LOG(INFO, "nic compact_cqe is off.");
+	}
+}
+
 static int
 hinic3_dev_init(struct rte_eth_dev *eth_dev)
 {
@@ -4072,7 +4109,13 @@ hinic3_dev_init(struct rte_eth_dev *eth_dev)
 		return err;
 	}
 
-	eth_dev->rx_pkt_burst = hinic3_recv_pkts;
+	hinic3_nic_feature_init(nic_dev);
+
+	if (nic_dev->config.rx_cqe_compact_en != HINIC3_RX_CQE_COMPACT_EN)
+		eth_dev->rx_pkt_burst = hinic3_recv_pkts;
+	else
+		eth_dev->rx_pkt_burst = hinic3_recv_pkts_compact_cqe;
+
 	eth_dev->tx_pkt_burst = hinic3_xmit_pkts;
 
 	return err;
