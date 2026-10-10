@@ -155,6 +155,9 @@ struct hinic3_nic_dev {
 
 };
 
+#define SELECT_OTHER_COS_ID(cos_id) ((cos_id) ^ 4)
+#define ODD_NUMBER_QUEUE_ID(q_id) ((q_id) & 1)
+
 extern const struct rte_flow_ops hinic3_flow_ops;
 
 /**

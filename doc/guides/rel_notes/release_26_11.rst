@@ -92,6 +92,10 @@ New Features
     ``xdp_meta_rx_ts_valid_mask``.
   * Added ``read_clock`` operation to query the PTP hardware clock.
 
+* **Updated Huawei hinic3 ethernet driver.**
+
+  * Added CIR drop statistics and VF link aggregation (LAG) support.
+
 * **Updated Intel iavf driver.**
 
   * Runtime Rx/Tx queue setup is now automatically disabled
