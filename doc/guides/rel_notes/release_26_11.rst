@@ -103,6 +103,7 @@ New Features
   * Added a compact CQE receive data path.
   * Extended TCP segmentation offload (TSO) to 255 segments.
   * Added a compact CQE transmit data path.
+  * Added a mailbox count telemetry endpoint.
 
 * **Updated Intel iavf driver.**
 

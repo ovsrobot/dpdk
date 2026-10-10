@@ -23,6 +23,7 @@ sources = files(
         'hinic3_flow.c',
         'hinic3_rx.c',
         'hinic3_tx.c',
+        'hinic3_telemetry.c',
 )
 
 includes += include_directories('base')
