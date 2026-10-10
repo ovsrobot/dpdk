@@ -820,6 +820,7 @@ static int
 hinic3_dev_set_link_up(struct rte_eth_dev *dev)
 {
 	struct hinic3_nic_dev *nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct rte_eth_link link = { 0 };
 	int err;
 
 	/*
@@ -844,6 +845,23 @@ hinic3_dev_set_link_up(struct rte_eth_dev *dev)
 		return err;
 	}
 
+	if (HINIC3_IS_VF(nic_dev->hwdev)) {
+		link = dev->data->dev_link;
+		link.link_status = nic_dev->hwdev->link_status &
+					nic_dev->hwdev->vf_valid_status;
+		if (link.link_status == RTE_ETH_LINK_DOWN) {
+			PMD_DRV_LOG(ERR,
+				"Set VF link up failed, dev_name: %s, port_id: %d,"
+				" link_status: %d, vf_valid_status: %d",
+				nic_dev->dev_name, dev->data->port_id,
+				nic_dev->hwdev->link_status,
+				nic_dev->hwdev->vf_valid_status);
+			return -EAGAIN;
+		}
+
+		(void)rte_eth_linkstatus_set(dev, &link);
+	}
+
 	return 0;
 }
 
@@ -860,6 +878,7 @@ static int
 hinic3_dev_set_link_down(struct rte_eth_dev *dev)
 {
 	struct hinic3_nic_dev *nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct rte_eth_link link = {0};
 	int err;
 
 	err = hinic3_set_vport_enable(nic_dev->hwdev, false);
@@ -873,9 +892,17 @@ hinic3_dev_set_link_down(struct rte_eth_dev *dev)
 	err = hinic3_set_port_enable(nic_dev->hwdev, false);
 	if (err) {
 		PMD_DRV_LOG(ERR,
-			"Set MAC link down failed, dev_name: %s, port_id: %d",
-			nic_dev->dev_name, dev->data->port_id);
+			    "Set MAC link down failed, dev_name: %s, port_id: %d",
+			    nic_dev->dev_name, dev->data->port_id);
 		return err;
+	}
+
+	if (HINIC3_IS_VF(nic_dev->hwdev)) {
+		link = dev->data->dev_link;
+		link.link_status = nic_dev->hwdev->link_status &
+					nic_dev->hwdev->vf_valid_status;
+
+		(void)rte_eth_linkstatus_set(dev, &link);
 	}
 
 	return 0;
@@ -925,6 +952,12 @@ hinic3_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 	} while (rep_cnt--);
 
 out:
+	if (HINIC3_IS_VF(nic_dev->hwdev)) {
+		nic_dev->hwdev->link_status = link.link_status;
+		link.link_status = nic_dev->hwdev->link_status &
+					nic_dev->hwdev->vf_valid_status;
+	}
+
 	return rte_eth_linkstatus_set(dev, &link);
 }
 
@@ -2470,6 +2503,12 @@ hinic3_dev_promiscuous_disable(struct rte_eth_dev *dev)
 	uint32_t rx_mode;
 	int err;
 
+	if (!(nic_dev->feature_cap & NIC_F_PROMISC)) {
+		PMD_DRV_LOG(ERR, "nic_dev: %s, port_id: %d, do not support vf promisc: %" PRIu64,
+			    nic_dev->dev_name, dev->data->port_id, nic_dev->feature_cap);
+		return -ENOTSUP;
+	}
+
 	rx_mode = nic_dev->rx_mode & (~HINIC3_RX_MODE_PROMISC);
 
 	err = hinic3_set_rx_mode(nic_dev->hwdev, rx_mode);
@@ -3522,6 +3561,8 @@ static const struct eth_dev_ops hinic3_pmd_vf_ops = {
 	.dev_configure                 = hinic3_dev_configure,
 	.dev_infos_get                 = hinic3_dev_infos_get,
 	.fw_version_get                = hinic3_fw_version_get,
+	.dev_set_link_up               = hinic3_dev_set_link_up,
+	.dev_set_link_down             = hinic3_dev_set_link_down,
 	.rx_queue_setup                = hinic3_rx_queue_setup,
 	.tx_queue_setup                = hinic3_tx_queue_setup,
 	.rx_queue_intr_enable          = hinic3_dev_rx_queue_intr_enable,
@@ -3543,6 +3584,8 @@ static const struct eth_dev_ops hinic3_pmd_vf_ops = {
 	.vlan_offload_set              = hinic3_vlan_offload_set,
 	.allmulticast_enable           = hinic3_dev_allmulticast_enable,
 	.allmulticast_disable          = hinic3_dev_allmulticast_disable,
+	.promiscuous_enable            = hinic3_dev_promiscuous_enable,
+	.promiscuous_disable           = hinic3_dev_promiscuous_disable,
 	.rss_hash_update               = hinic3_rss_hash_update,
 	.rss_hash_conf_get             = hinic3_rss_conf_get,
 	.reta_update                   = hinic3_rss_reta_update,

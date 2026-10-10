@@ -443,12 +443,13 @@ int
 hinic3_set_vport_enable(struct hinic3_hwdev *hwdev, bool enable)
 {
 	struct hinic3_vport_state en_state;
-	struct hinic3_nic_dev *nic_dev = hwdev->dev_handle;
+	struct hinic3_nic_dev *nic_dev;
 	uint16_t out_size = sizeof(en_state);
 	int err;
 
 	if (!hwdev)
 		return -EINVAL;
+	nic_dev = hwdev->dev_handle;
 
 	memset(&en_state, 0, sizeof(en_state));
 	en_state.func_id = hinic3_global_func_id(hwdev);
@@ -466,6 +467,8 @@ hinic3_set_vport_enable(struct hinic3_hwdev *hwdev, bool enable)
 			    err, en_state.msg_head.status, out_size);
 		return -EIO;
 	}
+
+	hwdev->vf_valid_status = enable;
 
 	return 0;
 }

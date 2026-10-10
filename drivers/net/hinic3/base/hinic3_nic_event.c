@@ -112,6 +112,12 @@ link_status_event_handler(struct hinic3_hwdev *hwdev, struct hinic3_handler_info
 
 	/* Link event reported only after set vport enable. */
 	hinic3_get_link_port_info(hwdev, link_status->state, &link);
+
+	if (HINIC3_IS_VF(hwdev)) {
+		hwdev->link_status = link.link_status;
+		link.link_status = hwdev->link_status & hwdev->vf_valid_status;
+	}
+
 	err = rte_eth_linkstatus_set(hwdev->eth_dev, &link);
 	if (!err && hwdev->eth_dev->data->dev_conf.intr_conf.lsc != 0)
 		rte_eth_dev_callback_process(hwdev->eth_dev,
