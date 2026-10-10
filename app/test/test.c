@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
@@ -21,6 +22,7 @@ extern cmdline_parse_ctx_t main_ctx[];
 #include <rte_eal.h>
 #include <rte_cycles.h>
 #include <rte_log.h>
+#include <rte_random.h>
 #include <rte_string_fns.h>
 #ifdef RTE_LIB_TIMER
 #include <rte_timer.h>
@@ -107,6 +109,33 @@ do_recursive_call(void)
 
 int last_test_result;
 
+/* Tests that use rte_rand() get a different sequence on every run, which
+ * is good for coverage but makes it hard to compare performance results.
+ * Setting DPDK_TEST_SEED gives a repeatable sequence instead.
+ */
+static bool use_test_seed;
+static uint64_t test_seed;
+
+static int
+get_test_seed(void)
+{
+	const char *env = getenv("DPDK_TEST_SEED");
+	char *end;
+
+	if (env == NULL || *env == '\0')
+		return 0;
+
+	errno = 0;
+	test_seed = strtoull(env, &end, 0);
+	if (errno != 0 || end == env || *end != '\0') {
+		fprintf(stderr, "Invalid DPDK_TEST_SEED: '%s'\n", env);
+		return -1;
+	}
+
+	use_test_seed = true;
+	return 0;
+}
+
 #define MAX_EXTRA_ARGS 32
 
 int
@@ -175,8 +204,18 @@ main(int argc, char **argv)
 		goto out;
 	}
 
+	if (get_test_seed() < 0) {
+		ret = -1;
+		goto out;
+	}
+
 	recursive_call = getenv(RECURSIVE_ENV_VAR);
 	if (recursive_call != NULL) {
+		/* Child instances inherit the environment, so seed them
+		 * too rather than leaving them randomly seeded.
+		 */
+		if (use_test_seed)
+			rte_srand(test_seed);
 		ret = do_recursive_call();
 		goto out;
 	}
@@ -233,6 +272,12 @@ main(int argc, char **argv)
 				}
 			}
 
+			/* Reseed before each test so that a test gets the same
+			 * sequence no matter what ran before it.
+			 */
+			if (use_test_seed)
+				rte_srand(test_seed);
+
 			snprintf(buf, sizeof(buf), "%s\n", tests[i]);
 			if (cmdline_parse_check(cl, buf) < 0) {
 				printf("Error: invalid test command: '%s'\n", tests[i]);
@@ -259,6 +304,9 @@ end_of_cmd:
 			ret = -1;
 			goto out;
 		}
+
+		if (use_test_seed)
+			rte_srand(test_seed);
 
 		cmdline_interact(cl);
 		cmdline_stdin_exit(cl);
