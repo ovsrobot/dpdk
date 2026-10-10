@@ -938,7 +938,7 @@ struct hinic3_set_fdir_ethertype_rule {
 	uint8_t pkt_type_en;
 	uint8_t pkt_type;
 	uint8_t qid;
-	uint8_t rsvd2;
+	uint8_t flags;
 };
 
 struct hinic3_cmd_set_rq_flush {

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2025 Huawei Technologies Co., Ltd
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd
  */
 
 #ifndef _HINIC3_FDIR_H_
@@ -8,8 +8,13 @@
 #define HINIC3_FLOW_MAX_PATTERN_NUM 16
 
 #define HINIC3_TCAM_DYNAMIC_BLOCK_SIZE 16
+#define HINIC3_TCAM_DYNAMIC_MAX_FILTERS(nic_dev)         \
+		(HINIC3_IS_SP230_NIC(nic_dev)            \
+		? HINIC3_TCAM_DYNAMIC_MAX_FILTERS_HTN    \
+		: HINIC3_TCAM_DYNAMIC_MAX_FILTERS_STN)
 
-#define HINIC3_TCAM_DYNAMIC_MAX_FILTERS 1024
+#define HINIC3_TCAM_DYNAMIC_MAX_FILTERS_STN 2048
+#define HINIC3_TCAM_DYNAMIC_MAX_FILTERS_HTN 1024
 
 #define HINIC3_PKT_TCAM_DYNAMIC_INDEX_START(block_index) \
 	(HINIC3_TCAM_DYNAMIC_BLOCK_SIZE * (block_index))
@@ -21,6 +26,8 @@
 		((index) % HINIC3_TCAM_DYNAMIC_BLOCK_SIZE)
 
 #define HINIC3_TCAM_INVALID_INDEX 0xFFFF
+
+#define HINIC3_RSS_QUEUE_BUF 128
 
 enum hinic3_ether_type {
 	HINIC3_PKT_TYPE_ARP = 1,
@@ -71,6 +78,7 @@ struct hinic3_fdir_filter {
 struct hinic3_ethertype_filter {
 	int tcam_index[HINIC3_PKT_TYPE_BUTT];
 	uint16_t ether_type;	/**< Ether type to match */
+	uint16_t flags;
 	uint16_t queue;		/**< Queue assigned to when match*/
 };
 
@@ -96,6 +104,7 @@ enum hinic3_fdir_tunnel_mode {
 	HINIC3_FDIR_TUNNEL_MODE_GENEVE = 5,
 	HINIC3_FDIR_TUNNEL_MODE_NSH    = 6,
 	HINIC3_FDIR_TUNNEL_MODE_IPIP   = 7,
+	HINIC3_FDIR_TUNNEL_MODE_MAX    = 8,
 };
 
 enum hinic3_fdir_ip_type {
@@ -186,7 +195,7 @@ struct hinic3_tcam_key_mem_htn {
 	uint32_t rsvd0 : 16;
 	uint32_t ip_proto : 8;
 	uint32_t tunnel_type : 3;
-	uint32_t function_id_h: 5;
+	uint32_t function_id_h : 5;
 
 	uint32_t function_id_l : 5;
 	uint32_t ip_type : 2;
@@ -250,7 +259,7 @@ struct hinic3_tcam_key_mem_htn {
 	uint32_t rsvd8 : 16;
 
 	uint32_t sport : 16;
-	uint32_t dipv4_l :16;
+	uint32_t dipv4_l : 16;
 
 	uint32_t rsvd9 : 16;
 	uint32_t dport : 16;
@@ -668,6 +677,8 @@ int hinic3_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
 int hinic3_flow_add_del_ethertype_filter(struct rte_eth_dev *dev,
 					 struct hinic3_ethertype_filter *ethertype_filter,
 					 bool add);
+int hinic3_flow_query_fdir_filter(struct rte_eth_dev *dev, struct hinic3_fdir_filter *fdir_filter,
+				  __rte_unused uint64_t *hits, __rte_unused uint64_t *bytes_count);
 void hinic3_free_fdir_filter(struct rte_eth_dev *dev);
 int hinic3_enable_rxq_fdir_filter(struct rte_eth_dev *dev, uint32_t queue_id,
 				  uint32_t able);
