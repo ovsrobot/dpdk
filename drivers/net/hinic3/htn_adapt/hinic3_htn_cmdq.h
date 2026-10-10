@@ -27,7 +27,7 @@ struct hinic3_htn_qp_ctxt_block {
 	};
 };
 
-struct hinic3_rss_cmd_header {
+struct hinic3_htn_rss_cmd_header {
 	uint32_t rsv[3];
 	uint16_t rsv1;
 	uint16_t dest_func_id;

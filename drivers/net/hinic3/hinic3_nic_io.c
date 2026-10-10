@@ -11,15 +11,6 @@
 #include "hinic3_rx.h"
 #include "hinic3_tx.h"
 
-#define HINIC3_DEAULT_TX_CI_PENDING_LIMIT	3
-#define HINIC3_DEAULT_TX_CI_COALESCING_TIME	16
-#define HINIC3_DEAULT_DROP_THD_ON		0xFFFF
-#define HINIC3_DEAULT_DROP_THD_OFF		0
-
-#define WQ_PREFETCH_MAX				6
-#define WQ_PREFETCH_MIN				1
-#define WQ_PREFETCH_THRESHOLD			256
-
 #define CI_IDX_HIGH_SHIFH			12
 
 #define CI_HIGN_IDX(val) ((val) >> CI_IDX_HIGH_SHIFH)
@@ -53,16 +44,6 @@
 	(((val) & SQ_CTXT_WQ_PAGE_##member##_MASK)	\
 	 << SQ_CTXT_WQ_PAGE_##member##_SHIFT)
 
-#define SQ_CTXT_PKT_DROP_THD_ON_SHIFT		0
-#define SQ_CTXT_PKT_DROP_THD_OFF_SHIFT		16
-
-#define SQ_CTXT_PKT_DROP_THD_ON_MASK		0xFFFFU
-#define SQ_CTXT_PKT_DROP_THD_OFF_MASK		0xFFFFU
-
-#define SQ_CTXT_PKT_DROP_THD_SET(val, member)		\
-	(((val) & SQ_CTXT_PKT_DROP_##member##_MASK)	\
-	 << SQ_CTXT_PKT_DROP_##member##_SHIFT)
-
 #define SQ_CTXT_GLOBAL_SQ_ID_SHIFT		0
 
 #define SQ_CTXT_GLOBAL_SQ_ID_MASK		0x1FFFU
@@ -84,30 +65,6 @@
 	(((val) & SQ_CTXT_VLAN_##member##_MASK)		\
 	 << SQ_CTXT_VLAN_##member##_SHIFT)
 
-#define SQ_CTXT_PREF_CACHE_THRESHOLD_SHIFT	0
-#define SQ_CTXT_PREF_CACHE_MAX_SHIFT		14
-#define SQ_CTXT_PREF_CACHE_MIN_SHIFT		25
-
-#define SQ_CTXT_PREF_CACHE_THRESHOLD_MASK	0x3FFFU
-#define SQ_CTXT_PREF_CACHE_MAX_MASK		0x7FFU
-#define SQ_CTXT_PREF_CACHE_MIN_MASK		0x7FU
-
-#define SQ_CTXT_PREF_CI_HI_SHIFT		0
-#define SQ_CTXT_PREF_OWNER_SHIFT		4
-
-#define SQ_CTXT_PREF_CI_HI_MASK			0xFU
-#define SQ_CTXT_PREF_OWNER_MASK			0x1U
-
-#define SQ_CTXT_PREF_WQ_PFN_HI_SHIFT		0
-#define SQ_CTXT_PREF_CI_LOW_SHIFT		20
-
-#define SQ_CTXT_PREF_WQ_PFN_HI_MASK		0xFFFFFU
-#define SQ_CTXT_PREF_CI_LOW_MASK		0xFFFU
-
-#define SQ_CTXT_PREF_SET(val, member)			\
-	(((val) & SQ_CTXT_PREF_##member##_MASK)		\
-	 << SQ_CTXT_PREF_##member##_SHIFT)
-
 #define SQ_CTXT_WQ_BLOCK_PFN_HI_SHIFT		0
 
 #define SQ_CTXT_WQ_BLOCK_PFN_HI_MASK		0x7FFFFFU
@@ -125,18 +82,6 @@
 #define RQ_CTXT_CI_PI_SET(val, member)			\
 	(((val) & RQ_CTXT_##member##_MASK) << RQ_CTXT_##member##_SHIFT)
 
-#define RQ_CTXT_CEQ_ATTR_INTR_SHIFT		21
-#define RQ_CTXT_CEQ_ATTR_INTR_ARM_SHIFT		30
-#define RQ_CTXT_CEQ_ATTR_EN_SHIFT		31
-
-#define RQ_CTXT_CEQ_ATTR_INTR_MASK		0x3FFU
-#define RQ_CTXT_CEQ_ATTR_INTR_ARM_MASK		0x1U
-#define RQ_CTXT_CEQ_ATTR_EN_MASK		0x1U
-
-#define RQ_CTXT_CEQ_ATTR_SET(val, member)		\
-	(((val) & RQ_CTXT_CEQ_ATTR_##member##_MASK)	\
-	 << RQ_CTXT_CEQ_ATTR_##member##_SHIFT)
-
 #define RQ_CTXT_WQ_PAGE_HI_PFN_SHIFT		0
 #define RQ_CTXT_WQ_PAGE_WQE_TYPE_SHIFT		28
 #define RQ_CTXT_WQ_PAGE_OWNER_SHIFT		31
@@ -148,38 +93,6 @@
 #define RQ_CTXT_WQ_PAGE_SET(val, member)		\
 	(((val) & RQ_CTXT_WQ_PAGE_##member##_MASK)	\
 	 << RQ_CTXT_WQ_PAGE_##member##_SHIFT)
-
-#define RQ_CTXT_CQE_LEN_SHIFT			28
-
-#define RQ_CTXT_CQE_LEN_MASK			0x3U
-
-#define RQ_CTXT_CQE_LEN_SET(val, member)		\
-	(((val) & RQ_CTXT_##member##_MASK) << RQ_CTXT_##member##_SHIFT)
-
-#define RQ_CTXT_PREF_CACHE_THRESHOLD_SHIFT	0
-#define RQ_CTXT_PREF_CACHE_MAX_SHIFT		14
-#define RQ_CTXT_PREF_CACHE_MIN_SHIFT		25
-
-#define RQ_CTXT_PREF_CACHE_THRESHOLD_MASK	0x3FFFU
-#define RQ_CTXT_PREF_CACHE_MAX_MASK		0x7FFU
-#define RQ_CTXT_PREF_CACHE_MIN_MASK		0x7FU
-
-#define RQ_CTXT_PREF_CI_HI_SHIFT		0
-#define RQ_CTXT_PREF_OWNER_SHIFT		4
-
-#define RQ_CTXT_PREF_CI_HI_MASK			0xFU
-#define RQ_CTXT_PREF_OWNER_MASK			0x1U
-
-#define RQ_CTXT_PREF_WQ_PFN_HI_SHIFT		0
-#define RQ_CTXT_PREF_CI_LOW_SHIFT		20
-
-#define RQ_CTXT_PREF_WQ_PFN_HI_MASK		0xFFFFFU
-#define RQ_CTXT_PREF_CI_LOW_MASK		0xFFFU
-
-#define RQ_CTXT_PREF_SET(val, member)			\
-	(((val) & RQ_CTXT_PREF_##member##_MASK)		\
-	 << RQ_CTXT_PREF_##member##_SHIFT)
-
 #define RQ_CTXT_WQ_BLOCK_PFN_HI_SHIFT		0
 
 #define RQ_CTXT_WQ_BLOCK_PFN_HI_MASK		0x7FFFFFU
@@ -191,12 +104,7 @@
 #define SIZE_16BYTES(size) (RTE_ALIGN((size), 16) >> 4)
 
 #define WQ_PAGE_PFN_SHIFT			12
-#define WQ_BLOCK_PFN_SHIFT			9
-
 #define WQ_PAGE_PFN(page_addr)	((page_addr) >> WQ_PAGE_PFN_SHIFT)
-#define WQ_BLOCK_PFN(page_addr) ((page_addr) >> WQ_BLOCK_PFN_SHIFT)
-
-#define CQE_CTX_CI_ADDR_SHIFT			4
 
 void
 hinic3_sq_prepare_ctxt(struct hinic3_txq *sq, uint16_t sq_id,
@@ -205,6 +113,8 @@ hinic3_sq_prepare_ctxt(struct hinic3_txq *sq, uint16_t sq_id,
 	uint64_t wq_page_addr, wq_page_pfn, wq_block_pfn;
 	uint32_t wq_page_pfn_hi, wq_page_pfn_lo, wq_block_pfn_hi, wq_block_pfn_lo;
 	uint16_t pi_start, ci_start;
+
+	hinic3_cmdq_get_ops(sq->nic_dev)->prepare_sq_ctxt_drop_and_prefetch(sq_ctxt);
 
 	ci_start = sq->cons_idx & sq->q_mask;
 	pi_start = sq->prod_idx & sq->q_mask;
@@ -232,10 +142,6 @@ hinic3_sq_prepare_ctxt(struct hinic3_txq *sq, uint16_t sq_id,
 
 	sq_ctxt->wq_pfn_lo = wq_page_pfn_lo;
 
-	sq_ctxt->pkt_drop_thd =
-		SQ_CTXT_PKT_DROP_THD_SET(HINIC3_DEAULT_DROP_THD_ON, THD_ON) |
-		SQ_CTXT_PKT_DROP_THD_SET(HINIC3_DEAULT_DROP_THD_OFF, THD_OFF);
-
 	sq_ctxt->global_sq_id =
 		SQ_CTXT_GLOBAL_QUEUE_ID_SET(sq_id, GLOBAL_SQ_ID);
 
@@ -244,11 +150,6 @@ hinic3_sq_prepare_ctxt(struct hinic3_txq *sq, uint16_t sq_id,
 				 SQ_CTXT_VLAN_CEQ_SET(1, INSERT_MODE);
 
 	sq_ctxt->rsvd0 = 0;
-
-	sq_ctxt->pref_cache =
-		SQ_CTXT_PREF_SET(WQ_PREFETCH_MIN, CACHE_MIN) |
-		SQ_CTXT_PREF_SET(WQ_PREFETCH_MAX, CACHE_MAX) |
-		SQ_CTXT_PREF_SET(WQ_PREFETCH_THRESHOLD, CACHE_THRESHOLD);
 
 	sq_ctxt->pref_ci_owner =
 		SQ_CTXT_PREF_SET(CI_HIGN_IDX(ci_start), CI_HI) |
@@ -277,7 +178,6 @@ hinic3_rq_prepare_ctxt(struct hinic3_rxq *rq, struct hinic3_rq_ctxt *rq_ctxt)
 	uint32_t wq_page_pfn_hi, wq_page_pfn_lo, wq_block_pfn_hi, wq_block_pfn_lo;
 	uint16_t pi_start, ci_start;
 	uint16_t wqe_type = rq->wqe_type;
-	uint8_t intr_disable;
 
 	/* RQ depth is in unit of 8 Bytes. */
 	ci_start = (uint16_t)((rq->cons_idx & rq->q_mask) << wqe_type);
@@ -298,16 +198,13 @@ hinic3_rq_prepare_ctxt(struct hinic3_rxq *rq, struct hinic3_rq_ctxt *rq_ctxt)
 	rq_ctxt->ci_pi = RQ_CTXT_CI_PI_SET(ci_start, CI_IDX) |
 			 RQ_CTXT_CI_PI_SET(pi_start, PI_IDX);
 
-	/* RQ doesn't need ceq, msix_entry_idx set 1, but mask not enable. */
-	intr_disable = rq->dp_intr_en ? 0 : 1;
-	rq_ctxt->ceq_attr = RQ_CTXT_CEQ_ATTR_SET(intr_disable, EN) |
-			    RQ_CTXT_CEQ_ATTR_SET(0, INTR_ARM) |
-			    RQ_CTXT_CEQ_ATTR_SET(rq->msix_entry_idx, INTR);
-
 	/* Use 32Byte WQE with SGE for CQE in default. */
 	rq_ctxt->wq_pfn_hi_type_owner =
 		RQ_CTXT_WQ_PAGE_SET(wq_page_pfn_hi, HI_PFN) |
 		RQ_CTXT_WQ_PAGE_SET(1, OWNER);
+
+	/* RQ doesn't need ceq, msix_entry_idx set 1, but mask not enable */
+	hinic3_cmdq_get_ops(rq->nic_dev)->prepare_rq_ctxt_ceq_and_prefetch(rq, rq_ctxt);
 
 	switch (wqe_type) {
 	case HINIC3_EXTEND_RQ_WQE:
@@ -330,11 +227,6 @@ hinic3_rq_prepare_ctxt(struct hinic3_rxq *rq, struct hinic3_rq_ctxt *rq_ctxt)
 	}
 
 	rq_ctxt->wq_pfn_lo = wq_page_pfn_lo;
-
-	rq_ctxt->pref_cache =
-		RQ_CTXT_PREF_SET(WQ_PREFETCH_MIN, CACHE_MIN) |
-		RQ_CTXT_PREF_SET(WQ_PREFETCH_MAX, CACHE_MAX) |
-		RQ_CTXT_PREF_SET(WQ_PREFETCH_THRESHOLD, CACHE_THRESHOLD);
 
 	rq_ctxt->pref_ci_owner =
 		RQ_CTXT_PREF_SET(CI_HIGN_IDX(ci_start), CI_HI) |
@@ -392,7 +284,7 @@ init_sq_ctxts(struct hinic3_nic_dev *nic_dev)
 				    ? HINIC3_Q_CTXT_MAX
 				    : (nic_dev->num_sqs - q_id);
 		cmd = hinic3_cmdq_get_ops(nic_dev)->prepare_cmd_buf_qp_context_multi_store(nic_dev,
-			cmd_buf, HINIC3_QP_CTXT_TYPE_SQ, q_id, max_ctxts);
+				cmd_buf, HINIC3_QP_CTXT_TYPE_SQ, q_id, max_ctxts);
 		rte_atomic_thread_fence(rte_memory_order_seq_cst);
 		err = hinic3_cmdq_direct_resp(nic_dev->hwdev, HINIC3_MOD_L2NIC,
 					      cmd, cmd_buf, &out_param, 0);
@@ -444,7 +336,8 @@ init_rq_ctxts(struct hinic3_nic_dev *nic_dev)
 				    ? HINIC3_Q_CTXT_MAX
 				    : (nic_dev->num_rqs - q_id);
 		cmd = hinic3_cmdq_get_ops(nic_dev)->prepare_cmd_buf_qp_context_multi_store(nic_dev,
-			cmd_buf, HINIC3_QP_CTXT_TYPE_RQ, q_id, max_ctxts);
+				cmd_buf, HINIC3_QP_CTXT_TYPE_RQ, q_id, max_ctxts);
+
 		rte_atomic_thread_fence(rte_memory_order_seq_cst);
 		err = hinic3_cmdq_direct_resp(nic_dev->hwdev, HINIC3_MOD_L2NIC,
 					      cmd, cmd_buf, &out_param, 0);
@@ -490,10 +383,8 @@ clean_queue_offload_ctxt(struct hinic3_nic_dev *nic_dev,
 		PMD_DRV_LOG(ERR, "Allocate cmd buf for LRO/TSO space failed");
 		return -ENOMEM;
 	}
-
-	cmd = hinic3_cmdq_get_ops(nic_dev)->prepare_cmd_buf_clean_tso_lro_space(nic_dev,
-		cmd_buf, ctxt_type);
-
+	cmd = hinic3_cmdq_get_ops(nic_dev)->prepare_cmd_buf_clean_tso_lro_space(nic_dev, cmd_buf,
+										ctxt_type);
 	/* Send a command to hardware to clean up queue offload context. */
 	err = hinic3_cmdq_direct_resp(nic_dev->hwdev, HINIC3_MOD_L2NIC,
 				      cmd, cmd_buf, &out_param, 0);
@@ -563,7 +454,7 @@ hinic3_init_rq_cqe_ctxts(struct hinic3_nic_dev *nic_dev)
 	while (q_id < nic_dev->num_rqs) {
 		rxq = nic_dev->rxqs[q_id];
 		if (rxq->wqe_type == HINIC3_COMPACT_RQ_WQE) {
-			rq_ci_paddr = rxq->rq_ci_paddr >> CQE_CTX_CI_ADDR_SHIFT;
+			rq_ci_paddr = rxq->rq_ci_paddr >> RQ_CI_ADDR_SHIFT;
 			cqe_ctx.ci_addr_hi = upper_32_bits(rq_ci_paddr);
 			cqe_ctx.ci_addr_lo = lower_32_bits(rq_ci_paddr);
 			cqe_ctx.threshold_cqe_num = nic_dev->config.rx_cqe_coalesce_num;
@@ -641,8 +532,8 @@ hinic3_init_qp_ctxts(struct hinic3_nic_dev *nic_dev)
 	/* Configure CI tables for each SQ. */
 	for (q_id = 0; q_id < nic_dev->num_sqs; q_id++) {
 		sq_attr.ci_dma_base = nic_dev->txqs[q_id]->ci_dma_base >> 0x2;
-		sq_attr.pending_limit = HINIC3_DEAULT_TX_CI_PENDING_LIMIT;
-		sq_attr.coalescing_time = HINIC3_DEAULT_TX_CI_COALESCING_TIME;
+		sq_attr.pending_limit = nic_dev->config.tx_pending_limit;
+		sq_attr.coalescing_time = nic_dev->config.tx_coalescing_time;
 		sq_attr.intr_en = 0;
 		sq_attr.intr_idx = 0; /**< Tx doesn't need interrupt. */
 		sq_attr.l2nic_sqn = q_id;

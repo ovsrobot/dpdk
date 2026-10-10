@@ -28,6 +28,82 @@
 
 #define HINIC3_Q_CTXT_MAX ((uint16_t)(((HINIC3_CMDQ_BUF_SIZE - 8) - RTE_PKTMBUF_HEADROOM) / 64))
 
+
+#define RQ_CTXT_PREF_CACHE_THRESHOLD_SHIFT		0
+#define RQ_CTXT_PREF_CACHE_MAX_SHIFT			14
+#define RQ_CTXT_PREF_CACHE_MIN_SHIFT			25
+
+#define RQ_CTXT_PREF_CACHE_THRESHOLD_MASK		0x3FFFU
+#define RQ_CTXT_PREF_CACHE_MAX_MASK			0x7FFU
+#define RQ_CTXT_PREF_CACHE_MIN_MASK			0x7FU
+
+#define RQ_CTXT_PREF_CI_HI_SHIFT			0
+#define RQ_CTXT_PREF_OWNER_SHIFT			4
+
+#define RQ_CTXT_PREF_CI_HI_MASK				0xFU
+#define RQ_CTXT_PREF_OWNER_MASK				0x1U
+
+#define RQ_CTXT_PREF_WQ_PFN_HI_SHIFT			0
+#define RQ_CTXT_PREF_CI_LOW_SHIFT			20
+
+#define RQ_CTXT_PREF_WQ_PFN_HI_MASK			0xFFFFFU
+#define RQ_CTXT_PREF_CI_LOW_MASK			0xFFFU
+
+#define RQ_CTXT_PREF_SET(val, member)			(((val) & \
+					RQ_CTXT_PREF_##member##_MASK) << \
+					RQ_CTXT_PREF_##member##_SHIFT)
+
+#define RQ_CTXT_CEQ_ATTR_SET(val, member)		(((val) & \
+					RQ_CTXT_CEQ_ATTR_##member##_MASK) \
+					<< RQ_CTXT_CEQ_ATTR_##member##_SHIFT)
+
+#define RQ_CTXT_CQE_LEN_SHIFT				28
+#define RQ_CTXT_MAX_COUNT_SHIFT				18
+
+#define RQ_CTXT_CQE_LEN_MASK				0x3U
+#define RQ_CTXT_MAX_COUNT_MASK				0x3FFU
+#define RQ_CTXT_CQE_LEN_SET(val, member)		(((val) & \
+					RQ_CTXT_##member##_MASK) << \
+					RQ_CTXT_##member##_SHIFT)
+
+#define SQ_CI_ADDR_SHIFT	2
+#define RQ_CI_ADDR_SHIFT	4
+#define RQ_CQE_AGGREGATE_NUM		768
+
+#define SQ_CTXT_PREF_CACHE_THRESHOLD_SHIFT		0
+#define SQ_CTXT_PREF_CACHE_MAX_SHIFT			14
+#define SQ_CTXT_PREF_CACHE_MIN_SHIFT			25
+
+#define SQ_CTXT_PREF_CACHE_THRESHOLD_MASK		0x3FFFU
+#define SQ_CTXT_PREF_CACHE_MAX_MASK			0x7FFU
+#define SQ_CTXT_PREF_CACHE_MIN_MASK			0x7FU
+
+#define SQ_CTXT_PREF_CI_HI_SHIFT			0
+#define SQ_CTXT_PREF_OWNER_SHIFT			4
+
+#define SQ_CTXT_PREF_CI_HI_MASK				0xFU
+#define SQ_CTXT_PREF_OWNER_MASK				0x1U
+
+#define SQ_CTXT_PREF_WQ_PFN_HI_SHIFT			0
+#define SQ_CTXT_PREF_CI_LOW_SHIFT			20
+
+#define SQ_CTXT_PREF_WQ_PFN_HI_MASK			0xFFFFFU
+#define SQ_CTXT_PREF_CI_LOW_MASK			0xFFFU
+
+#define SQ_CTXT_PREF_SET(val, member)			(((val) & \
+					SQ_CTXT_PREF_##member##_MASK) \
+					<< SQ_CTXT_PREF_##member##_SHIFT)
+
+#define SQ_CTXT_PKT_DROP_THD_ON_SHIFT		0
+#define SQ_CTXT_PKT_DROP_THD_OFF_SHIFT		16
+
+#define SQ_CTXT_PKT_DROP_THD_ON_MASK		0xFFFFU
+#define SQ_CTXT_PKT_DROP_THD_OFF_MASK		0xFFFFU
+
+#define SQ_CTXT_PKT_DROP_THD_SET(val, member)	(((val) & \
+			SQ_CTXT_PKT_DROP_##member##_MASK) \
+			<< SQ_CTXT_PKT_DROP_##member##_SHIFT)
+
 enum hinic3_rq_wqe_type {
 	HINIC3_COMPACT_RQ_WQE,
 	HINIC3_NORMAL_RQ_WQE,
@@ -44,54 +120,6 @@ enum hinic3_qp_ctxt_type {
 	HINIC3_QP_CTXT_TYPE_SQ,
 	HINIC3_QP_CTXT_TYPE_RQ,
 };
-
-/* Prepare cmd to clean tso/lro space */
-typedef uint8_t  (*prepare_cmd_buf_clean_tso_lro_space_t)(struct hinic3_nic_dev *nic_dev,
-							  struct hinic3_cmd_buf *cmd_buf,
-							  enum hinic3_qp_ctxt_type ctxt_type);
-/* Prepare cmd to store RQ and TQ ctxt */
-typedef uint8_t  (*prepare_cmd_buf_qp_context_multi_store_t)(struct hinic3_nic_dev *nic_dev,
-							     struct hinic3_cmd_buf *cmd_buf,
-							     enum hinic3_qp_ctxt_type ctxt_type,
-							     uint16_t start_qid,
-							     uint16_t max_ctxts);
-/* Prepare cmd to modify vlan tag */
-typedef uint8_t  (*prepare_cmd_buf_modify_svlan_t)(struct hinic3_cmd_buf *cmd_buf, uint16_t func_id,
-						   uint16_t vlan_tag, uint16_t q_id,
-						   uint8_t vlan_mode);
-/* Prepare cmd to set RSS indir table */
-typedef uint8_t  (*prepare_cmd_buf_set_rss_indir_table_t)(struct hinic3_nic_dev *nic_dev,
-							  const uint32_t *indir_table,
-							  struct hinic3_cmd_buf *cmd_buf);
-/* Prepare cmd to get RSS indir table */
-typedef uint8_t  (*prepare_cmd_buf_get_rss_indir_table_t)(struct hinic3_nic_dev *nic_dev,
-							  struct hinic3_cmd_buf *cmd_buf);
-/* Configure RSS indir table */
-typedef void     (*cmd_buf_to_rss_indir_table_t)(const struct hinic3_cmd_buf *cmd_buf,
-						 uint32_t *indir_table);
-
-struct hinic3_nic_cmdq_ops {
-	prepare_cmd_buf_clean_tso_lro_space_t		prepare_cmd_buf_clean_tso_lro_space;
-	prepare_cmd_buf_qp_context_multi_store_t	prepare_cmd_buf_qp_context_multi_store;
-	prepare_cmd_buf_modify_svlan_t			prepare_cmd_buf_modify_svlan;
-	prepare_cmd_buf_set_rss_indir_table_t		prepare_cmd_buf_set_rss_indir_table;
-	prepare_cmd_buf_get_rss_indir_table_t		prepare_cmd_buf_get_rss_indir_table;
-	cmd_buf_to_rss_indir_table_t			cmd_buf_to_rss_indir_table;
-};
-
-/* Forward declaration */
-struct hinic3_nic_dev;
-
-/**
- * Get cmdq ops for the given NIC device.
- *
- * @param[in] nic_dev
- * Pointer to NIC device structure.
- *
- * @return
- * Pointer to cmdq ops structure.
- */
-const struct hinic3_nic_cmdq_ops *hinic3_cmdq_get_ops(struct hinic3_nic_dev *nic_dev);
 
 /* Doorbell info. */
 struct hinic3_db {
@@ -166,6 +194,41 @@ struct hinic3_rq_enable {
 	uint8_t rq_enable;
 	uint8_t rsvd[3];
 };
+
+typedef uint8_t (*prepare_cmd_buf_clean_tso_lro_space_t)(struct hinic3_nic_dev *nic_dev,
+							 struct hinic3_cmd_buf *cmd_buf,
+							 enum hinic3_qp_ctxt_type ctxt_type);
+typedef uint8_t (*prepare_cmd_buf_qp_context_multi_store_t)(struct hinic3_nic_dev *nic_dev,
+							   struct hinic3_cmd_buf *cmd_buf,
+							   enum hinic3_qp_ctxt_type ctxt_type,
+							   uint16_t start_qid,
+							   uint16_t max_ctxts);
+typedef uint8_t  (*prepare_cmd_buf_modify_svlan_t)(struct hinic3_cmd_buf *cmd_buf, uint16_t func_id,
+						   uint16_t vlan_tag, uint16_t q_id,
+						   uint8_t vlan_mode);
+typedef uint8_t (*prepare_cmd_buf_set_rss_indir_table_t)(struct hinic3_nic_dev *nic_dev,
+							 const uint32_t *indir_table,
+							 struct hinic3_cmd_buf *cmd_buf);
+typedef uint8_t (*prepare_cmd_buf_get_rss_indir_table_t)(struct hinic3_nic_dev *nic_dev,
+							 struct hinic3_cmd_buf *cmd_buf);
+typedef void (*cmd_buf_to_rss_indir_table_t)(const struct hinic3_cmd_buf *cmd_buf,
+					     uint32_t *indir_table);
+typedef void (*prepare_sq_ctxt_drop_and_prefetch_t)(struct hinic3_sq_ctxt *sq_ctxt);
+typedef void (*prepare_rq_ctxt_ceq_and_prefetch_t)(struct hinic3_rxq *rq,
+						   struct hinic3_rq_ctxt *rq_ctxt);
+
+struct hinic3_nic_cmdq_ops {
+	prepare_cmd_buf_clean_tso_lro_space_t		prepare_cmd_buf_clean_tso_lro_space;
+	prepare_cmd_buf_qp_context_multi_store_t	prepare_cmd_buf_qp_context_multi_store;
+	prepare_cmd_buf_modify_svlan_t			prepare_cmd_buf_modify_svlan;
+	prepare_cmd_buf_set_rss_indir_table_t		prepare_cmd_buf_set_rss_indir_table;
+	prepare_cmd_buf_get_rss_indir_table_t		prepare_cmd_buf_get_rss_indir_table;
+	cmd_buf_to_rss_indir_table_t			cmd_buf_to_rss_indir_table;
+	prepare_sq_ctxt_drop_and_prefetch_t		prepare_sq_ctxt_drop_and_prefetch;
+	prepare_rq_ctxt_ceq_and_prefetch_t		prepare_rq_ctxt_ceq_and_prefetch;
+};
+
+const struct hinic3_nic_cmdq_ops *hinic3_cmdq_get_ops(struct hinic3_nic_dev *nic_dev);
 
 #define DB_INFO_QID_SHIFT	 0
 #define DB_INFO_NON_FILTER_SHIFT 22
