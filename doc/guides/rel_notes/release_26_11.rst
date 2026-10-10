@@ -226,6 +226,9 @@ Removed Items
   The only remaining method for detecting LLDP packets is by using
   the mbuf packet type in conjunction with the ``enable_lldp`` devarg.
 
+* sched: Removed the private random number generator used by RED: the
+  inline function ``rte_fast_rand()``.
+
 
 API Changes
 -----------
