@@ -13,7 +13,8 @@
  * - in the data plane, it expects only one thread per port/queue pair at a time.
  *   Calling RX/TX burst functions concurrently on the same queue (e.g. when using
  *   RTE_ETH_TX_OFFLOAD_MT_LOCKFREE, shared RX queues, or multi-threaded
- *   software PMDs) is not supported.
+ *   software PMDs) is not supported and will be rejected at installation time
+ *   unless overridden by RTE_BPF_ETH_F_SKIP_MT_CHECK.
  * - in the control plane, it is not MT safe, i.e. it is not allowed to do
  *   load/unload for the same port/queue from different threads in parallel.
  * - though it allows load/unload at runtime
@@ -37,6 +38,8 @@ extern "C" {
 enum {
 	RTE_BPF_ETH_F_NONE = 0,
 	RTE_BPF_ETH_F_JIT  = 0x1, /**< use compiled into native ISA code */
+	RTE_BPF_ETH_F_SKIP_MT_CHECK = 0x2,
+	/**< skip check for concurrent data plane thread usage */
 };
 
 /**
