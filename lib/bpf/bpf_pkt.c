@@ -137,7 +137,7 @@ static struct bpf_eth_cbh tx_cbh = {
 static __rte_always_inline void
 bpf_eth_cbi_inuse(struct bpf_eth_cbi *cbi)
 {
-	cbi->use = BPF_ETH_CBI_INUSE;
+	rte_atomic_store_explicit(&cbi->use, BPF_ETH_CBI_INUSE, rte_memory_order_relaxed);
 	/* make sure no store/load reordering could happen */
 	rte_smp_mb();
 }
@@ -150,7 +150,7 @@ bpf_eth_cbi_unuse(struct bpf_eth_cbi *cbi)
 {
 	/* make sure all previous loads are completed */
 	rte_smp_rmb();
-	cbi->use = 0;
+	rte_atomic_store_explicit(&cbi->use, 0, rte_memory_order_relaxed);
 }
 
 /*
