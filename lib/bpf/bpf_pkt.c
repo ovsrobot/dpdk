@@ -26,8 +26,8 @@
 
 struct __rte_cache_aligned bpf_eth_cbi {
 	/* used by both data & control path */
-	RTE_ATOMIC(uint32_t) use;    /*usage counter */
-	const struct rte_eth_rxtx_callback *cb;  /* callback handle */
+	RTE_ATOMIC(uint32_t) use;    /* number of datapath threads in callback */
+	RTE_ATOMIC(const struct rte_eth_rxtx_callback *) cb;  /* callback handle */
 	struct rte_bpf *bpf;
 	struct rte_bpf_jit jit;
 	/* used by control path only */
@@ -35,12 +35,6 @@ struct __rte_cache_aligned bpf_eth_cbi {
 	uint16_t port;
 	uint16_t queue;
 };
-
-/*
- * Odd number means that callback is used by datapath.
- * Even number means that callback is not used by datapath.
- */
-#define BPF_ETH_CBI_INUSE  1
 
 /*
  * List to manage RX/TX installed callbacks.
@@ -75,45 +69,50 @@ static struct bpf_eth_cbh tx_cbh = {
 };
 
 /*
- * Marks given callback as used by datapath.
+ * Removing an rx/tx callback is done in two steps (similar to RCU).
+ * The callback is removed from the ethdev queue so later bursts do not
+ * call it, but a burst already in progress may still be running it.
+ *
+ * The use counter is the number of threads inside the callback.
+ * There can be more than one on a Tx queue with MT_LOCKFREE.
+ *
+ * Datapath increments use then loads cb; unload stores cb then loads use.
+ * These are seq_cst, so either the datapath sees cb == NULL and skips
+ * the program, or unload sees use != 0 and waits for zero. The release
+ * decrement pairs with the acquire wait, so the program is destroyed
+ * only after its last use.
  */
-static __rte_always_inline void
-bpf_eth_cbi_inuse(struct bpf_eth_cbi *cbi)
+
+/*
+ * Enter the callback. Returns true if the BPF program may be run.
+ */
+static inline bool
+bpf_eth_cbi_enter(struct bpf_eth_cbi *cbi)
 {
-	cbi->use++;
-	/* make sure no store/load reordering could happen */
-	rte_smp_mb();
+	rte_atomic_fetch_add_explicit(&cbi->use, 1, rte_memory_order_seq_cst);
+	return rte_atomic_load_explicit(&cbi->cb, rte_memory_order_seq_cst) != NULL;
 }
 
 /*
- * Marks given callback list as not used by datapath.
+ * Leave the callback.
  */
-static __rte_always_inline void
-bpf_eth_cbi_unuse(struct bpf_eth_cbi *cbi)
+static inline void
+bpf_eth_cbi_exit(struct bpf_eth_cbi *cbi)
 {
-	/* make sure all previous loads are completed */
-	rte_smp_rmb();
-	cbi->use++;
+	rte_atomic_fetch_sub_explicit(&cbi->use, 1, rte_memory_order_release);
 }
 
 /*
  * Waits till datapath finished using given callback.
+ * Must be called after cb is cleared.
  */
 static void
 bpf_eth_cbi_wait(const struct bpf_eth_cbi *cbi)
 {
-	uint32_t puse;
+	__rte_atomic uint32_t *use = (__rte_atomic uint32_t *)(uintptr_t)&cbi->use;
 
-	/* make sure all previous loads and stores are completed */
-	rte_smp_mb();
-
-	puse = cbi->use;
-
-	/* in use, busy wait till current RX/TX iteration is finished */
-	if ((puse & BPF_ETH_CBI_INUSE) != 0) {
-		RTE_WAIT_UNTIL_MASKED((__rte_atomic uint32_t *)(uintptr_t)&cbi->use,
-			UINT32_MAX, !=, puse, rte_memory_order_relaxed);
-	}
+	if (rte_atomic_load_explicit(use, rte_memory_order_seq_cst) != 0)
+		RTE_WAIT_UNTIL_MASKED(use, UINT32_MAX, ==, 0, rte_memory_order_acquire);
 }
 
 static void
@@ -262,16 +261,12 @@ bpf_rx_callback_vm(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	__rte_unused uint16_t max_pkts, void *user_param)
 {
 	struct bpf_eth_cbi *cbi;
-	uint16_t rc;
 
 	cbi = user_param;
-
-	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
-		pkt_filter_vm(cbi->bpf, pkt, nb_pkts, 1) :
-		nb_pkts;
-	bpf_eth_cbi_unuse(cbi);
-	return rc;
+	if (bpf_eth_cbi_enter(cbi))
+		nb_pkts = pkt_filter_vm(cbi->bpf, pkt, nb_pkts, 1);
+	bpf_eth_cbi_exit(cbi);
+	return nb_pkts;
 }
 
 static uint16_t
@@ -280,15 +275,12 @@ bpf_rx_callback_jit(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	__rte_unused uint16_t max_pkts, void *user_param)
 {
 	struct bpf_eth_cbi *cbi;
-	uint16_t rc;
 
 	cbi = user_param;
-	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
-		pkt_filter_jit(&cbi->jit, pkt, nb_pkts, 1) :
-		nb_pkts;
-	bpf_eth_cbi_unuse(cbi);
-	return rc;
+	if (bpf_eth_cbi_enter(cbi))
+		nb_pkts = pkt_filter_jit(&cbi->jit, pkt, nb_pkts, 1);
+	bpf_eth_cbi_exit(cbi);
+	return nb_pkts;
 }
 
 static uint16_t
@@ -296,15 +288,12 @@ bpf_tx_callback_vm(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	struct rte_mbuf *pkt[], uint16_t nb_pkts, void *user_param)
 {
 	struct bpf_eth_cbi *cbi;
-	uint16_t rc;
 
 	cbi = user_param;
-	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
-		pkt_filter_vm(cbi->bpf, pkt, nb_pkts, 0) :
-		nb_pkts;
-	bpf_eth_cbi_unuse(cbi);
-	return rc;
+	if (bpf_eth_cbi_enter(cbi))
+		nb_pkts = pkt_filter_vm(cbi->bpf, pkt, nb_pkts, 0);
+	bpf_eth_cbi_exit(cbi);
+	return nb_pkts;
 }
 
 static uint16_t
@@ -312,15 +301,12 @@ bpf_tx_callback_jit(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	struct rte_mbuf *pkt[], uint16_t nb_pkts, void *user_param)
 {
 	struct bpf_eth_cbi *cbi;
-	uint16_t rc;
 
 	cbi = user_param;
-	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
-		pkt_filter_jit(&cbi->jit, pkt, nb_pkts, 0) :
-		nb_pkts;
-	bpf_eth_cbi_unuse(cbi);
-	return rc;
+	if (bpf_eth_cbi_enter(cbi))
+		nb_pkts = pkt_filter_jit(&cbi->jit, pkt, nb_pkts, 0);
+	bpf_eth_cbi_exit(cbi);
+	return nb_pkts;
 }
 
 /*
@@ -333,15 +319,12 @@ bpf_rx_callback_mb_vm(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	__rte_unused uint16_t max_pkts, void *user_param)
 {
 	struct bpf_eth_cbi *cbi;
-	uint16_t rc;
 
 	cbi = user_param;
-	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
-		pkt_filter_mb_vm(cbi->bpf, pkt, nb_pkts, 1) :
-		nb_pkts;
-	bpf_eth_cbi_unuse(cbi);
-	return rc;
+	if (bpf_eth_cbi_enter(cbi))
+		nb_pkts = pkt_filter_mb_vm(cbi->bpf, pkt, nb_pkts, 1);
+	bpf_eth_cbi_exit(cbi);
+	return nb_pkts;
 }
 
 static uint16_t
@@ -350,15 +333,12 @@ bpf_rx_callback_mb_jit(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	__rte_unused uint16_t max_pkts, void *user_param)
 {
 	struct bpf_eth_cbi *cbi;
-	uint16_t rc;
 
 	cbi = user_param;
-	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
-		pkt_filter_mb_jit(&cbi->jit, pkt, nb_pkts, 1) :
-		nb_pkts;
-	bpf_eth_cbi_unuse(cbi);
-	return rc;
+	if (bpf_eth_cbi_enter(cbi))
+		nb_pkts = pkt_filter_mb_jit(&cbi->jit, pkt, nb_pkts, 1);
+	bpf_eth_cbi_exit(cbi);
+	return nb_pkts;
 }
 
 static uint16_t
@@ -366,15 +346,12 @@ bpf_tx_callback_mb_vm(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	struct rte_mbuf *pkt[], uint16_t nb_pkts, void *user_param)
 {
 	struct bpf_eth_cbi *cbi;
-	uint16_t rc;
 
 	cbi = user_param;
-	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
-		pkt_filter_mb_vm(cbi->bpf, pkt, nb_pkts, 0) :
-		nb_pkts;
-	bpf_eth_cbi_unuse(cbi);
-	return rc;
+	if (bpf_eth_cbi_enter(cbi))
+		nb_pkts = pkt_filter_mb_vm(cbi->bpf, pkt, nb_pkts, 0);
+	bpf_eth_cbi_exit(cbi);
+	return nb_pkts;
 }
 
 static uint16_t
@@ -382,15 +359,12 @@ bpf_tx_callback_mb_jit(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	struct rte_mbuf *pkt[], uint16_t nb_pkts, void *user_param)
 {
 	struct bpf_eth_cbi *cbi;
-	uint16_t rc;
 
 	cbi = user_param;
-	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
-		pkt_filter_mb_jit(&cbi->jit, pkt, nb_pkts, 0) :
-		nb_pkts;
-	bpf_eth_cbi_unuse(cbi);
-	return rc;
+	if (bpf_eth_cbi_enter(cbi))
+		nb_pkts = pkt_filter_mb_jit(&cbi->jit, pkt, nb_pkts, 0);
+	bpf_eth_cbi_exit(cbi);
+	return nb_pkts;
 }
 
 static rte_rx_callback_fn
@@ -438,8 +412,7 @@ static void
 bpf_eth_cbi_unload(struct bpf_eth_cbi *bc)
 {
 	/* mark this cbi as empty */
-	bc->cb = NULL;
-	rte_smp_mb();
+	rte_atomic_store_explicit(&bc->cb, NULL, rte_memory_order_seq_cst);
 
 	/* make sure datapath doesn't use bpf anymore, then destroy bpf */
 	bpf_eth_cbi_wait(bc);
@@ -450,16 +423,21 @@ bpf_eth_cbi_unload(struct bpf_eth_cbi *bc)
 static void
 bpf_eth_unload(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue)
 {
+	const struct rte_eth_rxtx_callback *cb;
 	struct bpf_eth_cbi *bc;
 
 	bc = bpf_eth_cbh_find(cbh, port, queue);
-	if (bc == NULL || bc->cb == NULL)
+	if (bc == NULL)
+		return;
+
+	cb = rte_atomic_load_explicit(&bc->cb, rte_memory_order_relaxed);
+	if (cb == NULL)
 		return;
 
 	if (cbh->type == BPF_ETH_RX)
-		rte_eth_remove_rx_callback(port, queue, bc->cb);
+		rte_eth_remove_rx_callback(port, queue, cb);
 	else
-		rte_eth_remove_tx_callback(port, queue, bc->cb);
+		rte_eth_remove_tx_callback(port, queue, cb);
 
 	bpf_eth_cbi_unload(bc);
 }
@@ -494,6 +472,7 @@ bpf_eth_elf_install(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue,
 	struct rte_bpf *bpf, uint32_t flags)
 {
 	int32_t rc;
+	const struct rte_eth_rxtx_callback *cb;
 	struct bpf_eth_cbi *bc;
 	rte_rx_callback_fn frx;
 	rte_tx_callback_fn ftx;
@@ -534,18 +513,20 @@ bpf_eth_elf_install(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue,
 		return -ENOMEM;
 
 	/* remove old one, if any */
-	if (bc->cb != NULL)
-		bpf_eth_unload(cbh, port, queue);
+	bpf_eth_unload(cbh, port, queue);
 
 	bc->bpf = bpf;
 	bc->jit = jit;
 
 	if (cbh->type == BPF_ETH_RX)
-		bc->cb = rte_eth_add_rx_callback(port, queue, frx, bc);
+		cb = rte_eth_add_rx_callback(port, queue, frx, bc);
 	else
-		bc->cb = rte_eth_add_tx_callback(port, queue, ftx, bc);
+		cb = rte_eth_add_tx_callback(port, queue, ftx, bc);
 
-	if (bc->cb == NULL) {
+	/* publish bpf and jit to the datapath */
+	rte_atomic_store_explicit(&bc->cb, cb, rte_memory_order_release);
+
+	if (cb == NULL) {
 		rc = -rte_errno;
 		bpf_eth_cbi_cleanup(bc);
 	} else

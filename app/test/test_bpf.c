@@ -4329,6 +4329,10 @@ test_bpf_elf_load(load_elf_image_t load_elf_image)
 #include <rte_ethdev.h>
 #include <rte_bpf_ethdev.h>
 #include <rte_bus_vdev.h>
+#include <rte_cycles.h>
+#include <rte_launch.h>
+#include <rte_lcore.h>
+#include <rte_pause.h>
 
 #include "test_bpf_filter.h"
 
@@ -4336,7 +4340,8 @@ test_bpf_elf_load(load_elf_image_t load_elf_image)
 #define BPF_TEST_POOLSIZE	256 /* at least 2x burst */
 #define BPF_TEST_PKT_LEN	64 /* Ether + IP + TCP */
 
-static int null_vdev_setup(const char *name, uint16_t *port, struct rte_mempool *pool)
+static int null_vdev_setup(const char *name, uint16_t *port, struct rte_mempool *pool,
+			   uint64_t tx_offloads)
 {
 	int ret;
 
@@ -4347,7 +4352,9 @@ static int null_vdev_setup(const char *name, uint16_t *port, struct rte_mempool 
 	ret = rte_eth_dev_get_port_by_name(name, port);
 	TEST_ASSERT(ret == 0, "failed to get port id for %s: %d", name, ret);
 
-	struct rte_eth_conf conf = { };
+	struct rte_eth_conf conf = {
+		.txmode.offloads = tx_offloads,
+	};
 	ret = rte_eth_dev_configure(*port, 1, 1, &conf);
 	TEST_ASSERT(ret == 0, "failed to configure port %u: %d", *port, ret);
 
@@ -4488,7 +4495,7 @@ test_bpf_elf_tx_load(load_elf_image_t load_elf_image)
 					  SOCKET_ID_ANY);
 	TEST_ASSERT(mb_pool != NULL, "failed to create mempool");
 
-	ret = null_vdev_setup(null_dev, &port, mb_pool);
+	ret = null_vdev_setup(null_dev, &port, mb_pool, 0);
 	if (ret != 0)
 		goto fail;
 
@@ -4577,7 +4584,7 @@ test_bpf_elf_rx_load(load_elf_image_t load_elf_image)
 					  SOCKET_ID_ANY);
 	TEST_ASSERT(pool != NULL, "failed to create mempool");
 
-	ret = null_vdev_setup(null_dev, &port, pool);
+	ret = null_vdev_setup(null_dev, &port, pool, 0);
 	if (ret != 0)
 		goto fail;
 
@@ -4618,6 +4625,136 @@ fail:
 }
 
 
+#define BPF_MT_BURST		32
+#define BPF_MT_POOLSIZE		4096
+#define BPF_MT_ITERATIONS	1000
+
+static RTE_ATOMIC(bool) bpf_mt_stop;
+
+struct bpf_mt_arg {
+	uint16_t port;
+	struct rte_mempool *pool;
+};
+
+/* Transmit on the same queue as the other workers until told to stop. */
+static int
+bpf_mt_tx_worker(void *arg)
+{
+	const struct bpf_mt_arg *mt = arg;
+	struct rte_mbuf *pkts[BPF_MT_BURST];
+
+	while (!rte_atomic_load_explicit(&bpf_mt_stop, rte_memory_order_relaxed)) {
+		if (rte_pktmbuf_alloc_bulk(mt->pool, pkts, BPF_MT_BURST) != 0) {
+			rte_pause();
+			continue;
+		}
+		setup_mbufs(pkts, BPF_MT_BURST);
+
+		uint16_t sent = rte_eth_tx_burst(mt->port, 0, pkts, BPF_MT_BURST);
+		rte_pktmbuf_free_bulk(pkts + sent, BPF_MT_BURST - sent);
+	}
+	return 0;
+}
+
+/*
+ * Load and unload a Tx filter while several lcores do tx burst
+ * on the same MT_LOCKFREE queue.
+ */
+static int
+test_bpf_elf_tx_mt_lockfree(load_elf_image_t load_elf_image)
+{
+	static const struct rte_bpf_arg prog_arg = {
+		.type = RTE_BPF_ARG_PTR,
+		.size = sizeof(struct dummy_net),
+	};
+	static const char null_dev[] = "net_null_bpf_mt";
+	struct bpf_mt_arg mt = { .port = UINT16_MAX };
+	struct rte_eth_dev_info dev_info;
+	unsigned int lcore, workers = 0;
+	int ret;
+
+	RTE_LCORE_FOREACH_WORKER(lcore)
+		workers++;
+	if (workers < 2) {
+		printf("%s: need at least 2 worker lcores, skipping\n", __func__);
+		return TEST_SKIPPED;
+	}
+
+	mt.pool = rte_pktmbuf_pool_create("bpf_mt_test_pool", BPF_MT_POOLSIZE,
+					  0, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+					  SOCKET_ID_ANY);
+	TEST_ASSERT_NOT_NULL(mt.pool, "failed to create mempool");
+
+	ret = null_vdev_setup(null_dev, &mt.port, mt.pool, RTE_ETH_TX_OFFLOAD_MT_LOCKFREE);
+	if (ret != 0)
+		goto fail;
+
+	ret = rte_eth_dev_info_get(mt.port, &dev_info);
+	if (ret != 0)
+		goto fail;
+	if (!(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MT_LOCKFREE)) {
+		ret = TEST_SKIPPED;
+		goto fail;
+	}
+
+	rte_atomic_store_explicit(&bpf_mt_stop, false, rte_memory_order_relaxed);
+	RTE_LCORE_FOREACH_WORKER(lcore)
+		rte_eal_remote_launch(bpf_mt_tx_worker, &mt, lcore);
+
+	for (unsigned int i = 0; i < BPF_MT_ITERATIONS; i++) {
+		uint32_t flags = (i & 1) ? RTE_BPF_ETH_F_JIT : 0;
+		struct rte_bpf *bpf;
+		struct rte_bpf_jit jit;
+
+		bpf = load_elf_image(app_test_bpf_filter_o, app_test_bpf_filter_o_len,
+				     "filter", NULL, 0, &prog_arg);
+		if (bpf == NULL) {
+			printf("%s@%d: failed to load BPF filter\n", __func__, __LINE__);
+			ret = TEST_FAILED;
+			break;
+		}
+
+		rte_bpf_get_jit(bpf, &jit);
+		if (jit.func == NULL)
+			flags = 0;
+
+		ret = rte_bpf_eth_tx_install(mt.port, 0, bpf, flags);
+		if (ret != 0) {
+			printf("%s@%d: install failed: %d\n", __func__, __LINE__, ret);
+			rte_bpf_destroy(bpf);
+			ret = TEST_FAILED;
+			break;
+		}
+
+		rte_delay_us(10);
+		rte_bpf_eth_tx_unload(mt.port, 0);
+	}
+
+	rte_atomic_store_explicit(&bpf_mt_stop, true, rte_memory_order_relaxed);
+	rte_eal_mp_wait_lcore();
+
+	if (ret == 0) {
+		unsigned int avail = rte_mempool_avail_count(mt.pool);
+
+		if (avail != BPF_MT_POOLSIZE) {
+			printf("%s: mempool available %u != %u\n",
+			       __func__, avail, BPF_MT_POOLSIZE);
+			ret = TEST_FAILED;
+		}
+	}
+
+fail:
+	if (mt.port != UINT16_MAX) {
+		rte_eth_dev_stop(mt.port);
+		rte_vdev_uninit(null_dev);
+	}
+	rte_mempool_free(mt.pool);
+
+	if (ret == TEST_SKIPPED)
+		return TEST_SKIPPED;
+	return ret == 0 ? TEST_SUCCESS : TEST_FAILED;
+}
+
 static int
 test_bpf_elf(void)
 {
@@ -4636,6 +4773,9 @@ test_bpf_elf(void)
 		if (ret == TEST_SUCCESS)
 			ret = test_bpf_elf_rx_load(elf_image_loaders[li]);
 	}
+
+	if (ret == TEST_SUCCESS)
+		ret = test_bpf_elf_tx_mt_lockfree(load_elf_image_direct);
 
 	return ret;
 }

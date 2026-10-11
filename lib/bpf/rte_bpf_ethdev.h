@@ -14,6 +14,8 @@
  *   same port/queue from different threads in parallel.
  * - though it allows load/unload at runtime
  *   (while RX/TX is ongoing on given port/queue).
+ * - TX burst on the same port/queue may be called from more than
+ *   one thread when RTE_ETH_TX_OFFLOAD_MT_LOCKFREE is enabled.
  * - allows only one BPF program per port/queue,
  * i.e. new load will replace previously loaded for that port/queue BPF program.
  * Filter behaviour - if BPF program returns zero value for a given packet,
