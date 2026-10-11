@@ -21,9 +21,72 @@
 #include "bpf_impl.h"
 
 /*
- * information about installed BPF rx/tx callback
+ * CP-DP synchronization mechanism
+ *
+ * After the callback is installed to a port/queue, removing it safely is a non-trivial task.
+ * The `rte_bpf` object can only be destroyed while the callback is not being executed,
+ * while the number of synchronization calls in the packet callback must be minimized.
+ *
+ * APIs `rte_eth_remove_rx_callback` and `rte_eth_remove_tx_callback` remove the callback from
+ * the callback list and upon return guarantee that it will not be called again,
+ * but not that any existing invocation of the callback has completed.
+ *
+ * Current synchronization mechanism relies on the following per-port/queue entities:
+ * 1. List of installed port/queue callbacks ("cbs" on the diagram);
+ * 2. Member `cb` of struct `bpf_eth_cbi`;
+ * 3. Member `use` of struct `bpf_eth_cbi`;
+ *
+ * BPF program is only executed if the first two are set, and increments `use` at the start and
+ * end of the callback execution so that in the safe state its value is even.
+ * This relies on only one thread calling the per-port/queue callback at a time.
+ *
+ * Unload processing starts with clearing the first two entities,
+ * then waits for `use` to become even before destroying the BPF program.
+ * The whole operation is protected by a control-plane-only spinlock (not shown on the diagram).
+ *
+ * Typical sequence of synchronization actions between CP and DP on unload is shown below:
+ * ```
+ *   +----+                +-----+         +-----+        +----+         +-----+          +----+
+ *   | CP |                | cbs |         | use |        | cb |         | bpf |          | DP |
+ *   +----+                +-----+         +-----+        +----+         +-----+          +----+
+ *     |                      |               |              |              |                |
+ *     |                      |<---------------------- fetch callback -----------------------|
+ *     |                      |               |              |              |                |
+ *     |                      |               |<------------- increment to odd --------------|
+ *     |                      |               |              |              |                |
+ *     |-- remove callback -->|               |              |              |       rte_smp_mb()
+ *     |                      |               |              |              |                |
+ *     |                      |               |              |<------ fetch non-NULL --------|
+ *     |                      |               |              |              |                |
+ *     |------------------- store NULL --------------------->|              |                |
+ *     |                      |               |              |              |                |
+ *   rte_smp_mb()             |               |              |              |                |
+ *     |                      |               |              |              |                |
+ *   rte_smp_mb()             |               |              |              |                |
+ *     |                      |               |              |              |                |
+ *     +-if use is odd        |               |              |              | if cb not NULL-+
+ *     | |                    |               |              |              |              | |
+ *     | +------------ fetch odd ------------>|              |              |<-- execute --+ |
+ *     | |                    |               |              |              |  BPF program | |
+ *     | +-while use is same  |               |              |              |              +-+
+ *     | | |                  |               |              |              |                |
+ *     | | +---------- fetch odd ------------>|              |              |      rte_smp_rmb()
+ *     | | |                  |               |              |              |                |
+ *     +-+-+                  |               |<------------- increment to even -------------|
+ *     |                      |               |              |              |                |
+ *     |------------- fetch even ------------>|              |              |                |
+ *     |                      |               |              |              |                |
+ *     |----------------- destroy BPF program and cleanup ----------------->|                |
+ *     |                      |               |              |              |                |
+ *   +----+                +-----+         +-----+        +----+         +-----+          +----+
+ *   | CP |                | cbs |         | use |        | cb |         | bpf |          | DP |
+ *   +----+                +-----+         +-----+        +----+         +-----+          +----+
+ * ```
  */
 
+/*
+ * information about installed BPF rx/tx callback
+ */
 struct __rte_cache_aligned bpf_eth_cbi {
 	/* used by both data & control path */
 	RTE_ATOMIC(uint32_t) use;    /*usage counter */
