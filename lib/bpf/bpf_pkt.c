@@ -84,7 +84,7 @@
 struct __rte_cache_aligned bpf_eth_cbi {
 	/* used by both data & control path */
 	RTE_ATOMIC(uint32_t) use;    /* usage flag: 1 when in use, 0 otherwise */
-	const struct rte_eth_rxtx_callback *cb;  /* callback handle */
+	RTE_ATOMIC(const struct rte_eth_rxtx_callback *) cb;  /* callback handle */
 	struct rte_bpf *bpf;
 	struct rte_bpf_jit jit;
 	/* used by control path only */
@@ -318,7 +318,7 @@ bpf_rx_callback_vm(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 	cbi = user_param;
 
 	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
+	rc = (rte_atomic_load_explicit(&cbi->cb, rte_memory_order_relaxed) != NULL) ?
 		pkt_filter_vm(cbi->bpf, pkt, nb_pkts, 1) :
 		nb_pkts;
 	bpf_eth_cbi_unuse(cbi);
@@ -335,7 +335,7 @@ bpf_rx_callback_jit(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 
 	cbi = user_param;
 	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
+	rc = (rte_atomic_load_explicit(&cbi->cb, rte_memory_order_relaxed) != NULL) ?
 		pkt_filter_jit(&cbi->jit, pkt, nb_pkts, 1) :
 		nb_pkts;
 	bpf_eth_cbi_unuse(cbi);
@@ -351,7 +351,7 @@ bpf_tx_callback_vm(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 
 	cbi = user_param;
 	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
+	rc = (rte_atomic_load_explicit(&cbi->cb, rte_memory_order_relaxed) != NULL) ?
 		pkt_filter_vm(cbi->bpf, pkt, nb_pkts, 0) :
 		nb_pkts;
 	bpf_eth_cbi_unuse(cbi);
@@ -367,7 +367,7 @@ bpf_tx_callback_jit(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 
 	cbi = user_param;
 	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
+	rc = (rte_atomic_load_explicit(&cbi->cb, rte_memory_order_relaxed) != NULL) ?
 		pkt_filter_jit(&cbi->jit, pkt, nb_pkts, 0) :
 		nb_pkts;
 	bpf_eth_cbi_unuse(cbi);
@@ -388,7 +388,7 @@ bpf_rx_callback_mb_vm(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 
 	cbi = user_param;
 	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
+	rc = (rte_atomic_load_explicit(&cbi->cb, rte_memory_order_relaxed) != NULL) ?
 		pkt_filter_mb_vm(cbi->bpf, pkt, nb_pkts, 1) :
 		nb_pkts;
 	bpf_eth_cbi_unuse(cbi);
@@ -405,7 +405,7 @@ bpf_rx_callback_mb_jit(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 
 	cbi = user_param;
 	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
+	rc = (rte_atomic_load_explicit(&cbi->cb, rte_memory_order_relaxed) != NULL) ?
 		pkt_filter_mb_jit(&cbi->jit, pkt, nb_pkts, 1) :
 		nb_pkts;
 	bpf_eth_cbi_unuse(cbi);
@@ -421,7 +421,7 @@ bpf_tx_callback_mb_vm(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 
 	cbi = user_param;
 	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
+	rc = (rte_atomic_load_explicit(&cbi->cb, rte_memory_order_relaxed) != NULL) ?
 		pkt_filter_mb_vm(cbi->bpf, pkt, nb_pkts, 0) :
 		nb_pkts;
 	bpf_eth_cbi_unuse(cbi);
@@ -437,7 +437,7 @@ bpf_tx_callback_mb_jit(__rte_unused uint16_t port, __rte_unused uint16_t queue,
 
 	cbi = user_param;
 	bpf_eth_cbi_inuse(cbi);
-	rc = (cbi->cb != NULL) ?
+	rc = (rte_atomic_load_explicit(&cbi->cb, rte_memory_order_relaxed) != NULL) ?
 		pkt_filter_mb_jit(&cbi->jit, pkt, nb_pkts, 0) :
 		nb_pkts;
 	bpf_eth_cbi_unuse(cbi);
@@ -489,7 +489,7 @@ static void
 bpf_eth_cbi_unload(struct bpf_eth_cbi *bc)
 {
 	/* mark this cbi as empty */
-	bc->cb = NULL;
+	rte_atomic_store_explicit(&bc->cb, NULL, rte_memory_order_relaxed);
 
 	/* make sure datapath doesn't use bpf anymore, then destroy bpf */
 	bpf_eth_cbi_wait(bc);
@@ -500,16 +500,21 @@ bpf_eth_cbi_unload(struct bpf_eth_cbi *bc)
 static void
 bpf_eth_unload(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue)
 {
+	const struct rte_eth_rxtx_callback *cb;
 	struct bpf_eth_cbi *bc;
 
 	bc = bpf_eth_cbh_find(cbh, port, queue);
-	if (bc == NULL || bc->cb == NULL)
+	if (bc == NULL)
+		return;
+
+	cb = rte_atomic_load_explicit(&bc->cb, rte_memory_order_relaxed);
+	if (cb == NULL)
 		return;
 
 	if (cbh->type == BPF_ETH_RX)
-		rte_eth_remove_rx_callback(port, queue, bc->cb);
+		rte_eth_remove_rx_callback(port, queue, cb);
 	else
-		rte_eth_remove_tx_callback(port, queue, bc->cb);
+		rte_eth_remove_tx_callback(port, queue, cb);
 
 	bpf_eth_cbi_unload(bc);
 }
@@ -586,6 +591,7 @@ bpf_eth_elf_install(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue,
 	struct rte_bpf *bpf, uint32_t flags)
 {
 	int32_t rc;
+	const struct rte_eth_rxtx_callback *cb;
 	struct bpf_eth_cbi *bc;
 	rte_rx_callback_fn frx;
 	rte_tx_callback_fn ftx;
@@ -632,18 +638,20 @@ bpf_eth_elf_install(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue,
 		return -ENOMEM;
 
 	/* remove old one, if any */
-	if (bc->cb != NULL)
+	if (rte_atomic_load_explicit(&bc->cb, rte_memory_order_relaxed) != NULL)
 		bpf_eth_unload(cbh, port, queue);
 
 	bc->bpf = bpf;
 	bc->jit = jit;
 
 	if (cbh->type == BPF_ETH_RX)
-		bc->cb = rte_eth_add_rx_callback(port, queue, frx, bc);
+		cb = rte_eth_add_rx_callback(port, queue, frx, bc);
 	else
-		bc->cb = rte_eth_add_tx_callback(port, queue, ftx, bc);
+		cb = rte_eth_add_tx_callback(port, queue, ftx, bc);
 
-	if (bc->cb == NULL) {
+	rte_atomic_store_explicit(&bc->cb, cb, rte_memory_order_relaxed);
+
+	if (cb == NULL) {
 		rc = -rte_errno;
 		bpf_eth_cbi_cleanup(bc);
 	} else
