@@ -62,8 +62,6 @@
  *     |                      |               |              |              |                |
  *   rte_smp_mb()             |               |              |              |                |
  *     |                      |               |              |              |                |
- *   rte_smp_mb()             |               |              |              |                |
- *     |                      |               |              |              |                |
  *     +-if use is odd        |               |              |              | if cb not NULL-+
  *     | |                    |               |              |              |              | |
  *     | +------------ fetch odd ------------>|              |              |<-- execute --+ |
@@ -502,7 +500,6 @@ bpf_eth_cbi_unload(struct bpf_eth_cbi *bc)
 {
 	/* mark this cbi as empty */
 	bc->cb = NULL;
-	rte_smp_mb();
 
 	/* make sure datapath doesn't use bpf anymore, then destroy bpf */
 	bpf_eth_cbi_wait(bc);
