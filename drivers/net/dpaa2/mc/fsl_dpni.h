@@ -1112,6 +1112,10 @@ int dpni_set_rx_tc_dist(struct fsl_mc_io *mc_io,
 #define DPNI_POLICER_OPT_DISCARD_RED	0x00000002
 
 /**
+ * Do NOT reset counters generally for policer update
+ */
+
+/**
  * enum dpni_policer_mode - selecting the policer mode
  * @DPNI_POLICER_MODE_NONE: Policer is disabled
  * @DPNI_POLICER_MODE_PASS_THROUGH: Policer pass through
@@ -1127,12 +1131,17 @@ enum dpni_policer_mode {
 
 /**
  * enum dpni_policer_unit - DPNI policer units
- * @DPNI_POLICER_UNIT_BYTES: bytes units
+ * @DPNI_POLICER_UNIT_BYTES_L3: bytes units (for each frame takes into account
+ * FD length - L3 offset)
  * @DPNI_POLICER_UNIT_FRAMES: frames units
+ * @DPNI_POLICER_UNIT_BYTES_L2_WITHOUT_FCS: bytes units (for each frame takes
+ * into account FD length - L2 offset, which means L2 size without the 4 bytes
+ * for the FCS)
  */
 enum dpni_policer_unit {
-	DPNI_POLICER_UNIT_BYTES = 0,
-	DPNI_POLICER_UNIT_FRAMES
+	DPNI_POLICER_UNIT_BYTES_L3 = 0,
+	DPNI_POLICER_UNIT_FRAMES,
+	DPNI_POLICER_UNIT_BYTES_L2_WITHOUT_FCS,
 };
 
 /**
@@ -1173,12 +1182,12 @@ struct dpni_rx_tc_policing_cfg {
 	uint32_t ebs;
 };
 
-
 int dpni_set_rx_tc_policing(struct fsl_mc_io *mc_io,
 			    uint32_t cmd_flags,
 			    uint16_t token,
 			    uint8_t tc_id,
 			    const struct dpni_rx_tc_policing_cfg *cfg);
+
 
 int dpni_get_rx_tc_policing(struct fsl_mc_io *mc_io,
 			    uint32_t cmd_flags,

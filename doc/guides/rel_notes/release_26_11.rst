@@ -20,7 +20,6 @@ DPDK Release 26.11
       ninja -C build doc
       xdg-open build/doc/guides/html/rel_notes/release_26_11.html
 
-
 New Features
 ------------
 
@@ -115,6 +114,7 @@ New Features
 
   * Added the inner IP header to the RSS hash so tunneled traffic is
     distributed across the Rx queues.
+  * Added support for traffic metering and policing (rte_mtr API).
 
 * **Updated NXP ENETC4 PMD.**
 
