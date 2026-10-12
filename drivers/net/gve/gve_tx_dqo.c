@@ -134,12 +134,43 @@ gve_tx_clean_descs_dqo(struct gve_tx_queue *txq, uint16_t nb_descs) {
 static inline bool
 gve_tx_validate_descs(struct rte_mbuf *tx_pkt, uint16_t nb_descs, bool is_tso)
 {
-	if (!is_tso)
-		return nb_descs <= GVE_TX_MAX_DATA_DESCS;
-
-	int tso_segsz = tx_pkt->tso_segsz;
+	int tso_segsz, seg_remain, mbuf_remain;
 	int num_descs, seg_offset, mbuf_len;
-	int headlen = tx_pkt->l2_len + tx_pkt->l3_len + tx_pkt->l4_len;
+	int headlen;
+
+	/* Reject zero-length packet */
+	if (unlikely(nb_descs == 0 || tx_pkt->pkt_len == 0))
+		return false;
+
+	if (!is_tso) {
+		/* Reject packets that violate hardware length constraints */
+		if (unlikely(tx_pkt->pkt_len < GVE_TX_MIN_PKT_SIZE_DQO ||
+			     tx_pkt->pkt_len > GVE_TX_MAX_PKT_SIZE_DQO))
+			return false;
+		return nb_descs <= GVE_TX_MAX_DATA_DESCS;
+	}
+
+	headlen = tx_pkt->l2_len + tx_pkt->l3_len + tx_pkt->l4_len;
+
+	/* Reject split transport header */
+	if (unlikely(tx_pkt->data_len < headlen))
+		return false;
+
+	/* Reject missing TCP header on TSO */
+	if (unlikely(tx_pkt->l4_len == 0))
+		return false;
+
+	/* Reject TSO packet without payload */
+	if (unlikely(tx_pkt->pkt_len <= (uint32_t)headlen))
+		return false;
+
+	/* Enforce GVE hardware MSS and header limits */
+	if (unlikely(tx_pkt->tso_segsz < GVE_TX_MIN_TSO_MSS_DQO ||
+		     tx_pkt->tso_segsz > GVE_TX_MAX_TSO_MSS_DQO ||
+		     headlen > GVE_TX_MAX_HDR_SIZE_DQO))
+		return false;
+
+	tso_segsz = tx_pkt->tso_segsz;
 
 	/* Headers will be split into their own buffer. */
 	num_descs = 1;
@@ -150,7 +181,7 @@ gve_tx_validate_descs(struct rte_mbuf *tx_pkt, uint16_t nb_descs, bool is_tso)
 		if (!mbuf_len)
 			goto next_mbuf;
 
-		int seg_remain = tso_segsz - seg_offset;
+		seg_remain = tso_segsz - seg_offset;
 		if (num_descs == GVE_TX_MAX_DATA_DESCS && seg_remain)
 			return false;
 
@@ -162,7 +193,7 @@ gve_tx_validate_descs(struct rte_mbuf *tx_pkt, uint16_t nb_descs, bool is_tso)
 			 * is not at risk of defying this limitation.
 			 * Thus, such segments are ignored.
 			 */
-			int mbuf_remain = tx_pkt->data_len % GVE_TX_MAX_BUF_SIZE_DQO;
+			mbuf_remain = tx_pkt->data_len % GVE_TX_MAX_BUF_SIZE_DQO;
 
 			/* For each TSO segment, HW will prepend
 			 * headers. The remaining bytes of this mbuf
@@ -183,7 +214,6 @@ next_mbuf:
 		if (tx_pkt)
 			mbuf_len = tx_pkt->data_len;
 	}
-
 
 	return true;
 }
