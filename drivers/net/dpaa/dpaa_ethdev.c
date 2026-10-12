@@ -57,6 +57,9 @@
 #define DRIVER_RECV_ERR_PKTS      "recv_err_pkts"
 #define RTE_PRIORITY_103 103
 
+/* Maximum number of stale frame queues cleaned up per congestion group. */
+#define DPAA_CGR_STALE_FQ_MAX     64
+
 /* Supported Rx offloads */
 static uint64_t dev_rx_offloads_sup =
 		RTE_ETH_RX_OFFLOAD_SCATTER;
@@ -494,6 +497,44 @@ static int dpaa_eth_dev_stop(struct rte_eth_dev *dev)
 	return 0;
 }
 
+/* Shut down any frame queue still linked to this CGR.
+ *
+ * A CGR must have no members left when it is deleted. FQs left behind by a
+ * previous run of the application are not owned by this process, so they can
+ * only be found by asking QMan. There may be more than one, hence the loop.
+ */
+static void
+dpaa_cgr_stale_fq_cleanup(struct rte_eth_dev *dev, uint32_t cgrid_start,
+			  uint32_t cgrid_num, const char *dir)
+{
+	uint32_t start_fqid = 1;
+	uint32_t fqid, cgrid;
+	uint32_t loop, max_loop;
+	int ret;
+
+	max_loop = cgrid_num * DPAA_CGR_STALE_FQ_MAX;
+	for (loop = 0; loop < max_loop; loop++) {
+		if (qman_pending_fq_by_cgrid_range(cgrid_start, cgrid_num,
+						   start_fqid, &fqid, &cgrid))
+			break;
+		/* Should be FQ not cleaned in previous program. */
+		DPAA_PMD_DEBUG("FQ(fqid=0x%x) with %s cgid=%d is still alive?",
+			fqid, dir, cgrid);
+		ret = qman_shutdown_fq_by_fqid(fqid);
+		if (ret) {
+			DPAA_PMD_WARN("%s: Failed(%d) to shutdown %s cgid=%d's fq(fqid=0x%x)",
+				dev->data->name, ret, dir, cgrid, fqid);
+			/* Do not spin on an FQ that refuses to shut down. */
+			break;
+		}
+		/* Resume the scan past the FQ just handled instead of
+		 * restarting from the beginning, which would be O(N^2) for
+		 * N stale FQs.
+		 */
+		start_fqid = fqid + 1;
+	}
+}
+
 static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 {
 	struct fman_if *fif = dev->process_private;
@@ -503,7 +544,7 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 	struct rte_eth_link *link = &dev->data->dev_link;
 	struct dpaa_if *dpaa_intf = dev->data->dev_private;
 	struct qman_fq *fq;
-	int loop;
+	uint32_t loop;
 	int ret;
 
 	PMD_INIT_FUNC_TRACE();
@@ -568,6 +609,11 @@ clean_1:
 
 	/* Release RX congestion Groups */
 	if (dpaa_intf->cgr_rx) {
+		/* The CGRIDs are a contiguous range, so one scan of the FQID
+		 * space covers all of them.
+		 */
+		dpaa_cgr_stale_fq_cleanup(dev, dpaa_intf->cgr_rx[0].cgrid,
+					  dpaa_intf->nb_rx_queues, "rx");
 		for (loop = 0; loop < dpaa_intf->nb_rx_queues; loop++) {
 			ret = qman_delete_cgr(&dpaa_intf->cgr_rx[loop]);
 			if (ret) {
@@ -575,12 +621,15 @@ clean_1:
 					dev->data->name, loop, ret);
 			}
 		}
+		qman_release_cgrid_range(dpaa_intf->cgr_rx[0].cgrid, dpaa_intf->nb_rx_queues);
 		rte_free(dpaa_intf->cgr_rx);
 		dpaa_intf->cgr_rx = NULL;
 	}
 
 	/* Release TX congestion Groups */
 	if (dpaa_intf->cgr_tx) {
+		dpaa_cgr_stale_fq_cleanup(dev, dpaa_intf->cgr_tx[0].cgrid,
+					  MAX_DPAA_CORES, "tx");
 		for (loop = 0; loop < MAX_DPAA_CORES; loop++) {
 			ret = qman_delete_cgr(&dpaa_intf->cgr_tx[loop]);
 			if (ret) {
@@ -588,6 +637,8 @@ clean_1:
 					dev->data->name, loop, ret);
 			}
 		}
+		qman_release_cgrid_range(dpaa_intf->cgr_tx[0].cgrid,
+					 MAX_DPAA_CORES);
 		rte_free(dpaa_intf->cgr_tx);
 		dpaa_intf->cgr_tx = NULL;
 	}
@@ -1937,19 +1988,32 @@ static int dpaa_rx_queue_init(struct qman_fq *fq, struct qman_cgr *cgr_rx,
 		ret = qman_create_cgr(cgr_rx, QMAN_CGR_FLAG_USE_INIT,
 				      &cgr_opts);
 		if (ret) {
-			DPAA_PMD_WARN(
-				"rx taildrop init fail on rx fqid 0x%x(ret=%d)",
+			/* Do not fall back to running without the CGR. The
+			 * caller counts one CGR per queue it initialised and
+			 * deletes cgr_rx[0..n) on its error path, so a queue
+			 * without a CGR would make it delete an object that
+			 * was never added to the portal list, whose node is
+			 * still zeroed from rte_zmalloc().
+			 */
+			DPAA_PMD_ERR("rx taildrop init fail on rx fqid 0x%x(ret=%d)",
 				fq->fqid, ret);
-			goto without_cgr;
+			return ret;
 		}
 		opts.we_mask |= QM_INITFQ_WE_CGID;
 		opts.fqd.cgid = cgr_rx->cgrid;
 		opts.fqd.fq_ctrl |= QM_FQCTRL_CGE;
 	}
-without_cgr:
+
 	ret = qman_init_fq(fq, 0, &opts);
-	if (ret)
+	if (ret) {
 		DPAA_PMD_ERR("init rx fqid 0x%x failed with ret:%d", fqid, ret);
+		/* The caller only counts this CGR once this function returns
+		 * success, so its error path will not delete it. Unlink it here
+		 * or the portal keeps a pointer into memory the caller frees.
+		 */
+		if (cgr_rx)
+			qman_delete_cgr(cgr_rx);
+	}
 	return ret;
 }
 
@@ -2028,10 +2092,12 @@ static int dpaa_tx_queue_init(struct qman_fq *fq,
 		ret = qman_create_cgr(cgr_tx, QMAN_CGR_FLAG_USE_INIT,
 				      &cgr_opts);
 		if (ret) {
-			DPAA_PMD_WARN(
-				"rx taildrop init fail on rx fqid 0x%x(ret=%d)",
+			/* See the equivalent comment in
+			 * dpaa_rx_queue_init().
+			 */
+			DPAA_PMD_ERR("tx taildrop init fail on tx fqid 0x%x(ret=%d)",
 				fq->fqid, ret);
-			goto without_cgr;
+			return ret;
 		}
 		opts.we_mask |= QM_INITFQ_WE_CGID;
 		opts.fqd.cgid = cgr_tx->cgrid;
@@ -2039,10 +2105,14 @@ static int dpaa_tx_queue_init(struct qman_fq *fq,
 		DPAA_PMD_DEBUG("Tx FQ tail drop enabled, threshold = %d",
 				td_tx_threshold);
 	}
-without_cgr:
+
 	ret = qman_init_fq(fq, QMAN_INITFQ_FLAG_SCHED, &opts);
-	if (ret)
+	if (ret) {
 		DPAA_PMD_ERR("init tx fqid 0x%x failed %d", fq->fqid, ret);
+		/* See the equivalent comment in dpaa_rx_queue_init(). */
+		if (cgr_tx)
+			qman_delete_cgr(cgr_tx);
+	}
 	return ret;
 }
 
@@ -2214,6 +2284,8 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 	int num_rx_fqs, fqid;
 	int loop, ret = 0;
 	int dev_id;
+	int nb_rx_cgr = 0, nb_tx_cgr = 0;
+	bool rx_cgrid_allocated = false, tx_cgrid_allocated = false;
 	struct rte_dpaa_device *dpaa_device;
 	struct dpaa_if *dpaa_intf;
 	struct fm_eth_port_cfg *cfg;
@@ -2335,6 +2407,7 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 			ret = -EINVAL;
 			goto free_rx;
 		}
+		rx_cgrid_allocated = true;
 	} else {
 		dpaa_intf->cgr_rx = NULL;
 	}
@@ -2369,6 +2442,8 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 			fqid);
 		if (ret)
 			goto free_rx;
+		if (dpaa_intf->cgr_rx)
+			nb_rx_cgr++;
 		dpaa_intf->rx_queues[loop].vsp_id = vsp_id;
 		dpaa_intf->rx_queues[loop].dpaa_intf = dpaa_intf;
 	}
@@ -2409,10 +2484,10 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 			ret = -EINVAL;
 			goto free_tx;
 		}
+		tx_cgrid_allocated = true;
 	} else {
 		dpaa_intf->cgr_tx = NULL;
 	}
-
 
 	for (loop = 0; loop < MAX_DPAA_CORES; loop++) {
 		if (dpaa_intf->cgr_tx)
@@ -2424,6 +2499,8 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 			dpaa_intf->cgr_tx ? &dpaa_intf->cgr_tx[loop] : NULL);
 		if (ret)
 			goto free_tx;
+		if (dpaa_intf->cgr_tx)
+			nb_tx_cgr++;
 
 		if (dpaa_intf->ts_enable) {
 			ret = dpaa_tx_conf_queue_init(&dpaa_intf->tx_conf_queues[loop]);
@@ -2503,6 +2580,15 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 	return 0;
 
 free_tx:
+	/* Every created Tx CGR was linked into the QMan portal's cgr_cbs
+	 * list by qman_create_cgr(). Delete them before freeing cgr_tx so
+	 * the portal does not retain dangling pointers into freed memory,
+	 * then release the reserved CGRID range.
+	 */
+	for (loop = 0; loop < nb_tx_cgr; loop++)
+		qman_delete_cgr(&dpaa_intf->cgr_tx[loop]);
+	if (tx_cgrid_allocated)
+		qman_release_cgrid_range(cgrid_tx[0], MAX_DPAA_CORES);
 	rte_free(dpaa_intf->tx_conf_queues);
 	dpaa_intf->tx_conf_queues = NULL;
 	rte_free(dpaa_intf->tx_queues);
@@ -2510,8 +2596,15 @@ free_tx:
 	dpaa_intf->nb_tx_queues = 0;
 
 free_rx:
+	/* Same as above for the Rx CGRs. */
+	for (loop = 0; loop < nb_rx_cgr; loop++)
+		qman_delete_cgr(&dpaa_intf->cgr_rx[loop]);
+	if (rx_cgrid_allocated)
+		qman_release_cgrid_range(cgrid[0], num_rx_fqs);
 	rte_free(dpaa_intf->cgr_rx);
+	dpaa_intf->cgr_rx = NULL;
 	rte_free(dpaa_intf->cgr_tx);
+	dpaa_intf->cgr_tx = NULL;
 	rte_free(dpaa_intf->rx_queues);
 	dpaa_intf->rx_queues = NULL;
 	dpaa_intf->nb_rx_queues = 0;
