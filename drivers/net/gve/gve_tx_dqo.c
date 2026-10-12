@@ -264,6 +264,8 @@ gve_tx_burst_dqo(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	uint16_t nb_descs;
 	bool csum, tso;
 	uint16_t tx_id;
+	uint32_t last_desc_idx;
+	uint32_t last_re_interval;
 
 	pkts = txq->pkt_ring_dqo;
 	txr = txq->tx_ring;
@@ -331,20 +333,19 @@ gve_tx_burst_dqo(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 		txd = &txr[(tx_id - 1) & mask];
 		txd->pkt.end_of_packet = 1;
 
+		last_desc_idx = (tx_id - 1) & mask;
+		last_re_interval = (last_desc_idx - txq->last_re_idx) & mask;
+		if (unlikely(last_re_interval >= GVE_TX_MIN_RE_INTERVAL)) {
+			txd->pkt.report_event = true;
+			txq->last_re_idx = last_desc_idx;
+		}
+
 		txq->nb_free -= nb_descs;
 		txq->nb_used += nb_descs;
 	}
 
 	/* update the tail pointer if any packets were processed */
 	if (nb_tx > 0) {
-		/* Request a descriptor completion on the last descriptor */
-		txq->re_cnt += nb_tx;
-		if (txq->re_cnt >= GVE_TX_MIN_RE_INTERVAL) {
-			txd = &txr[(tx_id - 1) & mask];
-			txd->pkt.report_event = true;
-			txq->re_cnt = 0;
-		}
-
 		rte_write32(tx_id, txq->qtx_tail);
 		txq->tx_tail = tx_id;
 
@@ -445,6 +446,7 @@ gve_reset_tx_ring_state_dqo(struct gve_tx_queue *txq)
 	txq->nb_used = 0;
 
 	txq->last_desc_cleaned = 0;
+	txq->last_re_idx = 0;
 	txq->nb_free = txq->nb_tx_desc - 1;
 
 	txq->complq_tail = 0;
