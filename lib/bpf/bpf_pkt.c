@@ -552,6 +552,48 @@ rte_bpf_eth_tx_unload(uint16_t port, uint16_t queue)
 	rte_spinlock_unlock(&cbh->lock);
 }
 
+/*
+ * Check if the supplied port/queue pair is suitable for BPF callback execution.
+ */
+static int
+bpf_eth_check_mt(const struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue)
+{
+	struct rte_eth_txq_info qinfo;
+	struct rte_eth_conf conf;
+	int ret;
+
+	if (cbh->type == BPF_ETH_TX) {
+		ret = rte_eth_dev_conf_get(port, &conf);
+		if (ret != 0) {
+			RTE_BPF_LOG_LINE(ERR,
+				"%s(%u, %u): failed to get device configuration: %d;",
+				__func__, port, queue, ret);
+			return ret;
+		}
+
+		if ((conf.txmode.offloads & RTE_ETH_TX_OFFLOAD_MT_LOCKFREE) != 0) {
+			RTE_BPF_LOG_LINE(ERR,
+				"%s(%u, %u): MT_LOCKFREE Tx offload is enabled on port;",
+				__func__, port, queue);
+			return -ENOTSUP;
+		}
+
+		/*
+		 * Ignore errors from tx_queue_info_get: the PMD might not implement
+		 * txq_info_get (e.g. net/null), or the queue might not be set up yet.
+		 */
+		if (rte_eth_tx_queue_info_get(port, queue, &qinfo) == 0 &&
+				(qinfo.conf.offloads & RTE_ETH_TX_OFFLOAD_MT_LOCKFREE) != 0) {
+			RTE_BPF_LOG_LINE(ERR,
+				"%s(%u, %u): MT_LOCKFREE Tx offload is enabled on queue;",
+				__func__, port, queue);
+			return -ENOTSUP;
+		}
+	}
+
+	return 0;
+}
+
 static int
 bpf_eth_elf_install(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue,
 	struct rte_bpf *bpf, uint32_t flags)
@@ -571,6 +613,10 @@ bpf_eth_elf_install(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue,
 
 	if (bpf->prm.nb_prog_arg != 1)
 		return -EINVAL;
+
+	rc = bpf_eth_check_mt(cbh, port, queue);
+	if (rc != 0)
+		return rc;
 
 	if (cbh->type == BPF_ETH_RX)
 		frx = select_rx_callback(bpf->prm.prog_arg[0].type, flags);
