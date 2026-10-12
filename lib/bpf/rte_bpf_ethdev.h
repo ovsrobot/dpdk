@@ -10,8 +10,12 @@
  *
  * API to install BPF filter as RX/TX callbacks for eth devices.
  * Note that right now:
- * - it is not MT safe, i.e. it is not allowed to do load/unload for the
- *   same port/queue from different threads in parallel.
+ * - in the data plane, it expects only one thread per port/queue pair at a time.
+ *   Calling RX/TX burst functions concurrently on the same queue (e.g. when using
+ *   RTE_ETH_TX_OFFLOAD_MT_LOCKFREE, shared RX queues, or multi-threaded
+ *   software PMDs) is not supported.
+ * - in the control plane, it is not MT safe, i.e. it is not allowed to do
+ *   load/unload for the same port/queue from different threads in parallel.
  * - though it allows load/unload at runtime
  *   (while RX/TX is ongoing on given port/queue).
  * - allows only one BPF program per port/queue,
