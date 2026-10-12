@@ -132,7 +132,7 @@ static struct bpf_eth_cbh tx_cbh = {
 static __rte_always_inline void
 bpf_eth_cbi_inuse(struct bpf_eth_cbi *cbi)
 {
-	cbi->use = true;
+	rte_atomic_store_explicit(&cbi->use, true, rte_memory_order_relaxed);
 	/* make sure no store/load reordering could happen */
 	rte_smp_mb();
 }
@@ -145,7 +145,7 @@ bpf_eth_cbi_unuse(struct bpf_eth_cbi *cbi)
 {
 	/* make sure all previous loads are completed */
 	rte_smp_rmb();
-	cbi->use = false;
+	rte_atomic_store_explicit(&cbi->use, false, rte_memory_order_relaxed);
 }
 
 /*
@@ -158,7 +158,7 @@ bpf_eth_cbi_wait(const struct bpf_eth_cbi *cbi)
 	rte_smp_mb();
 
 	/* in use, busy wait till current RX/TX iteration is finished */
-	while (cbi->use)
+	while (rte_atomic_load_explicit(&cbi->use, rte_memory_order_relaxed))
 		rte_pause();
 }
 
