@@ -3033,8 +3033,8 @@ void txgbe_dev_e56_check_bp_event(void *param)
 	if (!hw->devarg.auto_neg)
 		return;
 
-	/* only continue if link is down */
-	if (dev->data->dev_link.link_status)
+	/* Continue only for an administratively up port with link down. */
+	if (!hw->dev_start || dev->data->dev_link.link_status)
 		goto out;
 
 	value = rd32_epcs(hw, VR_AN_INTR);
@@ -3360,6 +3360,9 @@ txgbe_dev_setup_link_alarm_handler_aml(void *param)
 	struct txgbe_hw *hw = (struct txgbe_hw *)param;
 
 	if (!hw)
+		return;
+
+	if (!hw->dev_start)
 		return;
 
 	struct rte_eth_dev *dev = (struct rte_eth_dev *)hw->dev_back;
