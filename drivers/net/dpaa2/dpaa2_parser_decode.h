@@ -625,8 +625,6 @@ union __rte_packed_begin dpaa2_faf_h_parse_64b {
 #define DPAA2_VXLAN_IN_SADDR5_OFFSET \
 	offsetof(struct dpaa2_psr_result_parse, word8.vxlan_in_saddr5)
 
-#define DPAA2_VXLAN_VNI_OFFSET \
-	offsetof(struct dpaa2_psr_result_parse, word8.vxlan_vni[0])
 #define DPAA2_VXLAN_IN_TYPE_OFFSET \
 	offsetof(struct dpaa2_psr_result_parse, word8.vxlan_eth_type)
 /* Set by SP for vxlan distribution end*/
