@@ -286,6 +286,9 @@ the ``-a`` EAL option (e.g. ``-a dpaa_bus:fm1-mac3,drv_rx_taildrop=64``):
    Configure the Rx / Tx frame queue taildrop congestion threshold. A value
    of ``0`` disables taildrop.
 
+``drv_fmcless_rxq``
+   In FMCLESS mode, override the number of Rx frame queues to create.
+
 FMAN Config
 -----------
 
