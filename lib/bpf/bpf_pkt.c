@@ -6,6 +6,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <sys/queue.h>
 
@@ -36,12 +37,12 @@
  * 2. Member `cb` of struct `bpf_eth_cbi`;
  * 3. Member `use` of struct `bpf_eth_cbi`;
  *
- * BPF program is only executed if the first two are set, and increments `use` at the start and
- * end of the callback execution so that in the safe state its value is even.
+ * BPF program is only executed if the first two are set, and sets `use` to true at the start and
+ * to false at the end of the callback execution.
  * This relies on only one thread calling the per-port/queue callback at a time.
  *
  * Unload processing starts with clearing the first two entities,
- * then waits for `use` to become even before destroying the BPF program.
+ * then waits for `use` to become false before destroying the BPF program.
  * The whole operation is protected by a control-plane-only spinlock (not shown on the diagram).
  *
  * Typical sequence of synchronization actions between CP and DP on unload is shown below:
@@ -52,7 +53,7 @@
  *     |                      |               |              |              |                |
  *     |                      |<---------------------- fetch callback -----------------------|
  *     |                      |               |              |              |                |
- *     |                      |               |<------------- increment to odd --------------|
+ *     |                      |               |<------------ store true ---------------------|
  *     |                      |               |              |              |                |
  *     |-- remove callback -->|               |              |              |       rte_smp_mb()
  *     |                      |               |              |              |                |
@@ -62,17 +63,17 @@
  *     |                      |               |              |              |                |
  *   rte_smp_mb()             |               |              |              |                |
  *     |                      |               |              |              |                |
- *     +-if use is odd        |               |              |              | if cb not NULL-+
+ *     +-while use is true    |               |              |              | if cb not NULL-+
  *     | |                    |               |              |              |              | |
- *     | +------------ fetch odd ------------>|              |              |<-- execute --+ |
+ *     | +----------- fetch true ------------>|              |              |<-- execute --+ |
  *     | |                    |               |              |              |  BPF program | |
- *     | +-while use is same  |               |              |              |              +-+
- *     | | |                  |               |              |              |                |
- *     | | +---------- fetch odd ------------>|              |              |      rte_smp_rmb()
- *     | | |                  |               |              |              |                |
- *     +-+-+                  |               |<------------- increment to even -------------|
+ *     | |                    |               |              |              |              +-+
+ *     | |                    |               |              |              |                |
+ *     | |                    |               |              |              |      rte_smp_rmb()
+ *     | |                    |               |              |              |                |
+ *     +-+                    |               |<------------ store false --------------------|
  *     |                      |               |              |              |                |
- *     |------------- fetch even ------------>|              |              |                |
+ *     |------------ fetch false ------------>|              |              |                |
  *     |                      |               |              |              |                |
  *     |----------------- destroy BPF program and cleanup ----------------->|                |
  *     |                      |               |              |              |                |
@@ -87,7 +88,7 @@
  */
 struct __rte_cache_aligned bpf_eth_cbi {
 	/* used by both data & control path */
-	RTE_ATOMIC(uint32_t) use;    /*usage counter */
+	RTE_ATOMIC(bool) use;    /* usage flag: true when in use, false otherwise */
 	const struct rte_eth_rxtx_callback *cb;  /* callback handle */
 	struct rte_bpf *bpf;
 	struct rte_bpf_jit jit;
@@ -96,12 +97,6 @@ struct __rte_cache_aligned bpf_eth_cbi {
 	uint16_t port;
 	uint16_t queue;
 };
-
-/*
- * Odd number means that callback is used by datapath.
- * Even number means that callback is not used by datapath.
- */
-#define BPF_ETH_CBI_INUSE  1
 
 /*
  * List to manage RX/TX installed callbacks.
@@ -141,20 +136,20 @@ static struct bpf_eth_cbh tx_cbh = {
 static __rte_always_inline void
 bpf_eth_cbi_inuse(struct bpf_eth_cbi *cbi)
 {
-	cbi->use++;
+	cbi->use = true;
 	/* make sure no store/load reordering could happen */
 	rte_smp_mb();
 }
 
 /*
- * Marks given callback list as not used by datapath.
+ * Marks given callback as not used by datapath.
  */
 static __rte_always_inline void
 bpf_eth_cbi_unuse(struct bpf_eth_cbi *cbi)
 {
 	/* make sure all previous loads are completed */
 	rte_smp_rmb();
-	cbi->use++;
+	cbi->use = false;
 }
 
 /*
@@ -163,18 +158,12 @@ bpf_eth_cbi_unuse(struct bpf_eth_cbi *cbi)
 static void
 bpf_eth_cbi_wait(const struct bpf_eth_cbi *cbi)
 {
-	uint32_t puse;
-
 	/* make sure all previous loads and stores are completed */
 	rte_smp_mb();
 
-	puse = cbi->use;
-
 	/* in use, busy wait till current RX/TX iteration is finished */
-	if ((puse & BPF_ETH_CBI_INUSE) != 0) {
-		RTE_WAIT_UNTIL_MASKED((__rte_atomic uint32_t *)(uintptr_t)&cbi->use,
-			UINT32_MAX, !=, puse, rte_memory_order_relaxed);
-	}
+	while (cbi->use)
+		rte_pause();
 }
 
 static void
