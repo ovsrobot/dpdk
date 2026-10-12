@@ -4692,7 +4692,27 @@ test_bpf_elf_tx_mt_lockfree(load_elf_image_t load_elf_image)
 		goto fail;
 	}
 
+	/* Tx installation must succeed when check is skipped with flag */
+	ret = rte_bpf_eth_tx_install(port, 0, bpf, RTE_BPF_ETH_F_SKIP_MT_CHECK);
+	if (ret != 0) {
+		printf("%s@%d: expected rte_bpf_eth_tx_install with SKIP_MT_CHECK to succeed, got %d\n",
+		       __func__, __LINE__, ret);
+		ret = TEST_FAILED;
+		goto fail;
+	}
+	rte_bpf_eth_tx_unload(port, 0);
+	bpf = NULL;
+
 	/* Rx installation on the same port must still succeed */
+	bpf = load_elf_image(app_test_bpf_filter_o, app_test_bpf_filter_o_len, "filter",
+			     NULL, 0, &prog_arg);
+	if (bpf == NULL) {
+		printf("%s@%d: failed to load BPF filter image\n",
+		       __func__, __LINE__);
+		ret = TEST_FAILED;
+		goto fail;
+	}
+
 	ret = rte_bpf_eth_rx_install(port, 0, bpf, 0);
 	if (ret != 0) {
 		printf("%s@%d: expected rte_bpf_eth_rx_install to succeed, got %d\n",

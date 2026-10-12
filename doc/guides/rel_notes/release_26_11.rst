@@ -366,6 +366,11 @@ API Changes
     ``rte_event_port_profile_links_get`` and
     ``rte_event_port_profile_unlink``
 
+* bpf: BPF packet callbacks can no longer be installed on
+  ``RTE_ETH_TX_OFFLOAD_MT_LOCKFREE`` ports and queues to prevent race
+  conditions on unload, but this safety feature can be overridden with
+  the new ``RTE_BPF_ETH_F_SKIP_MT_CHECK`` flag.
+
 * reorder: Promoted the following API from experimental to stable:
   ``rte_reorder_seqn``, ``rte_reorder_drain_up_to_seqn``,
   ``rte_reorder_min_seqn_set`` and ``rte_reorder_memory_footprint_get``.

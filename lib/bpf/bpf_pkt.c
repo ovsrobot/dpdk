@@ -602,9 +602,11 @@ bpf_eth_elf_install(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue,
 	if (bpf->prm.nb_prog_arg != 1)
 		return -EINVAL;
 
-	rc = bpf_eth_check_mt(cbh, port, queue);
-	if (rc != 0)
-		return rc;
+	if ((flags & RTE_BPF_ETH_F_SKIP_MT_CHECK) == 0) {
+		rc = bpf_eth_check_mt(cbh, port, queue);
+		if (rc != 0)
+			return rc;
+	}
 
 	if (cbh->type == BPF_ETH_RX)
 		frx = select_rx_callback(bpf->prm.prog_arg[0].type, flags);
