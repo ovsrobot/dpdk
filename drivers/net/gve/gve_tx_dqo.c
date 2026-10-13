@@ -126,20 +126,67 @@ gve_tx_clean_descs_dqo(struct gve_tx_queue *txq, uint16_t nb_descs) {
 		gve_tx_clean_dqo(txq);
 }
 
+/* Max descriptors a single packet may use. A larger packet can never pass
+ * gve_can_tx(): one slot is always reserved, the cacheline overlap margin
+ * must stay free, and up to GVE_TX_MIN_RE_INTERVAL - 1 descriptors posted
+ * after the last report_event are not reclaimed until more are posted.
+ */
+static inline int
+gve_tx_max_pkt_descs(const struct gve_tx_queue *txq)
+{
+	return (int)txq->nb_tx_desc - 1 - GVE_TX_MIN_DESC_PREVENT_CACHE_OVERLAP -
+		(GVE_TX_MIN_RE_INTERVAL - 1);
+}
+
 /* GVE expects at most 10 data descriptors per mtu-sized segment. Beyond this,
  * the hardware will assume the driver is malicious and stop transmitting
  * packets altogether. Validate that a packet can be sent to avoid sending
  * posting descriptors for an invalid packet.
  */
 static inline bool
-gve_tx_validate_descs(struct rte_mbuf *tx_pkt, uint16_t nb_descs, bool is_tso)
+gve_tx_validate_descs(const struct gve_tx_queue *txq, struct rte_mbuf *tx_pkt,
+		      uint16_t nb_descs, bool is_tso)
 {
-	if (!is_tso)
-		return nb_descs <= GVE_TX_MAX_DATA_DESCS;
-
-	int tso_segsz = tx_pkt->tso_segsz;
 	int num_descs, seg_offset, mbuf_len;
-	int headlen = tx_pkt->l2_len + tx_pkt->l3_len + tx_pkt->l4_len;
+	int tso_segsz, headlen;
+
+	/* Reject packets that can never fit in the ring */
+	if (unlikely(nb_descs > gve_tx_max_pkt_descs(txq)))
+		return false;
+
+	if (!is_tso) {
+		/* Reject packets that violate hardware length constraints */
+		if (unlikely(tx_pkt->pkt_len < GVE_TX_MIN_PKT_SIZE_DQO ||
+			     tx_pkt->pkt_len > GVE_TX_MAX_PKT_SIZE_DQO))
+			return false;
+		return nb_descs <= GVE_TX_MAX_DATA_DESCS;
+	}
+
+	headlen = tx_pkt->l2_len + tx_pkt->l3_len + tx_pkt->l4_len;
+
+	/* Reject missing TCP header on TSO */
+	if (unlikely(tx_pkt->l4_len == 0))
+		return false;
+
+	/* Reject packet with headers (L2-L4) not contiguous in first segment */
+	if (unlikely(tx_pkt->data_len < headlen))
+		return false;
+
+	/* Reject TSO packet without payload */
+	if (unlikely(tx_pkt->pkt_len <= (uint32_t)headlen))
+		return false;
+
+	/* Enforce GVE hardware TSO total length limit */
+	if (unlikely(tx_pkt->pkt_len - headlen > GVE_TX_MAX_TSO_LEN_DQO))
+		return false;
+
+	/* Enforce GVE hardware MSS and header limits */
+	if (unlikely(tx_pkt->tso_segsz < GVE_TX_MIN_TSO_MSS_DQO ||
+		     tx_pkt->tso_segsz > GVE_TX_MAX_PKT_SIZE_DQO ||
+		     headlen > GVE_TX_MAX_HDR_SIZE_DQO))
+		return false;
+
+	tso_segsz = tx_pkt->tso_segsz;
 
 	/* Headers will be split into their own buffer. */
 	num_descs = 1;
@@ -147,14 +194,18 @@ gve_tx_validate_descs(struct rte_mbuf *tx_pkt, uint16_t nb_descs, bool is_tso)
 	mbuf_len = tx_pkt->data_len - headlen;
 
 	while (tx_pkt) {
+		int seg_remain;
+
 		if (!mbuf_len)
 			goto next_mbuf;
 
-		int seg_remain = tso_segsz - seg_offset;
+		seg_remain = tso_segsz - seg_offset;
 		if (num_descs == GVE_TX_MAX_DATA_DESCS && seg_remain)
 			return false;
 
 		if (seg_remain < mbuf_len) {
+			int mbuf_remain = tx_pkt->data_len % GVE_TX_MAX_BUF_SIZE_DQO;
+
 			seg_offset = mbuf_len % tso_segsz;
 			/* The MSS is bound from above by 9728B, so a
 			 * single TSO segment in the middle of an mbuf
@@ -162,7 +213,6 @@ gve_tx_validate_descs(struct rte_mbuf *tx_pkt, uint16_t nb_descs, bool is_tso)
 			 * is not at risk of defying this limitation.
 			 * Thus, such segments are ignored.
 			 */
-			int mbuf_remain = tx_pkt->data_len % GVE_TX_MAX_BUF_SIZE_DQO;
 
 			/* For each TSO segment, HW will prepend
 			 * headers. The remaining bytes of this mbuf
@@ -183,7 +233,6 @@ next_mbuf:
 		if (tx_pkt)
 			mbuf_len = tx_pkt->data_len;
 	}
-
 
 	return true;
 }
@@ -256,6 +305,7 @@ gve_tx_burst_dqo(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	struct rte_mbuf *tx_pkt;
 	struct gve_tx_pkt *pkts;
 	uint32_t last_desc_idx;
+	uint16_t nb_drop = 0;
 	uint16_t nb_tx = 0;
 	uint64_t bytes = 0;
 	const char *reason;
@@ -281,9 +331,13 @@ gve_tx_burst_dqo(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 					       txq->rs_thresh);
 
 
-		if (rte_mbuf_check(tx_pkt, true, &reason)) {
+		if (unlikely(rte_mbuf_check(tx_pkt, true, &reason))) {
 			PMD_DRV_DP_LOG(DEBUG, "Invalid mbuf: %s", reason);
-			break;
+			txq->stats.dropped_pkts++;
+			txq->stats.errors++;
+			rte_pktmbuf_free(tx_pkt);
+			nb_drop++;
+			continue;
 		}
 
 		ol_flags = tx_pkt->ol_flags;
@@ -292,6 +346,16 @@ gve_tx_burst_dqo(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 
 		nb_descs = gve_tx_pkt_nb_data_descs(tx_pkt);
 		nb_descs += tso;
+
+		/* Drop packet if it doesn't adhere to hardware limits. */
+		if (unlikely(!gve_tx_validate_descs(txq, tx_pkt, nb_descs, tso))) {
+			txq->stats.dropped_pkts++;
+			txq->stats.errors++;
+			rte_pktmbuf_free(tx_pkt);
+			nb_drop++;
+			continue;
+		}
+
 		req_descs = nb_descs + GVE_TX_MIN_DESC_PREVENT_CACHE_OVERLAP;
 
 		/* Clean if there aren't enough descriptors to send the packet
@@ -304,12 +368,6 @@ gve_tx_burst_dqo(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 			gve_tx_clean_descs_dqo(txq, nb_to_clean);
 			if (!gve_can_tx(txq, req_descs, 1))
 				break;
-		}
-
-		/* Drop packet if it doesn't adhere to hardware limits. */
-		if (!gve_tx_validate_descs(tx_pkt, nb_descs, tso)) {
-			txq->stats.too_many_descs++;
-			break;
 		}
 
 		if (!gve_free_compl_tags_pop(txq, &compl_tag))
@@ -357,7 +415,7 @@ gve_tx_burst_dqo(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	}
 
 	if (nb_tx > 0) {
-		txq->stats.packets += nb_tx;
+		txq->stats.packets += (nb_tx - nb_drop);
 		txq->stats.bytes += bytes;
 		txq->stats.errors += nb_pkts - nb_tx;
 	}

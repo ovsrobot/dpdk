@@ -113,7 +113,7 @@ struct gve_tx_stats {
 	uint64_t packets;
 	uint64_t bytes;
 	uint64_t errors;
-	uint64_t too_many_descs;
+	uint64_t dropped_pkts;
 };
 
 struct gve_rx_stats {
