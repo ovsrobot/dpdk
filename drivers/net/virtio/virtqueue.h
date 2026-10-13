@@ -445,15 +445,15 @@ virtqueue_nused(const struct virtqueue *vq)
 
 	if (vq->hw->weak_barriers) {
 	/**
-	 * x86 prefers to using rte_smp_rmb over rte_atomic_load_explicit as it
+	 * x86 prefers rte_io_rmb over rte_atomic_load_explicit as it
 	 * reports a slightly better perf, which comes from the saved
-	 * branch by the compiler.
-	 * The if and else branches are identical with the smp and io
-	 * barriers both defined as compiler barriers on x86.
+	 * branch by the compiler: on x86 this makes the two branches
+	 * identical, since rte_io_rmb() is only a compiler barrier and
+	 * loads are not reordered with other loads.
 	 */
 #ifdef RTE_ARCH_X86_64
 		idx = vq->vq_split.ring.used->idx;
-		rte_smp_rmb();
+		rte_io_rmb();
 #else
 		idx = rte_atomic_load_explicit(&(vq)->vq_split.ring.used->idx,
 				rte_memory_order_acquire);
