@@ -145,6 +145,14 @@ capture fails to start if the FIFO has no reader::
    --> /ethdev/capture/stop,0
    {"/ethdev/capture/stop": {"status": "stopped"}}
 
+Using Wireshark
+---------------
+
+The ``dpdk-wireshark-extcap`` program presents the ports of a running DPDK
+application as Wireshark capture interfaces, using these telemetry commands
+with a FIFO created by Wireshark as the output.
+See :doc:`../tools/wireshark_extcap`.
+
 Limitations
 -----------
 
