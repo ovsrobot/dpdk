@@ -51,6 +51,7 @@ Sample Applications User Guides
     ptpclient
     ptp_tap_relay_sw
     fips_validation
+    wycheproof_validation
     ipsec_secgw
     bbdev_app
     ntb

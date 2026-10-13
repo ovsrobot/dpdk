@@ -170,6 +170,12 @@ New Features
   instead of defaulting only to the Intel uncore driver.
 
 
+* **Added Wycheproof validation example application.**
+
+  Added a new example application that validates a DPDK cryptodev PMD against
+  the Google Wycheproof JSON test vectors, covering AEAD, MAC, DSA, ECDH and
+  ECDSA algorithm families.
+
 Removed Items
 -------------
 

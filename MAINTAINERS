@@ -2029,7 +2029,7 @@ F: doc/guides/sample_app_ug/ethtool.rst
 
 FIPS validation example
 M: Gowrishankar Muthukrishnan <gmuthukrishn@marvell.com>
-F: examples/fips_validation/
+F: examples/crypto_validation/fips_validation/
 F: doc/guides/sample_app_ug/fips_validation.rst
 
 Flow filtering example
@@ -2103,3 +2103,8 @@ F: examples/vmdq/
 F: doc/guides/sample_app_ug/vmdq_forwarding.rst
 F: examples/vmdq_dcb/
 F: doc/guides/sample_app_ug/vmdq_dcb_forwarding.rst
+
+Wycheproof validation example
+M: Kai Ji <kai.ji@intel.com>
+F: examples/crypto_validation/wycheproof_validation/
+F: doc/guides/sample_app_ug/wycheproof_validation.rst
