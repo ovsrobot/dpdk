@@ -4411,6 +4411,22 @@ enum rte_flow_conv_op {
 	 *   @code const char ** @endcode
 	 */
 	RTE_FLOW_CONV_OP_ACTION_NAME_PTR,
+
+	/**
+	 * Convert an entire pattern, applying item masks.
+	 *
+	 * Same as RTE_FLOW_CONV_OP_PATTERN, except each copied spec
+	 * and last is ANDed with the item mask. Not masked:
+	 * - items with a NULL mask (default mask is not applied);
+	 * - RAW pattern and GENEVE_OPT data contents;
+	 * - FLEX, COMPARE and PMD private items.
+	 *
+	 * - @p src type:
+	 *   @code const struct rte_flow_item * @endcode
+	 * - @p dst type:
+	 *   @code struct rte_flow_item * @endcode
+	 */
+	RTE_FLOW_CONV_OP_PATTERN_MASKED,
 };
 
 /**

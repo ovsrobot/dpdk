@@ -82,6 +82,12 @@ New Features
   Added support for the VFIO character device (cdev) API, also known as IOMMUFD.
   DPDK now supports both the group mode and the new cdev mode.
 
+* **Added masked pattern conversion to flow API.**
+
+  Added ``RTE_FLOW_CONV_OP_PATTERN_MASKED`` to ``rte_flow_conv()``.
+  The new operation copies a pattern like ``RTE_FLOW_CONV_OP_PATTERN`` and
+  ANDs each item ``spec`` and ``last`` with the item mask.
+
 * **Updated AF_XDP driver.**
 
   * Changed the default device plugin endpoint path used when
