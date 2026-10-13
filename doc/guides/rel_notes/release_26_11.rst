@@ -163,6 +163,10 @@ New Features
   Added ``rte_bbdev_queue_stats_get()`` function to retrieve statistics
   for a specific queue, complementing the existing device-level statistics API.
 
+* **Added wireshark capture support.**
+
+  * New ``capture`` library for packet capture accessed via telemetry API.
+
 
 Removed Items
 -------------
