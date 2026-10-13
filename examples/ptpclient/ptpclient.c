@@ -34,6 +34,12 @@ static volatile bool force_quit;
 #define NSEC_PER_SEC        1000000000L
 #define KERNEL_TIME_ADJUST_LIMIT  20000
 
+/* PI clock servo parameters (same model as linuxptp). */
+#define PTP_SERVO_KP              0.7
+#define PTP_SERVO_KI              0.3
+/* Step the clock directly when the offset exceeds this threshold. */
+#define PTP_STEP_THRESHOLD_NS     100000
+
 struct rte_mempool *mbuf_pool;
 uint32_t ptp_enabled_port_mask;
 uint8_t ptp_enabled_port_nb;
@@ -96,6 +102,18 @@ struct ptpv2_time_receiver_ordinary {
 };
 
 static struct ptpv2_time_receiver_ordinary ptp_data;
+
+/* Per-port clock servo state. */
+struct ptp_clock_servo {
+	int freq_adj_supported;     /* -1 unknown, 0 software, 1 hardware */
+	int count;                  /* number of samples processed */
+	int64_t last_offset;        /* previous offset (ns) */
+	uint64_t last_local;        /* NIC clock at previous sample (ns) */
+	double drift_ppb;           /* integral term / standing frequency (ppb) */
+};
+
+static struct ptp_clock_servo ptp_servo[RTE_MAX_ETHPORTS];
+
 
 static inline uint64_t timespec64_to_ns(const struct timespec *ts)
 {
@@ -229,7 +247,7 @@ print_clock_info(struct ptpv2_time_receiver_ordinary *ptp)
 	int64_t nsec;
 	struct timespec net_time, sys_time;
 
-	printf("time transmitter clock id: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
+	printf("\ntime transmitter clock id: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
 		ptp->transmitter_clock_id[0],
 		ptp->transmitter_clock_id[1],
 		ptp->transmitter_clock_id[2],
@@ -306,6 +324,93 @@ delta_eval(struct ptpv2_time_receiver_ordinary *ptp)
 	delta = -((int64_t)((t2 - t1) - (t4 - t3))) / 2;
 
 	return delta;
+}
+
+/*
+ * Convert a frequency correction in ppb to the scaled ppm (16-bit fractional)
+ * unit expected by rte_eth_timesync_adjust_freq().
+ */
+static int64_t
+ppb_to_scaled_ppm(double ppb)
+{
+	return (int64_t)(ppb * 65536.0 / 1000.0);
+}
+
+/*
+ * PI clock servo. Drives the transmitter/receiver offset to zero by compensating
+ * for clock frequency drift, not just the instantaneous phase offset.
+ *
+ * The servo output is a frequency correction (ppb). When the PMD supports
+ * hardware frequency adjustment it is applied via rte_eth_timesync_adjust_freq()
+ * (e.g. the E810 INCVAL register). Otherwise the same correction is realized in
+ * software as an incremental phase step over the elapsed interval using
+ * rte_eth_timesync_adjust_time(), which every timesync-capable PMD provides.
+ */
+static void
+clock_servo(struct ptpv2_time_receiver_ordinary *ptp, int64_t offset)
+{
+	struct ptp_clock_servo *servo = &ptp_servo[ptp->portid];
+	struct timespec now;
+	uint64_t local;
+	double ppb, ki_term;
+
+	/* Probe hardware frequency adjustment support once. */
+	if (servo->freq_adj_supported < 0) {
+		servo->freq_adj_supported =
+			(rte_eth_timesync_adjust_freq(ptp->portid, 0) == 0) ? 1 : 0;
+		printf("Port %u clock frequency adjustment: %s\n", ptp->portid,
+		       servo->freq_adj_supported ? "hardware" : "software");
+	}
+
+	if (rte_eth_timesync_read_time(ptp->portid, &now) != 0)
+		return;
+	local = timespec64_to_ns(&now);
+
+	/* Large offset: step the clock directly and (re)start the servo. */
+	if (offset >= PTP_STEP_THRESHOLD_NS || offset <= -PTP_STEP_THRESHOLD_NS) {
+		rte_eth_timesync_adjust_time(ptp->portid, offset);
+		servo->last_offset = 0;
+		servo->last_local = local;
+		if (servo->count == 0)
+			servo->count = 1;
+		return;
+	}
+
+	switch (servo->count) {
+	case 0:
+		/* First sample: establish the baseline only. */
+		servo->last_offset = offset;
+		servo->last_local = local;
+		servo->count = 1;
+		return;
+	case 1:
+		/* Second sample: seed the drift estimate from the slope. */
+		if (local > servo->last_local)
+			servo->drift_ppb = 1e9 *
+				(double)(offset - servo->last_offset) /
+				(double)(local - servo->last_local);
+		servo->count = 2;
+		break;
+	default:
+		ki_term = PTP_SERVO_KI * (double)offset;
+		servo->drift_ppb += ki_term;
+		break;
+	}
+
+	ppb = PTP_SERVO_KP * (double)offset + servo->drift_ppb;
+
+	if (servo->freq_adj_supported == 1) {
+		rte_eth_timesync_adjust_freq(ptp->portid, ppb_to_scaled_ppm(ppb));
+	} else if (local > servo->last_local) {
+		/* Realize the frequency correction as a phase step. */
+		double dt = (double)(local - servo->last_local);
+
+		rte_eth_timesync_adjust_time(ptp->portid,
+					     (int64_t)(ppb * dt / 1e9));
+	}
+
+	servo->last_offset = offset;
+	servo->last_local = local;
 }
 
 /*
@@ -507,8 +612,7 @@ parse_drsp(struct ptpv2_time_receiver_ordinary *ptp)
 			/* Evaluate the delta for adjustment. */
 			ptp->delta = delta_eval(ptp);
 
-			rte_eth_timesync_adjust_time(ptp->portid,
-							ptp->delta);
+			clock_servo(ptp, ptp->delta);
 
 			ptp->current_ptp_port = ptp->portid;
 
@@ -575,6 +679,10 @@ lcore_main(void)
 
 	printf("\nCore %u Waiting for SYNC packets. [Ctrl+C to quit]\n",
 			rte_lcore_id());
+
+	/* Hardware frequency support is probed on the first adjustment. */
+	for (portid = 0; portid < RTE_MAX_ETHPORTS; portid++)
+		ptp_servo[portid].freq_adj_supported = -1;
 
 	/* Run until the application is quit or killed. */
 
