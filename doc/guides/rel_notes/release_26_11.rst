@@ -163,6 +163,12 @@ New Features
   Added ``rte_bbdev_queue_stats_get()`` function to retrieve statistics
   for a specific queue, complementing the existing device-level statistics API.
 
+* **Added Wycheproof validation example application.**
+
+  Added a new example application that validates a DPDK cryptodev PMD against
+  the Google Wycheproof JSON test vectors, covering AEAD, MAC, DSA, ECDH and
+  ECDSA algorithm families.
+
 * **Supported auto-detection of uncore power driver.**
 
   The uncore power library got automatic probing of multiple uncore drivers
