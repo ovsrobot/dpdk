@@ -804,6 +804,7 @@ hinic3_dev_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *info)
 				RTE_ETH_TX_OFFLOAD_TCP_CKSUM |
 				RTE_ETH_TX_OFFLOAD_SCTP_CKSUM |
 				RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM |
+				RTE_ETH_TX_OFFLOAD_OUTER_UDP_CKSUM |
 				RTE_ETH_TX_OFFLOAD_TCP_TSO |
 				RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
 
@@ -4102,6 +4103,8 @@ hinic3_dev_init(struct rte_eth_dev *eth_dev)
 			hinic3_dev_uninit(eth_dev);
 			return err;
 		}
+
+		eth_dev->tx_pkt_prepare = hinic3_prep_pkts;
 
 		if (nic_dev->config.rx_cqe_compact_en != HINIC3_RX_CQE_COMPACT_EN) {
 			eth_dev->rx_pkt_burst = hinic3_recv_pkts;

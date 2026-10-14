@@ -387,12 +387,22 @@ struct __rte_cache_aligned hinic3_txq {
 	uint64_t prof_tx_end_tsc;
 #endif
 };
+#define HINIC3_FIXED_EXT_HDR_LEN  8
+#define HINIC3_UNIT_BYTES_U  8
+#define HINIC3_UNIT_BYTES_AH  4
+#define HINIC3_IPV6_MAX_EXT_HDRS 9
+
+struct hinic3_ipv6_ext_hdr {
+	uint8_t next_hdr;
+	uint8_t len;
+};
 
 void hinic3_flush_txqs(struct hinic3_nic_dev *nic_dev);
 void hinic3_free_txq_mbufs(struct hinic3_txq *txq);
 void hinic3_free_all_txq_mbufs(struct hinic3_nic_dev *nic_dev);
 uint16_t hinic3_xmit_pkts_compact_cqe(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 uint16_t hinic3_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
+uint16_t hinic3_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 int hinic3_stop_sq(struct hinic3_txq *txq);
 int hinic3_start_all_sqs(struct rte_eth_dev *eth_dev);
 int hinic3_tx_done_cleanup(void *txq, uint32_t free_cnt);
