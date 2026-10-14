@@ -129,16 +129,45 @@ enum rte_pcapng_direction {
  * @param comment
  *   Optional per packet comment.
  *   Truncated to UINT16_MAX characters.
+ * @param timestamp
+ *   Time of the packet in nanoseconds since the Unix epoch,
+ *   for example a hardware timestamp. Bit 63 must be zero.
+ *   If zero, the current TSC is used,
+ *   and rte_pcapng_write_packets() converts it to the epoch.
  *
  * @return
  *   - The pointer to the new mbuf formatted for pcapng_write
- *   - NULL on error such as invalid port or out of memory.
+ *   - NULL on error such as invalid port, invalid timestamp
+ *     or out of memory.
  */
 struct rte_mbuf *
 rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *m, struct rte_mempool *mp,
 		uint32_t length,
-		enum rte_pcapng_direction direction, const char *comment);
+		enum rte_pcapng_direction direction,
+		const char *comment, uint64_t timestamp);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice.
+ *
+ * Convert a TSC value to nanoseconds since the Unix epoch.
+ *
+ * Uses the calibrated clock of the capture file, the same conversion
+ * that rte_pcapng_write_packets() applies to a TSC timestamp.
+ * A caller can take the TSC at packet arrival, convert it,
+ * and give the result to rte_pcapng_copy().
+ *
+ * @param self
+ *  The handle to the packet capture file.
+ * @param tsc
+ *  The TSC value to convert.
+ * @return
+ *  Nanoseconds since the Unix epoch.
+ */
+__rte_experimental
+uint64_t
+rte_pcapng_tsc_to_ns(const rte_pcapng_t *self, uint64_t tsc);
 
 
 /**
