@@ -1011,12 +1011,12 @@ memif_free_regions(struct rte_eth_dev *dev)
 			/* This is memzone */
 			if (i > 0 && (pmd->flags & ETH_MEMIF_FLAG_ZERO_COPY)) {
 				r->addr = NULL;
-				if (r->fd > 0)
+				if (r->fd >= 0)
 					close(r->fd);
 			}
 			if (r->addr != NULL) {
 				munmap(r->addr, r->region_size);
-				if (r->fd > 0) {
+				if (r->fd >= 0) {
 					close(r->fd);
 					r->fd = -1;
 				}
@@ -1137,7 +1137,7 @@ memif_region_init_shm(struct rte_eth_dev *dev, uint8_t has_buffers)
 	return ret;
 
 error:
-	if (r->fd > 0)
+	if (r->fd >= 0)
 		close(r->fd);
 	r->fd = -1;
 
