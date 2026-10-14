@@ -30,7 +30,6 @@ sources = files(
         'vdpa.c',
         'vduse.c',
         'vhost.c',
-        'vhost_crypto.c',
         'vhost_user.c',
         'virtio_net.c',
         'virtio_net_ctrl.c',
@@ -39,9 +38,14 @@ headers = files(
         'rte_vdpa.h',
         'rte_vhost.h',
         'rte_vhost_async.h',
-        'rte_vhost_crypto.h',
 )
 driver_sdk_headers = files(
         'vdpa_driver.h',
 )
-deps += ['ethdev', 'cryptodev', 'hash', 'pci', 'dmadev']
+deps += ['ethdev', 'pci', 'dmadev']
+
+if dpdk_conf.has('RTE_LIB_CRYPTODEV')
+    sources += files('vhost_crypto.c')
+    headers += files('rte_vhost_crypto.h')
+    deps += ['cryptodev', 'hash']
+endif
