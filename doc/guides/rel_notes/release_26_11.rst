@@ -24,6 +24,19 @@ DPDK Release 26.11
 New Features
 ------------
 
+* **Added RSA-specific capability parameters in cryptodev.**
+
+  Added ``rte_crypto_rsa_capa`` to report RSA modulus length, supported
+  padding schemes, and MGF1 hash algorithms. Also added
+  ``pss_explicit_salt`` so a PMD can advertise support for an
+  application-supplied RSA-PSS salt, along with the corresponding
+  ``pss_salt`` field in ``rte_crypto_rsa_op_param`` to carry it per
+  sign operation.
+
+* **Updated AESNI_MB crypto driver.**
+
+  * Added support for version 3.0 of IPsec MB Library.
+
 .. This section should contain new features added in this release.
    Sample format:
 
