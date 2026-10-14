@@ -118,6 +118,7 @@ New Features
 
   * Added CIR drop statistics and VF link aggregation (LAG) support.
   * Added FEC mode get and set support.
+  * Added mailbox message counter reporting through the device private dump API.
 
 * **Updated Intel iavf driver.**
 

@@ -85,6 +85,8 @@ void hinic3_aeqs_free(struct hinic3_hwdev *hwdev);
 
 void hinic3_dump_aeq_info(struct hinic3_hwdev *hwdev);
 
+void hinic3_dump_aeq_mbox_info(struct hinic3_hwdev *hwdev);
+
 int hinic3_aeq_poll_msg(struct hinic3_eq *eq, uint32_t timeout, void *param);
 
 void hinic3_dev_handle_aeq_event(struct hinic3_hwdev *hwdev, void *param);
