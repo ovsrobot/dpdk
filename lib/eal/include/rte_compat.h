@@ -32,17 +32,7 @@ __attribute__((section(".text.experimental")))
 #define __has_attribute(x) 0
 #endif
 
-#if !defined ALLOW_INTERNAL_API && __has_attribute(error) /* For GCC */
-
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_internal
-#else
-#define __rte_internal \
-__attribute__((error("Symbol is not public ABI"), \
-section(".text.internal")))
-#endif
-
-#elif !defined ALLOW_INTERNAL_API && __has_attribute(diagnose_if) /* For clang */
+#if !defined ALLOW_INTERNAL_API && __has_attribute(diagnose_if) /* For Clang */
 
 #ifdef RTE_TOOLCHAIN_MSVC
 #define __rte_internal
@@ -53,6 +43,16 @@ _Pragma("GCC diagnostic ignored \"-Wgcc-compat\"") \
 __attribute__((diagnose_if(1, "Symbol is not public ABI", "error"), \
 section(".text.internal"))) \
 _Pragma("GCC diagnostic pop")
+#endif
+
+#elif !defined ALLOW_INTERNAL_API && __has_attribute(error) /* For GCC */
+
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_internal
+#else
+#define __rte_internal \
+__attribute__((error("Symbol is not public ABI"), \
+section(".text.internal")))
 #endif
 
 #else
