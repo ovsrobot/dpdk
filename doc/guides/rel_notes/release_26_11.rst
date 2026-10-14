@@ -125,6 +125,7 @@ New Features
   * Added device parameters for runtime configuration.
   * Added a compact CQE receive data path.
   * Extended TCP segmentation offload (TSO) to 255 segments.
+  * Added a compact CQE transmit data path.
 
 * **Updated Intel iavf driver.**
 
