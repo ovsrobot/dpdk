@@ -316,8 +316,6 @@ hinic3_xstats_calc_num(struct hinic3_nic_dev *nic_dev)
 	}
 }
 
-#define HINIC3_MAX_QUEUE_DEPTH 16384
-#define HINIC3_MIN_QUEUE_DEPTH 128
 #define HINIC3_TXD_ALIGN       1
 #define HINIC3_RXD_ALIGN       1
 
@@ -1322,6 +1320,14 @@ hinic3_tx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 
 	nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
 	hwdev = nic_dev->hwdev;
+	/* Queue depth must be equal to first queue */
+	if (nic_dev->txq_depth == 0) {
+		nic_dev->txq_depth = nb_desc;
+	} else if (nb_desc != nic_dev->txq_depth) {
+		PMD_DRV_LOG(WARNING, "txq%u depth:%u is not equal to first queue depth:%u.",
+			qid, nb_desc, nic_dev->txq_depth);
+		nb_desc = nic_dev->txq_depth;
+	}
 
 	/* Queue depth must be power of 2, otherwise will be aligned up. */
 	sq_depth = (nb_desc & (nb_desc - 1))
@@ -2231,7 +2237,13 @@ hinic3_dev_stop(struct rte_eth_dev *dev)
 	/* Free mempool. */
 	hinic3_copy_mempool_uninit(nic_dev);
 
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++)
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	for (uint16_t i = 0; i < dev->data->nb_tx_queues; i++)
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+
 	nic_dev->rxq_depth = 0;
+	nic_dev->txq_depth = 0;
 	return 0;
 }
 
