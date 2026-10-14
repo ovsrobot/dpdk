@@ -24,7 +24,6 @@
 #include <dpaa2_pmd_logs.h>
 
 static char *dpaa2_flow_control_log;
-static int dpaa2_sp_loaded = -1;
 
 /* Default size of a key */
 #define DPNI_DEFAULT_KEY_SIZE 24
@@ -42,7 +41,6 @@ enum dpaa2_flow_dist_type {
 #define DPAA2_FLOW_RAW_OFFSET_FIELD_SHIFT	16
 #define DPAA2_FLOW_MAX_KEY_SIZE			16
 #define DPAA2_PROT_FIELD_STRING_SIZE		16
-#define VXLAN_HF_VNI 0x08
 
 struct dpaa2_dev_flow {
 	LIST_ENTRY(dpaa2_dev_flow) next;
@@ -85,12 +83,6 @@ enum rte_flow_item_type dpaa2_hp_supported_pattern_type[] = {
 	RTE_FLOW_ITEM_TYPE_MPLS,
 	RTE_FLOW_ITEM_TYPE_PPPOES,
 	RTE_FLOW_ITEM_TYPE_RAW
-};
-
-static const
-enum rte_flow_item_type dpaa2_sp_supported_pattern_type[] = {
-	RTE_FLOW_ITEM_TYPE_VXLAN,
-	RTE_FLOW_ITEM_TYPE_ECPRI
 };
 
 static const
@@ -167,18 +159,6 @@ static const struct rte_flow_item_ah dpaa2_flow_item_ah_mask = {
 
 static const struct rte_flow_item_gre dpaa2_flow_item_gre_mask = {
 	.protocol = RTE_BE16(0xffff),
-};
-
-static const struct rte_flow_item_vxlan dpaa2_flow_item_vxlan_mask = {
-	.flags = 0xff,
-	.vni = { 0xff, 0xff, 0xff },
-};
-
-static const struct rte_flow_item_ecpri dpaa2_flow_item_ecpri_mask = {
-	.hdr.common.type = 0xff,
-	.hdr.dummy[0] = RTE_BE32(0xffffffff),
-	.hdr.dummy[1] = RTE_BE32(0xffffffff),
-	.hdr.dummy[2] = RTE_BE32(0xffffffff),
 };
 
 static const struct rte_flow_item_gtp dpaa2_flow_item_gtp_mask = {
@@ -432,92 +412,6 @@ dpaa2_flow_fs_entry_log(const char *log_info,
 	for (idx = 0; idx < flow->fs_rule_size; idx++)
 		DPAA2_FLOW_DUMP("%02x ", mask[idx]);
 	DPAA2_FLOW_DUMP("\r\n");
-}
-
-/** For LX2160A, LS2088A and LS1088A*/
-#define WRIOP_CCSR_BASE 0x8b80000
-#define WRIOP_CCSR_CTLU_OFFSET 0
-#define WRIOP_CCSR_CTLU_PARSER_OFFSET 0
-#define WRIOP_CCSR_CTLU_PARSER_INGRESS_OFFSET 0
-
-#define WRIOP_INGRESS_PARSER_PHY \
-	(WRIOP_CCSR_BASE + WRIOP_CCSR_CTLU_OFFSET + \
-	WRIOP_CCSR_CTLU_PARSER_OFFSET + \
-	WRIOP_CCSR_CTLU_PARSER_INGRESS_OFFSET)
-
-struct dpaa2_parser_ccsr {
-	uint32_t psr_cfg;
-	uint32_t psr_idle;
-	uint32_t psr_pclm;
-	uint8_t psr_ver_min;
-	uint8_t psr_ver_maj;
-	uint8_t psr_id1_l;
-	uint8_t psr_id1_h;
-	uint32_t psr_rev2;
-	uint8_t rsv[0x2c];
-	uint8_t sp_ins[4032];
-};
-
-int
-dpaa2_soft_parser_loaded(void)
-{
-	int fd, i, ret = 0;
-	struct dpaa2_parser_ccsr *parser_ccsr = NULL;
-
-	dpaa2_flow_control_log = getenv("DPAA2_FLOW_CONTROL_LOG");
-
-	if (dpaa2_sp_loaded >= 0)
-		return dpaa2_sp_loaded;
-
-	fd = open("/dev/mem", O_RDWR | O_SYNC);
-	if (fd < 0) {
-		DPAA2_PMD_ERR("open \"/dev/mem\" ERROR(%d)", fd);
-		ret = fd;
-		goto exit;
-	}
-
-	parser_ccsr = mmap(NULL, sizeof(struct dpaa2_parser_ccsr),
-		PROT_READ | PROT_WRITE, MAP_SHARED, fd,
-		WRIOP_INGRESS_PARSER_PHY);
-	if (!parser_ccsr) {
-		DPAA2_PMD_ERR("Map 0x%" PRIx64 "(size=0x%x) failed",
-			(uint64_t)WRIOP_INGRESS_PARSER_PHY,
-			(uint32_t)sizeof(struct dpaa2_parser_ccsr));
-		ret = -ENOBUFS;
-		goto exit;
-	}
-
-	DPAA2_PMD_INFO("Parser ID:0x%02x%02x, Rev:major(%02x), minor(%02x)",
-		parser_ccsr->psr_id1_h, parser_ccsr->psr_id1_l,
-		parser_ccsr->psr_ver_maj, parser_ccsr->psr_ver_min);
-
-	if (dpaa2_flow_control_log) {
-		for (i = 0; i < 64; i++) {
-			DPAA2_FLOW_DUMP("%02x ",
-				parser_ccsr->sp_ins[i]);
-			if (!((i + 1) % 16))
-				DPAA2_FLOW_DUMP("\r\n");
-		}
-	}
-
-	for (i = 0; i < 16; i++) {
-		if (parser_ccsr->sp_ins[i]) {
-			dpaa2_sp_loaded = 1;
-			break;
-		}
-	}
-	if (dpaa2_sp_loaded < 0)
-		dpaa2_sp_loaded = 0;
-
-	ret = dpaa2_sp_loaded;
-
-exit:
-	if (parser_ccsr)
-		munmap(parser_ccsr, sizeof(struct dpaa2_parser_ccsr));
-	if (fd >= 0)
-		close(fd);
-
-	return ret;
 }
 
 static int
@@ -1766,13 +1660,7 @@ dpaa2_flow_extract_support(const uint8_t *mask_src,
 		mask_support = (const char *)&dpaa2_flow_item_gre_mask;
 		size = sizeof(struct rte_flow_item_gre);
 		break;
-	case RTE_FLOW_ITEM_TYPE_VXLAN:
-		mask_support = (const char *)&dpaa2_flow_item_vxlan_mask;
-		size = sizeof(struct rte_flow_item_vxlan);
 		break;
-	case RTE_FLOW_ITEM_TYPE_ECPRI:
-		mask_support = (const char *)&dpaa2_flow_item_ecpri_mask;
-		size = sizeof(struct rte_flow_item_ecpri);
 		break;
 	case RTE_FLOW_ITEM_TYPE_GTP:
 		mask_support = (const char *)&dpaa2_flow_item_gtp_mask;
@@ -3569,422 +3457,6 @@ dpaa2_configure_flow_gre(struct dpaa2_dev_flow *flow,
 }
 
 static int
-dpaa2_configure_flow_vxlan(struct dpaa2_dev_flow *flow,
-	struct rte_eth_dev *dev,
-	const struct rte_flow_attr *attr,
-	const struct rte_dpaa2_flow_item *dpaa2_pattern,
-	const struct rte_flow_action actions[] __rte_unused,
-	struct rte_flow_error *error __rte_unused,
-	int *device_configured)
-{
-	int ret, local_cfg = 0;
-	uint32_t group;
-	const struct rte_flow_item_vxlan *spec, *mask;
-	struct dpaa2_dev_priv *priv = dev->data->dev_private;
-	const struct rte_flow_item *pattern = &dpaa2_pattern->generic_item;
-
-	group = attr->group;
-
-	/* Parse pattern list to get the matching parameters */
-	spec = pattern->spec;
-	mask = pattern->mask ?
-		pattern->mask : &dpaa2_flow_item_vxlan_mask;
-
-	/* Get traffic class index and flow id to be configured */
-	flow->tc_id = group;
-	flow->tc_index = attr->priority;
-
-	if (dpaa2_pattern->in_tunnel) {
-		DPAA2_PMD_ERR("Tunnel-VXLAN distribution not support");
-		return -ENOTSUP;
-	}
-
-	if (!spec) {
-		ret = dpaa2_flow_identify_by_faf(priv, flow,
-				FAF_VXLAN_FRAM, DPAA2_FLOW_QOS_TYPE,
-				group, &local_cfg);
-		if (ret)
-			return ret;
-
-		ret = dpaa2_flow_identify_by_faf(priv, flow,
-				FAF_VXLAN_FRAM, DPAA2_FLOW_FS_TYPE,
-				group, &local_cfg);
-		if (ret)
-			return ret;
-
-		(*device_configured) |= local_cfg;
-		return 0;
-	}
-
-	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_VXLAN);
-	if (ret) {
-		DPAA2_PMD_WARN("Extract field(s) of VXLAN not support.");
-
-		return ret;
-	}
-
-	if (mask->flags) {
-		if (spec->flags != VXLAN_HF_VNI) {
-			DPAA2_PMD_ERR("vxlan flag(0x%02x) must be 0x%02x.",
-				spec->flags, VXLAN_HF_VNI);
-			return -EINVAL;
-		}
-		if (mask->flags != 0xff) {
-			DPAA2_PMD_ERR("Not support to extract vxlan flag.");
-			return -EINVAL;
-		}
-	}
-
-	if (mask->vni[0] || mask->vni[1] || mask->vni[2]) {
-		ret = dpaa2_flow_add_pr_extract_rule(flow,
-			DPAA2_VXLAN_VNI_OFFSET,
-			sizeof(mask->vni), spec->vni,
-			mask->vni,
-			priv, group, &local_cfg, DPAA2_FLOW_QOS_TYPE);
-		if (ret)
-			return ret;
-
-		ret = dpaa2_flow_add_pr_extract_rule(flow,
-			DPAA2_VXLAN_VNI_OFFSET,
-			sizeof(mask->vni), spec->vni,
-			mask->vni,
-			priv, group, &local_cfg, DPAA2_FLOW_FS_TYPE);
-		if (ret)
-			return ret;
-	}
-
-	(*device_configured) |= local_cfg;
-
-	return 0;
-}
-
-static int
-dpaa2_configure_flow_ecpri(struct dpaa2_dev_flow *flow,
-	struct rte_eth_dev *dev,
-	const struct rte_flow_attr *attr,
-	const struct rte_dpaa2_flow_item *dpaa2_pattern,
-	const struct rte_flow_action actions[] __rte_unused,
-	struct rte_flow_error *error __rte_unused,
-	int *device_configured)
-{
-	int ret, local_cfg = 0;
-	uint32_t group;
-	const struct rte_flow_item_ecpri *spec, *mask;
-	struct rte_flow_item_ecpri local_mask;
-	struct dpaa2_dev_priv *priv = dev->data->dev_private;
-	const struct rte_flow_item *pattern =
-		&dpaa2_pattern->generic_item;
-	uint8_t extract_nb = 0, i;
-	uint64_t rule_data[DPAA2_ECPRI_MAX_EXTRACT_NB];
-	uint64_t mask_data[DPAA2_ECPRI_MAX_EXTRACT_NB];
-	uint8_t extract_size[DPAA2_ECPRI_MAX_EXTRACT_NB];
-	uint8_t extract_off[DPAA2_ECPRI_MAX_EXTRACT_NB];
-
-	group = attr->group;
-
-	/* Parse pattern list to get the matching parameters */
-	spec = pattern->spec;
-	if (pattern->mask) {
-		memcpy(&local_mask, pattern->mask,
-			sizeof(struct rte_flow_item_ecpri));
-		local_mask.hdr.common.u32 =
-			rte_be_to_cpu_32(local_mask.hdr.common.u32);
-		mask = &local_mask;
-	} else {
-		mask = &dpaa2_flow_item_ecpri_mask;
-	}
-
-	/* Get traffic class index and flow id to be configured */
-	flow->tc_id = group;
-	flow->tc_index = attr->priority;
-
-	if (dpaa2_pattern->in_tunnel) {
-		DPAA2_PMD_ERR("Tunnel-ECPRI distribution not support");
-		return -ENOTSUP;
-	}
-
-	if (!spec) {
-		ret = dpaa2_flow_identify_by_faf(priv, flow,
-			FAFE_ECPRI_FRAM, DPAA2_FLOW_QOS_TYPE,
-			group, &local_cfg);
-		if (ret)
-			return ret;
-
-		ret = dpaa2_flow_identify_by_faf(priv, flow,
-			FAFE_ECPRI_FRAM, DPAA2_FLOW_FS_TYPE,
-			group, &local_cfg);
-		if (ret)
-			return ret;
-
-		(*device_configured) |= local_cfg;
-		return 0;
-	}
-
-	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_ECPRI);
-	if (ret) {
-		DPAA2_PMD_WARN("Extract field(s) of ECPRI not support.");
-
-		return ret;
-	}
-
-	if (mask->hdr.common.type != 0xff) {
-		DPAA2_PMD_WARN("ECPRI header type not specified.");
-
-		return -EINVAL;
-	}
-
-	if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_IQ_DATA) {
-		rule_data[extract_nb] = ECPRI_FAFE_TYPE_0;
-		mask_data[extract_nb] = 0xff;
-		extract_size[extract_nb] = sizeof(uint8_t);
-		extract_off[extract_nb] = DPAA2_FAFE_PSR_OFFSET;
-		extract_nb++;
-
-		if (mask->hdr.type0.pc_id) {
-			rule_data[extract_nb] = spec->hdr.type0.pc_id;
-			mask_data[extract_nb] = mask->hdr.type0.pc_id;
-			extract_size[extract_nb] = sizeof(rte_be16_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_iq_data, pc_id);
-			extract_nb++;
-		}
-		if (mask->hdr.type0.seq_id) {
-			rule_data[extract_nb] = spec->hdr.type0.seq_id;
-			mask_data[extract_nb] = mask->hdr.type0.seq_id;
-			extract_size[extract_nb] = sizeof(rte_be16_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_iq_data, seq_id);
-			extract_nb++;
-		}
-	} else if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_BIT_SEQ) {
-		rule_data[extract_nb] = ECPRI_FAFE_TYPE_1;
-		mask_data[extract_nb] = 0xff;
-		extract_size[extract_nb] = sizeof(uint8_t);
-		extract_off[extract_nb] = DPAA2_FAFE_PSR_OFFSET;
-		extract_nb++;
-
-		if (mask->hdr.type1.pc_id) {
-			rule_data[extract_nb] = spec->hdr.type1.pc_id;
-			mask_data[extract_nb] = mask->hdr.type1.pc_id;
-			extract_size[extract_nb] = sizeof(rte_be16_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_bit_seq, pc_id);
-			extract_nb++;
-		}
-		if (mask->hdr.type1.seq_id) {
-			rule_data[extract_nb] = spec->hdr.type1.seq_id;
-			mask_data[extract_nb] = mask->hdr.type1.seq_id;
-			extract_size[extract_nb] = sizeof(rte_be16_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_bit_seq, seq_id);
-			extract_nb++;
-		}
-	} else if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_RTC_CTRL) {
-		rule_data[extract_nb] = ECPRI_FAFE_TYPE_2;
-		mask_data[extract_nb] = 0xff;
-		extract_size[extract_nb] = sizeof(uint8_t);
-		extract_off[extract_nb] = DPAA2_FAFE_PSR_OFFSET;
-		extract_nb++;
-
-		if (mask->hdr.type2.rtc_id) {
-			rule_data[extract_nb] = spec->hdr.type2.rtc_id;
-			mask_data[extract_nb] = mask->hdr.type2.rtc_id;
-			extract_size[extract_nb] = sizeof(rte_be16_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_rtc_ctrl, rtc_id);
-			extract_nb++;
-		}
-		if (mask->hdr.type2.seq_id) {
-			rule_data[extract_nb] = spec->hdr.type2.seq_id;
-			mask_data[extract_nb] = mask->hdr.type2.seq_id;
-			extract_size[extract_nb] = sizeof(rte_be16_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_rtc_ctrl, seq_id);
-			extract_nb++;
-		}
-	} else if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_GEN_DATA) {
-		rule_data[extract_nb] = ECPRI_FAFE_TYPE_3;
-		mask_data[extract_nb] = 0xff;
-		extract_size[extract_nb] = sizeof(uint8_t);
-		extract_off[extract_nb] = DPAA2_FAFE_PSR_OFFSET;
-		extract_nb++;
-
-		if (mask->hdr.type3.pc_id || mask->hdr.type3.seq_id)
-			DPAA2_PMD_WARN("Extract type3 msg not support.");
-	} else if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_RM_ACC) {
-		rule_data[extract_nb] = ECPRI_FAFE_TYPE_4;
-		mask_data[extract_nb] = 0xff;
-		extract_size[extract_nb] = sizeof(uint8_t);
-		extract_off[extract_nb] = DPAA2_FAFE_PSR_OFFSET;
-		extract_nb++;
-
-		if (mask->hdr.type4.rma_id) {
-			rule_data[extract_nb] = spec->hdr.type4.rma_id;
-			mask_data[extract_nb] = mask->hdr.type4.rma_id;
-			extract_size[extract_nb] = sizeof(uint8_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET + 0;
-				/** Compiler not support to take address
-				 * of bit-field
-				 * offsetof(struct rte_ecpri_msg_rm_access,
-				 * rma_id);
-				 */
-			extract_nb++;
-		}
-		if (mask->hdr.type4.ele_id) {
-			rule_data[extract_nb] = spec->hdr.type4.ele_id;
-			mask_data[extract_nb] = mask->hdr.type4.ele_id;
-			extract_size[extract_nb] = sizeof(rte_be16_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET + 2;
-				/** Compiler not support to take address
-				 * of bit-field
-				 * offsetof(struct rte_ecpri_msg_rm_access,
-				 * ele_id);
-				 */
-			extract_nb++;
-		}
-	} else if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_DLY_MSR) {
-		rule_data[extract_nb] = ECPRI_FAFE_TYPE_5;
-		mask_data[extract_nb] = 0xff;
-		extract_size[extract_nb] = sizeof(uint8_t);
-		extract_off[extract_nb] = DPAA2_FAFE_PSR_OFFSET;
-		extract_nb++;
-
-		if (mask->hdr.type5.msr_id) {
-			rule_data[extract_nb] = spec->hdr.type5.msr_id;
-			mask_data[extract_nb] = mask->hdr.type5.msr_id;
-			extract_size[extract_nb] = sizeof(uint8_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_delay_measure,
-					msr_id);
-			extract_nb++;
-		}
-		if (mask->hdr.type5.act_type) {
-			rule_data[extract_nb] = spec->hdr.type5.act_type;
-			mask_data[extract_nb] = mask->hdr.type5.act_type;
-			extract_size[extract_nb] = sizeof(uint8_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_delay_measure,
-					act_type);
-			extract_nb++;
-		}
-	} else if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_RMT_RST) {
-		rule_data[extract_nb] = ECPRI_FAFE_TYPE_6;
-		mask_data[extract_nb] = 0xff;
-		extract_size[extract_nb] = sizeof(uint8_t);
-		extract_off[extract_nb] = DPAA2_FAFE_PSR_OFFSET;
-		extract_nb++;
-
-		if (mask->hdr.type6.rst_id) {
-			rule_data[extract_nb] = spec->hdr.type6.rst_id;
-			mask_data[extract_nb] = mask->hdr.type6.rst_id;
-			extract_size[extract_nb] = sizeof(rte_be16_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_remote_reset,
-					rst_id);
-			extract_nb++;
-		}
-		if (mask->hdr.type6.rst_op) {
-			rule_data[extract_nb] = spec->hdr.type6.rst_op;
-			mask_data[extract_nb] = mask->hdr.type6.rst_op;
-			extract_size[extract_nb] = sizeof(uint8_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_remote_reset,
-					rst_op);
-			extract_nb++;
-		}
-	} else if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_EVT_IND) {
-		rule_data[extract_nb] = ECPRI_FAFE_TYPE_7;
-		mask_data[extract_nb] = 0xff;
-		extract_size[extract_nb] = sizeof(uint8_t);
-		extract_off[extract_nb] = DPAA2_FAFE_PSR_OFFSET;
-		extract_nb++;
-
-		if (mask->hdr.type7.evt_id) {
-			rule_data[extract_nb] = spec->hdr.type7.evt_id;
-			mask_data[extract_nb] = mask->hdr.type7.evt_id;
-			extract_size[extract_nb] = sizeof(uint8_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_event_ind,
-					evt_id);
-			extract_nb++;
-		}
-		if (mask->hdr.type7.evt_type) {
-			rule_data[extract_nb] = spec->hdr.type7.evt_type;
-			mask_data[extract_nb] = mask->hdr.type7.evt_type;
-			extract_size[extract_nb] = sizeof(uint8_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_event_ind,
-					evt_type);
-			extract_nb++;
-		}
-		if (mask->hdr.type7.seq) {
-			rule_data[extract_nb] = spec->hdr.type7.seq;
-			mask_data[extract_nb] = mask->hdr.type7.seq;
-			extract_size[extract_nb] = sizeof(uint8_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_event_ind,
-					seq);
-			extract_nb++;
-		}
-		if (mask->hdr.type7.number) {
-			rule_data[extract_nb] = spec->hdr.type7.number;
-			mask_data[extract_nb] = mask->hdr.type7.number;
-			extract_size[extract_nb] = sizeof(uint8_t);
-			extract_off[extract_nb] =
-				DPAA2_ECPRI_MSG_OFFSET +
-				offsetof(struct rte_ecpri_msg_event_ind,
-					number);
-			extract_nb++;
-		}
-	} else {
-		DPAA2_PMD_ERR("Invalid ecpri header type(%d)",
-				spec->hdr.common.type);
-		return -EINVAL;
-	}
-
-	for (i = 0; i < extract_nb; i++) {
-		ret = dpaa2_flow_add_pr_extract_rule(flow,
-			extract_off[i],
-			extract_size[i], &rule_data[i], &mask_data[i],
-			priv, group,
-			device_configured,
-			DPAA2_FLOW_QOS_TYPE);
-		if (ret)
-			return ret;
-
-		ret = dpaa2_flow_add_pr_extract_rule(flow,
-			extract_off[i],
-			extract_size[i], &rule_data[i], &mask_data[i],
-			priv, group,
-			device_configured,
-			DPAA2_FLOW_FS_TYPE);
-		if (ret)
-			return ret;
-	}
-
-	(*device_configured) |= local_cfg;
-
-	return 0;
-}
-
-static int
 dpaa2_configure_flow_gtp(struct dpaa2_dev_flow *flow,
 	struct rte_eth_dev *dev,
 	const struct rte_flow_attr *attr,
@@ -4906,26 +4378,6 @@ dpaa2_generic_flow_set(struct dpaa2_dev_flow *flow,
 				goto end_flow_set;
 			}
 			break;
-		case RTE_FLOW_ITEM_TYPE_VXLAN:
-			ret = dpaa2_configure_flow_vxlan(flow, dev, attr,
-					&dpaa2_pattern[i],
-					actions, error,
-					&is_keycfg_configured);
-			if (ret) {
-				DPAA2_PMD_ERR("VXLAN flow config failed!");
-				goto end_flow_set;
-			}
-			break;
-		case RTE_FLOW_ITEM_TYPE_ECPRI:
-			ret = dpaa2_configure_flow_ecpri(flow,
-					dev, attr, &dpaa2_pattern[i],
-					actions, error,
-					&is_keycfg_configured);
-			if (ret) {
-				DPAA2_PMD_ERR("ECPRI flow config failed!");
-				goto end_flow_set;
-			}
-			break;
 		case RTE_FLOW_ITEM_TYPE_GTP:
 			ret = dpaa2_configure_flow_gtp(flow,
 					dev, attr, &dpaa2_pattern[i],
@@ -5135,14 +4587,10 @@ dpaa2_dev_verify_patterns(const struct rte_flow_item pattern[])
 	unsigned int i, j, is_found = 0;
 	int ret = 0;
 	const enum rte_flow_item_type *hp_supported;
-	const enum rte_flow_item_type *sp_supported;
-	uint64_t hp_supported_num, sp_supported_num;
+	uint64_t hp_supported_num;
 
 	hp_supported = dpaa2_hp_supported_pattern_type;
 	hp_supported_num = RTE_DIM(dpaa2_hp_supported_pattern_type);
-
-	sp_supported = dpaa2_sp_supported_pattern_type;
-	sp_supported_num = RTE_DIM(dpaa2_sp_supported_pattern_type);
 
 	for (j = 0; pattern[j].type != RTE_FLOW_ITEM_TYPE_END; j++) {
 		is_found = 0;
@@ -5150,16 +4598,6 @@ dpaa2_dev_verify_patterns(const struct rte_flow_item pattern[])
 			if (hp_supported[i] == pattern[j].type) {
 				is_found = 1;
 				break;
-			}
-		}
-		if (is_found)
-			continue;
-		if (dpaa2_sp_loaded > 0) {
-			for (i = 0; i < sp_supported_num; i++) {
-				if (sp_supported[i] == pattern[j].type) {
-					is_found = 1;
-					break;
-				}
 			}
 		}
 		if (!is_found) {
