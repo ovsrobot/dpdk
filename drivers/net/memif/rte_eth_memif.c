@@ -886,6 +886,8 @@ eth_memif_tx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 	if (unlikely((pmd->flags & ETH_MEMIF_FLAG_CONNECTED) == 0))
 		return 0;
+	if (unlikely(nb_pkts == 0))
+		return 0;
 	if (unlikely(ring == NULL)) {
 		int ret;
 
