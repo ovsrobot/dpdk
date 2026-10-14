@@ -551,6 +551,10 @@ hinic3_get_nic_type(struct rte_pci_device *pci_dev)
 	case HINIC3_DEV_ID_SP230:
 	case HINIC3_DEV_ID_VF_SP230:
 		return NIC_SP230;
+	case HINIC3_DEV_ID_SP560:
+	case HINIC3_DEV_ID_VF_SP560:
+	case HINIC3_DEV_ID_HYPER_VF_SP560:
+		return NIC_SP560;
 	default:
 		return NIC_UNKNOWN;
 	}
@@ -571,6 +575,7 @@ hinic3_cmdq_get_ops(struct hinic3_nic_dev *nic_dev)
 	static const struct hinic3_nic_cmdq_ops *cmdq_ops[] = {
 		[NIC_SP620]   = &hinic3_stn_cmdq_ops,
 		[NIC_SP230]   = &hinic3_htn_cmdq_ops,
+		[NIC_SP560]   = &hinic3_stn_cmdq_ops,
 		[NIC_UNKNOWN] = &hinic3_stn_cmdq_ops,
 	};
 
@@ -3952,6 +3957,9 @@ static const struct rte_pci_id pci_id_hinic3_map[] = {
 	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_VF_SP230)},
 
 	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_SP920)},
+	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_SP560)},
+	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_VF_SP560)},
+	{RTE_PCI_DEVICE(PCI_VENDOR_ID_HUAWEI, HINIC3_DEV_ID_HYPER_VF_SP560)},
 
 	{.vendor_id = 0},
 };

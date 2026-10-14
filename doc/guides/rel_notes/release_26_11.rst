@@ -121,6 +121,7 @@ New Features
   * Added Class of Service (COS) mask and map support.
   * Updated RSS hash type configuration.
   * Added mailbox message counter reporting through the device private dump API.
+  * Added support for the SP560 NIC.
 
 * **Updated Intel iavf driver.**
 
