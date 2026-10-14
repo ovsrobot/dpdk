@@ -2954,6 +2954,26 @@ hinic3_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 		}
 	}
 
+	if (HINIC3_IS_VF(nic_dev->hwdev) && HINIC3_IS_SP230_NIC(nic_dev)) {
+		for (uint32_t i = 0; i < nic_dev->num_rqs; i++) {
+			struct hinic3_rxq *rxq = nic_dev->rxqs[i];
+			if (rxq == NULL)
+				continue;
+			stats->ipackets += rxq->rxq_stats.packets;
+			stats->ibytes += rxq->rxq_stats.bytes;
+			stats->imissed += rxq->rxq_stats.dropped;
+		}
+
+		for (uint32_t i = 0; i < nic_dev->num_sqs; i++) {
+			struct hinic3_txq *txq = nic_dev->txqs[i];
+			if (txq == NULL)
+				continue;
+			stats->opackets += txq->txq_stats.packets;
+			stats->obytes += txq->txq_stats.bytes;
+		}
+		return 0;
+	}
+
 	/* Vport stats. */
 	stats->oerrors += vport_stats.tx_discard_vport;
 
