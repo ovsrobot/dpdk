@@ -27,8 +27,13 @@ New Features
 * **Updated AESNI_MB crypto driver.**
 
   * Added support for version 3.0 of IPsec MB Library.
+  * Added support for the following wireless algorithms:
+       - NEA4, NIA4, NCA4: Snow 5G confidentiality, integrity and AEAD modes.
+       - NEA5, NIA5, NCA5: AES 256 confidentiality, integrity and AEAD modes.
+       - NEA6, NIA6, NCA6: ZUC 256 confidentiality, integrity and AEAD modes.
 
 .. This section should contain new features added in this release.
+
    Sample format:
 
    * **Add a title in the past tense with a full stop.**
