@@ -405,6 +405,10 @@ foreach subpath:subdirs
                 dependencies: static_deps)
 
         dpdk_static_drivers += static_lib
+        if headers.length() > 0
+            dpdk_libraries += shared_lib
+            dpdk_shared_lib_deps += shared_dep
+        endif
 
         set_variable('shared_@0@'.format(lib_name), shared_dep)
         set_variable('static_@0@'.format(lib_name), static_dep)
