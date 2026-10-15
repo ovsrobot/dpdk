@@ -107,7 +107,7 @@ foreach app:apps
     dpdk_apps_enabled += app
     link_libs = []
     if get_option('default_library') == 'static'
-        link_libs = dpdk_static_libraries + dpdk_drivers
+        link_libs = dpdk_static_libraries + dpdk_static_drivers
     endif
 
     exec = executable('dpdk-' + name,

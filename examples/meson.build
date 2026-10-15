@@ -3,7 +3,7 @@
 
 link_whole_libs = []
 if get_option('default_library') == 'static'
-    link_whole_libs = dpdk_static_libraries + dpdk_drivers
+    link_whole_libs = dpdk_static_libraries + dpdk_static_drivers
 endif
 
 # list of all example apps. Keep 1-3 per line, in alphabetical order.
