@@ -150,6 +150,10 @@ New Features
 
   * Added the inner IP header to the RSS hash so tunneled traffic is
     distributed across the Rx queues.
+  * Removed ``DPAA2_FLOW_CONTROL_MISS_FLOW`` environment variable. The
+    per-device FS table miss flow id now defaults to the lowest-priority
+    flow of the device. Users who previously redirected unmatched frames
+    to a specific queue via this variable must use the rte_flow API instead.
 
 * **Updated NXP ENETC4 PMD.**
 
