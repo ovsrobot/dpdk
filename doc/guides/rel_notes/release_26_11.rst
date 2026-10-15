@@ -118,7 +118,8 @@ New Features
 
   Added ``ignore_outgoing`` so ``rte_eth_rx_burst()`` returns only incoming
   packets. The single-queue scenario is accelerated, as the kernel does
-  the filtering.
+  the filtering. Multi-queue ports are also filtered in the kernel since
+  Linux 6.2, otherwise in the PMD.
 
 * **Updated AF_XDP driver.**
 
