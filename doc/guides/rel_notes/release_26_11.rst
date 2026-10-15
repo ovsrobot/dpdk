@@ -24,6 +24,10 @@ DPDK Release 26.11
 New Features
 ------------
 
+* **Updated AESNI_MB crypto driver.**
+
+  * Added support for version 3.0 of IPsec MB Library.
+
 .. This section should contain new features added in this release.
    Sample format:
 
