@@ -1276,6 +1276,11 @@ struct qman_cgr {
 	struct list_head node;
 };
 
+/* Polling bound while waiting for an FQ retirement notification. A retire
+ * that has not been reported by then is not going to complete on this portal.
+ */
+#define QMAN_FQRN_WAIT_MAX		10000000u
+
 /* Flags to qman_create_fq() */
 #define QMAN_FQ_FLAG_NO_ENQUEUE      0x00000001 /* can't enqueue */
 #define QMAN_FQ_FLAG_NO_MODIFY       0x00000002 /* can only enqueue */
