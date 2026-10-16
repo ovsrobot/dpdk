@@ -19,6 +19,7 @@
 #include <rte_ether.h>
 #include <rte_malloc.h>
 #include <rte_dmadev.h>
+#include <rte_usage_count.h>
 
 #include "rte_vhost.h"
 #include "vdpa_driver.h"
@@ -202,7 +203,7 @@ struct async_dma_vchan_info {
 struct async_dma_info {
 	struct async_dma_vchan_info *vchans;
 	/* number of registered virtual channels */
-	uint16_t nr_vchans;
+	rte_usage_count_t nr_vchans;
 };
 
 extern struct async_dma_info dma_copy_track[RTE_DMADEV_DEFAULT_MAX];

@@ -2152,7 +2152,7 @@ rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 	dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr = pkts_cmpl_flag_addr;
 	dma_copy_track[dma_id].vchans[vchan_id].ring_size = max_desc;
 	dma_copy_track[dma_id].vchans[vchan_id].ring_mask = max_desc - 1;
-	dma_copy_track[dma_id].nr_vchans++;
+	rte_usage_count_claim(&dma_copy_track[dma_id].nr_vchans);
 
 	pthread_mutex_unlock(&vhost_dma_lock);
 	return 0;
@@ -2437,9 +2437,8 @@ rte_vhost_async_dma_unconfigure(int16_t dma_id, uint16_t vchan_id)
 
 	rte_free(dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr);
 	dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr = NULL;
-	dma_copy_track[dma_id].nr_vchans--;
 
-	if (dma_copy_track[dma_id].nr_vchans == 0) {
+	if (rte_usage_count_release(&dma_copy_track[dma_id].nr_vchans)) {
 		rte_free(dma_copy_track[dma_id].vchans);
 		dma_copy_track[dma_id].vchans = NULL;
 	}
