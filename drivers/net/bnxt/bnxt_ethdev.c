@@ -1252,12 +1252,6 @@ static int bnxt_dev_info_get_op(struct rte_eth_dev *eth_dev,
 	 * TODO: default_rxconf, default_txconf, rx_desc_lim, and tx_desc_lim
 	 *       need further investigation.
 	 */
-	dev_info->max_vmdq_pools = 0;
-	dev_info->vmdq_queue_num = 0;
-
-	dev_info->vmdq_pool_base = 0;
-	dev_info->vmdq_queue_base = 0;
-
 	dev_info->rx_seg_capa.max_nseg = BNXT_MAX_BUFFER_SPLIT_SEGS;
 	dev_info->rx_seg_capa.multi_pools = BNXT_MULTI_POOL_BUF_SPLIT_CAP;
 	dev_info->rx_seg_capa.offset_allowed = BNXT_BUF_SPLIT_OFFSET_CAP;
@@ -1999,39 +1993,23 @@ static void bnxt_mac_addr_remove_op(struct rte_eth_dev *eth_dev,
 				    uint32_t index)
 {
 	struct bnxt *bp = eth_dev->data->dev_private;
-	uint64_t pool_mask;
 	struct bnxt_vnic_info *vnic;
 	struct bnxt_filter_info *filter, *temp_filter;
-	uint32_t i;
 
 	if (is_bnxt_in_error(bp))
 		return;
 
-	if ((eth_dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_VMDQ_FLAG) == 0)
-		pool_mask = 1;
-	else
-		pool_mask = eth_dev->data->mac_pool_sel[index];
-
-	/*
-	 * Loop through all VNICs from the specified filter flow pools to
-	 * remove the corresponding MAC addr filter
-	 */
-	for (i = 0; i < bp->nr_vnics; i++) {
-		if (!(pool_mask & (1ULL << i)))
-			continue;
-
-		vnic = &bp->vnic_info[i];
-		filter = STAILQ_FIRST(&vnic->filter);
-		while (filter) {
-			temp_filter = STAILQ_NEXT(filter, next);
-			if (filter->mac_index == index) {
-				STAILQ_REMOVE(&vnic->filter, filter,
-						bnxt_filter_info, next);
-				bnxt_hwrm_clear_l2_filter(bp, filter);
-				bnxt_free_filter(bp, filter);
-			}
-			filter = temp_filter;
+	vnic = &bp->vnic_info[0];
+	filter = STAILQ_FIRST(&vnic->filter);
+	while (filter) {
+		temp_filter = STAILQ_NEXT(filter, next);
+		if (filter->mac_index == index) {
+			STAILQ_REMOVE(&vnic->filter, filter,
+					bnxt_filter_info, next);
+			bnxt_hwrm_clear_l2_filter(bp, filter);
+			bnxt_free_filter(bp, filter);
 		}
+		filter = temp_filter;
 	}
 }
 
@@ -4528,10 +4506,7 @@ static int bnxt_restore_mac_filters(struct bnxt *bp)
 	struct rte_eth_dev *dev = bp->eth_dev;
 	struct rte_eth_dev_info dev_info;
 	struct rte_ether_addr *addr;
-	uint64_t pool_mask;
-	uint32_t pool = 0;
 	uint32_t i;
-	bool vmdq;
 	int rc;
 
 	if (BNXT_VF(bp) && !BNXT_VF_IS_TRUSTED(bp))
@@ -4541,8 +4516,6 @@ static int bnxt_restore_mac_filters(struct bnxt *bp)
 	if (rc)
 		return rc;
 
-	vmdq = (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_VMDQ_FLAG) != 0;
-
 	/* replay MAC address configuration */
 	for (i = 1; i < dev_info.max_mac_addrs; i++) {
 		addr = &dev->data->mac_addrs[i];
@@ -4551,21 +4524,9 @@ static int bnxt_restore_mac_filters(struct bnxt *bp)
 		if (rte_is_zero_ether_addr(addr))
 			continue;
 
-		pool = 0;
-		if (!vmdq)
-			pool_mask = 1;
-		else
-			pool_mask = dev->data->mac_pool_sel[i];
-
-		do {
-			if (pool_mask & 1ULL) {
-				rc = bnxt_mac_addr_add_op(dev, addr, i, pool);
-				if (rc)
-					return rc;
-			}
-			pool_mask >>= 1;
-			pool++;
-		} while (pool_mask);
+		rc = bnxt_mac_addr_add_op(dev, addr, i, 0);
+		if (rc)
+			return rc;
 	}
 
 	return 0;
