@@ -14,6 +14,7 @@ DPDK Tools User Guides
     pmdinfo
     dumpcap
     pdump
+    wireshark_extcap
     telemetrywatcher
     dmaperf
     flow-perf
