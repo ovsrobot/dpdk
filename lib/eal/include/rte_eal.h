@@ -393,6 +393,15 @@ int rte_eal_has_hugepages(void);
 int rte_eal_has_pci(void);
 
 /**
+ * Whether packet capture is allowed.
+ * Disabled by the --no-capture and --no-telemetry options.
+ *
+ * @return
+ *   Nonzero if capture is enabled.
+ */
+int rte_eal_has_capture(void);
+
+/**
  * Whether the EAL was asked to create UIO device.
  *
  * @return

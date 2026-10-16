@@ -109,3 +109,10 @@ rte_eal_has_pci(void)
 {
 	return !internal_config.no_pci;
 }
+
+RTE_EXPORT_SYMBOL(rte_eal_has_capture)
+int
+rte_eal_has_capture(void)
+{
+	return !internal_config.no_capture;
+}

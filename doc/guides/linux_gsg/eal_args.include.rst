@@ -293,6 +293,10 @@ Other options
 
     Disable telemetry.
 
+*   ``--no-capture``:
+
+    Disable packet capture. Implied by ``--no-telemetry``.
+
 *   ``--force-max-simd-bitwidth=<val>``:
 
     Specify the maximum SIMD bitwidth size to handle. This limits which vector paths,

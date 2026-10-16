@@ -384,6 +384,11 @@ capture_start_req(const char *cmd, const char *params, struct rte_tel_data *d)
 		return -1;
 	}
 
+	if (!rte_eal_has_capture()) {
+		capture_err(d, "capture disabled by --no-capture");
+		return 0;
+	}
+
 	/* Note: params is const so need non-const copy for parsing
 	 * Alternative would be to change telemetry to allow this.
 	 */

@@ -70,6 +70,10 @@ capture_mp_attach(struct capture *cap)
 	struct rte_eth_dev_info dev_info;
 	uint16_t num_queues;
 
+	/* each process decides for itself */
+	if (!rte_eal_has_capture())
+		return -EPERM;
+
 	if (rte_eth_dev_info_get(cap->port_id, &dev_info) < 0)
 		return -EINVAL;
 
@@ -223,10 +227,11 @@ capture_mp_broadcast(struct capture *cap, enum capture_mp_op op)
 			= (const struct capture_mp_response *)mp_reply.msgs[i].param;
 
 		/*
-		 * A secondary that has no callbacks to detach replies ENOENT,
-		 * which happens whenever it was not polling this port.
+		 * ENOENT: nothing to detach, it was not polling this port.
+		 * EPERM: started with --no-capture, which is not an error.
 		 */
-		if (resp->err != 0 && resp->err != -ENOENT) {
+		if (resp->err != 0 && resp->err != -ENOENT &&
+		    resp->err != -EPERM) {
 			CAPTURE_LOG(ERR, "Secondary could not %s capture: %s",
 				    op == CAPTURE_MP_START ? "start" : "stop",
 				    rte_strerror(-resp->err));

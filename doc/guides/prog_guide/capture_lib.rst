@@ -67,6 +67,9 @@ Requirements
   commands if the call does not work at startup, so capture is simply
   unavailable rather than unsafe.
 
+* Capture can be refused at runtime with the ``--no-capture`` EAL option,
+  which is also implied by ``--no-telemetry``.
+
 Telemetry commands
 ------------------
 

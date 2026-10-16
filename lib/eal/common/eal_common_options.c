@@ -2350,6 +2350,9 @@ eal_parse_args(void)
 		int_cfg->no_shconf = 1;
 	if (args.no_telemetry)
 		int_cfg->no_telemetry = 1;
+	/* capture is reached over the telemetry socket, so it goes with it */
+	if (args.no_capture || args.no_telemetry)
+		int_cfg->no_capture = 1;
 	if (args.match_allocations)
 		int_cfg->match_allocations = 1;
 	if (args.create_uio_dev)
