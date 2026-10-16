@@ -296,7 +296,7 @@ acl_add_ptr(struct acl_build_context *context,
 			acl_include(&node->ptrs[n].values, bits, 0);
 			acl_include(&node->values, bits, -1);
 			if (ptr != NULL)
-				ptr->ref_count++;
+				rte_usage_count_claim(&ptr->ref_count);
 			if (node->num_ptrs <= n)
 				node->num_ptrs = n + 1;
 			return 0;
@@ -411,7 +411,7 @@ acl_dup_node(struct acl_build_context *context, struct rte_acl_node *node)
 	for (n = 0; n < node->num_ptrs; n++) {
 		if (node->ptrs[n].ptr != NULL) {
 			next->ptrs[n].ptr = node->ptrs[n].ptr;
-			next->ptrs[n].ptr->ref_count++;
+			rte_usage_count_claim(&next->ptrs[n].ptr->ref_count);
 			acl_include(&next->ptrs[n].values,
 				&node->ptrs[n].values, -1);
 		}
@@ -449,8 +449,7 @@ acl_deref_ptr(struct acl_build_context *context,
 	/* De-reference the node at the specified pointer */
 	if (node != NULL && node->ptrs[index].ptr != NULL) {
 		ref_node = node->ptrs[index].ptr;
-		ref_node->ref_count--;
-		if (ref_node->ref_count == 0)
+		if (rte_usage_count_release(&ref_node->ref_count))
 			acl_free_node(context, ref_node);
 	}
 }
@@ -966,7 +965,7 @@ build_trie(struct acl_build_context *context, struct rte_acl_build_rule *head,
 
 		root = acl_alloc_node(context, 0);
 
-		root->ref_count = 1;
+		rte_usage_count_claim(&root->ref_count);
 		end = root;
 
 		for (n = 0; n < rule->config->num_fields; n++) {

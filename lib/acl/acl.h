@@ -5,6 +5,8 @@
 #ifndef	_ACL_H_
 #define	_ACL_H_
 
+#include <rte_usage_count.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -104,7 +106,7 @@ struct rte_acl_match_results {
 struct rte_acl_node {
 	uint64_t node_index;  /* index for this node */
 	uint32_t level;       /* level 0-n in the trie */
-	uint32_t ref_count;   /* ref count for this node */
+	rte_usage_count_t ref_count; /* ref count for this node */
 	struct rte_acl_bitset  values;
 	/* set of all values that map to another node
 	 * (union of bits in each transition.
