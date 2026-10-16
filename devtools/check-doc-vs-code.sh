@@ -89,6 +89,18 @@ check_mq_caps() # <driver>
 		fi
 	fi
 
+	if all_docs_agree $1 "RSS hash"; then
+		if has_doc_feature "$doc" "RSS hash"; then
+			git grep -qE 'flow_type_rss_offloads[[:space:]]*\|?=' -- "$code" ||
+				error "RSS documented but flow_type_rss_offloads not set for $1"
+		else
+			! git grep -qE 'flow_type_rss_offloads[[:space:]]*\|?=' -- "$code" ||
+				error "flow_type_rss_offloads set but RSS not documented for $1"
+			! git grep -qE 'RTE_ETH_MQ_RX.*RSS' -- "$code" ||
+				error "RSS mq_mode referenced but RSS not documented for $1"
+		fi
+	fi
+
 	if all_docs_agree $1 "VMDq"; then
 		if has_doc_feature "$doc" "VMDq"; then
 			git grep -qE 'max_vmdq_pools[[:space:]]*=' -- "$code" ||
@@ -131,7 +143,7 @@ if has_code_change 'RTE_FLOW_.*_TYPE_' ||
 		check_rte_flow $driver
 	done
 fi
-if has_code_change 'get_dcb_info\|max_vmdq_pools\|RTE_ETH_MQ_.*DCB\|RTE_ETH_MQ_.*VMDQ' ||
+if has_code_change 'get_dcb_info\|flow_type_rss_offloads\|max_vmdq_pools\|RTE_ETH_MQ_' ||
 		has_file_change 'doc/guides/nics/features'; then
 	for driver in $(changed_net_drivers); do
 		check_mq_caps $driver

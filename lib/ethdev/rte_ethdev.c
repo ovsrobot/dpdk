@@ -1526,6 +1526,14 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 		goto rollback;
 	}
 
+	if (dev_info.flow_type_rss_offloads == 0 &&
+			(dev_conf->rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG) != 0) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Ethdev port_id=%u does not support RSS rx mode",
+			port_id);
+		ret = -EINVAL;
+		goto rollback;
+	}
+
 	dev->data->dev_conf.rx_adv_conf.rss_conf.rss_hf =
 		rte_eth_rss_hf_refine(dev_conf->rx_adv_conf.rss_conf.rss_hf);
 
