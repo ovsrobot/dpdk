@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="400" viewBox="0 0 960 400">
+  <title>DPDK extcap</title>
+  <rect width="960" height="400" fill="#FFFFFF"/>
+  <path d="M 40,120 L 40,48 Q 40,40 48,40 L 312,40 Q 320,40 320,48 L 320,120 Z" fill="#FFFFFF" stroke="#1B2A41" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M 40,120 L 320,120 L 320,292 Q 320,300 312,300 L 48,300 Q 40,300 40,292 Z" fill="#DCE8F7" stroke="#2B5B9E" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M 40.0,120.0 L 320.0,120.0" fill="none" stroke="#1B2A41" stroke-width="1.5" stroke-linejoin="round"/>
+  <text x="180.0" y="86.0" font-family="'Source Sans 3','Source Sans Pro','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="17" font-weight="600" fill="#1B2A41" text-anchor="middle">Application</text>
+  <text x="54" y="149.6" font-family="'Source Sans 3','Source Sans Pro','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="16" font-weight="700" fill="#2B5B9E" text-anchor="start">DPDK</text>
+  <rect x="72" y="256" width="96" height="30" rx="3" fill="#A9C6EC" stroke="#2B5B9E" stroke-width="1.5"/>
+  <text x="120.0" y="275.9" font-family="'Source Sans 3','Source Sans Pro','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="500" fill="#1B2A41" text-anchor="middle">PMD</text>
+  <rect x="40" y="340" width="280" height="40" rx="2" fill="#3D4A5C" stroke="#3D4A5C" stroke-width="1.5"/>
+  <text x="180.0" y="365.6" font-family="'Source Sans 3','Source Sans Pro','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="16" font-weight="600" fill="#FFFFFF" text-anchor="middle">NIC hardware</text>
+  <path d="M 120.0,340.0 L 120.0,296.0" fill="none" stroke="#1B2A41" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="120.0,286.0 125.0,296.0 115.0,296.0" fill="#1B2A41"/>
+  <path d="M 120.0,256.0 L 120.0,130.0" fill="none" stroke="#1B2A41" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="120.0,120.0 125.0,130.0 115.0,130.0" fill="#1B2A41"/>
+  <line x1="200" y1="128" x2="200" y2="292" stroke="#2B5B9E" stroke-width="1.5" stroke-dasharray="2 5" stroke-linecap="round"/>
+  <rect x="208" y="132" width="96" height="30" rx="3" fill="#A9C6EC" stroke="#2B5B9E" stroke-width="1.5"/>
+  <text x="256.0" y="151.9" font-family="'Source Sans 3','Source Sans Pro','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="500" fill="#1B2A41" text-anchor="middle">telemetry</text>
+  <path d="M 120.0,190.0 L 142.0,190.0" fill="none" stroke="#1B2A41" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="152.0,190.0 142.0,195.0 142.0,185.0" fill="#1B2A41"/>
+  <rect x="152.0" y="176.0" width="96" height="28" rx="2" fill="#FFFFFF" stroke="#B84A3A" stroke-width="1.5"/>
+  <line x1="168.0" y1="176.0" x2="168.0" y2="204.0" stroke="#E8B3AA" stroke-width="1"/>
+  <line x1="184.0" y1="176.0" x2="184.0" y2="204.0" stroke="#E8B3AA" stroke-width="1"/>
+  <line x1="200.0" y1="176.0" x2="200.0" y2="204.0" stroke="#E8B3AA" stroke-width="1"/>
+  <line x1="216.0" y1="176.0" x2="216.0" y2="204.0" stroke="#E8B3AA" stroke-width="1"/>
+  <line x1="232.0" y1="176.0" x2="232.0" y2="204.0" stroke="#E8B3AA" stroke-width="1"/>
+  <rect x="187.0" y="180.0" width="10.0" height="20" rx="1.5" fill="#F07F6E"/>
+  <rect x="203.0" y="180.0" width="10.0" height="20" rx="1.5" fill="#F07F6E"/>
+  <rect x="219.0" y="180.0" width="10.0" height="20" rx="1.5" fill="#F07F6E"/>
+  <rect x="235.0" y="180.0" width="10.0" height="20" rx="1.5" fill="#F07F6E"/>
+  <rect x="152.0" y="176.0" width="96" height="28" rx="2" fill="none" stroke="#B84A3A" stroke-width="1.5"/>
+  <circle cx="120" cy="190" r="5.5" fill="#D9503E"/>
+  <path d="M 248.0,190.0 L 326.0,190.0" fill="none" stroke="#1B2A41" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="336.0,190.0 326.0,195.0 326.0,185.0" fill="#1B2A41"/>
+  <path d="M 343,177.0 L 419,177.0 A 7,13.0 0 0 1 419,203.0 L 343,203.0 A 7,13.0 0 0 1 343,177.0 Z" fill="#EEF0F3" stroke="#6B7383" stroke-width="1.5" stroke-linejoin="round"/>
+  <ellipse cx="343" cy="190" rx="7" ry="13.0" fill="#D5D9E0" stroke="#6B7383" stroke-width="1.5"/>
+  <text x="381.0" y="225.9" font-family="'Source Sans 3','Source Sans Pro','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="400" fill="#6B7383" text-anchor="middle">pipe</text>
+  <rect x="660" y="170" width="160" height="80" rx="8" fill="#DDF1E8" stroke="#2E7D5B" stroke-width="1.5"/>
+  <text x="740.0" y="215.9" font-family="'Source Sans 3','Source Sans Pro','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="17" font-weight="600" fill="#1B2A41" text-anchor="middle">Wireshark</text>
+  <path d="M 426.0,190.0 L 650.0,190.0" fill="none" stroke="#1B2A41" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="660.0,190.0 650.0,195.0 650.0,185.0" fill="#1B2A41"/>
+  <rect x="460" y="122" width="160" height="50" rx="8" fill="#DDF1E8" stroke="#2E7D5B" stroke-width="1.5"/>
+  <text x="540.0" y="152.6" font-family="'Source Sans 3','Source Sans Pro','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="16" font-weight="600" fill="#1B2A41" text-anchor="middle">DPDK extcap</text>
+  <path d="M 460.0,147.0 L 314.0,147.0" fill="none" stroke="#6B7383" stroke-width="1.75" stroke-dasharray="6 4" stroke-linejoin="round"/>
+  <polygon points="304.0,147.0 314.0,142.0 314.0,152.0" fill="#6B7383"/>
+  <path d="M 740.0,170.0 L 740.0,147.0 L 630.0,147.0" fill="none" stroke="#6B7383" stroke-width="1.75" stroke-dasharray="6 4" stroke-linejoin="round"/>
+  <polygon points="620.0,147.0 630.0,142.0 630.0,152.0" fill="#6B7383"/>
+</svg>

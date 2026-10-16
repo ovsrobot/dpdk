@@ -264,6 +264,10 @@ New Features
   Added ``dpdk-validate-bpf`` tool to pre-validate eBPF programs
   for compatibility with the ``lib/bpf`` execution context.
 
+* **Added wireshark capture support.**
+
+  * New ``capture`` library for packet capture accessed via telemetry API.
+
 
 Removed Items
 -------------
