@@ -77,6 +77,18 @@ check_mq_caps() # <driver>
 	[ -d $code ] || return 0
 	[ -f $doc ] || return 0
 
+	if all_docs_agree $1 "DCB"; then
+		if has_doc_feature "$doc" "DCB"; then
+			git grep -q '\.get_dcb_info[[:space:]]*=' -- "$code" ||
+				error "DCB documented but no get_dcb_info callback for $1"
+		else
+			! git grep -q '\.get_dcb_info[[:space:]]*=' -- "$code" ||
+				error "get_dcb_info callback but DCB not documented for $1"
+			! git grep -qE 'RTE_ETH_MQ_(RX|TX).*DCB' -- "$code" ||
+				error "DCB mq_mode referenced but DCB not documented for $1"
+		fi
+	fi
+
 	if all_docs_agree $1 "VMDq"; then
 		if has_doc_feature "$doc" "VMDq"; then
 			git grep -qE 'max_vmdq_pools[[:space:]]*=' -- "$code" ||
@@ -119,7 +131,7 @@ if has_code_change 'RTE_FLOW_.*_TYPE_' ||
 		check_rte_flow $driver
 	done
 fi
-if has_code_change 'max_vmdq_pools\|RTE_ETH_MQ_.*VMDQ' ||
+if has_code_change 'get_dcb_info\|max_vmdq_pools\|RTE_ETH_MQ_.*DCB\|RTE_ETH_MQ_.*VMDQ' ||
 		has_file_change 'doc/guides/nics/features'; then
 	for driver in $(changed_net_drivers); do
 		check_mq_caps $driver
