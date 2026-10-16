@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <rte_jhash.h>
 #include <rte_tailq.h>
+#include <rte_usage_count.h>
 
 #include "rte_lpm6.h"
 #include "lpm_log.h"
@@ -87,7 +88,7 @@ struct rte_lpm_tbl8_hdr {
 	uint32_t owner_entry_ind; /**< index of the owner table entry where
 				    *  pointer to the tbl8 is stored
 				    */
-	uint32_t ref_cnt; /**< table reference counter */
+	rte_usage_count_t ref_cnt; /**< table reference counter */
 };
 
 /** LPM6 structure. */
@@ -676,7 +677,7 @@ add_step(struct rte_lpm6 *lpm, struct rte_lpm6_tbl_entry *tbl,
 
 		/* update tbl8 rule reference counter */
 		if (tbl_ind != TBL24_IND && is_new_rule)
-			lpm->tbl8_hdrs[tbl_ind].ref_cnt++;
+			rte_usage_count_claim(&lpm->tbl8_hdrs[tbl_ind].ref_cnt);
 
 		return 0;
 	}
@@ -717,7 +718,7 @@ add_step(struct rte_lpm6 *lpm, struct rte_lpm6_tbl_entry *tbl,
 
 			/* update the current table's reference counter */
 			if (tbl_ind != TBL24_IND)
-				lpm->tbl8_hdrs[tbl_ind].ref_cnt++;
+				rte_usage_count_claim(&lpm->tbl8_hdrs[tbl_ind].ref_cnt);
 		}
 		/*
 		 * If it's valid but not extended the rule that was stored
@@ -768,7 +769,7 @@ add_step(struct rte_lpm6 *lpm, struct rte_lpm6_tbl_entry *tbl,
 
 			/* update the current table's reference counter */
 			if (tbl_ind != TBL24_IND)
-				lpm->tbl8_hdrs[tbl_ind].ref_cnt++;
+				rte_usage_count_claim(&lpm->tbl8_hdrs[tbl_ind].ref_cnt);
 		}
 
 		*next_tbl_ind = tbl[entry_ind].lpm6_tbl8_gindex;
@@ -1231,7 +1232,7 @@ remove_tbl(struct rte_lpm6 *lpm, struct rte_lpm_tbl8_hdr *tbl_hdr,
 
 		struct rte_lpm_tbl8_hdr *owner_tbl_hdr =
 			&lpm->tbl8_hdrs[owner_tbl_ind];
-		if (--owner_tbl_hdr->ref_cnt == 0)
+		if (rte_usage_count_release(&owner_tbl_hdr->ref_cnt))
 			remove_tbl(lpm, owner_tbl_hdr, owner_tbl_ind, lsp_rule);
 	}
 
@@ -1306,7 +1307,7 @@ rte_lpm6_delete(struct rte_lpm6 *lpm, const struct rte_ipv6_addr *ip, uint8_t de
 	 */
 	if (tbl_ind != TBL24_IND) {
 		struct rte_lpm_tbl8_hdr *tbl_hdr = &lpm->tbl8_hdrs[tbl_ind];
-		if (--tbl_hdr->ref_cnt == 0) {
+		if (rte_usage_count_release(&tbl_hdr->ref_cnt)) {
 			/* remove the table */
 			remove_tbl(lpm, tbl_hdr, tbl_ind, lsp_rule);
 			return 0;
