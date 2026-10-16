@@ -13,7 +13,7 @@ if get_option('default_library') == 'static'
             compile_args: subproject_cflags,
             # static library deps in DPDK build don't include "link_with" parameters,
             # so explicitly link-in both libs and drivers
-            link_whole: dpdk_static_libraries + dpdk_drivers,
+            link_whole: dpdk_static_libraries + dpdk_static_drivers,
             link_args: dpdk_extra_ldflags)
 else
     dpdk_dep = declare_dependency(

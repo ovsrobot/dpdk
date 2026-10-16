@@ -49,7 +49,7 @@ Note that CFLAGS might contain an -march flag higher than typical baseline.
 This is required for a number of static inline functions in the public headers.''',
         requires: ['libdpdk-libs'],
         libraries_private: ['-Wl,--whole-archive'] +
-            dpdk_drivers + dpdk_static_libraries +
+            dpdk_static_drivers + dpdk_static_libraries +
             ['-Wl,--no-whole-archive'] + platform_flags
 )
 

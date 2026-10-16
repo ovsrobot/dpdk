@@ -404,7 +404,7 @@ foreach subpath:subdirs
                 include_directories: includes,
                 dependencies: static_deps)
 
-        dpdk_drivers += static_lib
+        dpdk_static_drivers += static_lib
 
         set_variable('shared_@0@'.format(lib_name), shared_dep)
         set_variable('static_@0@'.format(lib_name), static_dep)
