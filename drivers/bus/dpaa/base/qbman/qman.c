@@ -1588,6 +1588,7 @@ err:
 	return -EIO;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(qman_destroy_fq)
 void qman_destroy_fq(struct qman_fq *fq, u32 flags __maybe_unused)
 {
 	/*
@@ -2988,6 +2989,11 @@ qman_shutdown_fq(struct qman_fq *fq)
 
 	default:
 		ret = -EIO;
+	}
+
+	if (!ret) {
+		fq->state = qman_fq_state_oos;
+		qman_destroy_fq(fq, 0);
 	}
 
 out:
