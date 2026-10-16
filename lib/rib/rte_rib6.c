@@ -24,6 +24,8 @@
 #define RTE_RIB_VALID_NODE	1
 /* Maximum length of a RIB6 name. */
 #define RTE_RIB6_NAMESIZE	64
+/* Prefix used for the memory objects owned by a RIB6. */
+#define RIB6_MEM_PREFIX		"RIB6_"
 
 TAILQ_HEAD(rte_rib6_list, rte_tailq_entry);
 static struct rte_tailq_elem rte_rib6_tailq = {
@@ -480,6 +482,7 @@ rte_rib6_create(const char *name, int socket_id,
 	struct rte_tailq_entry *te;
 	struct rte_rib6_list *rib6_list;
 	struct rte_mempool *node_pool;
+	int ret;
 
 	/* Check user arguments. */
 	if (unlikely(name == NULL || conf == NULL || conf->max_nodes <= 0)) {
@@ -487,7 +490,15 @@ rte_rib6_create(const char *name, int socket_id,
 		return NULL;
 	}
 
-	snprintf(mem_name, sizeof(mem_name), "MP_%s", name);
+	/* Add RIB6 Prefix to its node mempool name */
+	ret = snprintf(mem_name, sizeof(mem_name), RIB6_MEM_PREFIX "%s", name);
+	if (unlikely(ret < 0 || ret >= (int)RTE_MEMPOOL_NAMESIZE)) {
+		RIB_LOG(ERR, "RIB6 name %s is too long, limit is %zu characters",
+			name, RTE_MEMPOOL_NAMESIZE - sizeof(RIB6_MEM_PREFIX));
+		rte_errno = ENAMETOOLONG;
+		return NULL;
+	}
+
 	node_pool = rte_mempool_create(mem_name, conf->max_nodes,
 		sizeof(struct rte_rib6_node) + conf->ext_sz, 0, 0,
 		NULL, NULL, NULL, NULL, socket_id, 0);
@@ -498,7 +509,6 @@ rte_rib6_create(const char *name, int socket_id,
 		return NULL;
 	}
 
-	snprintf(mem_name, sizeof(mem_name), "RIB6_%s", name);
 	rib6_list = RTE_TAILQ_CAST(rte_rib6_tailq.head, rte_rib6_list);
 
 	rte_mcfg_tailq_write_lock();
