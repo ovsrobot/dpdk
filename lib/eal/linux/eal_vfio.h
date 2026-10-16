@@ -7,6 +7,7 @@
 
 #include <rte_common.h>
 #include <rte_spinlock.h>
+#include <rte_usage_count.h>
 
 #include <stdint.h>
 
@@ -42,7 +43,7 @@ struct vfio_group {
 	bool active;
 	int group_num;
 	int fd;
-	int n_devices;
+	rte_usage_count_t n_devices;
 };
 
 /* device tracking (common for group and cdev modes) */
@@ -66,7 +67,7 @@ struct vfio_device {
 struct vfio_group_config {
 	bool iommu_type_set;
 	bool mem_event_clb_set;
-	size_t n_groups;
+	rte_usage_count_t n_groups;
 	struct vfio_group groups[RTE_MAX_VFIO_GROUPS];
 };
 

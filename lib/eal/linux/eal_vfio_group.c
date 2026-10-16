@@ -508,7 +508,7 @@ vfio_group_create(struct vfio_container *cfg, int iommu_group)
 	VFIO_GROUP_FOREACH(cfg, grp) {
 		if (grp->active)
 			continue;
-		cfg->group_cfg.n_groups++;
+		rte_usage_count_claim(&cfg->group_cfg.n_groups);
 		grp->active = true;
 		grp->group_num = iommu_group;
 		grp->fd = -1;
@@ -527,10 +527,8 @@ vfio_group_erase(struct vfio_container *cfg, struct vfio_group *grp)
 		EAL_LOG(ERR, "Error when closing group fd %d", grp->fd);
 
 	*grp = (struct vfio_group){0};
-	group_cfg->n_groups--;
-
-	/* if this was the last group in config, erase IOMMU setup and unregister callback */
-	if (group_cfg->n_groups == 0) {
+	/* if this was the last group in config, erase IOMMU setup */
+	if (rte_usage_count_release(&group_cfg->n_groups)) {
 		cfg->dma_setup_done = false;
 		group_cfg->iommu_type_set = false;
 	}
@@ -880,8 +878,7 @@ out:
 	dev->fd = fd;
 	/* store backreference to group */
 	dev->group = grp->group_num;
-	/* increment number of devices in group */
-	grp->n_devices++;
+	rte_usage_count_claim(&grp->n_devices);
 	return 0;
 }
 

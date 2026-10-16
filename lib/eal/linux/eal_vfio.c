@@ -1125,11 +1125,8 @@ found:
 		/* close device handle */
 		vfio_device_erase(cfg, dev);
 
-		/* remove device from group */
-		grp->n_devices--;
-
-		/* was this the last device? */
-		if (grp->n_devices == 0)
+		/* remove device from group, erase the group if it was the last device */
+		if (rte_usage_count_release(&grp->n_devices))
 			vfio_group_erase(cfg, grp);
 
 		/* if no more groups left, remove callback */
