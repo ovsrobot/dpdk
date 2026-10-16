@@ -368,8 +368,10 @@ int commands_init(void)
 	}
 
 	commands = (char *)calloc(commands_len, sizeof(char));
-	if (!commands)
+	if (!commands) {
+		printf("commands_init: calloc(%d) failed %s\n", commands_len, strerror(errno));
 		return -1;
+	}
 
 	TAILQ_FOREACH(t, &commands_list, next) {
 		strlcat(commands, t->command, commands_len);

@@ -200,6 +200,13 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 	}
 #endif
 #endif
+	if (WIFEXITED(status))
+		printf("Child process exited with status %d\n", WEXITSTATUS(status));
+	else if (WIFSIGNALED(status))
+		printf("Child process killed by signal %d\n", WTERMSIG(status));
+	else
+		printf("Child process terminated with wait status %d\n", status);
+
 	return status;
 }
 

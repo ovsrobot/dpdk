@@ -657,6 +657,8 @@ malloc_heap_alloc_on_heap_id(size_t size, unsigned int heap_id, unsigned int fla
 	/* for legacy mode, try once and with all flags */
 	if (internal_conf->legacy_mem) {
 		ret = heap_alloc(heap, size, flags, align, bound, contig);
+		if (ret == NULL)
+			EAL_LOG(ERR, "Error allocating from heap in legacy mode");
 		goto alloc_unlock;
 	}
 
