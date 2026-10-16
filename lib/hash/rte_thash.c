@@ -15,6 +15,7 @@
 #include <rte_log.h>
 #include <rte_malloc.h>
 #include <rte_cpuflags.h>
+#include <rte_usage_count.h>
 
 RTE_LOG_REGISTER_SUFFIX(thash_logtype, thash, INFO);
 #define RTE_LOGTYPE_HASH thash_logtype
@@ -34,7 +35,7 @@ static struct rte_tailq_elem rte_thash_tailq = {
 EAL_REGISTER_TAILQ(rte_thash_tailq)
 
 struct thash_lfsr {
-	uint32_t	ref_cnt;
+	rte_usage_count_t	ref_cnt;
 	uint32_t	poly;
 	/**< polynomial associated with the lfsr */
 	uint32_t	rev_poly;
@@ -187,7 +188,7 @@ alloc_lfsr(uint32_t poly_degree)
 
 	/* clear bits_cnt after rev_state was inited */
 	lfsr->bits_cnt = 0;
-	lfsr->ref_cnt = 1;
+	rte_usage_count_claim(&lfsr->ref_cnt);
 
 	return lfsr;
 }
@@ -195,15 +196,14 @@ alloc_lfsr(uint32_t poly_degree)
 static void
 attach_lfsr(struct rte_thash_subtuple_helper *h, struct thash_lfsr *lfsr)
 {
-	lfsr->ref_cnt++;
+	rte_usage_count_claim(&lfsr->ref_cnt);
 	h->lfsr = lfsr;
 }
 
 static void
 free_lfsr(struct thash_lfsr *lfsr)
 {
-	lfsr->ref_cnt--;
-	if (lfsr->ref_cnt == 0)
+	if (rte_usage_count_release(&lfsr->ref_cnt))
 		rte_free(lfsr);
 }
 
