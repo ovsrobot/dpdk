@@ -169,7 +169,8 @@ idpf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->hash_key_size = vport->rss_key_size;
 	dev_info->reta_size = vport->rss_lut_size;
 
-	dev_info->flow_type_rss_offloads = IDPF_RSS_OFFLOAD_ALL;
+	if (adapter->caps.rss_caps != 0)
+		dev_info->flow_type_rss_offloads = IDPF_RSS_OFFLOAD_ALL;
 
 	dev_info->rx_offload_capa =
 		RTE_ETH_RX_OFFLOAD_IPV4_CKSUM           |
