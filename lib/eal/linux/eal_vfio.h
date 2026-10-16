@@ -75,10 +75,29 @@ struct vfio_cdev_config {
 	uint32_t ioas_id;
 };
 
+/*
+ * Device node namespace used by a container. Global no-IOMMU mode does not make
+ * every device no-IOMMU, but a container cannot mix both kinds, so once the
+ * first group/device is opened, the node type is fixed for that container.
+ */
+enum vfio_node_type {
+	VFIO_NODE_UNSET = 0, /**< no group/device opened yet */
+	VFIO_NODE_IOMMU,     /**< /dev/vfio/N or /dev/vfio/devices/vfioN */
+	VFIO_NODE_NOIOMMU,   /**< /dev/vfio/noiommu-N or /dev/vfio/devices/noiommu-vfioN */
+};
+
+/* Mode-specific node path function.
+ * Builds path to group/cdev node number node_num of a given type into buf.
+ * Returns 0 on success, -1 on failure.
+ */
+typedef int (*vfio_node_path_t)(enum vfio_node_type type, int node_num,
+		char *buf, size_t len);
+
 /* per-container configuration */
 struct vfio_container {
 	bool active;
 	bool dma_setup_done;
+	enum vfio_node_type node_type;
 	int container_fd;
 	struct vfio_user_mem_maps mem_maps;
 	union {
@@ -145,6 +164,9 @@ int vfio_get_iommu_type(void);
 int vfio_mp_sync_setup(void);
 void vfio_mp_sync_cleanup(void);
 bool vfio_container_is_default(struct vfio_container *cfg);
+int vfio_open_node(struct vfio_container *cfg,
+		vfio_node_path_t path_fn,
+		int node_num);
 
 /* group mode functions */
 int vfio_group_enable(struct vfio_container *cfg);
@@ -167,7 +189,7 @@ int vfio_cdev_setup_ioas(struct vfio_container *cfg);
 int vfio_cdev_sync_ioas(struct vfio_container *cfg);
 int vfio_cdev_get_iommufd(void);
 int vfio_cdev_get_device_num(const char *sysfs_base, const char *dev_addr,
-		int *cdev_dev_num);
+		enum vfio_node_type node_type, int *cdev_dev_num);
 struct vfio_device *vfio_cdev_get_dev_by_num(struct vfio_container *cfg, int cdev_dev_num);
 int vfio_cdev_setup_device(struct vfio_container *cfg, struct vfio_device *dev);
 

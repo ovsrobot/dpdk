@@ -23,25 +23,37 @@
 #include "eal_internal_cfg.h"
 
 #define DEV_VFIO_IOMMUFD_PATH "/dev/iommu"
-#define DEV_VFIO_CDEV_FMT "/dev/vfio/devices/%s%d"
+#define DEV_VFIO_CDEV_FMT "/dev/vfio/devices/vfio%d"
+#define DEV_VFIO_NOIOMMU_CDEV_FMT "/dev/vfio/devices/noiommu-vfio%d"
 
 /*
  * Global no-IOMMU mode does not mean every device is no-IOMMU: the kernel only
- * creates no-IOMMU devices for devices without an IOMMU group, so cdev names
- * are tried in this order regardless of IOVA mode.
+ * creates no-IOMMU devices for devices without an IOMMU group, so both cdev
+ * names must be recognized in sysfs regardless of IOVA mode.
  */
-static const char * const cdev_prefixes[] = {"vfio", "noiommu-vfio"};
+static const struct {
+	enum vfio_node_type type;
+	const char *prefix;
+} cdev_prefixes[] = {
+	{ VFIO_NODE_IOMMU, "vfio" },
+	{ VFIO_NODE_NOIOMMU, "noiommu-vfio" },
+};
 
-/* return length of the matching cdev prefix, or 0 if the name has none */
+/*
+ * return length of the matching cdev prefix, or 0 if the name has none. If
+ * type is set, only the prefix for that node type is matched.
+ */
 static size_t
-cdev_match_prefix(const char *name)
+cdev_match_prefix(const char *name, enum vfio_node_type type)
 {
 	unsigned int i;
 
 	for (i = 0; i < RTE_DIM(cdev_prefixes); i++) {
-		size_t len = strlen(cdev_prefixes[i]);
+		size_t len = strlen(cdev_prefixes[i].prefix);
 
-		if (strncmp(name, cdev_prefixes[i], len) == 0)
+		if (type != VFIO_NODE_UNSET && type != cdev_prefixes[i].type)
+			continue;
+		if (strncmp(name, cdev_prefixes[i].prefix, len) == 0)
 			return len;
 	}
 	return 0;
@@ -226,7 +238,8 @@ vfio_cdev_enable(struct vfio_container *cfg)
 }
 
 int
-vfio_cdev_get_device_num(const char *sysfs_base, const char *dev_addr, int *cdev_dev_num)
+vfio_cdev_get_device_num(const char *sysfs_base, const char *dev_addr,
+		enum vfio_node_type node_type, int *cdev_dev_num)
 {
 	char linkname[PATH_MAX] = {0};
 	size_t prefix_len;
@@ -246,7 +259,7 @@ vfio_cdev_get_device_num(const char *sysfs_base, const char *dev_addr, int *cdev
 
 	/* find the matching VFIO cdev entry */
 	while ((entry = readdir(dir)) != NULL) {
-		prefix_len = cdev_match_prefix(entry->d_name);
+		prefix_len = cdev_match_prefix(entry->d_name, node_type);
 		if (prefix_len == 0)
 			continue;
 
@@ -284,21 +297,36 @@ vfio_cdev_get_dev_by_num(struct vfio_container *cfg, int cdev_dev_num)
 }
 
 static int
-cdev_open_device_fd(int cdev_dev_num)
+cdev_node_path(enum vfio_node_type type, int cdev_dev_num, char *buf, size_t len)
 {
-	char devname[PATH_MAX] = {0};
-	int dev_fd = -1;
-	unsigned int i;
-
-	for (i = 0; i < RTE_DIM(cdev_prefixes); i++) {
-		snprintf(devname, sizeof(devname), DEV_VFIO_CDEV_FMT,
-			cdev_prefixes[i], cdev_dev_num);
-		dev_fd = open(devname, O_RDWR);
-		if (dev_fd >= 0 || errno != ENOENT)
-			break;
+	switch (type) {
+	case VFIO_NODE_IOMMU:
+		snprintf(buf, len, DEV_VFIO_CDEV_FMT, cdev_dev_num);
+		return 0;
+	case VFIO_NODE_NOIOMMU:
+		snprintf(buf, len, DEV_VFIO_NOIOMMU_CDEV_FMT, cdev_dev_num);
+		return 0;
+	default:
+		errno = EINVAL;
+		return -1;
 	}
-	if (dev_fd < 0) {
-		EAL_LOG(ERR, "Cannot open %s: %s", devname, strerror(errno));
+}
+
+static int
+cdev_open_device_fd(struct vfio_container *cfg, int cdev_dev_num)
+{
+	int dev_fd;
+
+	dev_fd = vfio_open_node(cfg, cdev_node_path, cdev_dev_num);
+	if (dev_fd == -EXDEV) {
+		/* node type mismatch, reported by caller */
+		return -EXDEV;
+	} else if (dev_fd == -ENOENT) {
+		EAL_LOG(ERR, "Cannot find VFIO cdev for device %d", cdev_dev_num);
+		return -1;
+	} else if (dev_fd < 0) {
+		EAL_LOG(ERR, "Cannot open VFIO cdev for device %d: %s", cdev_dev_num,
+			strerror(errno));
 		return -1;
 	}
 
@@ -398,9 +426,9 @@ vfio_cdev_setup_device(struct vfio_container *cfg, struct vfio_device *dev)
 
 	/* get device fd - primary or custom container opens it, secondary requests from primary */
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY || !vfio_container_is_default(cfg)) {
-		device_fd = cdev_open_device_fd(dev->dev_num);
+		device_fd = cdev_open_device_fd(cfg, dev->dev_num);
 		if (device_fd < 0)
-			return -1;
+			return device_fd == -EXDEV ? -EXDEV : -1;
 		dev->fd = device_fd;
 
 		/* attach device to iommufd */

@@ -532,6 +532,7 @@ vfio_group_erase(struct vfio_container *cfg, struct vfio_group *grp)
 	/* if this was the last group in config, erase IOMMU setup and unregister callback */
 	if (group_cfg->n_groups == 0) {
 		cfg->dma_setup_done = false;
+		cfg->node_type = VFIO_NODE_UNSET;
 		group_cfg->iommu_type_set = false;
 	}
 }
@@ -549,27 +550,25 @@ vfio_group_get_by_num(struct vfio_container *cfg, int iommu_group)
 }
 
 static int
-vfio_open_group_sysfs(int iommu_group_num)
+vfio_group_node_path(enum vfio_node_type type, int iommu_group_num, char *buf, size_t len)
 {
-	char filename[PATH_MAX];
-	int fd;
-
-	/*
-	 * Global no-IOMMU mode does not mean every group is no-IOMMU: the
-	 * kernel only creates no-IOMMU groups for devices without an IOMMU
-	 * group, so try the regular group first, then the no-IOMMU one.
-	 */
-	snprintf(filename, sizeof(filename), DEV_VFIO_GROUP_FMT, iommu_group_num);
-	fd = open(filename, O_RDWR);
-	if (fd < 0 && errno == ENOENT) {
-		snprintf(filename, sizeof(filename), DEV_VFIO_NOIOMMU_GROUP_FMT, iommu_group_num);
-		fd = open(filename, O_RDWR);
+	switch (type) {
+	case VFIO_NODE_IOMMU:
+		snprintf(buf, len, DEV_VFIO_GROUP_FMT, iommu_group_num);
+		return 0;
+	case VFIO_NODE_NOIOMMU:
+		snprintf(buf, len, DEV_VFIO_NOIOMMU_GROUP_FMT, iommu_group_num);
+		return 0;
+	default:
+		errno = EINVAL;
+		return -1;
 	}
+}
 
-	/* we have to differentiate between failed open and non-existence */
-	if (fd < 0 && errno == ENOENT)
-		return -ENOENT;
-	return fd;
+static int
+vfio_open_group_sysfs(struct vfio_container *cfg, int iommu_group_num)
+{
+	return vfio_open_node(cfg, vfio_group_node_path, iommu_group_num);
 }
 
 static int
@@ -611,10 +610,10 @@ vfio_group_open_fd(struct vfio_container *cfg, struct vfio_group *grp)
 	if ((rte_eal_process_type() != RTE_PROC_PRIMARY) && (vfio_container_is_default(cfg)))
 		vfio_group_fd = vfio_group_request_fd(grp->group_num);
 	else
-		vfio_group_fd = vfio_open_group_sysfs(grp->group_num);
+		vfio_group_fd = vfio_open_group_sysfs(cfg, grp->group_num);
 
-	/* pass the non-existence up the chain */
-	if (vfio_group_fd == -ENOENT)
+	/* pass the non-existence and node type mismatch up the chain */
+	if (vfio_group_fd == -ENOENT || vfio_group_fd == -EXDEV)
 		return vfio_group_fd;
 	else if (vfio_group_fd < 0) {
 		EAL_LOG(ERR, "Failed to open VFIO group %d", grp->group_num);

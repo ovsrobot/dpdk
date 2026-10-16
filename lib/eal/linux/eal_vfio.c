@@ -40,6 +40,7 @@
  * - EEXIST: device already assigned
  * - ENOENT: group or device not found
  * - ENOMEM: memory allocation failed
+ * - EPERM: device IOMMU mode does not match container
  * - EIO: underlying VFIO operation failed
  */
 
@@ -53,6 +54,7 @@ enum vfio_result {
 	VFIO_NOT_FOUND,
 	VFIO_NO_SPACE,
 	VFIO_NO_MEM,
+	VFIO_IOMMU_MISMATCH,
 };
 
 /* per-process, per-container data */
@@ -481,6 +483,76 @@ vfio_container_erase(struct vfio_container *cfg)
 	*cfg = VFIO_CONTAINER_INITIALIZER;
 }
 
+static const char *
+vfio_node_type_to_str(enum vfio_node_type type)
+{
+	switch (type) {
+	case VFIO_NODE_IOMMU: return "IOMMU";
+	case VFIO_NODE_NOIOMMU: return "no-IOMMU";
+	default: return "unset";
+	}
+}
+
+/*
+ * Open a VFIO group or cdev node. If the container's node type is not yet
+ * known, try the IOMMU node first, then the no-IOMMU one, and remember which
+ * one was found. Returns fd on success, -ENOENT if no node exists, -EXDEV if
+ * only a node of the other type exists, or -1 with errno set on other errors.
+ */
+int
+vfio_open_node(struct vfio_container *cfg,
+		vfio_node_path_t path_fn,
+		int node_num)
+{
+	static const enum vfio_node_type probe_order[] = {VFIO_NODE_IOMMU, VFIO_NODE_NOIOMMU};
+	enum vfio_node_type cur, other;
+	char path[PATH_MAX];
+	unsigned int i;
+	int fd;
+
+	if (cfg->node_type != VFIO_NODE_UNSET) {
+		if (path_fn(cfg->node_type, node_num, path, sizeof(path)) < 0)
+			goto path_fail;
+		fd = open(path, O_RDWR);
+		if (fd >= 0 || errno != ENOENT)
+			return fd;
+
+		/* a node of the other type means the user is trying to mix them */
+		other = cfg->node_type == VFIO_NODE_IOMMU ? VFIO_NODE_NOIOMMU : VFIO_NODE_IOMMU;
+		if (path_fn(other, node_num, path, sizeof(path)) < 0)
+			goto path_fail;
+		if (access(path, F_OK) == 0) {
+			EAL_LOG(DEBUG, "Found %s, but container uses %s devices",
+				path, vfio_node_type_to_str(cfg->node_type));
+			return -EXDEV;
+		}
+		return -ENOENT;
+	}
+
+	/* probe the IOMMU and no-IOMMU nodes in order */
+	for (i = 0; i < RTE_DIM(probe_order); i++) {
+		cur = probe_order[i];
+
+		if (path_fn(cur, node_num, path, sizeof(path)) < 0)
+			goto path_fail;
+		fd = open(path, O_RDWR);
+		if (fd >= 0) {
+			cfg->node_type = cur;
+			EAL_LOG(DEBUG, "VFIO container uses %s devices",
+				vfio_node_type_to_str(cfg->node_type));
+			return fd;
+		}
+		if (errno != ENOENT)
+			return -1;
+	}
+	return -ENOENT;
+
+path_fail:
+	EAL_LOG(ERR, "Cannot build VFIO node path for node %d", node_num);
+	errno = EINVAL;
+	return -1;
+}
+
 static struct vfio_device *
 vfio_device_create(struct vfio_container *cfg, enum dev_vfio_mode mode)
 {
@@ -509,15 +581,20 @@ vfio_device_create(struct vfio_container *cfg, enum dev_vfio_mode mode)
 static void
 vfio_device_erase(struct vfio_container *cfg, struct vfio_device *dev)
 {
+	enum dev_vfio_mode mode = dev->mode;
+
 	if (dev->fd >= 0 && close(dev->fd))
 		EAL_LOG(ERR, "Error when closing device, %d (%s)", errno, strerror(errno));
 
-	if (dev->mode == DEV_VFIO_MODE_GROUP) {
+	if (mode == DEV_VFIO_MODE_GROUP) {
 		free(dev->sysfs_base);
 		free(dev->dev_addr);
 	}
 	*dev = (struct vfio_device){0};
 	cfg->n_devices--;
+
+	if (mode == DEV_VFIO_MODE_CDEV && cfg->n_devices == 0)
+		cfg->node_type = VFIO_NODE_UNSET;
 }
 
 static struct vfio_device *
@@ -648,8 +725,14 @@ vfio_cdev_assign_device(struct vfio_container *cfg, const char *sysfs_base, cons
 	enum vfio_result res;
 	int dev_num, ret;
 
-	/* get the cdev device number from sysfs */
-	ret = vfio_cdev_get_device_num(sysfs_base, dev_addr, &dev_num);
+	/* get the cdev device number from sysfs, matching container node type if known */
+	ret = vfio_cdev_get_device_num(sysfs_base, dev_addr, cfg->node_type, &dev_num);
+	if (ret == 0 && cfg->node_type != VFIO_NODE_UNSET) {
+		/* device may be bound to VFIO, but with a different node type */
+		ret = vfio_cdev_get_device_num(sysfs_base, dev_addr, VFIO_NODE_UNSET, &dev_num);
+		if (ret > 0)
+			return VFIO_IOMMU_MISMATCH;
+	}
 	if (ret < 0) {
 		EAL_LOG(ERR, "Failed to get cdev device number for %s", dev_addr);
 		return VFIO_ERROR;
@@ -676,7 +759,10 @@ vfio_cdev_assign_device(struct vfio_container *cfg, const char *sysfs_base, cons
 
 	/* set up our device now and store it in config */
 	ret = vfio_cdev_setup_device(cfg, dev);
-	if (ret < 0) {
+	if (ret == -EXDEV) {
+		res = VFIO_IOMMU_MISMATCH;
+		goto err;
+	} else if (ret < 0) {
 		EAL_LOG(ERR, "Cannot setup cdev device %s", dev_addr);
 		res = VFIO_ERROR;
 		goto err;
@@ -759,6 +845,9 @@ vfio_group_assign_device(struct vfio_container *cfg, const char *sysfs_base, con
 			EAL_LOG(DEBUG, "Device %s (IOMMU group %d) not managed by VFIO",
 				dev_addr, iommu_group_num);
 			res = VFIO_NOT_MANAGED;
+			goto group_erase;
+		} else if (ret == -EXDEV) {
+			res = VFIO_IOMMU_MISMATCH;
 			goto group_erase;
 		} else if (ret < 0) {
 			EAL_LOG(ERR, "Cannot open VFIO group %d for device %s",
@@ -951,6 +1040,11 @@ dev_vfio_container_assign_device(int container_fd, const char *sysfs_base, const
 		EAL_LOG(ERR, "Memory allocation failed for device %s", dev_addr);
 		rte_errno = ENOMEM;
 		return -1;
+	case VFIO_IOMMU_MISMATCH:
+		EAL_LOG(ERR, "Cannot assign device %s: cannot mix IOMMU and no-IOMMU",
+			dev_addr);
+		rte_errno = EPERM;
+		return -1;
 	default:
 		EAL_LOG(ERR, "Error assigning device %s to container", dev_addr);
 		rte_errno = EIO;
@@ -1004,8 +1098,8 @@ dev_vfio_setup_device(const char *sysfs_base, const char *dev_addr, int *vfio_de
 	{
 		int dev_num;
 
-		/* find device number */
-		ret = vfio_cdev_get_device_num(sysfs_base, dev_addr, &dev_num);
+		/* device may belong to custom container, do not assume node type */
+		ret = vfio_cdev_get_device_num(sysfs_base, dev_addr, VFIO_NODE_UNSET, &dev_num);
 		if (ret < 0)
 			goto assign_fail;
 		else if (ret == 0)
@@ -1043,6 +1137,12 @@ not_managed:
 	case VFIO_NO_MEM:
 		EAL_LOG(ERR, "Memory allocation failed for device %s", dev_addr);
 		rte_errno = ENOMEM;
+		ret = -1;
+		goto unlock;
+	case VFIO_IOMMU_MISMATCH:
+		EAL_LOG(ERR, "Cannot set up device %s: cannot mix IOMMU and no-IOMMU",
+			dev_addr);
+		rte_errno = EPERM;
 		ret = -1;
 		goto unlock;
 	default:
@@ -1506,7 +1606,8 @@ dev_vfio_get_device_num(const char *sysfs_base, const char *dev_addr, int *devic
 		return -1;
 	}
 
-	ret = vfio_cdev_get_device_num(sysfs_base, dev_addr, device_num);
+	/* device may belong to custom container, do not assume node type */
+	ret = vfio_cdev_get_device_num(sysfs_base, dev_addr, VFIO_NODE_UNSET, device_num);
 	if (ret < 0) {
 		rte_errno = EINVAL;
 		return -1;

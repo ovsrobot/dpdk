@@ -101,6 +101,7 @@ enum dev_vfio_iova_mode {
  * - ENXIO   - VFIO support not initialized.
  * - ENOTSUP - Unsupported VFIO mode.
  * - ENOMEM  - Memory allocation failed for device tracking.
+ * - EPERM   - Device IOMMU mode does not match container.
  */
 __rte_internal
 int dev_vfio_setup_device(const char *sysfs_base, const char *dev_addr, int *vfio_dev_fd);
@@ -384,6 +385,7 @@ dev_vfio_container_destroy(int container_fd);
  * - ENXIO   - VFIO support not initialized.
  * - ENOTSUP - Unsupported VFIO mode.
  * - ENOMEM  - Memory allocation failed for device tracking.
+ * - EPERM   - Device IOMMU mode does not match container.
  */
 __rte_internal
 int
