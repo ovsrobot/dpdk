@@ -125,8 +125,8 @@ New Features
 
 * **Updated AF_PACKET driver.**
 
-  Added ``ignore_outgoing`` so ``rte_eth_rx_burst()`` returns only incoming
-  packets.
+  Added ``ignore_outgoing`` devarg so ``rte_eth_rx_burst()``
+  returns only incoming packets.
 
 * **Updated AF_XDP driver.**
 
