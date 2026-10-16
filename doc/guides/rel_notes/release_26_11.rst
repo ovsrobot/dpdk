@@ -123,6 +123,15 @@ New Features
   Added internal ``flow_graph`` API in ethdev
   for PMD drivers to build graph-based flow pattern parsers.
 
+* **Added masked pattern conversion to flow API.**
+
+  Added ``RTE_FLOW_CONV_OP_PATTERN_MASKED`` to ``rte_flow_conv()``.
+  The new operation copies a pattern like ``RTE_FLOW_CONV_OP_PATTERN`` and
+  ANDs inline fields of each item ``spec`` and ``last`` with an explicit mask.
+  It preserves ``GENEVE_OPT.option_len`` and ``TAG.index``.
+  RAW pattern bytes, GENEVE_OPT data, FLEX, COMPARE and PMD private items
+  are not masked. Items with a NULL mask remain unchanged.
+
 * **Updated AF_XDP driver.**
 
   * Changed the default device plugin endpoint path used when

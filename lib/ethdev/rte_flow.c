@@ -245,6 +245,37 @@ static const struct rte_flow_desc_data rte_flow_desc_item[] = {
 	MK_FLOW_ITEM(COMPARE, sizeof(struct rte_flow_item_compare)),
 };
 
+/**
+ * Leading spec/last bytes that PATTERN_MASKED may AND with the item mask.
+ *
+ * PMD private items and FLEX return 0: their layout is opaque or the
+ * meaningful bytes sit past a pointer. RAW stops before its pattern
+ * pointer; GENEVE_OPT stops before option_len to preserve the data
+ * length and pointer. TAG stops before index to preserve its selector.
+ * Pointed-to data is not masked. COMPARE returns 0: its field descriptors
+ * hold selectors and pointers (pvalue, flex_handle) rather than match bits.
+ */
+static inline size_t
+rte_flow_conv_item_mask_size(const struct rte_flow_item *item)
+{
+	if ((int)item->type < 0)
+		return 0;
+	switch (item->type) {
+	case RTE_FLOW_ITEM_TYPE_RAW:
+		return offsetof(struct rte_flow_item_raw, pattern);
+	case RTE_FLOW_ITEM_TYPE_GENEVE_OPT:
+		return offsetof(struct rte_flow_item_geneve_opt, option_len);
+	case RTE_FLOW_ITEM_TYPE_TAG:
+		return offsetof(struct rte_flow_item_tag, index);
+	case RTE_FLOW_ITEM_TYPE_COMPARE:
+		return 0;
+	default:
+		if (rte_flow_desc_item[item->type].desc_fn != NULL)
+			return 0;
+		return rte_flow_desc_item[item->type].size;
+	}
+}
+
 /** Generate flow_action[] entry. */
 #define MK_FLOW_ACTION(t, s) \
 	[RTE_FLOW_ACTION_TYPE_ ## t] = { \
@@ -887,6 +918,16 @@ rte_flow_conv_action_conf(void *buf, const size_t size,
 	return off;
 }
 
+/** AND @p len bytes of @p buf with @p mask. */
+static inline void
+rte_flow_conv_apply_mask(uint8_t *buf, const uint8_t *mask, size_t len)
+{
+	size_t i;
+
+	for (i = 0; i < len; i++)
+		buf[i] &= mask[i];
+}
+
 /**
  * Copy a list of pattern items.
  *
@@ -900,6 +941,11 @@ rte_flow_conv_action_conf(void *buf, const size_t size,
  *   Maximum number of pattern items to process from @p src or 0 to process
  *   the entire list. In both cases, processing stops after
  *   RTE_FLOW_ITEM_TYPE_END is encountered.
+ * @param[in] with_mask
+ *   If true, AND each copied spec and last with the item mask.
+ *   A NULL mask is not replaced by the default mask. RAW pattern bytes,
+ *   GENEVE_OPT option_len and data, TAG index, FLEX, COMPARE and PMD
+ *   private items are not masked.
  * @param[out] error
  *   Perform verbose error reporting if not NULL.
  *
@@ -914,6 +960,7 @@ rte_flow_conv_pattern(struct rte_flow_item *dst,
 		      const size_t size,
 		      const struct rte_flow_item *src,
 		      unsigned int num,
+		      bool with_mask,
 		      struct rte_flow_error *error)
 {
 	uintptr_t data = (uintptr_t)dst;
@@ -943,16 +990,29 @@ rte_flow_conv_pattern(struct rte_flow_item *dst,
 	src -= num;
 	dst -= num;
 	do {
+		uint8_t *c_spec = NULL, *c_last = NULL;
+		const uint8_t *mask = NULL;
+		size_t item_mask_size = 0;
+
+		if (with_mask && src->mask) {
+			mask = src->mask;
+			item_mask_size = rte_flow_conv_item_mask_size(src);
+		}
+
 		if (src->spec) {
 			off = RTE_ALIGN_CEIL(off, sizeof(double));
 			ret = rte_flow_conv_item_spec
 				((void *)(data + off),
 				 size > off ? size - off : 0, src,
 				 RTE_FLOW_CONV_ITEM_SPEC);
-			if (size && size >= off + ret)
+			if (size && size >= off + ret) {
 				dst->spec = (void *)(data + off);
+				c_spec = (uint8_t *)(data + off);
+			}
 			off += ret;
-
+			if (c_spec && mask && item_mask_size)
+				rte_flow_conv_apply_mask(c_spec, mask,
+							 RTE_MIN(ret, item_mask_size));
 		}
 		if (src->last) {
 			off = RTE_ALIGN_CEIL(off, sizeof(double));
@@ -960,9 +1020,14 @@ rte_flow_conv_pattern(struct rte_flow_item *dst,
 				((void *)(data + off),
 				 size > off ? size - off : 0, src,
 				 RTE_FLOW_CONV_ITEM_LAST);
-			if (size && size >= off + ret)
+			if (size && size >= off + ret) {
 				dst->last = (void *)(data + off);
+				c_last = (uint8_t *)(data + off);
+			}
 			off += ret;
+			if (c_last && mask && item_mask_size)
+				rte_flow_conv_apply_mask(c_last, mask,
+							 RTE_MIN(ret, item_mask_size));
 		}
 		if (src->mask) {
 			off = RTE_ALIGN_CEIL(off, sizeof(double));
@@ -1109,7 +1174,7 @@ rte_flow_conv_rule(struct rte_flow_conv_rule *dst,
 		off = RTE_ALIGN_CEIL(off, sizeof(double));
 		ret = rte_flow_conv_pattern((void *)((uintptr_t)dst + off),
 					    size > off ? size - off : 0,
-					    src->pattern_ro, 0, error);
+					    src->pattern_ro, 0, false, error);
 		if (ret < 0)
 			return ret;
 		if (size && size >= off + (size_t)ret)
@@ -1228,7 +1293,7 @@ rte_flow_conv(enum rte_flow_conv_op op,
 		ret = sizeof(*attr);
 		break;
 	case RTE_FLOW_CONV_OP_ITEM:
-		ret = rte_flow_conv_pattern(dst, size, src, 1, error);
+		ret = rte_flow_conv_pattern(dst, size, src, 1, false, error);
 		break;
 	case RTE_FLOW_CONV_OP_ITEM_MASK:
 		item = src;
@@ -1243,7 +1308,7 @@ rte_flow_conv(enum rte_flow_conv_op op,
 		ret = rte_flow_conv_actions(dst, size, src, 1, error);
 		break;
 	case RTE_FLOW_CONV_OP_PATTERN:
-		ret = rte_flow_conv_pattern(dst, size, src, 0, error);
+		ret = rte_flow_conv_pattern(dst, size, src, 0, false, error);
 		break;
 	case RTE_FLOW_CONV_OP_ACTIONS:
 		ret = rte_flow_conv_actions(dst, size, src, 0, error);
@@ -1265,6 +1330,9 @@ rte_flow_conv(enum rte_flow_conv_op op,
 		break;
 	case RTE_FLOW_CONV_OP_ITEM_DEFAULT_MASK_PTR:
 		ret = rte_flow_conv_item_default_mask(dst, size, src, error);
+		break;
+	case RTE_FLOW_CONV_OP_PATTERN_MASKED:
+		ret = rte_flow_conv_pattern(dst, size, src, 0, true, error);
 		break;
 	default:
 		ret = rte_flow_error_set
