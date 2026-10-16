@@ -177,6 +177,7 @@ The public API headers are grouped by topics:
   [soring](@ref rte_soring.h),
   [stack](@ref rte_stack.h),
   [tailq](@ref rte_tailq.h),
+  [usage count](@ref rte_usage_count.h),
   [bitset](@ref rte_bitset.h),
   [bitmap](@ref rte_bitmap.h)
 

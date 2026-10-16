@@ -53,6 +53,7 @@ headers += files(
         'rte_trace.h',
         'rte_trace_point.h',
         'rte_trace_point_register.h',
+        'rte_usage_count.h',
         'rte_uuid.h',
         'rte_version.h',
 )
