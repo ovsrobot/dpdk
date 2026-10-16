@@ -573,6 +573,9 @@ parse_arg_corelist(const struct rte_argparse_arg *arg, const char *value)
 {
 	rte_cpuset_t *cpuset = arg->val_saver;
 	const char *last = value;
+	bool is_step = false;
+	int32_t step = 1;
+	int32_t max = -1;
 	int min = -1;
 
 	if (value == NULL) {
@@ -584,7 +587,6 @@ parse_arg_corelist(const struct rte_argparse_arg *arg, const char *value)
 	while (*last != '\0') {
 		char *end;
 		int64_t idx;
-		int32_t max;
 
 		while (isblank(*value))
 			value++;
@@ -603,6 +605,14 @@ parse_arg_corelist(const struct rte_argparse_arg *arg, const char *value)
 				arg->name_long);
 			return -EINVAL;
 		}
+		if (is_step) {
+			if (idx == 0) {
+				ARGPARSE_LOG(ERR, "argument %s step value must be positive!",
+					arg->name_long);
+				return -EINVAL;
+			}
+			step = idx;
+		}
 
 		if (*end == '-') {
 			if (min != -1) { /* can't have '-' within a range */
@@ -612,22 +622,41 @@ parse_arg_corelist(const struct rte_argparse_arg *arg, const char *value)
 			}
 			min = idx; /* start of range, move to next loop stage */
 		} else if (*end == ',' || *end == '\0') {
-			/* single value followed by comma or end (min is set only by '-') */
-			if (min == -1) {
-				min = max = idx;
-			} else if (min > idx) {
-				/* we have range from high to low */
+			if (!is_step) {
+				/* single value followed by comma or end (min is set only by '-') */
+				if (min == -1) {
+					min = max = idx;
+				} else if (min > idx) {
+					/* we have range from high to low */
+					max = min;
+					min = idx;
+				} else {
+					/* range from low to high */
+					max = idx;
+				}
+			}
+
+			for (; min <= max; min += step)
+				CPU_SET(min, cpuset);
+
+			/* no longer in a range */
+			min = -1;
+			max = -1;
+			step = 1;
+			is_step = false;
+		} else if (*end == ':') {
+			if (min == -1 || is_step) {
+				ARGPARSE_LOG(ERR, "argument %s step can only be used after a range (start-end:step)!",
+					arg->name_long);
+				return -EINVAL;
+			}
+			if (min > idx) {
 				max = min;
 				min = idx;
 			} else {
-				/* range from low to high */
 				max = idx;
 			}
-
-			for (; min <= max; min++)
-				CPU_SET(min, cpuset);
-
-			min = -1; /* no longer in a range */
+			is_step = true;
 		} else {
 			/* end is an unexpected character, return error */
 			ARGPARSE_LOG(ERR, "argument %s has an unexpected character!",

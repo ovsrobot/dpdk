@@ -822,8 +822,11 @@ test_argparse_parse_type_corelist(void)
 	char *corelist_valid_single = test_strdup("5");
 	char *corelist_valid_multiple = test_strdup("0,1,5");
 	char *corelist_valid_range = test_strdup("1-5");
+	char *corelist_valid_range_step = test_strdup("1-5:2");
 	char *corelist_valid_mixed = test_strdup("0,1,5-10,12-16,18,20");
+	char *corelist_valid_mixed_step = test_strdup("0,1,5-10:2,12-16:3,18,20");
 	char *corelist_valid_reverse_range = test_strdup("10-5");
+	char *corelist_valid_reverse_range_step = test_strdup("10-5:2");
 	char *corelist_valid_initial_spaces = test_strdup("   1,2,5-7");
 	char *corelist_valid_empty = test_strdup("");
 	char *corelist_invalid_spaces = test_strdup(" 1 , 2 , 5-7 ");
@@ -831,6 +834,12 @@ test_argparse_parse_type_corelist(void)
 	char *corelist_invalid_range_incomplete = test_strdup("1-");
 	char *corelist_invalid_range_double_dash = test_strdup("1--5");
 	char *corelist_invalid_range_double_range = test_strdup("1-3-5");
+	char *corelist_invalid_range_step_incomplete1 = test_strdup("1:");
+	char *corelist_invalid_range_step_incomplete2 = test_strdup("1:2");
+	char *corelist_invalid_range_step_incomplete3 = test_strdup("1-5:");
+	char *corelist_invalid_range_step_double = test_strdup("1-5::");
+	char *corelist_invalid_range_step_negative = test_strdup("1-5:-2:");
+	char *corelist_invalid_range_step_more = test_strdup("1-5:2:");
 	char *corelist_invalid_special_chars = test_strdup("1,2@3");
 	char *corelist_invalid_comma_only = test_strdup(",");
 	char *corelist_invalid_out_of_range = test_strdup("70000");
@@ -867,6 +876,18 @@ test_argparse_parse_type_corelist(void)
 	TEST_ASSERT(!CPU_ISSET(0, &val_cpuset), "Core 0 should not be set in range 1-5!");
 	TEST_ASSERT(!CPU_ISSET(6, &val_cpuset), "Core 6 should not be set in range 1-5!");
 
+	/* test valid range step */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_valid_range_step,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret == 0, "Argparse parse type for corelist (range step) failed!");
+	for (int i = 1; i <= 5; i += 2)
+		TEST_ASSERT(CPU_ISSET(i, &val_cpuset), "Core %d should be set in range 1-5:2!", i);
+	for (int i = 2; i <= 5; i += 2)
+		TEST_ASSERT(!CPU_ISSET(i, &val_cpuset), "Core %d should not be set in range 1-5:2!", i);
+	TEST_ASSERT(!CPU_ISSET(0, &val_cpuset), "Core 0 should not be set in range 1-5:2!");
+	TEST_ASSERT(!CPU_ISSET(6, &val_cpuset), "Core 6 should not be set in range 1-5:2!");
+
 	/* test valid mixed corelist */
 	CPU_ZERO(&val_cpuset);
 	ret = rte_argparse_parse_type(corelist_valid_mixed,
@@ -886,6 +907,31 @@ test_argparse_parse_type_corelist(void)
 	TEST_ASSERT(!CPU_ISSET(17, &val_cpuset), "Core 17 should not be set in mixed corelist!");
 	TEST_ASSERT(!CPU_ISSET(19, &val_cpuset), "Core 19 should not be set in mixed corelist!");
 
+	/* test valid mixed step corelist */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_valid_mixed_step,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret == 0, "Argparse parse type for corelist (mixed step) failed!");
+	TEST_ASSERT(CPU_ISSET(0, &val_cpuset), "Core 0 should be set in mixed step corelist!");
+	TEST_ASSERT(CPU_ISSET(1, &val_cpuset), "Core 1 should be set in mixed step corelist!");
+	for (int i = 5; i <= 10; i += 2)
+		TEST_ASSERT(CPU_ISSET(i, &val_cpuset), "Core %d should be set in range 5-10:2!", i);
+	for (int i = 6; i <= 10; i += 2)
+		TEST_ASSERT(!CPU_ISSET(i, &val_cpuset), "Core %d should not be set in range 5-10:2!", i);
+	for (int i = 12; i <= 16; i += 3)
+		TEST_ASSERT(CPU_ISSET(i, &val_cpuset), "Core %d should be set in range 12-16:3!", i);
+	for (int i = 13; i <= 16; i += 3)
+		TEST_ASSERT(!CPU_ISSET(i, &val_cpuset), "Core %d should not be set in range 12-16:3!", i);
+	for (int i = 14; i <= 16; i += 3)
+		TEST_ASSERT(!CPU_ISSET(i, &val_cpuset), "Core %d should not be set in range 12-16:3!", i);
+	TEST_ASSERT(CPU_ISSET(18, &val_cpuset), "Core 18 should be set in mixed step corelist!");
+	TEST_ASSERT(CPU_ISSET(20, &val_cpuset), "Core 20 should be set in mixed step corelist!");
+	TEST_ASSERT(!CPU_ISSET(2, &val_cpuset), "Core 2 should not be set in mixed step corelist!");
+	TEST_ASSERT(!CPU_ISSET(11, &val_cpuset), "Core 11 should not be set in mixed step corelist!");
+	TEST_ASSERT(!CPU_ISSET(17, &val_cpuset), "Core 17 should not be set in mixed step corelist!");
+	TEST_ASSERT(!CPU_ISSET(19, &val_cpuset), "Core 19 should not be set in mixed step corelist!");
+
+
 	/* test valid reverse range (10-5 should be interpreted as 5-10) */
 	CPU_ZERO(&val_cpuset);
 	ret = rte_argparse_parse_type(corelist_valid_reverse_range,
@@ -894,6 +940,20 @@ test_argparse_parse_type_corelist(void)
 	for (int i = 5; i <= 10; i++)
 		TEST_ASSERT(CPU_ISSET(i, &val_cpuset),
 				"Core %d should be set in reverse range 10-5!", i);
+	TEST_ASSERT(!CPU_ISSET(4, &val_cpuset), "Core 4 should not be set in reverse range 10-5!");
+	TEST_ASSERT(!CPU_ISSET(11, &val_cpuset), "Core 11 should not be set in reverse range 10-5!");
+
+	/* test valid reverse range step (10-5:2 should be interpreted as 5-10:2) */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_valid_reverse_range_step,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret == 0, "Argparse parse type for corelist (reverse range) failed!");
+	for (int i = 5; i <= 10; i += 2)
+		TEST_ASSERT(CPU_ISSET(i, &val_cpuset),
+				"Core %d should be set in reverse range 10-5:2!", i);
+	for (int i = 6; i <= 10; i += 2)
+		TEST_ASSERT(!CPU_ISSET(i, &val_cpuset),
+				"Core %d should not be set in reverse range 10-5:2!", i);
 	TEST_ASSERT(!CPU_ISSET(4, &val_cpuset), "Core 4 should not be set in reverse range 10-5!");
 	TEST_ASSERT(!CPU_ISSET(11, &val_cpuset), "Core 11 should not be set in reverse range 10-5!");
 
@@ -947,6 +1007,42 @@ test_argparse_parse_type_corelist(void)
 	ret = rte_argparse_parse_type(corelist_invalid_range_double_range,
 			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
 	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (double range) should have failed!");
+
+	/* test invalid corelist with step complete1 */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_invalid_range_step_incomplete1,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (step incomplete1) should have failed!");
+
+	/* test invalid corelist with step incomplete2 */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_invalid_range_step_incomplete2,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (step incomplete2) should have failed!");
+
+	/* test invalid corelist with step incomplete3 */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_invalid_range_step_incomplete3,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (step incomplete3) should have failed!");
+
+	/* test invalid corelist with step double */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_invalid_range_step_double,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (step double) should have failed!");
+
+	/* test invalid corelist with step negative */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_invalid_range_step_negative,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (step negative) should have failed!");
+
+	/* test invalid corelist with step more */
+	CPU_ZERO(&val_cpuset);
+	ret = rte_argparse_parse_type(corelist_invalid_range_step_more,
+			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
+	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (step more) should have failed!");
 
 	/* test invalid corelist with special characters */
 	CPU_ZERO(&val_cpuset);

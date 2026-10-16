@@ -271,8 +271,10 @@ The corelist parsing supports the following input formats:
 - **Single core**: ``--cores 5`` (sets core 5)
 - **Multiple cores**: ``--cores 1,2,5`` (sets cores 1, 2, and 5)
 - **Core ranges**: ``--cores 1-5`` (sets cores 1, 2, 3, 4, and 5)
+- **Core ranges with step**: ``--cores 1-5:2`` (sets cores 1, 3, and 5)
 - **Mixed format**: ``--cores 0,2-4,7`` (sets cores 0, 2, 3, 4, and 7)
 - **Reverse ranges**: ``--cores 5-1`` (equivalent to 1-5, sets cores 1, 2, 3, 4, and 5)
+- **Reverse ranges with step**: ``--cores 5-1:2`` (equivalent to 1-5:2, sets cores 1, 3, and 5)
 - **Empty corelist**: ``--cores ""`` (sets no cores)
 
 The parsed result is stored in an ``rte_cpuset_t`` structure that can be used
