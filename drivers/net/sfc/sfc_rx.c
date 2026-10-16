@@ -1670,18 +1670,6 @@ sfc_rx_check_mode(struct sfc_adapter *sa, struct rte_eth_rxmode *rxmode)
 {
 	uint64_t offloads_supported = sfc_rx_get_dev_offload_caps(sa) |
 				      sfc_rx_get_queue_offload_caps(sa);
-	int rc = 0;
-
-	switch (rxmode->mq_mode) {
-	case RTE_ETH_MQ_RX_NONE:
-	case RTE_ETH_MQ_RX_RSS:
-		/* No special checks are required */
-		break;
-	default:
-		sfc_err(sa, "Rx multi-queue mode %u not supported",
-			rxmode->mq_mode);
-		rc = EINVAL;
-	}
 
 	/*
 	 * Requested offloads are validated against supported by ethdev,
@@ -1700,7 +1688,7 @@ sfc_rx_check_mode(struct sfc_adapter *sa, struct rte_eth_rxmode *rxmode)
 		rxmode->offloads |= RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM;
 	}
 
-	return rc;
+	return 0;
 }
 
 /**

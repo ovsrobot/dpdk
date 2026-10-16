@@ -143,12 +143,10 @@ rep_eth_conf_chk(const struct rte_eth_conf *conf, uint16_t nb_rx_queues)
 		ret = -EINVAL;
 	}
 
-	switch (conf->rxmode.mq_mode) {
-	case RTE_ETH_MQ_RX_RSS:
+	if (conf->rxmode.mq_mode == RTE_ETH_MQ_RX_RSS) {
 		if (nb_rx_queues != 1) {
 			plt_err("Rx RSS is not supported with %u queues", nb_rx_queues);
 			ret = -EINVAL;
-			break;
 		}
 
 		rss_conf = &conf->rx_adv_conf.rss_conf;
@@ -157,18 +155,6 @@ rep_eth_conf_chk(const struct rte_eth_conf *conf, uint16_t nb_rx_queues)
 			plt_err("Rx RSS configuration is not supported");
 			ret = -EINVAL;
 		}
-		break;
-	case RTE_ETH_MQ_RX_NONE:
-		break;
-	default:
-		plt_err("Rx mode MQ modes other than RSS not supported");
-		ret = -EINVAL;
-		break;
-	}
-
-	if (conf->txmode.mq_mode != RTE_ETH_MQ_TX_NONE) {
-		plt_err("Tx mode MQ modes not supported");
-		ret = -EINVAL;
 	}
 
 	if (conf->lpbk_mode != 0) {

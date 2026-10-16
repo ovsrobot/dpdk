@@ -1990,7 +1990,6 @@ nicvf_dev_configure(struct rte_eth_dev *dev)
 	struct rte_eth_dev_data *data = dev->data;
 	struct rte_eth_conf *conf = &data->dev_conf;
 	struct rte_eth_rxmode *rxmode = &conf->rxmode;
-	struct rte_eth_txmode *txmode = &conf->txmode;
 	struct nicvf *nic = nicvf_pmd_priv(dev);
 	uint8_t cqcount;
 
@@ -2001,17 +2000,6 @@ nicvf_dev_configure(struct rte_eth_dev *dev)
 
 	if (!rte_eal_has_hugepages()) {
 		PMD_INIT_LOG(INFO, "Huge page is not configured");
-		return -EINVAL;
-	}
-
-	if (txmode->mq_mode) {
-		PMD_INIT_LOG(INFO, "Tx mq_mode DCB or VMDq not supported");
-		return -EINVAL;
-	}
-
-	if (rxmode->mq_mode != RTE_ETH_MQ_RX_NONE &&
-		rxmode->mq_mode != RTE_ETH_MQ_RX_RSS) {
-		PMD_INIT_LOG(INFO, "Unsupported rx qmode %d", rxmode->mq_mode);
 		return -EINVAL;
 	}
 
