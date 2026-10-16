@@ -17,13 +17,14 @@
 #include <bus_driver.h>
 #include <rte_spinlock.h>
 #include <rte_errno.h>
+#include <rte_usage_count.h>
 
 #include <eal_export.h>
 #include "eal_private.h"
 
 static struct rte_intr_handle *intr_handle;
 static rte_rwlock_t monitor_lock = RTE_RWLOCK_INITIALIZER;
-static uint32_t monitor_refcount;
+static rte_usage_count_t monitor_refcount;
 static bool hotplug_handle;
 
 #define EAL_UEV_MSG_LEN 4096
@@ -342,10 +343,8 @@ rte_dev_event_monitor_start(void)
 
 	rte_rwlock_write_lock(&monitor_lock);
 
-	if (monitor_refcount) {
-		monitor_refcount++;
+	if (!rte_usage_count_claim(&monitor_refcount))
 		goto exit;
-	}
 
 	intr_handle = rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_PRIVATE);
 	if (intr_handle == NULL) {
@@ -370,12 +369,11 @@ rte_dev_event_monitor_start(void)
 		goto exit;
 	}
 
-	monitor_refcount++;
-
 exit:
 	if (ret) {
 		rte_intr_instance_free(intr_handle);
 		intr_handle = NULL;
+		rte_usage_count_release(&monitor_refcount);
 	}
 	rte_rwlock_write_unlock(&monitor_lock);
 	return ret;
@@ -389,14 +387,13 @@ rte_dev_event_monitor_stop(void)
 
 	rte_rwlock_write_lock(&monitor_lock);
 
-	if (!monitor_refcount) {
+	if (monitor_refcount == 0) {
 		EAL_LOG(ERR, "device event monitor already stopped");
 		goto exit;
 	}
 
-	if (monitor_refcount > 1) {
-		monitor_refcount--;
-		goto exit;
+	if (!rte_usage_count_is_last(&monitor_refcount)) {
+		goto release;
 	}
 
 	ret = rte_intr_callback_unregister(intr_handle, dev_uev_handler,
@@ -411,7 +408,8 @@ rte_dev_event_monitor_stop(void)
 	intr_handle = NULL;
 	ret = 0;
 
-	monitor_refcount--;
+release:
+	rte_usage_count_release(&monitor_refcount);
 
 exit:
 	rte_rwlock_write_unlock(&monitor_lock);
