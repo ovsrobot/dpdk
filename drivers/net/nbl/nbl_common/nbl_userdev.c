@@ -4,6 +4,8 @@
 
 #include <uapi/linux/vfio.h>
 
+#include <rte_usage_count.h>
+
 #include "nbl_userdev.h"
 #include <dev_vfio.h>
 
@@ -26,7 +28,7 @@ struct nbl_userdev_map_record {
 };
 
 static int nbl_default_container = -1;
-static int nbl_group_count;
+static rte_usage_count_t nbl_group_count;
 
 TAILQ_HEAD(nbl_adapter_list_head, nbl_adapter);
 static struct nbl_adapter_list_head nbl_adapter_list =
@@ -423,7 +425,7 @@ static int nbl_mdev_map_device(struct nbl_adapter *adapter)
 	u64 dma_limit = NBL_USERDEV_DMA_LIMIT;
 	int ret, container_create = 0, container_set = 0;
 	int vfio_group_fd, container = nbl_default_container;
-	bool new_group = false;
+	bool new_group = false, first_group = false;
 
 	rte_pci_device_name(&pci_dev->addr, dev_name, RTE_DEV_NAME_MAX_LEN);
 	snprintf(pathname, sizeof(pathname),
@@ -481,11 +483,11 @@ static int nbl_mdev_map_device(struct nbl_adapter *adapter)
 			goto free_group;
 		}
 
-		nbl_group_count++;
+		first_group = rte_usage_count_claim(&nbl_group_count);
 		container_set = 1;
 		/* set an IOMMU type for container */
 
-		if (container_create || nbl_group_count == 1) {
+		if (container_create || first_group) {
 			if (ioctl(container, VFIO_CHECK_EXTENSION, VFIO_TYPE1v2_IOMMU)) {
 				ret = ioctl(container, VFIO_SET_IOMMU, VFIO_TYPE1v2_IOMMU);
 				if (ret) {
@@ -548,13 +550,13 @@ static int nbl_mdev_map_device(struct nbl_adapter *adapter)
 close_fd:
 	close(common->devfd);
 unregister_mem_event:
-	if (container_set && nbl_group_count == 1) {
+	if (first_group) {
 		rte_mcfg_mem_read_lock();
 		rte_mem_event_callback_unregister(NBL_USERDEV_EVENT_CLB_NAME, NULL);
 		rte_mcfg_mem_read_unlock();
 	}
 free_dma_map:
-	if (container_set && nbl_group_count == 1) {
+	if (first_group) {
 		rte_mcfg_mem_read_lock();
 		nbl_userdev_dma_free();
 		rte_mcfg_mem_read_unlock();
@@ -562,7 +564,7 @@ free_dma_map:
 unset_container:
 	if (container_set) {
 		ioctl(vfio_group_fd, VFIO_GROUP_UNSET_CONTAINER, &container);
-		nbl_group_count--;
+		rte_usage_count_release(&nbl_group_count);
 	}
 free_group:
 	if (new_group)
@@ -577,7 +579,7 @@ static int nbl_mdev_unmap_device(struct nbl_adapter *adapter)
 {
 	struct nbl_common_info *common = &adapter->common;
 	int vfio_group_fd, ret;
-	bool last_group_user;
+	bool last_group_user, last_group = false;
 
 	rte_mcfg_mem_read_lock();
 	TAILQ_REMOVE(&nbl_adapter_list, adapter, next);
@@ -591,11 +593,11 @@ static int nbl_mdev_unmap_device(struct nbl_adapter *adapter)
 		if (ret)
 			NBL_LOG(ERR, "unset container, error %i (%s) %d",
 				errno, strerror(errno), ret);
-		nbl_group_count--;
+		last_group = rte_usage_count_release(&nbl_group_count);
 		close(vfio_group_fd);
 		common->groupfd = -1;
 	}
-	if (!nbl_group_count) {
+	if (last_group) {
 		rte_mem_event_callback_unregister(NBL_USERDEV_EVENT_CLB_NAME, NULL);
 		nbl_userdev_dma_free();
 	}
