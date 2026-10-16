@@ -113,15 +113,14 @@ struct rte_ring_hts_headtail {
  * values in a modulo-32bit base: that's why the overflow of the indexes is not
  * a problem.
  */
-struct rte_ring {
-	alignas(RTE_CACHE_LINE_SIZE) char name[RTE_RING_NAMESIZE];
-	/**< Name of the ring. */
+struct __rte_cache_aligned rte_ring {
 	int flags;               /**< Flags supplied at creation. */
-	const struct rte_memzone *memzone;
-			/**< Memzone, if any, containing the rte_ring */
 	uint32_t size;           /**< Size of ring. */
 	uint32_t mask;           /**< Mask (size-1) of ring. */
 	uint32_t capacity;       /**< Usable size of ring */
+	const struct rte_memzone *memzone;
+			/**< Memzone, if any, containing the rte_ring */
+	char name[RTE_RING_NAMESIZE]; /**< Name of the ring. */
 
 	RTE_CACHE_GUARD;
 
