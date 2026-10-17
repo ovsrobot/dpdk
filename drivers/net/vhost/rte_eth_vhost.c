@@ -346,7 +346,7 @@ vhost_dev_tx_sw_csum(struct rte_mbuf *mbuf)
 
 	csum = ~csum;
 	/* See RFC768 */
-	if (unlikely((mbuf->packet_type & RTE_PTYPE_L4_UDP) && csum == 0))
+	if (unlikely(csum == 0) && (mbuf->packet_type & RTE_PTYPE_L4_MASK) == RTE_PTYPE_L4_UDP)
 		csum = 0xffff;
 
 	if (rte_pktmbuf_data_len(mbuf) >= csum_offset + 1)
@@ -389,7 +389,7 @@ vhost_dev_rx_sw_csum(struct rte_mbuf *mbuf)
 
 	csum = ~csum;
 	/* See RFC768 */
-	if (unlikely((ptype & RTE_PTYPE_L4_UDP) && csum == 0))
+	if (unlikely(csum == 0) && (ptype & RTE_PTYPE_L4_MASK) == RTE_PTYPE_L4_UDP)
 		csum = 0xffff;
 
 	if (rte_pktmbuf_data_len(mbuf) >= csum_offset + 1)
