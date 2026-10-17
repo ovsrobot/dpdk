@@ -1759,6 +1759,12 @@ test_expiry_with_rte_timer(const struct pdcp_test_conf *ul_conf)
 	if (ul_conf->entity.pdcp_xfrm.pkt_dir == RTE_SECURITY_PDCP_DOWNLINK)
 		return TEST_SKIPPED;
 
+	ret = rte_timer_subsystem_init();
+	if (ret < 0 && ret != -EALREADY) {
+		printf("timer subsystem init failed: %d\n", ret);
+		return TEST_FAILED;
+	}
+
 	/* Set up a timer */
 	rte_timer_init(&timer);
 

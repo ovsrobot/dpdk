@@ -134,6 +134,12 @@ test_timer_secondary(void)
 			return TEST_SKIPPED;
 		}
 
+		ret = rte_timer_subsystem_init();
+		if (ret < 0 && ret != -EALREADY) {
+			printf("timer subsystem init failed: %d\n", ret);
+			return TEST_FAILED;
+		}
+
 		mz = rte_memzone_reserve(TEST_INFO_MZ_NAME, sizeof(*test_info),
 					 SOCKET_ID_ANY, 0);
 		TEST_ASSERT_NOT_NULL(mz, "Couldn't allocate memory for "
@@ -187,6 +193,12 @@ test_timer_secondary(void)
 		uint64_t ticks, timeout_ms;
 		struct rte_timer *tim;
 		unsigned int i;
+
+		ret = rte_timer_subsystem_init();
+		if (ret < 0 && ret != -EALREADY) {
+			printf("timer subsystem init failed: %d\n", ret);
+			return TEST_FAILED;
+		}
 
 		mz = rte_memzone_lookup(TEST_INFO_MZ_NAME);
 		TEST_ASSERT_NOT_NULL(mz, "Couldn't lookup memzone for "
