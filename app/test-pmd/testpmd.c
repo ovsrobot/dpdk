@@ -446,6 +446,12 @@ uint8_t lsc_interrupt = 1; /* enabled by default */
  */
 uint8_t rmv_interrupt = 1; /* enabled by default */
 
+/*
+ * Ethernet flow control mode applied on port start.
+ * Negative means leave the device default.
+ */
+int flow_ctrl_mode = -1;
+
 uint8_t hot_plug = 0; /**< hotplug disabled by default. */
 
 /* After attach, port setup is called on event or by iterator */
@@ -2973,6 +2979,26 @@ update_bonding_port_dev_conf(portid_t bond_pid)
 #endif
 }
 
+static void
+port_flow_ctrl_apply(portid_t pi)
+{
+	struct rte_eth_fc_conf fc_conf;
+	int ret;
+
+	if (flow_ctrl_mode < 0 || !is_proc_primary())
+		return;
+
+	memset(&fc_conf, 0, sizeof(fc_conf));
+	ret = rte_eth_dev_flow_ctrl_get(pi, &fc_conf);
+	if (ret == 0) {
+		fc_conf.mode = flow_ctrl_mode;
+		ret = rte_eth_dev_flow_ctrl_set(pi, &fc_conf);
+	}
+	if (ret != 0 && ret != -ENOTSUP)
+		fprintf(stderr, "Port %u: failed to set flow control: %s\n",
+			pi, rte_strerror(-ret));
+}
+
 int
 start_port(portid_t pid)
 {
@@ -3228,6 +3254,8 @@ start_port(portid_t pid)
 		else
 			fprintf(stderr, "Port %d can not be set into started\n",
 				pi);
+
+		port_flow_ctrl_apply(pi);
 
 		if (eth_macaddr_get_print_err(pi, &port->eth_addr) == 0)
 			printf("Port %d: " RTE_ETHER_ADDR_PRT_FMT "\n", pi,

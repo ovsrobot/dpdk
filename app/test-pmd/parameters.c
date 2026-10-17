@@ -207,6 +207,8 @@ enum {
 	TESTPMD_OPT_NO_LSC_INTERRUPT_NUM,
 #define TESTPMD_OPT_NO_RMV_INTERRUPT "no-rmv-interrupt"
 	TESTPMD_OPT_NO_RMV_INTERRUPT_NUM,
+#define TESTPMD_OPT_FLOW_CTRL "flow-ctrl"
+	TESTPMD_OPT_FLOW_CTRL_NUM,
 #define TESTPMD_OPT_PRINT_EVENT "print-event"
 	TESTPMD_OPT_PRINT_EVENT_NUM,
 #define TESTPMD_OPT_MASK_EVENT "mask-event"
@@ -357,6 +359,7 @@ static const struct option long_options[] = {
 	NO_ARG(TESTPMD_OPT_DISABLE_DEVICE_START),
 	NO_ARG(TESTPMD_OPT_NO_LSC_INTERRUPT),
 	NO_ARG(TESTPMD_OPT_NO_RMV_INTERRUPT),
+	REQUIRED_ARG(TESTPMD_OPT_FLOW_CTRL),
 	REQUIRED_ARG(TESTPMD_OPT_PRINT_EVENT),
 	REQUIRED_ARG(TESTPMD_OPT_MASK_EVENT),
 	REQUIRED_ARG(TESTPMD_OPT_TX_OFFLOADS),
@@ -515,6 +518,8 @@ usage(char* progname)
 	printf("  --disable-device-start: do not automatically start port\n");
 	printf("  --no-lsc-interrupt: disable link status change interrupt.\n");
 	printf("  --no-rmv-interrupt: disable device removal interrupt.\n");
+	printf("  --flow-ctrl=none|rx|tx|full: set Ethernet flow control"
+	       " mode when ports are started.\n");
 #ifdef RTE_LIB_BITRATESTATS
 	printf("  --bitrate-stats=N: set the logical core N to perform "
 		"bit-rate calculation.\n");
@@ -1634,6 +1639,19 @@ launch_args_parse(int argc, char** argv)
 			break;
 		case TESTPMD_OPT_NO_RMV_INTERRUPT_NUM:
 			rmv_interrupt = 0;
+			break;
+		case TESTPMD_OPT_FLOW_CTRL_NUM:
+			if (!strcmp(optarg, "none"))
+				flow_ctrl_mode = RTE_ETH_FC_NONE;
+			else if (!strcmp(optarg, "rx"))
+				flow_ctrl_mode = RTE_ETH_FC_RX_PAUSE;
+			else if (!strcmp(optarg, "tx"))
+				flow_ctrl_mode = RTE_ETH_FC_TX_PAUSE;
+			else if (!strcmp(optarg, "full"))
+				flow_ctrl_mode = RTE_ETH_FC_FULL;
+			else
+				rte_exit(EXIT_FAILURE,
+					 "flow-ctrl must be none, rx, tx or full\n");
 			break;
 		case TESTPMD_OPT_FLOW_ISOLATE_ALL_NUM:
 			flow_isolate_all = 1;

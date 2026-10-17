@@ -224,6 +224,11 @@ The command line options are:
 
     Disable RSS (Receive Side Scaling).
 
+*   ``--flow-ctrl=mode``
+
+    Set the Ethernet flow control mode of all ports each time they are started.
+    The possible values are ``none``, ``rx``, ``tx`` and ``full``.
+
 *   ``--port-topology=mode``
 
     Set port topology, where mode is ``paired`` (the default), ``chained`` or ``loop``.
