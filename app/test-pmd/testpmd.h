@@ -625,6 +625,7 @@ extern uint16_t mbuf_data_size[MAX_SEGS_BUFFER_SPLIT];
 extern uint32_t param_total_num_mbufs;
 
 extern uint16_t stats_period;
+extern uint32_t run_time;
 
 extern struct rte_eth_xstat_name *xstats_display;
 extern unsigned int xstats_display_num;

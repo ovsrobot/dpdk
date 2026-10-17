@@ -61,6 +61,8 @@ enum {
 	TESTPMD_OPT_TX_FIRST_NUM,
 #define TESTPMD_OPT_STATS_PERIOD "stats-period"
 	TESTPMD_OPT_STATS_PERIOD_NUM,
+#define TESTPMD_OPT_RUN_TIME "run-time"
+	TESTPMD_OPT_RUN_TIME_NUM,
 #define TESTPMD_OPT_DISPLAY_XSTATS "display-xstats"
 	TESTPMD_OPT_DISPLAY_XSTATS_NUM,
 #define TESTPMD_OPT_NB_CORES "nb-cores"
@@ -282,6 +284,7 @@ static const struct option long_options[] = {
 	REQUIRED_ARG(TESTPMD_OPT_ETH_PEER),
 	NO_ARG(TESTPMD_OPT_TX_FIRST),
 	REQUIRED_ARG(TESTPMD_OPT_STATS_PERIOD),
+	REQUIRED_ARG(TESTPMD_OPT_RUN_TIME),
 	REQUIRED_ARG(TESTPMD_OPT_DISPLAY_XSTATS),
 	REQUIRED_ARG(TESTPMD_OPT_NB_CORES),
 	REQUIRED_ARG(TESTPMD_OPT_NB_PORTS),
@@ -408,6 +411,8 @@ usage(char* progname)
 	       "(only if interactive is disabled).\n");
 	printf("  --stats-period=PERIOD: statistics will be shown "
 	       "every PERIOD seconds (only if interactive is disabled).\n");
+	printf("  --run-time=N: stop forwarding and exit after N seconds "
+	       "(only if interactive is disabled).\n");
 	printf("  --display-xstats xstat_name1[,...]: comma-separated list of "
 	       "extended statistics to show. Used with --stats-period "
 	       "specified or interactive commands that show Rx/Tx statistics "
@@ -997,6 +1002,19 @@ launch_args_parse(int argc, char** argv)
 				"packets first\n");
 			tx_first = 1;
 			break;
+		case TESTPMD_OPT_RUN_TIME_NUM: {
+			char *end = NULL;
+			unsigned long secs;
+
+			errno = 0;
+			secs = strtoul(optarg, &end, 10);
+			if (optarg[0] == '\0' || *end != '\0' || errno != 0 ||
+					secs == 0 || secs > INT32_MAX)
+				rte_exit(EXIT_FAILURE, "Invalid run-time value\n");
+
+			run_time = secs;
+			break;
+		}
 		case TESTPMD_OPT_STATS_PERIOD_NUM: {
 			char *end = NULL;
 

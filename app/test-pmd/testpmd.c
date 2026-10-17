@@ -242,6 +242,7 @@ uint16_t mbuf_data_size[MAX_SEGS_BUFFER_SPLIT] = {
 uint32_t param_total_num_mbufs = 0;  /**< number of mbufs in all pools - if
                                       * specified on command-line. */
 uint16_t stats_period; /**< Period to show statistics (disabled by default) */
+uint32_t run_time; /**< Seconds to forward before exit (0 = no limit) */
 
 /** Extended statistics to show. */
 struct rte_eth_xstat_name *xstats_display;
@@ -4556,6 +4557,41 @@ disable_primary_monitor(void)
 }
 #endif
 
+/*
+ * Non-interactive wait: print stats every stats_period seconds
+ * and stop after run_time seconds, or on signal.
+ */
+static void
+forward_wait(void)
+{
+	uint64_t hz = rte_get_timer_hz();
+	uint64_t now = rte_get_timer_cycles();
+	uint64_t end = now + (uint64_t)run_time * hz;
+	uint64_t next_stats = now;
+
+	while (f_quit == 0) {
+		uint64_t wake;
+
+		now = rte_get_timer_cycles();
+		if (run_time != 0 && now >= end)
+			break;
+
+		if (stats_period != 0 && now >= next_stats) {
+			print_stats();
+			next_stats = now + (uint64_t)stats_period * hz;
+		}
+
+		/* wake at least once a second to check for signal */
+		wake = now + hz;
+		if (stats_period != 0 && next_stats < wake)
+			wake = next_stats;
+		if (run_time != 0 && end < wake)
+			wake = end;
+
+		rte_delay_us_sleep((wake - now) * US_PER_S / hz);
+	}
+}
+
 int
 main(int argc, char** argv)
 {
@@ -4649,6 +4685,9 @@ main(int argc, char** argv)
 	if (tx_first && interactive)
 		rte_exit(EXIT_FAILURE, "--tx-first cannot be used on "
 				"interactive mode.\n");
+
+	if (run_time && interactive)
+		rte_exit(EXIT_FAILURE, "--run-time cannot be used on interactive mode.\n");
 
 	if (tx_first && lsc_interrupt) {
 		fprintf(stderr,
@@ -4755,26 +4794,8 @@ main(int argc, char** argv)
 	} else {
 		printf("No commandline core given, start packet forwarding\n");
 		start_packet_forwarding(tx_first);
-		if (stats_period != 0) {
-			uint64_t prev_time = 0, cur_time, diff_time = 0;
-			uint64_t timer_period;
-
-			/* Convert to number of cycles */
-			timer_period = stats_period * rte_get_timer_hz();
-
-			while (f_quit == 0) {
-				cur_time = rte_get_timer_cycles();
-				diff_time += cur_time - prev_time;
-
-				if (diff_time >= timer_period) {
-					print_stats();
-					/* Reset the timer */
-					diff_time = 0;
-				}
-				/* Sleep to avoid unnecessary checks */
-				prev_time = cur_time;
-				rte_delay_us_sleep(US_PER_S);
-			}
+		if (stats_period != 0 || run_time != 0) {
+			forward_wait();
 		} else {
 			char c;
 

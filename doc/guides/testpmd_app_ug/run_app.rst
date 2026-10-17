@@ -64,6 +64,12 @@ The command line options are:
     Display statistics every PERIOD seconds, if interactive mode is disabled.
     The default value is 0, which means that the statistics will not be displayed.
 
+*   ``--run-time N``
+
+    Stop forwarding and exit after N seconds, if interactive mode is disabled.
+    Final statistics are displayed as on a normal exit.
+    The default value is 0, which means run until interrupted.
+
 *   ``--display-xstats xstat_name1[,...]``
 
     Display comma-separated list of extended statistics every PERIOD seconds
