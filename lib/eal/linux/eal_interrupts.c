@@ -479,6 +479,18 @@ uio_intr_enable(const struct rte_intr_handle *intr_handle)
 	return 0;
 }
 
+/*
+ * The source holds a copy of the caller's handle; the fds are owned
+ * by the caller, so drop them before freeing the copy.
+ */
+static void
+eal_intr_source_free_handle(struct rte_intr_source *src)
+{
+	rte_intr_fd_set(src->intr_handle, -1);
+	rte_intr_dev_fd_set(src->intr_handle, -1);
+	rte_intr_instance_free(src->intr_handle);
+}
+
 RTE_EXPORT_SYMBOL(rte_intr_callback_register)
 int
 rte_intr_callback_register(const struct rte_intr_handle *intr_handle,
@@ -666,7 +678,7 @@ rte_intr_callback_unregister(const struct rte_intr_handle *intr_handle,
 		/* all callbacks for that source are removed. */
 		if (TAILQ_EMPTY(&src->callbacks)) {
 			TAILQ_REMOVE(&intr_sources, src, next);
-			rte_intr_instance_free(src->intr_handle);
+			eal_intr_source_free_handle(src);
 			free(src);
 		}
 	}
@@ -922,7 +934,7 @@ eal_intr_source_remove_and_free(struct rte_intr_source *src)
 	}
 
 	/* Free the interrupt source */
-	rte_intr_instance_free(src->intr_handle);
+	eal_intr_source_free_handle(src);
 	free(src);
 }
 
@@ -1067,7 +1079,7 @@ eal_intr_process_interrupts(struct epoll_event *events, int nfds)
 		/* all callbacks for that source are removed. */
 		if (TAILQ_EMPTY(&src->callbacks)) {
 			TAILQ_REMOVE(&intr_sources, src, next);
-			rte_intr_instance_free(src->intr_handle);
+			eal_intr_source_free_handle(src);
 			free(src);
 		}
 
