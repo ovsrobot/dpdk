@@ -3345,6 +3345,62 @@ void ena_com_rss_destroy(struct ena_com_dev *ena_dev)
 	memset(&ena_dev->rss, 0x0, sizeof(ena_dev->rss));
 }
 
+int ena_com_flow_steering_init(struct ena_com_dev *ena_dev, u16 flow_steering_entries)
+{
+	u32 tbl_size_in_bytes =
+		flow_steering_entries * sizeof(struct ena_com_flow_steering_table_entry);
+	struct ena_com_flow_steering *flow_steering = &ena_dev->flow_steering;
+
+	memset(flow_steering, 0x0, sizeof(*flow_steering));
+
+	if (!(ena_dev->supported_features & BIT(ENA_ADMIN_FLOW_STEERING_CONFIG)))
+		return ENA_COM_UNSUPPORTED;
+
+	flow_steering->tbl_size = flow_steering_entries;
+
+	flow_steering->flow_steering_tbl = ENA_MEM_ALLOC(ena_dev->dmadev, tbl_size_in_bytes);
+	if (unlikely(!flow_steering->flow_steering_tbl)) {
+		ena_trc_err(ena_dev, "Flow steering table memory allocation failed\n");
+		return ENA_COM_NO_MEM;
+	}
+
+	ENA_MEM_ALLOC_COHERENT(ena_dev->dmadev,
+			       sizeof(struct ena_admin_flow_steering_rule_params),
+			       flow_steering->requested_rule,
+			       flow_steering->requested_rule_dma_addr,
+			       flow_steering->requested_rule_mem_handle);
+	if (unlikely(!flow_steering->requested_rule)) {
+		ena_trc_err(ena_dev, "Flow steering dma-able params memory allocation failed\n");
+		goto err;
+	}
+
+	return 0;
+err:
+	ena_com_flow_steering_destroy(ena_dev);
+
+	return ENA_COM_NO_MEM;
+}
+
+void ena_com_flow_steering_destroy(struct ena_com_dev *ena_dev)
+{
+	struct ena_com_flow_steering *flow_steering = &ena_dev->flow_steering;
+
+	if (flow_steering->requested_rule) {
+		ENA_MEM_FREE_COHERENT(ena_dev->dmadev,
+				      sizeof(struct ena_admin_flow_steering_rule_params),
+				      flow_steering->requested_rule,
+				      flow_steering->requested_rule_dma_addr,
+				      flow_steering->requested_rule_mem_handle);
+	}
+
+	if (flow_steering->flow_steering_tbl) {
+		ENA_MEM_FREE(ena_dev->dmadev,
+			     flow_steering->flow_steering_tbl,
+			     flow_steering->tbl_size *
+			     sizeof(struct ena_com_flow_steering_table_entry));
+	}
+}
+
 int ena_com_allocate_host_info(struct ena_com_dev *ena_dev)
 {
 	struct ena_host_attribute *host_attr = &ena_dev->host_attr;
@@ -3603,6 +3659,250 @@ int ena_com_config_dev_mode(struct ena_com_dev *ena_dev,
 
 	ena_dev->tx_max_header_size = llq_max_header_size;
 	ena_dev->tx_mem_queue_type = ENA_ADMIN_PLACEMENT_POLICY_DEV;
+
+	return 0;
+}
+
+int ena_com_flow_steering_add_rule(struct ena_com_dev *ena_dev,
+				   struct ena_com_flow_steering_rule_params *configure_params,
+				   u16 *rule_idx)
+{
+	struct ena_com_flow_steering *flow_steering = &ena_dev->flow_steering;
+	struct ena_com_admin_queue *admin_queue;
+	struct ena_admin_set_feat_resp resp;
+	struct ena_admin_set_feat_cmd cmd;
+	int ret;
+
+	if (!(ena_dev->supported_features & BIT(ENA_ADMIN_FLOW_STEERING_CONFIG))) {
+		ena_trc_err(ena_dev, "Flow steering rules are not supported by this device\n");
+		return ENA_COM_UNSUPPORTED;
+	}
+
+	if ((*rule_idx >= flow_steering->tbl_size) &&
+	    (*rule_idx != ENA_ADMIN_FLOW_STEERING_DEVICE_CHOOSE_LOCATION)) {
+		ena_trc_err(ena_dev, "Failed to add a flow steering rule, index %u out of bounds\n",
+			    *rule_idx);
+		return ENA_COM_INVAL;
+	}
+
+	if ((*rule_idx != ENA_ADMIN_FLOW_STEERING_DEVICE_CHOOSE_LOCATION) &&
+	    flow_steering->flow_steering_tbl[*rule_idx].in_use) {
+		ena_trc_err(ena_dev,
+			    "Failed to configure Flow steering rule to index %u with currently active rule in it\n",
+			    *rule_idx);
+		return ENA_COM_INVAL;
+	}
+
+	memset(&cmd, 0x0, sizeof(cmd));
+	admin_queue = &ena_dev->admin_queue;
+
+	cmd.aq_common_descriptor.opcode = ENA_ADMIN_SET_FEATURE;
+	cmd.aq_common_descriptor.flags =
+			ENA_ADMIN_AQ_COMMON_DESC_CTRL_DATA_INDIRECT_MASK;
+	cmd.feat_common.feature_id = ENA_ADMIN_FLOW_STEERING_CONFIG;
+	cmd.u.flow_steering.action = ENA_ADMIN_FLOW_STEERING_ADD_RULE;
+	cmd.u.flow_steering.flow_type = configure_params->flow_type;
+	cmd.u.flow_steering.rx_q_idx = configure_params->qid;
+	cmd.u.flow_steering.rule_location = *rule_idx;
+	cmd.u.flow_steering.flags = 0;
+
+	memcpy(flow_steering->requested_rule,
+	       &configure_params->flow_params,
+	       sizeof(struct ena_admin_flow_steering_rule_params));
+
+	ret = ena_com_mem_addr_set(ena_dev,
+				   &cmd.control_buffer.address,
+				   flow_steering->requested_rule_dma_addr);
+	if (unlikely(ret)) {
+		ena_trc_err(ena_dev, "Memory address set failed\n");
+		return ret;
+	}
+
+	cmd.control_buffer.length = sizeof(struct ena_admin_flow_steering_rule_params);
+
+	ret = ena_com_execute_admin_command(admin_queue,
+					    (struct ena_admin_aq_entry *)&cmd,
+					    sizeof(cmd),
+					    (struct ena_admin_acq_entry *)&resp,
+					    sizeof(resp));
+	if (unlikely(ret)) {
+		ena_trc_err(ena_dev, "Failed to add a new flow steering rule: %d\n", ret);
+		return ret;
+	}
+
+	/* If the rule index needs to be chosen by the device,
+	 * set it to the rule_idx from the response
+	 */
+	if (*rule_idx == ENA_ADMIN_FLOW_STEERING_DEVICE_CHOOSE_LOCATION) {
+		*rule_idx = resp.u.flow_steering.rule_location;
+		if (*rule_idx >= flow_steering->tbl_size) {
+			ena_trc_err(ena_dev, "Flow steering rule configured to invalid index: %d\n",
+				    *rule_idx);
+			return ENA_COM_FAULT;
+		}
+	}
+
+	flow_steering->flow_steering_tbl[*rule_idx].rule_params = *configure_params;
+	flow_steering->flow_steering_tbl[*rule_idx].in_use = true;
+
+	flow_steering->active_rules_cnt++;
+
+	return 0;
+}
+
+int ena_com_flow_steering_remove_rule(struct ena_com_dev *ena_dev, u16 rule_idx)
+{
+	struct ena_com_flow_steering *flow_steering = &ena_dev->flow_steering;
+	struct ena_admin_set_feat_resp resp;
+	struct ena_admin_set_feat_cmd cmd;
+	int ret;
+
+	if (!(ena_dev->supported_features & BIT(ENA_ADMIN_FLOW_STEERING_CONFIG))) {
+		ena_trc_err(ena_dev, "Flow steering rules are not supported by this device\n");
+		return ENA_COM_UNSUPPORTED;
+	}
+
+	if (rule_idx >= flow_steering->tbl_size) {
+		ena_trc_err(ena_dev, "Failed to remove a flow steering rule, index %u out of bounds\n",
+			    rule_idx);
+		return ENA_COM_INVAL;
+	}
+
+	if (!flow_steering->flow_steering_tbl[rule_idx].in_use) {
+		ena_trc_err(ena_dev,
+			    "Failed to remove a flow steering rule, no rule configured in index %u\n",
+			    rule_idx);
+		return ENA_COM_INVAL;
+	}
+
+	memset(&cmd, 0x0, sizeof(cmd));
+
+	cmd.aq_common_descriptor.opcode = ENA_ADMIN_SET_FEATURE;
+	cmd.feat_common.feature_id = ENA_ADMIN_FLOW_STEERING_CONFIG;
+	cmd.u.flow_steering.action = ENA_ADMIN_FLOW_STEERING_REMOVE_RULE;
+	cmd.u.flow_steering.rule_location = rule_idx;
+
+	ret = ena_com_execute_admin_command(&ena_dev->admin_queue,
+					    (struct ena_admin_aq_entry *)&cmd,
+					    sizeof(cmd),
+					    (struct ena_admin_acq_entry *)&resp,
+					    sizeof(resp));
+	if (unlikely(ret)) {
+		ena_trc_err(ena_dev, "Failed to remove a flow steering rule: %d\n", ret);
+		return ret;
+	}
+
+	memset(&flow_steering->flow_steering_tbl[rule_idx].rule_params, 0,
+	       sizeof(struct ena_admin_flow_steering_rule_params));
+	flow_steering->flow_steering_tbl[rule_idx].in_use = false;
+
+	flow_steering->active_rules_cnt--;
+
+	return 0;
+}
+
+int ena_com_flow_steering_remove_all_rules(struct ena_com_dev *ena_dev)
+{
+	struct ena_com_flow_steering *flow_steering = &ena_dev->flow_steering;
+	struct ena_admin_set_feat_resp resp;
+	struct ena_admin_set_feat_cmd cmd;
+	int ret;
+
+	if (!(ena_dev->supported_features & BIT(ENA_ADMIN_FLOW_STEERING_CONFIG))) {
+		ena_trc_err(ena_dev, "Flow steering rules are not supported by this device\n");
+		return ENA_COM_UNSUPPORTED;
+	}
+
+	memset(&cmd, 0x0, sizeof(cmd));
+
+	cmd.aq_common_descriptor.opcode = ENA_ADMIN_SET_FEATURE;
+	cmd.feat_common.feature_id = ENA_ADMIN_FLOW_STEERING_CONFIG;
+	cmd.u.flow_steering.action = ENA_ADMIN_FLOW_STEERING_REMOVE_ALL_RULES;
+
+	ret = ena_com_execute_admin_command(&ena_dev->admin_queue,
+					    (struct ena_admin_aq_entry *)&cmd,
+					    sizeof(cmd),
+					    (struct ena_admin_acq_entry *)&resp,
+					    sizeof(resp));
+	if (unlikely(ret)) {
+		ena_trc_err(ena_dev, "Failed to remove all flow steering rules: %d\n", ret);
+		return ret;
+	}
+
+	memset(flow_steering->flow_steering_tbl, 0,
+	       flow_steering->tbl_size * sizeof(struct ena_com_flow_steering_table_entry));
+	flow_steering->active_rules_cnt = 0;
+
+	return 0;
+}
+
+int ena_com_flow_steering_get_rule(struct ena_com_dev *ena_dev,
+				   struct ena_com_flow_steering_rule_params *configure_params,
+				   u16 rule_idx)
+{
+	struct ena_com_flow_steering *flow_steering = &ena_dev->flow_steering;
+	struct ena_com_flow_steering_table_entry *entry;
+
+	if (!(ena_dev->supported_features & BIT(ENA_ADMIN_FLOW_STEERING_CONFIG))) {
+		ena_trc_err(ena_dev, "Flow steering rules are not supported by this device\n");
+		return ENA_COM_UNSUPPORTED;
+	}
+
+	if (rule_idx >= flow_steering->tbl_size) {
+		ena_trc_err(ena_dev, "Failed to get a flow steering rule, index %u out bounds\n",
+			    rule_idx);
+		return ENA_COM_INVAL;
+	}
+
+	entry = &flow_steering->flow_steering_tbl[rule_idx];
+
+	if (!entry->in_use) {
+		ena_trc_err(ena_dev, "Failed to get a flow steering rule in index %u, entry not in use\n",
+			    rule_idx);
+		return ENA_COM_INVAL;
+	}
+
+	*configure_params = entry->rule_params;
+
+	return 0;
+}
+
+int ena_com_flow_steering_restore_device_rules(struct ena_com_dev *ena_dev)
+{
+	struct ena_com_flow_steering *flow_steering = &ena_dev->flow_steering;
+	struct ena_com_flow_steering_table_entry *rule_entry;
+	u16 rule_idx;
+	int ret;
+
+	if (!(ena_dev->supported_features & BIT(ENA_ADMIN_FLOW_STEERING_CONFIG)))
+		return ENA_COM_UNSUPPORTED;
+
+	/* no rules to restore */
+	if (flow_steering->active_rules_cnt == 0)
+		return 0;
+
+	/* set the amount of active rules to zero, will count them again while restoring */
+	flow_steering->active_rules_cnt = 0;
+
+	for (rule_idx = 0; rule_idx < flow_steering->tbl_size; rule_idx++) {
+		rule_entry = &flow_steering->flow_steering_tbl[rule_idx];
+
+		if (rule_entry->in_use) {
+			/* mark the entry as not in use before attempt to reconfigure it
+			 * so it will be counted as new rule
+			 */
+			rule_entry->in_use = false;
+
+			ret = ena_com_flow_steering_add_rule(ena_dev, &rule_entry->rule_params,
+							     &rule_idx);
+			if (unlikely(ret)) {
+				ena_trc_err(ena_dev,
+					    "Failed to restore flow steering rule in index %d\n",
+					    rule_idx);
+				return ENA_COM_FAULT;
+			}
+		}
+	}
 
 	return 0;
 }

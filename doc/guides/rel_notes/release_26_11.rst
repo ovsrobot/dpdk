@@ -133,6 +133,10 @@ New Features
     ``xdp_meta_rx_ts_valid_mask``.
   * Added ``read_clock`` operation to query the PTP hardware clock.
 
+* **Updated Amazon ENA (Elastic Network Adapter) ethernet driver.**
+
+  * Added Rx flow steering support using the generic flow API.
+
 * **Updated Broadcom bnxt driver.**
 
   * Added ``tx_dma_err_cmpl`` statistics to report Tx completions

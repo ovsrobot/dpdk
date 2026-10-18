@@ -9,6 +9,8 @@
 #define ENA_ADMIN_EXTRA_PROPERTIES_STRING_LEN 32
 #define ENA_ADMIN_EXTRA_PROPERTIES_COUNT     32
 
+#define ENA_ADMIN_FLOW_STEERING_DEVICE_CHOOSE_LOCATION 0xFFFF
+
 #define ENA_ADMIN_RSS_KEY_PARTS              10
 
 #define ENA_ADMIN_CUSTOMER_METRICS_SUPPORT_MASK 0x3F
@@ -68,6 +70,7 @@ enum ena_admin_aq_feature_id {
 	ENA_ADMIN_LINK_CONFIG                       = 27,
 	ENA_ADMIN_HOST_ATTR_CONFIG                  = 28,
 	ENA_ADMIN_PHC_CONFIG                        = 29,
+	ENA_ADMIN_FLOW_STEERING_CONFIG              = 30,
 	ENA_ADMIN_HW_TIMESTAMP                      = 31,
 	ENA_ADMIN_FEATURES_OPCODE_NUM               = 32,
 };
@@ -600,7 +603,7 @@ struct ena_admin_device_attr_feature_desc {
 	/* unicast MAC address (in Network byte order) */
 	uint8_t mac_addr[6];
 
-	uint8_t reserved7[2];
+	uint16_t flow_steering_max_entries;
 
 	uint32_t max_mtu;
 };
@@ -749,6 +752,78 @@ struct ena_admin_feature_hw_ts_desc {
 	 * Supported values from enum ena_admin_hw_timestamp_rx_support
 	 */
 	uint8_t rx;
+};
+
+struct ena_admin_flow_steering_rule_params {
+	uint8_t dst_ip[16];
+
+	uint8_t dst_ip_mask[16];
+
+	uint8_t src_ip[16];
+
+	uint8_t src_ip_mask[16];
+
+	uint16_t dst_port;
+
+	uint16_t dst_port_mask;
+
+	uint16_t src_port;
+
+	uint16_t src_port_mask;
+
+	uint8_t tos;
+
+	uint8_t tos_mask;
+
+	/* Reserved */
+	uint8_t reserved1[54];
+};
+
+/* add new rule or remove existing one */
+enum ena_admin_flow_steering_action {
+	ENA_ADMIN_FLOW_STEERING_ADD_RULE            = 1,
+	ENA_ADMIN_FLOW_STEERING_REMOVE_RULE         = 2,
+	ENA_ADMIN_FLOW_STEERING_REMOVE_ALL_RULES    = 3,
+};
+
+/* type of traffic the rule applied on */
+enum ena_admin_flow_steering_type {
+	ENA_ADMIN_FLOW_INVALID                      = 0,
+	ENA_ADMIN_FLOW_IPV4                         = 1,
+	ENA_ADMIN_FLOW_IPV6                         = 2,
+	ENA_ADMIN_FLOW_IPV4_TCP                     = 3,
+	ENA_ADMIN_FLOW_IPV6_TCP                     = 4,
+	ENA_ADMIN_FLOW_IPV4_UDP                     = 5,
+	ENA_ADMIN_FLOW_IPV6_UDP                     = 6,
+	ENA_ADMIN_FLOW_LAST                         = 7,
+};
+
+struct ena_admin_set_feature_flow_steering_desc_req {
+	/* specific command action as defined in enum
+	 * ena_admin_flow_steering_action
+	 */
+	uint8_t action;
+
+	/* specific flow type as defined in enum ena_admin_flow_steering_type */
+	uint8_t flow_type;
+
+	uint16_t rx_q_idx;
+
+	/* if value is ENA_ADMIN_FLOW_STEERING_DEVICE_CHOOSE_LOCATION it means
+	 * the device should find unused location for this rule
+	 */
+	uint16_t rule_location;
+
+	uint16_t reserved;
+
+	/* 31:0 : reserved */
+	uint32_t flags;
+};
+
+struct ena_admin_set_feature_flow_steering_desc_resp {
+	uint16_t rule_location;
+
+	uint16_t reserved;
 };
 
 struct ena_admin_feature_frag_bypass_desc {
@@ -1234,6 +1309,9 @@ struct ena_admin_set_feat_cmd {
 		/* PHC configuration */
 		struct ena_admin_feature_phc_desc phc;
 
+		/* Flow steering configuration */
+		struct ena_admin_set_feature_flow_steering_desc_req flow_steering;
+
 		/* Fragment bypass configuration */
 		struct ena_admin_feature_frag_bypass_desc frag_bypass;
 
@@ -1246,6 +1324,9 @@ struct ena_admin_set_feat_resp {
 
 	union {
 		uint32_t raw[14];
+
+		/* Flow steering configuration */
+		struct ena_admin_set_feature_flow_steering_desc_resp flow_steering;
 	} u;
 };
 

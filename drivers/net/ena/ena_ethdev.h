@@ -15,7 +15,7 @@
 #include <rte_timer.h>
 #include <rte_dev.h>
 #include <rte_net.h>
-
+#include "ena_flow.h"
 #include "ena_com.h"
 
 #define ENA_REGS_BAR	0
@@ -343,6 +343,7 @@ struct ena_adapter {
 	struct ena_stats_dev dev_stats;
 	struct ena_admin_basic_stats basic_stats;
 
+	uint16_t flow_rule_count;
 	u32 *indirect_table;
 	size_t indirect_table_size;
 

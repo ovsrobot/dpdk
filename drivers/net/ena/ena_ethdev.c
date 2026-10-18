@@ -240,6 +240,7 @@ static void ena_tx_map_mbuf(struct ena_ring *tx_ring,
 	uint16_t *header_len);
 static int ena_xmit_mbuf(struct ena_ring *tx_ring, struct rte_mbuf *mbuf);
 static int ena_tx_cleanup(void *txp, uint32_t free_pkt_cnt);
+static int ena_flow_ops_get(struct rte_eth_dev *dev, const struct rte_flow_ops **ops);
 static uint16_t eth_ena_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 				  uint16_t nb_pkts);
 static uint16_t eth_ena_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
@@ -360,6 +361,7 @@ static const struct eth_dev_ops ena_dev_ops = {
 	.rss_hash_update        = ena_rss_hash_update,
 	.rss_hash_conf_get      = ena_rss_hash_conf_get,
 	.tx_done_cleanup        = ena_tx_cleanup,
+	.flow_ops_get           = ena_flow_ops_get,
 };
 
 /*********************************************************************
@@ -944,6 +946,12 @@ static int ena_close(struct rte_eth_dev *dev)
 		rte_eal_alarm_cancel(ena_control_path_poll_handler, dev);
 	}
 
+	if (adapter->flow_rule_count) {
+		PMD_INIT_LOG_LINE(WARNING,
+				  "Closing device with %u active flow rules",
+				  adapter->flow_rule_count);
+		adapter->flow_rule_count = 0;
+	}
 	ena_rx_queue_release_all(dev);
 	ena_tx_queue_release_all(dev);
 
@@ -952,6 +960,7 @@ static int ena_close(struct rte_eth_dev *dev)
 	adapter->drv_stats = NULL;
 	ena_com_set_admin_running_state(ena_dev, false);
 	ena_com_rss_destroy(ena_dev);
+	ena_com_flow_steering_destroy(ena_dev);
 	ena_com_delete_debug_area(ena_dev);
 	ena_com_delete_host_info(ena_dev);
 	ena_com_abort_admin_commands(ena_dev);
@@ -1460,6 +1469,17 @@ static int ena_stop(struct rte_eth_dev *dev)
 			PMD_DRV_LOG_LINE(ERR, "Device reset failed, rc: %d", rc);
 	}
 
+	/*
+	 * Warn if application didn't flush rules before stopping.
+	 * RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP is not advertised, so applications must
+	 * not rely on rules being kept across device stop. The PMD doesn't flush
+	 * them either, so the remaining rules stay active until destroyed.
+	 */
+	if (adapter->flow_rule_count)
+		PMD_DRV_LOG_LINE(WARNING,
+				 "Stopping device with %u active flow rules. "
+				 "Application should call rte_flow_flush() before stop.",
+				 adapter->flow_rule_count);
 	rte_intr_disable(intr_handle);
 
 	rte_intr_efd_disable(intr_handle);
@@ -2546,6 +2566,19 @@ static int eth_ena_dev_init(struct rte_eth_dev *eth_dev)
 			goto err_rss_destroy;
 		}
 	}
+
+	/* A device that reports no rule entries can't hold any rule */
+	if (!get_feat_ctx.dev_attr.flow_steering_max_entries)
+		ena_dev->supported_features &= ~BIT(ENA_ADMIN_FLOW_STEERING_CONFIG);
+
+	rc = ena_com_flow_steering_init(ena_dev,
+					get_feat_ctx.dev_attr.flow_steering_max_entries);
+	if (rc && rc != ENA_COM_UNSUPPORTED) {
+		PMD_DRV_LOG_LINE(ERR, "Failed to init flow steering rules: %d", rc);
+		goto err_indirect_table_destroy;
+	}
+	adapter->flow_rule_count = 0;
+
 	adapter->drv_stats = rte_zmalloc("adapter stats",
 					 sizeof(*adapter->drv_stats),
 					 RTE_CACHE_LINE_SIZE);
@@ -2553,7 +2586,7 @@ static int eth_ena_dev_init(struct rte_eth_dev *eth_dev)
 		PMD_DRV_LOG_LINE(ERR,
 			"Failed to allocate memory for adapter statistics");
 		rc = -ENOMEM;
-		goto err_indirect_table_destroy;
+		goto err_rx_flow_steering_destroy;
 	}
 
 	rte_spinlock_init(&adapter->admin_lock);
@@ -2597,6 +2630,8 @@ err_control_path_destroy:
 	}
 err_stats_destroy:
 	rte_free(adapter->drv_stats);
+err_rx_flow_steering_destroy:
+	ena_com_flow_steering_destroy(ena_dev);
 err_indirect_table_destroy:
 	ena_indirect_table_release(adapter);
 err_rss_destroy:
@@ -2817,6 +2852,24 @@ static int ena_infos_get(struct rte_eth_dev *dev,
 							 dev_info->tx_desc_lim.nb_max);
 
 	dev_info->err_handle_mode = RTE_ETH_ERROR_HANDLE_MODE_PASSIVE;
+
+	/*
+	 * Flow rule lifecycle compliance:
+	 * rte_flow specification states that if this flag is not advertised,
+	 * rules cannot be created until the device is started for the
+	 * first time and cannot be kept when the device is stopped.
+	 * Explicitly clear RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP to inform applications
+	 * that they must not rely on rules being kept across device stop, and
+	 * should call rte_flow_flush() before stopping the device.
+	 */
+	dev_info->dev_capa &= ~RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
+	/*
+	 * ENA PMD does not implement internal locking for flow operations.
+	 * We clear RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE to tell DPDK that the
+	 * rte_flow API layer must provide thread-safety protection (via mutex)
+	 * when multiple threads call flow operations concurrently.
+	 */
+	dev->data->dev_flags &= ~RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE;
 
 	return 0;
 }
@@ -4353,4 +4406,20 @@ static bool ena_use_large_llq_hdr(struct ena_adapter *adapter, uint8_t recommend
 			return true;
 	}
 	return false;
+}
+
+static int
+ena_flow_ops_get(struct rte_eth_dev *dev, const struct rte_flow_ops **ops)
+{
+	struct ena_adapter *adapter = dev->data->dev_private;
+	struct ena_com_dev *ena_dev = &adapter->ena_dev;
+
+	if (!(ena_dev->supported_features & BIT(ENA_ADMIN_FLOW_STEERING_CONFIG))) {
+		PMD_DRV_LOG_LINE(WARNING, "Flow steering not supported");
+		*ops = NULL;
+		rte_errno = ENOTSUP;
+		return -rte_errno;
+	}
+	*ops = &ena_flow_ops;
+	return 0;
 }

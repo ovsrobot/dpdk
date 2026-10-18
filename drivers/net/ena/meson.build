@@ -10,6 +10,7 @@ endif
 sources = files(
         'ena_ethdev.c',
         'ena_rss.c',
+        'ena_flow.c',
         'base/ena_com.c',
         'base/ena_eth_com.c',
 )

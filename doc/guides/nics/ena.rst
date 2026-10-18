@@ -33,6 +33,7 @@ Supported features
 * Device reset upon failure
 * Rx interrupts
 * Rx HW packet timestamping
+* Rx flow steering
 
 Overview
 --------
@@ -57,6 +58,9 @@ Some of the ENA devices support a working mode called Low-latency
 Queue (LLQ), which saves several more microseconds.
 
 Rx hardware timestamping is available in the ENA driver
+on platforms that support this feature.
+
+Rx flow steering is available in the ENA driver
 on platforms that support this feature.
 
 Management Interface
@@ -247,6 +251,28 @@ ENA handles admin interrupts and AENQ notifications on separate interrupt.
 There is possibility that there won't be enough event file descriptors to
 handle both admin and Rx interrupts. In that situation the Rx interrupt request
 will fail.
+
+**Rx flow steering support**
+
+ENA PMD supports steering ingress packets to a specific Rx queue
+using the generic flow API (``rte_flow``).
+A rule matches IPv4 or IPv6 packets, optionally followed by TCP or UDP,
+on any combination of source and destination addresses,
+TOS (IPv4) or traffic class (IPv6), and source and destination ports.
+Each rule has a single ``QUEUE`` action.
+
+The following limitations apply:
+
+* Only ingress rules in group 0 with priority 0 are supported.
+* The ``ETH`` item is accepted only as a wildcard, without matching fields.
+* Rules can be created only after the device is started.
+* ``RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP`` is not advertised,
+  so the application must not rely on rules being kept across device stop,
+  and should flush them with ``rte_flow_flush()`` before stopping the device.
+* The queue index is checked only when the rule is created.
+  If the port is later reconfigured with fewer Rx queues,
+  the device silently drops the packets matching the rule.
+* The maximum number of rules is defined by the device.
 
 **Note about usage on \*.metal instances**
 
