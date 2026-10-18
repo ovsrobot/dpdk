@@ -1139,6 +1139,11 @@ static inline struct ena_com_dev *ena_com_io_cq_to_ena_dev(struct ena_com_io_cq 
 	return container_of(io_cq, struct ena_com_dev, io_cq_queues[io_cq->qid]);
 }
 
+static inline bool ena_com_sq_is_llq(struct ena_com_io_sq *io_sq)
+{
+	return io_sq->mem_queue_type != ENA_ADMIN_PLACEMENT_POLICY_HOST;
+}
+
 static inline bool ena_com_get_adaptive_moderation_enabled(struct ena_com_dev *ena_dev)
 {
 	return ena_dev->adaptive_coalescing;

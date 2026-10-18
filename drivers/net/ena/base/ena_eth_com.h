@@ -110,7 +110,7 @@ static inline bool ena_com_sq_have_enough_space(struct ena_com_io_sq *io_sq,
 {
 	int temp;
 
-	if (unlikely(io_sq->mem_queue_type == ENA_ADMIN_PLACEMENT_POLICY_HOST))
+	if (unlikely(!ena_com_sq_is_llq(io_sq)))
 		return ena_com_free_q_entries(io_sq) >= required_buffers;
 
 	/* This calculation doesn't need to be 100% accurate. So to reduce
@@ -136,8 +136,8 @@ static inline bool ena_com_meta_desc_changed(struct ena_com_io_sq *io_sq,
 
 static inline bool is_llq_max_tx_burst_exists(struct ena_com_io_sq *io_sq)
 {
-	return (io_sq->mem_queue_type == ENA_ADMIN_PLACEMENT_POLICY_DEV) &&
-	       io_sq->llq_info.max_entries_in_tx_burst > 0;
+	return likely(ena_com_sq_is_llq(io_sq)) &&
+	       (io_sq->llq_info.max_entries_in_tx_burst > 0);
 }
 
 static inline bool ena_com_is_doorbell_needed(struct ena_com_io_sq *io_sq,

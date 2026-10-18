@@ -151,16 +151,16 @@ static int ena_com_write_bounce_buffer_to_dev(struct ena_com_io_sq *io_sq,
 	return ENA_COM_OK;
 }
 
-static int ena_com_write_header_to_bounce(struct ena_com_io_sq *io_sq,
-						 u8 *header_src,
-						 u16 header_len)
+static int ena_com_write_header_to_llq_entry(struct ena_com_io_sq *io_sq,
+					  u8 *header_src,
+					  u16 header_len)
 {
 	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
 	struct ena_com_llq_info *llq_info = &io_sq->llq_info;
-	u8 *bounce_buffer = pkt_ctrl->curr_bounce_buf;
+	u8 *curr_llq_entry = pkt_ctrl->curr_llq_entry;
 	u16 header_offset;
 
-	if (unlikely(io_sq->mem_queue_type == ENA_ADMIN_PLACEMENT_POLICY_HOST))
+	if (unlikely(!ena_com_sq_is_llq(io_sq)))
 		return 0;
 
 	header_offset =
@@ -172,13 +172,13 @@ static int ena_com_write_header_to_bounce(struct ena_com_io_sq *io_sq,
 		return ENA_COM_FAULT;
 	}
 
-	if (unlikely(!bounce_buffer)) {
+	if (unlikely(!curr_llq_entry)) {
 		ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
-			    "Bounce buffer is NULL\n");
+			    "LLQ entry is NULL\n");
 		return ENA_COM_FAULT;
 	}
 
-	memcpy(bounce_buffer + header_offset, header_src, header_len);
+	memcpy(curr_llq_entry + header_offset, header_src, header_len);
 
 	return 0;
 }
@@ -186,46 +186,46 @@ static int ena_com_write_header_to_bounce(struct ena_com_io_sq *io_sq,
 static void *get_sq_desc_llq(struct ena_com_io_sq *io_sq)
 {
 	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
-	u8 *bounce_buffer;
+	u8 *curr_llq_entry;
 	void *sq_desc;
 
-	bounce_buffer = pkt_ctrl->curr_bounce_buf;
+	curr_llq_entry = pkt_ctrl->curr_llq_entry;
 
-	if (unlikely(!bounce_buffer)) {
+	if (unlikely(!curr_llq_entry)) {
 		ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
-			    "Bounce buffer is NULL\n");
+			    "LLQ entry is NULL\n");
 		return NULL;
 	}
 
-	sq_desc = bounce_buffer + pkt_ctrl->idx * io_sq->desc_entry_size;
+	sq_desc = curr_llq_entry + pkt_ctrl->idx * io_sq->desc_entry_size;
 	pkt_ctrl->idx++;
 	pkt_ctrl->descs_left_in_line--;
 
 	return sq_desc;
 }
 
-static int ena_com_close_bounce_buffer(struct ena_com_io_sq *io_sq)
+static int ena_com_close_llq_entry(struct ena_com_io_sq *io_sq)
 {
 	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
 	struct ena_com_llq_info *llq_info = &io_sq->llq_info;
 	int rc;
 
-	if (unlikely(io_sq->mem_queue_type == ENA_ADMIN_PLACEMENT_POLICY_HOST))
+	if (unlikely(!ena_com_sq_is_llq(io_sq)))
 		return ENA_COM_OK;
 
 	/* bounce buffer was used, so write it and get a new one */
 	if (likely(pkt_ctrl->idx)) {
 		rc = ena_com_write_bounce_buffer_to_dev(io_sq,
-							pkt_ctrl->curr_bounce_buf);
+							pkt_ctrl->curr_llq_entry);
 		if (unlikely(rc)) {
 			ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
 				    "Failed to write bounce buffer to device\n");
 			return rc;
 		}
 
-		pkt_ctrl->curr_bounce_buf =
+		pkt_ctrl->curr_llq_entry =
 			ena_com_get_next_bounce_buffer(&io_sq->bounce_buf_ctrl);
-		memset(io_sq->llq_buf_ctrl.curr_bounce_buf,
+		memset(io_sq->llq_buf_ctrl.curr_llq_entry,
 		       0x0, llq_info->desc_list_entry_size);
 	}
 
@@ -241,7 +241,7 @@ static void *get_tx_sq_desc(struct ena_com_io_sq *io_sq)
 {
 	void *tx_desc;
 
-	if (likely(io_sq->mem_queue_type == ENA_ADMIN_PLACEMENT_POLICY_DEV))
+	if (likely(ena_com_sq_is_llq(io_sq)))
 		return get_sq_desc_llq(io_sq);
 
 	tx_desc = get_sq_desc_regular_queue(io_sq);
@@ -259,16 +259,16 @@ static int ena_com_sq_update_llq_tail(struct ena_com_io_sq *io_sq)
 
 	if (!pkt_ctrl->descs_left_in_line) {
 		rc = ena_com_write_bounce_buffer_to_dev(io_sq,
-							pkt_ctrl->curr_bounce_buf);
+							pkt_ctrl->curr_llq_entry);
 		if (unlikely(rc)) {
 			ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
 				    "Failed to write bounce buffer to device\n");
 			return rc;
 		}
 
-		pkt_ctrl->curr_bounce_buf =
+		pkt_ctrl->curr_llq_entry =
 			ena_com_get_next_bounce_buffer(&io_sq->bounce_buf_ctrl);
-		memset(io_sq->llq_buf_ctrl.curr_bounce_buf,
+		memset(io_sq->llq_buf_ctrl.curr_llq_entry,
 		       0x0, llq_info->desc_list_entry_size);
 
 		pkt_ctrl->idx = 0;
@@ -291,7 +291,7 @@ static int ena_com_sq_update_reqular_queue_tail(struct ena_com_io_sq *io_sq)
 
 static int ena_com_sq_update_tail(struct ena_com_io_sq *io_sq)
 {
-	if (likely(io_sq->mem_queue_type == ENA_ADMIN_PLACEMENT_POLICY_DEV))
+	if (likely(ena_com_sq_is_llq(io_sq)))
 		return ena_com_sq_update_llq_tail(io_sq);
 
 	return ena_com_sq_update_reqular_queue_tail(io_sq);
@@ -514,14 +514,13 @@ int ena_com_prepare_tx(struct ena_com_io_sq *io_sq,
 		return ENA_COM_INVAL;
 	}
 
-	if (unlikely(io_sq->mem_queue_type == ENA_ADMIN_PLACEMENT_POLICY_DEV
-		     && !buffer_to_push)) {
+	if (unlikely(ena_com_sq_is_llq(io_sq) && !buffer_to_push)) {
 		ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
 			    "Push header wasn't provided in LLQ mode\n");
 		return ENA_COM_INVAL;
 	}
 
-	rc = ena_com_write_header_to_bounce(io_sq, buffer_to_push, header_len);
+	rc = ena_com_write_header_to_llq_entry(io_sq, buffer_to_push, header_len);
 	if (unlikely(rc))
 		return rc;
 
@@ -534,7 +533,7 @@ int ena_com_prepare_tx(struct ena_com_io_sq *io_sq,
 
 	/* If the caller doesn't want to send packets */
 	if (unlikely(!num_bufs && !header_len)) {
-		rc = ena_com_close_bounce_buffer(io_sq);
+		rc = ena_com_close_llq_entry(io_sq);
 		if (unlikely(rc))
 			ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
 				    "Failed to write buffers to LLQ\n");
@@ -635,7 +634,7 @@ int ena_com_prepare_tx(struct ena_com_io_sq *io_sq,
 		return rc;
 	}
 
-	rc = ena_com_close_bounce_buffer(io_sq);
+	rc = ena_com_close_llq_entry(io_sq);
 
 	*nb_hw_desc = io_sq->tail - start_tail;
 	return rc;
