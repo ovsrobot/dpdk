@@ -1996,20 +1996,23 @@ void ena_com_phc_destroy(struct ena_com_dev *ena_dev)
 
 int ena_com_phc_get_timestamp(struct ena_com_dev *ena_dev, u64 *timestamp)
 {
-	volatile struct ena_admin_phc_resp *resp = ena_dev->phc.virt_addr;
 	const ena_time_high_res_t zero_system_time = ENA_TIME_INIT_HIGH_RES();
 	struct ena_com_phc_info *phc = &ena_dev->phc;
+	volatile struct ena_admin_phc_resp *resp;
 	ena_time_high_res_t expire_time;
 	ena_time_high_res_t block_time;
 	unsigned long flags = 0;
 	int ret = ENA_COM_OK;
 
+	ENA_SPINLOCK_LOCK(phc->lock, flags);
+
 	if (!phc->active) {
+		ENA_SPINLOCK_UNLOCK(phc->lock, flags);
 		ena_trc_err(ena_dev, "PHC feature is not active in the device\n");
 		return ENA_COM_UNSUPPORTED;
 	}
 
-	ENA_SPINLOCK_LOCK(phc->lock, flags);
+	resp = ena_dev->phc.virt_addr;
 
 	/* Check if PHC is in blocked state */
 	if (unlikely(ENA_TIME_COMPARE_HIGH_RES(phc->system_time, zero_system_time))) {
