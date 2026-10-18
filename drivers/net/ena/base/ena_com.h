@@ -138,7 +138,7 @@ struct ena_com_io_bounce_buffer_control {
 
 /* This struct is to keep tracking the current location of the next llq entry */
 struct ena_com_llq_pkt_ctrl {
-	u8 *curr_bounce_buf;
+	u8 *curr_llq_entry;
 	u16 idx;
 	u16 descs_left_in_line;
 };

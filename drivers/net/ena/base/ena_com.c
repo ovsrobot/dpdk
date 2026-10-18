@@ -391,9 +391,9 @@ static int ena_com_init_io_sq(struct ena_com_dev *ena_dev,
 		       sizeof(io_sq->llq_info));
 
 		/* Initiate the first bounce buffer */
-		io_sq->llq_buf_ctrl.curr_bounce_buf =
+		io_sq->llq_buf_ctrl.curr_llq_entry =
 			ena_com_get_next_bounce_buffer(&io_sq->bounce_buf_ctrl);
-		memset(io_sq->llq_buf_ctrl.curr_bounce_buf,
+		memset(io_sq->llq_buf_ctrl.curr_llq_entry,
 		       0x0, io_sq->llq_info.desc_list_entry_size);
 		io_sq->llq_buf_ctrl.descs_left_in_line =
 			io_sq->llq_info.descs_num_before_header;
