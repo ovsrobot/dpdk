@@ -784,6 +784,8 @@ static int ena_com_set_llq(struct ena_com_dev *ena_dev)
 		BIT(ENA_ADMIN_DISABLE_META_CACHING) |
 		BIT(ENA_ADMIN_LIMIT_TX_BURST);
 
+	cmd.feat_common.feature_version = llq_info->feature_version;
+
 	ret = ena_com_execute_admin_command_no_resp(admin_queue,
 						    (struct ena_admin_aq_entry *)&cmd,
 						    sizeof(cmd));
@@ -804,6 +806,8 @@ static int ena_com_config_llq_info(struct ena_com_dev *ena_dev,
 	int rc;
 
 	memset(llq_info, 0, sizeof(*llq_info));
+
+	llq_info->feature_version = llq_features->feature_version;
 
 	supported_feat = llq_features->header_location_ctrl_supported;
 

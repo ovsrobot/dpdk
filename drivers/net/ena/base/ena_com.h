@@ -93,6 +93,7 @@ struct ena_com_llq_info {
 	u16 descs_per_entry;
 	u16 max_entries_in_tx_burst;
 	bool disable_meta_caching;
+	u8 feature_version;
 };
 
 struct ena_com_io_cq {
