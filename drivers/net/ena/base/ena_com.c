@@ -3581,6 +3581,7 @@ int ena_com_config_dev_mode(struct ena_com_dev *ena_dev,
 			    struct ena_llq_configurations *llq_default_cfg)
 {
 	struct ena_com_llq_info *llq_info = &ena_dev->llq_info;
+	u32 llq_max_header_size;
 	int rc;
 
 	if (!llq_features->max_llq_num) {
@@ -3592,14 +3593,15 @@ int ena_com_config_dev_mode(struct ena_com_dev *ena_dev,
 	if (unlikely(rc))
 		return rc;
 
-	ena_dev->tx_max_header_size = llq_info->common.desc_list_entry_size -
+	llq_max_header_size = llq_info->common.desc_list_entry_size -
 		(llq_info->common.descs_num_before_header * sizeof(struct ena_eth_io_tx_desc));
 
-	if (unlikely(ena_dev->tx_max_header_size == 0)) {
+	if (unlikely(llq_max_header_size == 0)) {
 		ena_trc_err(ena_dev, "The size of the LLQ entry is smaller than needed\n");
 		return ENA_COM_INVAL;
 	}
 
+	ena_dev->tx_max_header_size = llq_max_header_size;
 	ena_dev->tx_mem_queue_type = ENA_ADMIN_PLACEMENT_POLICY_DEV;
 
 	return 0;
