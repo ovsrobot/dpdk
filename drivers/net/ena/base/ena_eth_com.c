@@ -112,7 +112,7 @@ static void *get_sq_desc_regular_queue(struct ena_com_io_sq *io_sq)
 static int ena_com_write_bounce_buffer_to_dev(struct ena_com_io_sq *io_sq,
 						     u8 *bounce_buffer)
 {
-	struct ena_com_llq_info *llq_info = &io_sq->llq_info;
+	struct ena_com_llq_info_common *llq_info = &io_sq->llq_runtime.common;
 	u16 dst_tail_mask;
 	u32 dst_offset;
 
@@ -120,16 +120,16 @@ static int ena_com_write_bounce_buffer_to_dev(struct ena_com_io_sq *io_sq,
 	dst_offset = dst_tail_mask * llq_info->desc_list_entry_size;
 
 	if (is_llq_max_tx_burst_exists(io_sq)) {
-		if (unlikely(!io_sq->entries_in_tx_burst_left)) {
+		if (unlikely(!io_sq->llq_runtime.entries_in_tx_burst_left)) {
 			ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
 				    "Error: trying to send more packets than tx burst allows\n");
 			return ENA_COM_NO_SPACE;
 		}
 
-		io_sq->entries_in_tx_burst_left--;
+		io_sq->llq_runtime.entries_in_tx_burst_left--;
 		ena_trc_dbg(ena_com_io_sq_to_ena_dev(io_sq),
 			    "Decreasing entries_in_tx_burst_left of queue %u to %u\n",
-			    io_sq->qid, io_sq->entries_in_tx_burst_left);
+			    io_sq->qid, io_sq->llq_runtime.entries_in_tx_burst_left);
 	}
 
 	/* Make sure everything was written into the bounce buffer before
@@ -156,7 +156,7 @@ static int ena_com_write_header_to_llq_entry(struct ena_com_io_sq *io_sq,
 					  u16 header_len)
 {
 	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
-	struct ena_com_llq_info *llq_info = &io_sq->llq_info;
+	struct ena_com_llq_info_common *llq_info = &io_sq->llq_runtime.common;
 	u8 *curr_llq_entry = pkt_ctrl->curr_llq_entry;
 	u16 header_offset;
 
@@ -207,7 +207,7 @@ static void *get_sq_desc_llq(struct ena_com_io_sq *io_sq)
 static int ena_com_write_and_advance_llq_entry(struct ena_com_io_sq *io_sq)
 {
 	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
-	struct ena_com_llq_info *llq_info = &io_sq->llq_info;
+	struct ena_com_llq_info_common *llq_info = &io_sq->llq_runtime.common;
 	int rc;
 
 	rc = ena_com_write_bounce_buffer_to_dev(io_sq,
@@ -230,7 +230,7 @@ static int ena_com_write_and_advance_llq_entry(struct ena_com_io_sq *io_sq)
 static int ena_com_close_llq_entry(struct ena_com_io_sq *io_sq)
 {
 	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
-	struct ena_com_llq_info *llq_info = &io_sq->llq_info;
+	struct ena_com_llq_info_common *llq_info = &io_sq->llq_runtime.common;
 	int rc;
 
 	if (unlikely(!ena_com_sq_is_llq(io_sq)))
@@ -268,7 +268,7 @@ static void *get_tx_sq_desc(struct ena_com_io_sq *io_sq)
 static int ena_com_sq_update_llq_tail(struct ena_com_io_sq *io_sq)
 {
 	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
-	struct ena_com_llq_info *llq_info = &io_sq->llq_info;
+	struct ena_com_llq_info_common *llq_info = &io_sq->llq_runtime.common;
 	int rc;
 
 	if (!pkt_ctrl->descs_left_in_line) {
@@ -439,7 +439,7 @@ static int ena_com_create_and_store_tx_meta_desc(struct ena_com_io_sq *io_sq,
 	/* When disable meta caching is set, don't bother to save the meta and
 	 * compare it to the stored version, just create the meta
 	 */
-	if (io_sq->llq_info.disable_meta_caching) {
+	if (io_sq->llq_runtime.common.disable_meta_caching) {
 		*have_meta = true;
 		return ena_com_create_meta(io_sq, ena_meta);
 	}

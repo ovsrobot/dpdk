@@ -84,16 +84,25 @@ struct ena_com_tx_meta {
 	u16 l4_hdr_len; /* In words */
 };
 
-struct ena_com_llq_info {
-	u16 header_location_ctrl;
-	u16 desc_stride_ctrl;
-	u16 desc_list_entry_size_ctrl;
+struct ena_com_llq_info_common {
 	u16 desc_list_entry_size;
 	u16 descs_num_before_header;
 	u16 descs_per_entry;
 	u16 max_entries_in_tx_burst;
 	bool disable_meta_caching;
+};
+
+struct ena_com_llq_info {
+	struct ena_com_llq_info_common common;
+	u16 header_location_ctrl;
+	u16 desc_stride_ctrl;
+	u16 desc_list_entry_size_ctrl;
 	u8 feature_version;
+};
+
+struct ena_com_llq_info_runtime {
+	struct ena_com_llq_info_common common;
+	u16 entries_in_tx_burst_left;
 };
 
 struct ena_com_io_cq {
@@ -156,7 +165,7 @@ struct ena_com_io_sq {
 
 	u32 msix_vector;
 	struct ena_com_tx_meta cached_tx_meta;
-	struct ena_com_llq_info llq_info;
+	struct ena_com_llq_info_runtime llq_runtime;
 	struct ena_com_llq_pkt_ctrl llq_buf_ctrl;
 	struct ena_com_io_bounce_buffer_control bounce_buf_ctrl;
 
@@ -171,7 +180,6 @@ struct ena_com_io_sq {
 	u8 phase;
 	u8 desc_entry_size;
 	u8 dma_addr_bits;
-	u16 entries_in_tx_burst_left;
 } ____cacheline_aligned;
 
 struct ena_com_admin_cq {

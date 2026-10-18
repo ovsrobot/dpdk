@@ -118,7 +118,7 @@ static inline bool ena_com_sq_have_enough_space(struct ena_com_io_sq *io_sq,
 	 * (one for the header line and one to compensate the devision
 	 * down calculation.
 	 */
-	temp = required_buffers / io_sq->llq_info.descs_per_entry + 2;
+	temp = required_buffers / io_sq->llq_runtime.common.descs_per_entry + 2;
 
 	return ena_com_free_q_entries(io_sq) > temp;
 }
@@ -137,13 +137,13 @@ static inline bool ena_com_meta_desc_changed(struct ena_com_io_sq *io_sq,
 static inline bool is_llq_max_tx_burst_exists(struct ena_com_io_sq *io_sq)
 {
 	return likely(ena_com_sq_is_llq(io_sq)) &&
-	       (io_sq->llq_info.max_entries_in_tx_burst > 0);
+	       (io_sq->llq_runtime.common.max_entries_in_tx_burst > 0);
 }
 
 static inline bool ena_com_is_doorbell_needed(struct ena_com_io_sq *io_sq,
 					      struct ena_com_tx_ctx *ena_tx_ctx)
 {
-	struct ena_com_llq_info *llq_info;
+	struct ena_com_llq_info_common *llq_info;
 	int descs_after_first_entry;
 	int num_entries_needed = 1;
 	u16 num_descs;
@@ -151,7 +151,7 @@ static inline bool ena_com_is_doorbell_needed(struct ena_com_io_sq *io_sq,
 	if (!is_llq_max_tx_burst_exists(io_sq))
 		return false;
 
-	llq_info = &io_sq->llq_info;
+	llq_info = &io_sq->llq_runtime.common;
 	num_descs = ena_tx_ctx->num_bufs;
 
 	if (llq_info->disable_meta_caching ||
@@ -168,7 +168,7 @@ static inline bool ena_com_is_doorbell_needed(struct ena_com_io_sq *io_sq,
 		    "Queue: %d num_descs: %d num_entries_needed: %d\n",
 		    io_sq->qid, num_descs, num_entries_needed);
 
-	return num_entries_needed > io_sq->entries_in_tx_burst_left;
+	return num_entries_needed > io_sq->llq_runtime.entries_in_tx_burst_left;
 }
 
 static inline void ena_com_write_rx_sq_doorbell(struct ena_com_io_sq *io_sq)
@@ -184,7 +184,7 @@ static inline void ena_com_write_rx_sq_doorbell(struct ena_com_io_sq *io_sq)
 
 static inline void ena_com_write_tx_sq_doorbell(struct ena_com_io_sq *io_sq)
 {
-	u16 max_entries_in_tx_burst = io_sq->llq_info.max_entries_in_tx_burst;
+	u16 max_entries_in_tx_burst = io_sq->llq_runtime.common.max_entries_in_tx_burst;
 	u16 tail = io_sq->tail;
 
 	ena_trc_dbg(ena_com_io_sq_to_ena_dev(io_sq),
@@ -197,7 +197,7 @@ static inline void ena_com_write_tx_sq_doorbell(struct ena_com_io_sq *io_sq)
 		ena_trc_dbg(ena_com_io_sq_to_ena_dev(io_sq),
 			    "Reset available entries in tx burst for queue %d to %d\n",
 			    io_sq->qid, max_entries_in_tx_burst);
-		io_sq->entries_in_tx_burst_left = max_entries_in_tx_burst;
+		io_sq->llq_runtime.entries_in_tx_burst_left = max_entries_in_tx_burst;
 	}
 }
 

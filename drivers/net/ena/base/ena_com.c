@@ -367,7 +367,7 @@ static int ena_com_init_io_sq(struct ena_com_dev *ena_dev,
 	} else {
 		/* Allocate bounce buffers */
 		io_sq->bounce_buf_ctrl.buffer_size =
-			ena_dev->llq_info.desc_list_entry_size;
+			ena_dev->llq_info.common.desc_list_entry_size;
 		io_sq->bounce_buf_ctrl.buffers_num =
 			ENA_COM_BOUNCE_BUFFER_CNTRL_CNT;
 		io_sq->bounce_buf_ctrl.next_to_use = 0;
@@ -387,20 +387,20 @@ static int ena_com_init_io_sq(struct ena_com_dev *ena_dev,
 			return ENA_COM_NO_MEM;
 		}
 
-		memcpy(&io_sq->llq_info, &ena_dev->llq_info,
-		       sizeof(io_sq->llq_info));
+		memcpy(&io_sq->llq_runtime.common, &ena_dev->llq_info.common,
+		       sizeof(io_sq->llq_runtime.common));
 
 		/* Initiate the first bounce buffer */
 		io_sq->llq_buf_ctrl.curr_llq_entry =
 			ena_com_get_next_bounce_buffer(&io_sq->bounce_buf_ctrl);
 		memset(io_sq->llq_buf_ctrl.curr_llq_entry,
-		       0x0, io_sq->llq_info.desc_list_entry_size);
+		       0x0, io_sq->llq_runtime.common.desc_list_entry_size);
 		io_sq->llq_buf_ctrl.descs_left_in_line =
-			io_sq->llq_info.descs_num_before_header;
+			io_sq->llq_runtime.common.descs_num_before_header;
 
-		if (io_sq->llq_info.max_entries_in_tx_burst > 0)
-			io_sq->entries_in_tx_burst_left =
-				io_sq->llq_info.max_entries_in_tx_burst;
+		if (io_sq->llq_runtime.common.max_entries_in_tx_burst > 0)
+			io_sq->llq_runtime.entries_in_tx_burst_left =
+				io_sq->llq_runtime.common.max_entries_in_tx_burst;
 	}
 
 	io_sq->tail = 0;
@@ -775,7 +775,7 @@ static int ena_com_set_llq(struct ena_com_dev *ena_dev)
 
 	cmd.u.llq.header_location_ctrl_enabled = llq_info->header_location_ctrl;
 	cmd.u.llq.entry_size_ctrl_enabled = llq_info->desc_list_entry_size_ctrl;
-	cmd.u.llq.desc_num_before_header_enabled = llq_info->descs_num_before_header;
+	cmd.u.llq.desc_num_before_header_enabled = llq_info->common.descs_num_before_header;
 	cmd.u.llq.descriptors_stride_ctrl_enabled = llq_info->desc_stride_ctrl;
 
 	cmd.u.llq.accel_mode.u.set.enabled_flags =
@@ -845,17 +845,17 @@ static int ena_com_config_llq_info(struct ena_com_dev *ena_dev,
 	supported_feat = llq_features->entry_size_ctrl_supported;
 	if (likely(supported_feat & llq_default_cfg->llq_ring_entry_size)) {
 		llq_info->desc_list_entry_size_ctrl = llq_default_cfg->llq_ring_entry_size;
-		llq_info->desc_list_entry_size = llq_default_cfg->llq_ring_entry_size_value;
+		llq_info->common.desc_list_entry_size = llq_default_cfg->llq_ring_entry_size_value;
 	} else {
 		if (supported_feat & ENA_ADMIN_LIST_ENTRY_SIZE_128B) {
 			llq_info->desc_list_entry_size_ctrl = ENA_ADMIN_LIST_ENTRY_SIZE_128B;
-			llq_info->desc_list_entry_size = 128;
+			llq_info->common.desc_list_entry_size = 128;
 		} else if (supported_feat & ENA_ADMIN_LIST_ENTRY_SIZE_192B) {
 			llq_info->desc_list_entry_size_ctrl = ENA_ADMIN_LIST_ENTRY_SIZE_192B;
-			llq_info->desc_list_entry_size = 192;
+			llq_info->common.desc_list_entry_size = 192;
 		} else if (supported_feat & ENA_ADMIN_LIST_ENTRY_SIZE_256B) {
 			llq_info->desc_list_entry_size_ctrl = ENA_ADMIN_LIST_ENTRY_SIZE_256B;
-			llq_info->desc_list_entry_size = 256;
+			llq_info->common.desc_list_entry_size = 256;
 		} else {
 			ena_trc_err(ena_dev, "Invalid entry_size_ctrl, supported: 0x%x\n",
 				    supported_feat);
@@ -865,35 +865,40 @@ static int ena_com_config_llq_info(struct ena_com_dev *ena_dev,
 		ena_trc_err(ena_dev, "Default llq ring entry size is not supported, performing fallback, default: 0x%x, supported: 0x%x, used: 0x%x\n",
 			    llq_default_cfg->llq_ring_entry_size,
 			    supported_feat,
-			    llq_info->desc_list_entry_size);
+			    llq_info->common.desc_list_entry_size);
 	}
-	if (unlikely(llq_info->desc_list_entry_size & 0x7)) {
+	if (unlikely(llq_info->common.desc_list_entry_size & 0x7)) {
 		/* The desc list entry size should be whole multiply of 8
 		 * This requirement comes from __iowrite64_copy()
 		 */
 		ena_trc_err(ena_dev, "Illegal entry size %d\n",
-			    llq_info->desc_list_entry_size);
+			    llq_info->common.desc_list_entry_size);
 		return ENA_COM_INVAL;
 	}
 
 	if (llq_info->desc_stride_ctrl == ENA_ADMIN_MULTIPLE_DESCS_PER_ENTRY)
-		llq_info->descs_per_entry = llq_info->desc_list_entry_size /
+		llq_info->common.descs_per_entry = llq_info->common.desc_list_entry_size /
 			sizeof(struct ena_eth_io_tx_desc);
 	else
-		llq_info->descs_per_entry = 1;
+		llq_info->common.descs_per_entry = 1;
 
 	supported_feat = llq_features->desc_num_before_header_supported;
 	if (likely(supported_feat & llq_default_cfg->llq_num_decs_before_header)) {
-		llq_info->descs_num_before_header = llq_default_cfg->llq_num_decs_before_header;
+		llq_info->common.descs_num_before_header =
+		llq_default_cfg->llq_num_decs_before_header;
 	} else {
 		if (supported_feat & ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_2) {
-			llq_info->descs_num_before_header = ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_2;
+			llq_info->common.descs_num_before_header =
+			ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_2;
 		} else if (supported_feat & ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_1) {
-			llq_info->descs_num_before_header = ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_1;
+			llq_info->common.descs_num_before_header =
+			ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_1;
 		} else if (supported_feat & ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_4) {
-			llq_info->descs_num_before_header = ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_4;
+			llq_info->common.descs_num_before_header =
+			ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_4;
 		} else if (supported_feat & ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_8) {
-			llq_info->descs_num_before_header = ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_8;
+			llq_info->common.descs_num_before_header =
+			ENA_ADMIN_LLQ_NUM_DESCS_BEFORE_HEADER_8;
 		} else {
 			ena_trc_err(ena_dev, "Invalid descs_num_before_header, supported: 0x%x\n",
 				    supported_feat);
@@ -903,19 +908,19 @@ static int ena_com_config_llq_info(struct ena_com_dev *ena_dev,
 		ena_trc_err(ena_dev, "Default llq num descs before header is not supported, performing fallback, default: 0x%x, supported: 0x%x, used: 0x%x\n",
 			    llq_default_cfg->llq_num_decs_before_header,
 			    supported_feat,
-			    llq_info->descs_num_before_header);
+			    llq_info->common.descs_num_before_header);
 	}
 	/* Check for accelerated queue supported */
 	llq_accel_mode_get = llq_features->accel_mode.u.get;
 
-	llq_info->disable_meta_caching =
+	llq_info->common.disable_meta_caching =
 		!!(llq_accel_mode_get.supported_flags &
 		   BIT(ENA_ADMIN_DISABLE_META_CACHING));
 
 	if (llq_accel_mode_get.supported_flags & BIT(ENA_ADMIN_LIMIT_TX_BURST))
-		llq_info->max_entries_in_tx_burst =
+		llq_info->common.max_entries_in_tx_burst =
 			llq_accel_mode_get.max_tx_burst_size /
-			llq_default_cfg->llq_ring_entry_size_value;
+			llq_info->common.desc_list_entry_size;
 
 	rc = ena_com_set_llq(ena_dev);
 	if (unlikely(rc))
@@ -1055,7 +1060,8 @@ static void ena_com_io_queue_free(struct ena_com_dev *ena_dev,
 	if (io_sq->bounce_buf_ctrl.base_buffer) {
 		ENA_MEM_FREE(ena_dev->dmadev,
 			     io_sq->bounce_buf_ctrl.base_buffer,
-			     (io_sq->llq_info.desc_list_entry_size * ENA_COM_BOUNCE_BUFFER_CNTRL_CNT));
+			     (io_sq->llq_runtime.common.desc_list_entry_size *
+				ENA_COM_BOUNCE_BUFFER_CNTRL_CNT));
 		io_sq->bounce_buf_ctrl.base_buffer = NULL;
 	}
 }
@@ -3586,8 +3592,8 @@ int ena_com_config_dev_mode(struct ena_com_dev *ena_dev,
 	if (unlikely(rc))
 		return rc;
 
-	ena_dev->tx_max_header_size = llq_info->desc_list_entry_size -
-		(llq_info->descs_num_before_header * sizeof(struct ena_eth_io_tx_desc));
+	ena_dev->tx_max_header_size = llq_info->common.desc_list_entry_size -
+		(llq_info->common.descs_num_before_header * sizeof(struct ena_eth_io_tx_desc));
 
 	if (unlikely(ena_dev->tx_max_header_size == 0)) {
 		ena_trc_err(ena_dev, "The size of the LLQ entry is smaller than needed\n");
