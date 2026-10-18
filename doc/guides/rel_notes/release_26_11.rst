@@ -136,6 +136,8 @@ New Features
 * **Updated Amazon ENA (Elastic Network Adapter) ethernet driver.**
 
   * Added Rx flow steering support using the generic flow API.
+  * Restrict the Tx LLQ write barrier to ARM, where it is required for correct entry ordering,
+    and remove it on x86, where it is redundant and limits throughput.
 
 * **Updated Broadcom bnxt driver.**
 

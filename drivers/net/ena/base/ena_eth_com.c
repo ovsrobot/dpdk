@@ -132,10 +132,27 @@ static int ena_com_write_bounce_buffer_to_dev(struct ena_com_io_sq *io_sq,
 			    io_sq->qid, io_sq->llq_runtime.entries_in_tx_burst_left);
 	}
 
-	/* Make sure everything was written into the bounce buffer before
-	 * writing the bounce buffer to the device
+	/* Ensure the previous LLQ entry reaches the device before this one.
+	 *
+	 * The original wmb() was intended to ensure the bounce buffer is
+	 * fully written before it is copied to the device. This is not
+	 * required: a CPU always observes its own prior stores, on every
+	 * architecture. Moreover, wmb() orders stores against later stores,
+	 * not against later loads, so it could not provide this guarantee.
+	 *
+	 * The copy below uses relaxed stores to the WC LLQ region: plain
+	 * stores with no barrier, which the CPU may send to the device in any
+	 * order. On ARM, this means an entry may reach the device partially
+	 * and out of order before the doorbell is written. In addition, the
+	 * barrier in the doorbell write cannot prevent this, as it only orders
+	 * the entries against the doorbell, not against each other.
+	 *
+	 * On x86, this barrier is not needed. Each entry is written as complete
+	 * 64-byte WC lines, all of which reach the device before the
+	 * doorbell: on Intel, the UC doorbell write flushes pending WC
+	 * buffers; on AMD, each line is flushed once it is fully written.
 	 */
-	wmb();
+	arm_wmb();
 
 	/* The line is completed. Copy it to dev */
 	ENA_MEMCPY_TO_DEVICE_64(io_sq->desc_addr.pbuf_dev_addr + dst_offset,

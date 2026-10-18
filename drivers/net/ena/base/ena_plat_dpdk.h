@@ -73,6 +73,14 @@ typedef RTE_ATOMIC(int32_t) ena_atomic32_t;
 #define rmb rte_rmb
 #define mb rte_mb
 #define mmiowb rte_io_wmb
+
+/* Write memory barrier for ARM architectures - covers 32 and 64 bit ARM */
+#if defined(RTE_ARCH_ARM)
+#define arm_wmb rte_wmb
+#else
+static inline void arm_wmb(void) { }
+#endif
+
 #define __iomem
 
 #ifndef READ_ONCE
