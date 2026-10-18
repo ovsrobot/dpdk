@@ -204,6 +204,29 @@ static void *get_sq_desc_llq(struct ena_com_io_sq *io_sq)
 	return sq_desc;
 }
 
+static int ena_com_write_and_advance_llq_entry(struct ena_com_io_sq *io_sq)
+{
+	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
+	struct ena_com_llq_info *llq_info = &io_sq->llq_info;
+	int rc;
+
+	rc = ena_com_write_bounce_buffer_to_dev(io_sq,
+						pkt_ctrl->curr_llq_entry);
+	if (unlikely(rc)) {
+		ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
+			    "Failed to write bounce buffer to device\n");
+		return rc;
+	}
+
+	pkt_ctrl->curr_llq_entry =
+		ena_com_get_next_bounce_buffer(&io_sq->bounce_buf_ctrl);
+
+	memset(io_sq->llq_buf_ctrl.curr_llq_entry,
+	       0x0, llq_info->desc_list_entry_size);
+
+	return ENA_COM_OK;
+}
+
 static int ena_com_close_llq_entry(struct ena_com_io_sq *io_sq)
 {
 	struct ena_com_llq_pkt_ctrl *pkt_ctrl = &io_sq->llq_buf_ctrl;
@@ -215,18 +238,9 @@ static int ena_com_close_llq_entry(struct ena_com_io_sq *io_sq)
 
 	/* bounce buffer was used, so write it and get a new one */
 	if (likely(pkt_ctrl->idx)) {
-		rc = ena_com_write_bounce_buffer_to_dev(io_sq,
-							pkt_ctrl->curr_llq_entry);
-		if (unlikely(rc)) {
-			ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
-				    "Failed to write bounce buffer to device\n");
+		rc = ena_com_write_and_advance_llq_entry(io_sq);
+		if (unlikely(rc))
 			return rc;
-		}
-
-		pkt_ctrl->curr_llq_entry =
-			ena_com_get_next_bounce_buffer(&io_sq->bounce_buf_ctrl);
-		memset(io_sq->llq_buf_ctrl.curr_llq_entry,
-		       0x0, llq_info->desc_list_entry_size);
 	}
 
 	pkt_ctrl->idx = 0;
@@ -258,18 +272,9 @@ static int ena_com_sq_update_llq_tail(struct ena_com_io_sq *io_sq)
 	int rc;
 
 	if (!pkt_ctrl->descs_left_in_line) {
-		rc = ena_com_write_bounce_buffer_to_dev(io_sq,
-							pkt_ctrl->curr_llq_entry);
-		if (unlikely(rc)) {
-			ena_trc_err(ena_com_io_sq_to_ena_dev(io_sq),
-				    "Failed to write bounce buffer to device\n");
+		rc = ena_com_write_and_advance_llq_entry(io_sq);
+		if (unlikely(rc))
 			return rc;
-		}
-
-		pkt_ctrl->curr_llq_entry =
-			ena_com_get_next_bounce_buffer(&io_sq->bounce_buf_ctrl);
-		memset(io_sq->llq_buf_ctrl.curr_llq_entry,
-		       0x0, llq_info->desc_list_entry_size);
 
 		pkt_ctrl->idx = 0;
 		pkt_ctrl->descs_left_in_line = llq_info->descs_per_entry;
