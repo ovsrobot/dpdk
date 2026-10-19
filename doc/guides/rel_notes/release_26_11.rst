@@ -142,6 +142,10 @@ New Features
   * Raised the maximum Tx and Rx ring descriptor counts
     from 4096/8192 to 16384 each.
 
+* **Updated Huawei hinic3 ethernet driver.**
+
+  * Added CIR drop statistics and VF link aggregation (LAG) support.
+
 * **Updated Intel iavf driver.**
 
   * Runtime Rx/Tx queue setup is now automatically disabled
