@@ -123,6 +123,12 @@ New Features
   Added internal ``flow_graph`` API in ethdev
   for PMD drivers to build graph-based flow pattern parsers.
 
+* **Added step syntax for corelist ranges parsing.**
+
+  The corelist parser now supports step syntax for core ranges.
+  For example, ``-l 0-126:2`` selects cores 0, 2, 4, ..., 126.
+  This is useful for skipping sibling cores on systems with SMT/hyperthreading.
+
 * **Updated AF_XDP driver.**
 
   * Changed the default device plugin endpoint path used when
