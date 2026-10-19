@@ -115,6 +115,11 @@ enum nic_feature_cap {
 TAILQ_HEAD(hinic3_ethertype_filter_list, rte_flow);
 TAILQ_HEAD(hinic3_fdir_rule_filter_list, rte_flow);
 
+#define HINIC3_PTYPE_NUM 4096
+struct hinic3_ptype_table {
+	alignas(RTE_CACHE_LINE_SIZE) uint32_t ptype[HINIC3_PTYPE_NUM];
+};
+
 struct hinic3_nic_common_dev_config {
 	unsigned int tx_pending_limit; /**< TX CI coalescing parameter pending_limit. */
 	unsigned int tx_coalescing_time; /**< TX CI coalescing parameter coalescing_time. */
@@ -177,7 +182,7 @@ struct hinic3_nic_dev {
 	struct hinic3_ethertype_filter_list filter_ethertype_list;
 	struct hinic3_fdir_rule_filter_list filter_fdir_rule_list;
 	uint8_t cos_map[HINIC3_COS_NUM_MAX];
-	struct hinic3_nic_rx_ops *rx_ops;
+	struct hinic3_ptype_table *ptype_tbl;
 	struct hinic3_nic_tx_ops *tx_ops;
 	enum nic_type nic_type; /**< NIC type. */
 
