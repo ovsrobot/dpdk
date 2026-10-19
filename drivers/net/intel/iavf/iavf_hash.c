@@ -918,8 +918,10 @@ iavf_hash_parse_raw_pattern(const struct rte_flow_item *item,
 		return -ENOMEM;
 
 	msk_buf = rte_zmalloc(NULL, pkt_len, 0);
-	if (!msk_buf)
+	if (!msk_buf) {
+		rte_free(pkt_buf);
 		return -ENOMEM;
+	}
 
 	/* convert string to int array */
 	for (i = 0, j = 0; i < spec_len; i += 2, j++) {
