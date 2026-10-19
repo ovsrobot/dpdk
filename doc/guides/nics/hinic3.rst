@@ -48,6 +48,28 @@ Driver compilation and testing
 Refer to the document :doc:`build_and_test` for details.
 
 
+Runtime Configuration
+---------------------
+
+The driver can be configured at initialization via EAL device parameters.
+The following parameters are supported:
+
+- ``tx_pending_limit`` (default **2**): TX completion index coalescing
+  pending limit, in units of 8 packets.
+
+- ``tx_coalescing_time`` (default **2**): TX completion index coalescing
+  time, in microseconds.
+
+- ``rx_cqe_compact_en`` (default **1**): enable (``1``) or disable (``0``)
+  compact CQE mode.
+
+- ``rx_cqe_coalesce_num`` (default **7**): RX CQE coalescing count, in
+  units of 8 packets.
+
+- ``rx_cqe_timer_loop`` (default **5**): RX CQE coalescing timer loop, in
+  microseconds.
+
+
 Limitations or Known issues
 ---------------------------
 
