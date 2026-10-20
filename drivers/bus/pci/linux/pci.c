@@ -630,6 +630,15 @@ pci_device_iova_mode(const struct rte_pci_driver *pdrv,
 {
 	enum rte_iova_mode iova_mode = RTE_IOVA_DC;
 
+	if ((pdrv->drv_flags &
+		(RTE_PCI_DRV_NEED_IOVA_AS_VA | RTE_PCI_DRV_NEED_IOVA_AS_PA)) ==
+		(RTE_PCI_DRV_NEED_IOVA_AS_VA | RTE_PCI_DRV_NEED_IOVA_AS_PA)) {
+		RTE_LOG(WARNING, EAL,
+				"PCI driver '%s' sets both NEED_IOVA_AS_VA and NEED_IOVA_AS_PA flags, ignoring\n",
+				pdrv->driver.name);
+		return iova_mode;
+	}
+
 	switch (pdev->kdrv) {
 	case RTE_PCI_KDRV_VFIO: {
 		static int is_vfio_noiommu_enabled = -1;
@@ -644,6 +653,8 @@ pci_device_iova_mode(const struct rte_pci_driver *pdrv,
 			iova_mode = RTE_IOVA_PA;
 		else if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_VA) != 0)
 			iova_mode = RTE_IOVA_VA;
+		else if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_PA) != 0)
+			iova_mode = RTE_IOVA_PA;
 		break;
 	}
 
@@ -655,6 +666,8 @@ pci_device_iova_mode(const struct rte_pci_driver *pdrv,
 	default:
 		if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_VA) != 0)
 			iova_mode = RTE_IOVA_VA;
+		else if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_PA) != 0)
+			iova_mode = RTE_IOVA_PA;
 		break;
 	}
 	return iova_mode;
