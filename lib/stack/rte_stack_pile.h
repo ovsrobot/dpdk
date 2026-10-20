@@ -154,12 +154,25 @@ bulk:
 	 * Construct the bulk elements.
 	 * Copy bulks in reverse order, but ignore the object order within each bulk.
 	 */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+/*
+ * On architectures where rte_memcpy() is defined as memcpy(),
+ * although GCC knows that this code path is not taken when the source's size is smaller than
+ * RTE_STACK_PILE_BULK_SIZE, it still warns about memcpy() source overread.
+ * So we disable the compiler warning for this memcpy() instance.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overread"
+#endif
 	tmp = (struct rte_stack_lf_elem *)bulk_first;
 	__rte_assume(n_bulk > 0);
 	for (i = 0; i < n_bulk; i++, tmp = tmp->next)
 		rte_memcpy(((struct rte_stack_pile_bulk_elem *)tmp)->objs,
 				&obj_table[(n_bulk - i - 1) * RTE_STACK_PILE_BULK_SIZE],
 				sizeof(void *) * RTE_STACK_PILE_BULK_SIZE);
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic pop
+#endif
 
 	/* Push them to the bulk list. */
 	__rte_stack_pile_bulk_push_elems(&pile->bulk, bulk_first, bulk_last, n_bulk);
@@ -271,7 +284,20 @@ __rte_stack_pile_pop(struct rte_stack *s,
 
 bulk:
 	/* Fetch n_bulk * RTE_STACK_PILE_BULK_SIZE objects as bulk elements. */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+/*
+ * On architectures where rte_memcpy() is defined as memcpy(),
+ * although GCC knows that this code path is not taken when the destination's size is smaller than
+ * RTE_STACK_PILE_BULK_SIZE, it still warns about memcpy() destination overflow.
+ * So we disable the compiler warning for this memcpy() instance.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 	bulk_first = __rte_stack_pile_bulk_pop_elems(&pile->bulk, n_bulk, obj_table, &bulk_last);
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic pop
+#endif
 	if (unlikely(bulk_first == NULL)) {
 		/*
 		 * Not available.
