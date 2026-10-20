@@ -517,8 +517,7 @@ rte_pci_get_iommu_class(void)
 			iommu_no_va = pci_device_iommu_support_va(dev)
 					? 0 : 1;
 
-		if (dev->kdrv == RTE_PCI_KDRV_UNKNOWN ||
-		    dev->kdrv == RTE_PCI_KDRV_NONE)
+		if (dev->kdrv == RTE_PCI_KDRV_NONE)
 			continue;
 		RTE_BUS_FOREACH_DRV(drv, &rte_pci_bus) {
 			enum rte_iova_mode dev_iova_mode;

@@ -644,6 +644,8 @@ pci_device_iova_mode(const struct rte_pci_driver *pdrv,
 			iova_mode = RTE_IOVA_PA;
 		else if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_VA) != 0)
 			iova_mode = RTE_IOVA_VA;
+		else if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_PA) != 0)
+			iova_mode = RTE_IOVA_PA;
 		break;
 	}
 
@@ -655,6 +657,8 @@ pci_device_iova_mode(const struct rte_pci_driver *pdrv,
 	default:
 		if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_VA) != 0)
 			iova_mode = RTE_IOVA_VA;
+		else if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_PA) != 0)
+			iova_mode = RTE_IOVA_PA;
 		break;
 	}
 	return iova_mode;
