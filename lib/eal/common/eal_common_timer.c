@@ -8,8 +8,10 @@
 #include <rte_common.h>
 #include <rte_log.h>
 #include <rte_cycles.h>
+#include <rte_os_shim.h>
 #include <rte_pause.h>
 #include <rte_eal.h>
+#include <rte_time.h>
 
 #include <eal_export.h>
 #include "eal_private.h"
@@ -17,6 +19,10 @@
 
 /* The frequency of the RDTSC timer resolution */
 static uint64_t eal_tsc_resolution_hz;
+
+/* Reference point relating the TSC to the wall clock, taken at init */
+static uint64_t eal_tsc_base;
+static uint64_t eal_epoch_ns;
 
 /* Pointer to user delay function */
 RTE_EXPORT_SYMBOL(rte_delay_us)
@@ -39,6 +45,36 @@ rte_get_tsc_hz(void)
 	return eal_tsc_resolution_hz;
 }
 
+/*
+ * Convert a count of cycles to nanoseconds.
+ *
+ * Compute the whole seconds first, so that the remainder is always
+ * less than the frequency and scaling it by NS_PER_S cannot overflow.
+ */
+static uint64_t
+cycles_to_ns(uint64_t cycles)
+{
+	uint64_t secs = cycles / eal_tsc_resolution_hz;
+	uint64_t rem = cycles % eal_tsc_resolution_hz;
+
+	return secs * NS_PER_S + (rem * NS_PER_S) / eal_tsc_resolution_hz;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_tsc_to_ns, 26.11)
+uint64_t
+rte_tsc_to_ns(uint64_t tsc)
+{
+	/*
+	 * A caller may convert a TSC value sampled before the reference
+	 * point was taken, so handle both directions on an unsigned
+	 * magnitude.
+	 */
+	if (unlikely(tsc < eal_tsc_base))
+		return eal_epoch_ns - cycles_to_ns(eal_tsc_base - tsc);
+
+	return eal_epoch_ns + cycles_to_ns(tsc - eal_tsc_base);
+}
+
 static uint64_t
 estimate_tsc_freq(void)
 {
@@ -50,6 +86,27 @@ estimate_tsc_freq(void)
 	rte_delay_us_sleep(US_PER_S);
 	/* Round up to 10Mhz. 1E7 ~ 10Mhz */
 	return RTE_ALIGN_MUL_NEAR(rte_rdtsc() - start, CYC_PER_10MHZ);
+}
+
+/*
+ * Record the TSC value matching a wall clock reading, so that any TSC
+ * value can later be expressed as nanoseconds since the Unix epoch.
+ * Read the TSC either side of the clock to halve the sampling error.
+ */
+static void
+init_tsc_base(void)
+{
+	struct timespec ts;
+	uint64_t cycles;
+
+	cycles = rte_get_tsc_cycles();
+	if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
+		EAL_LOG(WARNING, "Could not read wall clock,"
+			" TSC to epoch conversion unavailable");
+		return;
+	}
+	eal_tsc_base = (cycles + rte_get_tsc_cycles()) / 2;
+	eal_epoch_ns = rte_timespec_to_ns(&ts);
 }
 
 int
@@ -71,6 +128,7 @@ init_tsc_freq(void)
 		}
 
 		eal_tsc_resolution_hz = mcfg->tsc_hz;
+		init_tsc_base();
 		return 0;
 	}
 
@@ -87,6 +145,7 @@ init_tsc_freq(void)
 	EAL_LOG(DEBUG, "TSC frequency is ~%" PRIu64 " KHz", freq / 1000);
 	eal_tsc_resolution_hz = freq;
 	mcfg->tsc_hz = freq;
+	init_tsc_base();
 	return 0;
 }
 

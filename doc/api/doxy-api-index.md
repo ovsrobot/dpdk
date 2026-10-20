@@ -73,6 +73,7 @@ The public API headers are grouped by topics:
 
 - **timers**:
   [cycles](@ref rte_cycles.h),
+  [time](@ref rte_time.h),
   [timer](@ref rte_timer.h),
   [alarm](@ref rte_alarm.h)
 

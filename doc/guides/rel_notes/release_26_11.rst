@@ -73,6 +73,12 @@ New Features
   Added the experimental ``rte_cpu_socket_id()`` function
   to map an OS logical CPU ID to the NUMA socket containing that CPU.
 
+* **Added API to convert TSC to epoch time.**
+
+  Added the experimental ``rte_tsc_to_ns()`` function in ``rte_time.h``
+  to convert a TSC value into nanoseconds since 1/1/1970,
+  using a reference point recorded during EAL initialization.
+
 * **Added pile stack and mempool driver.**
 
   Introduced pile, a lock-free, stack-like implementation,

@@ -5,8 +5,16 @@
 #ifndef _RTE_TIME_H_
 #define _RTE_TIME_H_
 
+/**
+ * @file
+ *
+ * Time and cycle counter conversion.
+ */
+
 #include <stdint.h>
 #include <time.h>
+
+#include <rte_compat.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -101,6 +109,32 @@ rte_ns_to_timespec(uint64_t nsec)
 
 	return ts;
 }
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Convert a TSC value into nanoseconds since the Unix epoch.
+ *
+ * EAL records the TSC alongside a CLOCK_REALTIME reading during
+ * initialization, and this converts using that reference point and the
+ * TSC frequency.  Values sampled before initialization are also handled,
+ * and the result tracks the wall clock as it was at init: later changes
+ * to the system time are not reflected.
+ *
+ * Each process takes its own reference point, so values converted in a
+ * secondary process may differ from the primary by the sampling error.
+ *
+ * Must be called after rte_eal_init(), which fails if the TSC frequency
+ * cannot be determined.
+ *
+ * @param tsc
+ *   A value read from rte_get_tsc_cycles() or rte_rdtsc().
+ * @return
+ *   Nanoseconds since 1/1/1970.
+ */
+__rte_experimental
+uint64_t rte_tsc_to_ns(uint64_t tsc);
 
 #ifdef __cplusplus
 }
