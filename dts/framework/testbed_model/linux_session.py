@@ -460,3 +460,7 @@ class LinuxSession(PosixSession):
         """Overrides :meth:`~.os_session.OSSession.configure_ipv4_forwarding`."""
         state = 1 if enable else 0
         self.send_command(f"sysctl -w net.ipv4.ip_forward={state}", privileged=True)
+
+    def clean_up_vhost(self) -> None:
+        """Overrides :meth:`~.os_session.OSSession.clean_up_vhost`."""
+        self.send_command("rm -rf /tmp/vhost-net*", privileged=True)
