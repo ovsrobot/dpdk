@@ -79,6 +79,13 @@ New Features
   to convert a TSC value into nanoseconds since 1/1/1970,
   using a reference point recorded during EAL initialization.
 
+* **Added pcapng support for user-supplied timestamps.**
+
+  Added the experimental ``rte_pcapng_copy_ts()`` function,
+  which takes the time of the packet in nanoseconds since the Unix epoch,
+  for example a hardware Rx timestamp.
+  ``rte_pcapng_copy()`` is unchanged and still uses the TSC at copy time.
+
 * **Added pile stack and mempool driver.**
 
   Introduced pile, a lock-free, stack-like implementation,

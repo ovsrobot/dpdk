@@ -32,6 +32,10 @@ to determine the lower bound based on MTU.
 Collecting packets is done in two parts.
 The function ``rte_pcapng_copy`` is used to format and copy mbuf data
 and ``rte_pcapng_write_packets`` writes a burst of packets to the output file.
+The timestamp of each packet is the TSC at the time of ``rte_pcapng_copy``.
+An application that has a better time for the packet,
+for example a hardware timestamp,
+can give it in nanoseconds to ``rte_pcapng_copy_ts`` instead.
 
 The function ``rte_pcapng_write_stats`` can be used
 to write statistics information into the output file.

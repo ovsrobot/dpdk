@@ -133,12 +133,64 @@ enum rte_pcapng_direction {
  * @return
  *   - The pointer to the new mbuf formatted for pcapng_write
  *   - NULL on error such as invalid port or out of memory.
+ *
+ * The packet is timestamped with the TSC, which
+ * rte_pcapng_write_packets() converts to epoch time.
+ * Use rte_pcapng_copy_ts() to give the time of the packet directly.
  */
 struct rte_mbuf *
 rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *m, struct rte_mempool *mp,
 		uint32_t length,
-		enum rte_pcapng_direction direction, const char *comment);
+		enum rte_pcapng_direction direction,
+		const char *comment);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Format an mbuf for writing to file, with the time of the packet.
+ *
+ * Same as rte_pcapng_copy(), except that the caller gives the time of
+ * the packet instead of it being taken from the TSC at copy time.
+ *
+ * @param port_id
+ *   The Ethernet port on which packet was received
+ *   or is going to be transmitted.
+ * @param queue
+ *   The queue on the Ethernet port where packet was received
+ *   or is going to be transmitted.
+ * @param mp
+ *   The mempool from which the "clone" mbufs are allocated.
+ * @param m
+ *   The mbuf to copy
+ * @param length
+ *   The upper limit on bytes to copy.  Passing UINT32_MAX
+ *   means all data (after offset).
+ * @param direction
+ *   The direction of the packer: receive, transmit or unknown.
+ * @param comment
+ *   Optional per packet comment.
+ *   Truncated to UINT16_MAX characters.
+ * @param timestamp
+ *   Time of the packet in nanoseconds since the Unix epoch,
+ *   for example a hardware timestamp.
+ *   Bit 63 is reserved and must be zero;
+ *   epoch time in nanoseconds sets it only in the year 2262.
+ *
+ * @return
+ *   - The pointer to the new mbuf formatted for pcapng_write
+ *   - NULL on error such as invalid port, invalid timestamp
+ *     or out of memory. rte_errno is EINVAL if bit 63 of
+ *     the timestamp is set.
+ */
+__rte_experimental
+struct rte_mbuf *
+rte_pcapng_copy_ts(uint16_t port_id, uint32_t queue,
+		   const struct rte_mbuf *m, struct rte_mempool *mp,
+		   uint32_t length,
+		   enum rte_pcapng_direction direction,
+		   const char *comment, uint64_t timestamp);
 
 
 /**

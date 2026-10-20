@@ -18,6 +18,7 @@
 #endif
 
 #include <rte_bus_vdev.h>
+#include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_ether.h>
 #include <rte_ip.h>
@@ -714,6 +715,104 @@ fail:
 	return -1;
 }
 
+static int
+test_pcapng_timestamp(void)
+{
+	char file_name[PATH_MAX] = "/tmp/pcapng_test_XXXXXX.pcapng";
+	char errbuf[PCAP_ERRBUF_SIZE];
+	rte_pcapng_t *pcapng = NULL;
+	struct dummy_mbuf mbfs;
+	struct pcap_pkthdr h;
+	struct rte_mbuf *mc;
+	uint64_t pcap_ts, ns;
+	pcap_t *pcap;
+	int ret, tmp_fd;
+
+	tmp_fd = mkstemps(file_name, strlen(".pcapng"));
+	if (tmp_fd == -1) {
+		perror("mkstemps() failure");
+		return -1;
+	}
+
+	pcapng = rte_pcapng_fdopen(tmp_fd, NULL, NULL, "pcapng_ts_test", NULL);
+	if (pcapng == NULL) {
+		printf("rte_pcapng_fdopen failed\n");
+		close(tmp_fd);
+		goto fail;
+	}
+
+	ret = rte_pcapng_add_interface(pcapng, port_id, DLT_EN10MB, NULL, NULL, NULL);
+	if (ret < 0) {
+		printf("can not add port %u\n", port_id);
+		goto fail;
+	}
+
+	mbuf1_prepare(&mbfs);
+
+	/* Bit 63 marks a TSC value, so a caller timestamp must not set it. */
+	mc = rte_pcapng_copy_ts(port_id, 0, &mbfs.mb[0], mp,
+				rte_pktmbuf_pkt_len(&mbfs.mb[0]),
+				RTE_PCAPNG_DIRECTION_IN, NULL,
+				UINT64_C(1) << 63);
+	if (mc != NULL || rte_errno != EINVAL) {
+		printf("rte_pcapng_copy_ts accepted a timestamp with bit 63 set\n");
+		rte_pktmbuf_free(mc);
+		goto fail;
+	}
+
+	/* One second ahead, so that it cannot be the TSC of the copy. */
+	pcap_ts = current_timestamp() + NS_PER_S;
+	mc = rte_pcapng_copy_ts(port_id, 0, &mbfs.mb[0], mp,
+				rte_pktmbuf_pkt_len(&mbfs.mb[0]),
+				RTE_PCAPNG_DIRECTION_IN, "custom_ts", pcap_ts);
+	if (mc == NULL) {
+		printf("rte_pcapng_copy_ts failed\n");
+		goto fail;
+	}
+
+	ret = rte_pcapng_write_packets(pcapng, &mc, 1);
+	rte_pktmbuf_free(mc);
+	if (ret <= 0) {
+		printf("Write of custom timestamp packet failed\n");
+		goto fail;
+	}
+
+	rte_pcapng_close(pcapng);
+	pcapng = NULL;
+
+	pcap = pcap_open_offline_with_tstamp_precision(file_name,
+						       PCAP_TSTAMP_PRECISION_NANO,
+						       errbuf);
+	if (pcap == NULL) {
+		printf("pcap_open_offline failed: %s\n", errbuf);
+		goto fail;
+	}
+
+	if (pcap_next(pcap, &h) == NULL) {
+		printf("No packets in file\n");
+		pcap_close(pcap);
+		goto fail;
+	}
+	pcap_close(pcap);
+
+	/* With nanosecond precision, tv_usec holds nanoseconds. */
+	ns = (uint64_t)h.ts.tv_sec * NS_PER_S + h.ts.tv_usec;
+	if (ns != pcap_ts) {
+		printf("Timestamp mismatch: expected %"PRIu64" got %"PRIu64"\n",
+		       pcap_ts, ns);
+		goto fail;
+	}
+
+	remove(file_name);
+	return 0;
+
+fail:
+	if (pcapng)
+		rte_pcapng_close(pcapng);
+	remove(file_name);
+	return -1;
+}
+
 static void
 test_cleanup(void)
 {
@@ -826,6 +925,7 @@ unit_test_suite test_pcapng_suite  = {
 		TEST_CASE(test_write_packets),
 		TEST_CASE(test_write_before_open),
 		TEST_CASE(test_long_timestamp),
+		TEST_CASE(test_pcapng_timestamp),
 		TEST_CASES_END()
 	}
 };
