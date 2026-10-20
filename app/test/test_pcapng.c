@@ -648,8 +648,8 @@ test_write_before_open(void)
 	mbuf1_prepare(&mbfs);
 	mbuf1_resize(&mbfs, rte_rand_max(MAX_DATA_SIZE));
 
-	/* Copy packets BEFORE opening the pcapng file.
-	 * This exercises the negative TSC delta path.
+	/* Copy packets BEFORE opening the pcapng file, so their
+	 * timestamps precede the capture start time.
 	 */
 	for (i = 0; i < (int)count; i++) {
 		clones[i] = rte_pcapng_copy(port_id, 0, &mbfs.mb[0], mp,
@@ -662,7 +662,7 @@ test_write_before_open(void)
 		}
 	}
 
-	/* Small delay so fdopen's tsc_base is measurably after the copies */
+	/* Small delay so the capture start is measurably after the copies */
 	rte_delay_us_block(100);
 
 	now = current_timestamp();
@@ -689,7 +689,7 @@ test_write_before_open(void)
 		goto fail;
 	}
 
-	/* Write the pre-captured packets — timestamps precede tsc_base */
+	/* Write the pre-captured packets */
 	len = rte_pcapng_write_packets(pcapng, clones, count);
 	rte_pktmbuf_free_bulk(clones, count);
 	if (len <= 0) {

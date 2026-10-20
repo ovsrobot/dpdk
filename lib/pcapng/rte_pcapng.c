@@ -40,8 +40,7 @@
 struct rte_pcapng {
 	int  outfd;		/* output file */
 	unsigned int ports;	/* number of interfaces added */
-	uint64_t offset_ns;	/* ns since 1/1/1970 when initialized */
-	uint64_t tsc_base;	/* TSC when started */
+	uint64_t start_time;	/* ns since 1/1/1970 when opened */
 
 	/* DPDK port id to interface index in file */
 	uint32_t port_index[RTE_MAX_ETHPORTS];
@@ -96,39 +95,6 @@ static ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
 /* compatibility wrapper because name is optional */
 #define if_indextoname(ifindex, ifname) NULL
 #endif
-
-/*
- * Convert a count of cycles to nanoseconds.
- *
- * Compute the whole seconds first, so that the remainder is always
- * less than the frequency and scaling it by NS_PER_S cannot wrap.
- */
-static uint64_t
-pcapng_cycles_to_ns(uint64_t delta)
-{
-	const uint64_t hz = rte_get_tsc_hz();
-	uint64_t secs = delta / hz;
-	uint64_t rem = delta % hz;
-
-	return secs * NS_PER_S + (rem * NS_PER_S) / hz;
-}
-
-/* Convert from TSC (CPU cycles) to nanoseconds */
-static uint64_t
-pcapng_timestamp(const rte_pcapng_t *self, uint64_t cycles)
-{
-	/*
-	 * A packet may be copied before the file was opened, so the TSC
-	 * can be behind the reference point.  Handle both directions on
-	 * an unsigned magnitude.
-	 */
-	if (unlikely(cycles < self->tsc_base))
-		return self->offset_ns -
-			pcapng_cycles_to_ns(self->tsc_base - cycles);
-
-	return self->offset_ns +
-		pcapng_cycles_to_ns(cycles - self->tsc_base);
-}
 
 /* length of option including padding */
 static uint16_t pcapng_optlen(uint16_t len)
@@ -361,7 +327,7 @@ rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 {
 	struct pcapng_statistics *hdr;
 	struct pcapng_option *opt;
-	uint64_t start_time = self->offset_ns;
+	uint64_t start_time = self->start_time;
 	uint64_t sample_time;
 	uint32_t optlen, len;
 	uint32_t *buf;
@@ -414,7 +380,7 @@ rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 	hdr->block_length = len;
 	hdr->interface_id = self->port_index[port_id];
 
-	sample_time = pcapng_timestamp(self, rte_get_tsc_cycles());
+	sample_time = rte_tsc_to_ns(rte_get_tsc_cycles());
 	hdr->timestamp_hi = sample_time >> 32;
 	hdr->timestamp_lo = (uint32_t)sample_time;
 
@@ -702,7 +668,7 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 		/* adjust timestamp recorded in packet */
 		cycles = (uint64_t)epb->timestamp_hi << 32;
 		cycles += epb->timestamp_lo;
-		timestamp = pcapng_timestamp(self, cycles);
+		timestamp = rte_tsc_to_ns(cycles);
 		epb->timestamp_hi = timestamp >> 32;
 		epb->timestamp_lo = (uint32_t)timestamp;
 
@@ -748,8 +714,6 @@ rte_pcapng_fdopen(int fd,
 {
 	unsigned int i;
 	rte_pcapng_t *self;
-	struct timespec ts;
-	uint64_t cycles;
 	int ret;
 
 	if ((osname && strlen(osname) > PCAPNG_STR_MAX) ||
@@ -769,17 +733,13 @@ rte_pcapng_fdopen(int fd,
 	self->outfd = fd;
 	self->ports = 0;
 
-	/* If Hz is zero, something is seriously broken. */
+	/* Timestamps come from the TSC; if Hz is zero it is unusable. */
 	if (rte_get_tsc_hz() == 0) {
 		rte_errno = ENODEV;
 		goto fail;
 	}
 
-	/* record start time in ns since 1/1/1970 */
-	cycles = rte_get_tsc_cycles();
-	clock_gettime(CLOCK_REALTIME, &ts);
-	self->tsc_base = (cycles + rte_get_tsc_cycles()) / 2;
-	self->offset_ns = rte_timespec_to_ns(&ts);
+	self->start_time = rte_tsc_to_ns(rte_get_tsc_cycles());
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++)
 		self->port_index[i] = UINT32_MAX;
