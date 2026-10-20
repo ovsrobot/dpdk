@@ -545,6 +545,12 @@ API Changes
   * ``rte_tel_data_add_dict_uint_hex``
   * ``rte_telemetry_register_cmd_arg``
 
+* pcapng: Added a ``timestamp`` parameter to ``rte_pcapng_copy``.
+  The application can give the time of the packet,
+  for example a hardware Rx timestamp, in nanoseconds since the Unix epoch.
+  The value 0 keeps the previous behavior: the TSC at copy time is used.
+  A timestamp with bit 63 set is rejected.
+
 
 ABI Changes
 -----------

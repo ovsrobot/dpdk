@@ -129,16 +129,24 @@ enum rte_pcapng_direction {
  * @param comment
  *   Optional per packet comment.
  *   Truncated to UINT16_MAX characters.
+ * @param timestamp
+ *   Time of the packet in nanoseconds since the Unix epoch,
+ *   for example a hardware timestamp. Bit 63 must be zero.
+ *   If zero, the current TSC is used,
+ *   and rte_pcapng_write_packets() converts it to the epoch.
  *
  * @return
  *   - The pointer to the new mbuf formatted for pcapng_write
- *   - NULL on error such as invalid port or out of memory.
+ *   - NULL on error such as invalid port, invalid timestamp
+ *     or out of memory. rte_errno is EINVAL if bit 63 of
+ *     the timestamp is set.
  */
 struct rte_mbuf *
 rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *m, struct rte_mempool *mp,
 		uint32_t length,
-		enum rte_pcapng_direction direction, const char *comment);
+		enum rte_pcapng_direction direction,
+		const char *comment, uint64_t timestamp);
 
 
 /**

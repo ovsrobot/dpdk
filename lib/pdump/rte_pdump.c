@@ -176,7 +176,7 @@ pdump_copy_burst(uint16_t port_id, uint16_t queue_id,
 		 */
 		if (cbs->ver == V2)
 			p = rte_pcapng_copy(port_id, queue_id, pkts[i], mp, cbs->snaplen,
-					    direction, NULL);
+					    direction, NULL, 0);
 		else
 			p = rte_pktmbuf_copy(pkts[i], mp, 0, cbs->snaplen);
 
