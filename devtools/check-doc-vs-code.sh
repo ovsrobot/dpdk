@@ -36,30 +36,83 @@ has_file_change() # <pattern>
 	changed_files | grep -q "$1"
 }
 
+net_driver_from_path() # <path>
+{
+	sed -rn '
+		s,.*drivers/net/intel/([^/]*)/.*,\1,p; t
+		s,.*drivers/net/([^./]*)/.*,\1,p; t
+		s,.*doc/guides/nics/features/([^./]*).*,\1,p'
+}
+
 changed_net_drivers()
 {
-	net_paths='drivers/net/|doc/guides/nics/features/'
 	[ -n "$drivers" ] ||
 		drivers=$(changed_files |
-			sed -rn "s,^($net_paths)([^./]*).*,\2,p" |
+			net_driver_from_path |
 			sort -u)
 	echo "$drivers"
 }
 
 all_net_drivers()
 {
-	find $rootdir/drivers/net -mindepth 1 -maxdepth 1 -type d |
-	sed 's,.*/,,' |
-	sort
+	{
+		find $rootdir/drivers/net -name meson.build
+		ls $rootdir/doc/guides/nics/features/*.ini
+	} |
+	net_driver_from_path |
+	sort -u
+}
+
+driver_code_dir() # <driver>
+{
+	drv=$(echo "$1" | sed -r 's/_(dcf|vec|vf)$//')
+	case $drv in
+	enetc|enetc4)
+		echo "$rootdir/drivers/net/enetc" ;;
+	igb|igc|e1000)
+		echo "$rootdir/drivers/net/intel/e1000" ;;
+	ixgbe|i40e|ice|fm10k|ipn3ke|idpf|cpfl|iavf)
+		echo "$rootdir/drivers/net/intel/$drv" ;;
+	*)
+		echo "$rootdir/drivers/net/$drv" ;;
+	esac
+}
+
+# compare doc vs code items:
+# - if driver matches code dir: report differences in both directions
+# - otherwise: only report doc items not in code (shared code directory)
+flow_item_diff() # <driver> <code_dir> <doc_items> <code_items>
+{
+	{
+		[ -n "$3" ] && echo "$3"
+		[ -n "$4" ] && {
+			echo "$4"
+			[ "$1" != $(basename "$2") ] && echo "$4"
+		}
+	} | sort | uniq -u
 }
 
 check_rte_flow() # <driver>
 {
-	code=$rootdir/drivers/net/$1
+	code=$(driver_code_dir $1)
 	doc=$rootdir/doc/guides/nics/features/$1.ini
 	[ -d $code ] || return 0
 	[ -f $doc ] || return 0
-	report=$($selfdir/parse-flow-support.sh $code $doc)
+	code_support=$($selfdir/parse-flow-support.sh $code)
+	report=$(
+		for category in item action; do
+			section="rte_flow ${category}s]"
+			code_items=$(echo "$code_support" | sed -n "/$section/,/]/p" |
+				sed '/]/d' | sed 's, *=.*,,' | sed '/^$/d' | sort -u)
+			doc_items=$(sed -n "/$section/,/]/p" "$doc" |
+				sed '/]/d' | sed 's, *=.*,,' | sed '/^$/d' | sort -u)
+			if [ -n "$doc_items" ] || [ -n "$code_items" ]; then
+				flow_item_diff $1 $code "$doc_items" "$code_items"
+			fi |
+			grep . |
+			sed "s,^,$category ,"
+		done
+	)
 	if [ -n "$report" ]; then
 		error "rte_flow doc out of sync for $1"
 		echo "$report" | sed 's,^,\t,'
