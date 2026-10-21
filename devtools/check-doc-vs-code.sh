@@ -78,6 +78,28 @@ driver_code_dir() # <driver>
 	esac
 }
 
+doc_code_map=","
+for d in $rootdir/doc/guides/nics/features/*.ini; do
+	drv=$(basename "$d" .ini)
+	code=$(driver_code_dir $drv)
+	case $doc_code_map in
+	*,$code:*)
+		before=${doc_code_map%,$code:*}
+		after=${doc_code_map#*,$code:}
+		drivers=${after%%,*}
+		rest=${after#*,}
+		doc_code_map="$before,$code:$drivers $drv,$rest" ;;
+	*)
+		doc_code_map="$doc_code_map$code: $drv," ;;
+	esac
+done
+
+docs_for_code() # <code_dir>
+{
+	tmp=${doc_code_map#*,$1:}
+	echo ${tmp%%,*}
+}
+
 # compare doc vs code items:
 # - if driver matches code dir: report differences in both directions
 # - otherwise: only report doc items not in code (shared code directory)
@@ -119,10 +141,55 @@ check_rte_flow() # <driver>
 	fi
 }
 
+has_doc_feature() # <ini_file> <feature>
+{
+	grep -q "^$2[[:space:]]*=[[:space:]]*[YP]" "$1"
+}
+
+all_docs_agree() # <driver> <feature>
+{
+	code=$(driver_code_dir $1)
+	first=""
+	for drv in $(docs_for_code $code); do
+		d=$rootdir/doc/guides/nics/features/$drv.ini
+		has_doc_feature "$d" "$2" && val=true || val=false
+		[ -n "$first" ] || first=$val
+		[ "$first" = "$val" ] || return 1
+	done
+	return 0
+}
+
+check_mq_cap() # <driver> <feature> <indicator> <code_pattern> <mq_pattern>
+{
+	if all_docs_agree "$1" "$2"; then
+		if has_doc_feature "$doc" "$2"; then
+			git grep -qE "$4" -- "$code" ||
+				error "$2 documented but $3 not set for $1"
+		else
+			! git grep -qE "$4" -- "$code" ||
+				error "$3 set but $2 not documented for $1"
+			! git grep -qE "$5" -- "$code" ||
+				error "$2 mq_mode referenced but $2 not documented for $1"
+		fi
+	fi
+}
+
+check_mq_caps() # <driver>
+{
+	code=$(driver_code_dir $1)
+	doc=$rootdir/doc/guides/nics/features/$1.ini
+	[ -d $code ] || return 0
+	[ -f $doc ] || return 0
+
+	check_mq_cap $1 "VMDq" "max_vmdq_pools" 'max_vmdq_pools[[:space:]]*=' \
+		'RTE_ETH_MQ_(RX|TX).*VMDQ'
+}
+
 if [ -z "$trusted_commit" ]; then
 	# check all
 	for driver in $(all_net_drivers); do
 		check_rte_flow $driver
+		check_mq_caps $driver
 	done
 	exit $result
 fi
@@ -132,6 +199,12 @@ if has_code_change 'RTE_FLOW_.*_TYPE_' ||
 		has_file_change 'doc/guides/nics/features'; then
 	for driver in $(changed_net_drivers); do
 		check_rte_flow $driver
+	done
+fi
+if has_code_change 'max_vmdq_pools|RTE_ETH_MQ_.*VMDQ' ||
+		has_file_change 'doc/guides/nics/features'; then
+	for driver in $(changed_net_drivers); do
+		check_mq_caps $driver
 	done
 fi
 exit $result
