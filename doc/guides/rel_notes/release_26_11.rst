@@ -73,6 +73,11 @@ New Features
   Added the experimental ``rte_cpu_socket_id()`` function
   to map an OS logical CPU ID to the NUMA socket containing that CPU.
 
+* **Added APIs to get log level and type names.**
+
+  Added the experimental ``rte_log_get_level_name()`` and
+  ``rte_log_get_type_name()`` functions to query human-readable log names.
+
 * **Added pile stack and mempool driver.**
 
   Introduced pile, a lock-free, stack-like implementation,

@@ -60,6 +60,13 @@ For example::
 
 Within an application, the same result can be achieved by using the ``rte_log_set_level_pattern()`` or ``rte_log_set_level_regex()`` APIs.
 
+Querying Log Names
+~~~~~~~~~~~~~~~~~~
+
+Applications can use ``rte_log_get_level_name()`` to convert a numeric log level
+to its display name, and ``rte_log_get_type_name()`` to retrieve the registered
+name for a log component type.
+
 
 Using Logging APIs to Generate Log Messages
 -------------------------------------------
