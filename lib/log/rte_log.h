@@ -127,6 +127,31 @@ uint32_t rte_log_get_global_level(void);
 int rte_log_get_level(uint32_t logtype);
 
 /**
+ * Get the name of a log level.
+ *
+ * @param level
+ *   The log level identifier.
+ * @return
+ *   The name of the log level, or "unknown" if level is not recognized.
+ *   The returned string is owned by DPDK and must not be modified or freed.
+ */
+__rte_experimental
+const char *rte_log_get_level_name(uint32_t level);
+
+/**
+ * Get the name of a log type.
+ *
+ * @param logtype
+ *   The log type identifier.
+ * @return
+ *   The name of the log type, or NULL if logtype is not registered.
+ *   The returned string is owned by DPDK, remains valid for the lifetime of
+ *   the process, and must not be modified or freed.
+ */
+__rte_experimental
+const char *rte_log_get_type_name(uint32_t logtype);
+
+/**
  * For a given `logtype`, check if a log with `loglevel` can be printed.
  *
  * @param logtype

@@ -110,6 +110,17 @@ test_logs(void)
 		"invalid default level for logtype3 got %d, expecting %d\n",
 		ret, RTE_LOG_ERR);
 
+	TEST_ASSERT(strcmp(rte_log_get_level_name(RTE_LOG_ERR), "error") == 0,
+		"invalid name for error log level\n");
+	TEST_ASSERT(strcmp(rte_log_get_level_name(0), "disabled") == 0,
+		"invalid name for disabled log level\n");
+	TEST_ASSERT(strcmp(rte_log_get_level_name(UINT32_MAX), "unknown") == 0,
+		"invalid name for unknown log level\n");
+	TEST_ASSERT(strcmp(rte_log_get_type_name(logtype1), "logtype1") == 0,
+		"invalid name for logtype1\n");
+	TEST_ASSERT_NULL(rte_log_get_type_name(UINT32_MAX),
+		"invalid log type has a name\n");
+
 	rte_log_set_level(logtype1, RTE_LOG_ERR);
 	CHECK_LEVELS(RTE_LOG_ERR, RTE_LOG_INFO, RTE_LOG_ERR);
 

@@ -126,6 +126,23 @@ rte_log_get_level(uint32_t type)
 	return rte_logs.dynamic_types[type].loglevel;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_log_get_level_name, 26.11)
+const char *
+rte_log_get_level_name(uint32_t level)
+{
+	return eal_log_level2str(level);
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_log_get_type_name, 26.11)
+const char *
+rte_log_get_type_name(uint32_t type)
+{
+	if (type >= rte_logs.dynamic_types_len)
+		return NULL;
+
+	return rte_logs.dynamic_types[type].name;
+}
+
 RTE_EXPORT_SYMBOL(rte_log_can_log)
 bool
 rte_log_can_log(uint32_t logtype, uint32_t level)
