@@ -29,9 +29,6 @@ Deprecation Notices
   Use the ``-S <service-corelist>`` parameter instead
   to specify the cores to be used for background services in DPDK.
 
-* mempool: The ``flushthresh`` field in ``struct rte_mempool_cache`` is obsolete,
-  and will be removed in DPDK 26.11.
-
 * mempool: The object array in ``struct rte_mempool_cache`` is oversize by factor two,
   and will be reduced to ``RTE_MEMPOOL_CACHE_MAX_SIZE`` in DPDK 26.11.
 
