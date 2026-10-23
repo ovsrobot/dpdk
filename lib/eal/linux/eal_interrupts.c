@@ -1628,6 +1628,8 @@ rte_intr_efd_disable(struct rte_intr_handle *intr_handle)
 		for (i = 0; i < (uint32_t)rte_intr_nb_efd_get(intr_handle); i++)
 			close(rte_intr_efds_index_get(intr_handle, i));
 	}
+	for (i = 0; i < (uint32_t)rte_intr_nb_efd_get(intr_handle); i++)
+		rte_intr_efds_index_set(intr_handle, i, -1);
 	rte_intr_nb_efd_set(intr_handle, 0);
 	rte_intr_max_intr_set(intr_handle, 0);
 }
