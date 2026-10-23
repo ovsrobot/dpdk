@@ -1266,6 +1266,22 @@ rte_flow_conv(enum rte_flow_conv_op op,
 	case RTE_FLOW_CONV_OP_ITEM_DEFAULT_MASK_PTR:
 		ret = rte_flow_conv_item_default_mask(dst, size, src, error);
 		break;
+	case RTE_FLOW_CONV_OP_ITEM_SIZE:
+	{
+		uintptr_t type = (uintptr_t)src;
+
+		if (type >= RTE_DIM(rte_flow_desc_item) ||
+				rte_flow_desc_item[type].name == NULL) {
+			ret = rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
+					"unknown item type to retrieve the size of");
+			break;
+		}
+		if (size >= sizeof(size_t))
+			*(size_t *)dst = rte_flow_desc_item[type].size;
+		ret = sizeof(size_t);
+		break;
+	}
 	default:
 		ret = rte_flow_error_set
 		(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
