@@ -60,6 +60,9 @@ The following parameters are supported:
 - ``tx_coalescing_time`` (default **2**): TX completion index coalescing
   time, in microseconds.
 
+- ``rx_cqe_compact_en`` (default **1**): enable (``1``) or disable (``0``)
+  compact CQE mode.
+
 - ``rx_cqe_coalesce_num`` (default **7**): RX CQE coalescing count, in
   units of 8 packets.
 
