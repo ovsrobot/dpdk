@@ -668,24 +668,37 @@ hinic3_deinit_sw_rxtxqs(struct hinic3_nic_dev *nic_dev)
 static int
 hinic3_copy_mempool_init(struct hinic3_nic_dev *nic_dev)
 {
-	nic_dev->cpy_mpool = rte_mempool_lookup(HINCI3_CPY_MEMPOOL_NAME);
+	char name[RTE_MEMPOOL_NAMESIZE];
+	unsigned int depth;
+
+	/*
+	 * Give each port its own copy pool sized from its Tx queue depth so
+	 * that in-flight copy mbufs from one port cannot starve another. A
+	 * copied packet pins its copy mbufs until Tx completion, so the pool
+	 * must be able to cover a full ring of in-flight packets. Cap the
+	 * per-queue depth at 256 to bound the hugepage memory a port can pin.
+	 */
+	depth = nic_dev->num_sqs * RTE_MIN(nic_dev->txq_depth, 256u);
+	if (depth < HINIC3_COPY_MEMPOOL_DEPTH)
+		depth = HINIC3_COPY_MEMPOOL_DEPTH;
+
+	snprintf(name, sizeof(name), "hinic3_cpy_%u",
+		 (unsigned int)nic_dev->hwdev->eth_dev->data->port_id);
+	nic_dev->cpy_mpool = rte_pktmbuf_pool_create(name, depth,
+			HINIC3_COPY_MEMPOOL_CACHE, 0, HINIC3_COPY_MBUF_SIZE,
+			nic_dev->hwdev->pci_dev->device.numa_node);
 	if (nic_dev->cpy_mpool == NULL) {
-		nic_dev->cpy_mpool = rte_pktmbuf_pool_create(HINCI3_CPY_MEMPOOL_NAME,
-			HINIC3_COPY_MEMPOOL_DEPTH, HINIC3_COPY_MEMPOOL_CACHE,
-			0, HINIC3_COPY_MBUF_SIZE, rte_socket_id());
-		if (nic_dev->cpy_mpool == NULL) {
-			PMD_DRV_LOG(ERR,
-				    "Create copy mempool failed, errno: %d, dev_name: %s",
-				    rte_errno, HINCI3_CPY_MEMPOOL_NAME);
-			return -ENOMEM;
-		}
+		PMD_DRV_LOG(ERR,
+			    "Create copy mempool %s failed, errno: %d, dev_name: %s",
+			    name, rte_errno, nic_dev->dev_name);
+		return -ENOMEM;
 	}
 
 	return 0;
 }
 
 /**
- * Clear the reference to the copy memory pool without freeing it.
+ * Free the copy memory pool.
  *
  * @param[in] nic_dev
  * Pointer to NIC device structure.
@@ -693,6 +706,9 @@ hinic3_copy_mempool_init(struct hinic3_nic_dev *nic_dev)
 static void
 hinic3_copy_mempool_uninit(struct hinic3_nic_dev *nic_dev)
 {
+	if (nic_dev->cpy_mpool != NULL)
+		rte_mempool_free(nic_dev->cpy_mpool);
+
 	nic_dev->cpy_mpool = NULL;
 }
 
@@ -1379,6 +1395,8 @@ hinic3_tx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 	txq->wqebb_size = (uint16_t)RTE_BIT32(txq->wqebb_shift);
 	txq->tx_free_thresh = tx_free_thresh;
 	txq->owner = 1;
+	txq->non_tso_max_pkt_len =
+		HINIC3_IS_SP230_NIC(nic_dev) ? HINIC3_MAX_JUMBO_FRAME_SIZE : MAX_SINGLE_SGE_SIZE;
 
 	if (!ODD_NUMBER_QUEUE_ID(qid) &&
 		hinic3_cmd_vf_lag(nic_dev->hwdev, hinic3_global_func_id(nic_dev->hwdev),
