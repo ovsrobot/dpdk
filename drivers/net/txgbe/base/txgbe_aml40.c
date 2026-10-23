@@ -123,13 +123,13 @@ s32 txgbe_get_link_capabilities_aml40(struct txgbe_hw *hw,
 
 	/* Fiber or DAC cable */
 	if (txgbe_is_dac_cable(hw)) {
-		if (hw->phy.fiber_suppport_speed ==
+		if (hw->phy.fiber_support_speed ==
 		    TXGBE_LINK_SPEED_10GB_FULL) {
 			*autoneg = false;
 		} else {
 			*autoneg = hw->devarg.auto_neg;
 		}
-		*speed = hw->phy.fiber_suppport_speed;
+		*speed = hw->phy.fiber_support_speed;
 	} else if (txgbe_is_40g_fiber_qsfp(hw)) {
 		*speed = TXGBE_LINK_SPEED_40GB_FULL;
 		*autoneg = false;
