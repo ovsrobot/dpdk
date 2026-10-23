@@ -1103,6 +1103,8 @@ pci_vfio_unmap_resource_primary(struct rte_pci_device *dev)
 		PCI_LOG(ERR, "Cannot release VFIO device");
 		return ret;
 	}
+	/* vfio_dev_fd is managed by VFIO layer, only clear reference here. */
+	rte_intr_dev_fd_set(dev->intr_handle, -1);
 
 	vfio_res_list =
 		RTE_TAILQ_CAST(dev_vfio_tailq.head, mapped_pci_res_list);
@@ -1142,6 +1144,8 @@ pci_vfio_unmap_resource_secondary(struct rte_pci_device *dev)
 		PCI_LOG(ERR, "Cannot release VFIO device");
 		return ret;
 	}
+	/* vfio_dev_fd is managed by VFIO layer, only clear reference here. */
+	rte_intr_dev_fd_set(dev->intr_handle, -1);
 
 	vfio_res_list =
 		RTE_TAILQ_CAST(dev_vfio_tailq.head, mapped_pci_res_list);
