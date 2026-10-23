@@ -131,8 +131,8 @@ struct rte_intr_handle *rte_intr_instance_dup(const struct rte_intr_handle *src)
 	intr_handle->max_intr = src->max_intr;
 	intr_handle->nb_efd = src->nb_efd;
 	intr_handle->efd_counter_size = src->efd_counter_size;
-	memcpy(intr_handle->efds, src->efds, src->nb_intr);
-	memcpy(intr_handle->elist, src->elist, src->nb_intr);
+	memcpy(intr_handle->efds, src->efds, src->nb_intr * sizeof(*src->efds));
+	memcpy(intr_handle->elist, src->elist, src->nb_intr * sizeof(*src->elist));
 
 	return intr_handle;
 }
