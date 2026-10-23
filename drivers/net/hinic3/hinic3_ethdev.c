@@ -1410,6 +1410,7 @@ hinic3_tx_queue_setup(struct rte_eth_dev *dev, uint16_t qid, uint16_t nb_desc,
 			(HINIC3_COS_NUM_MAX - 1) & nic_dev->cos_mask];
 
 	txq->tx_deferred_start = tx_conf->tx_deferred_start;
+
 	txq->tx_wqe_compact_task = HINIC3_SUPPORT_TX_WQE_COMPACT_TASK(nic_dev);
 
 	ci_mz = hinic3_dma_zone_reserve(dev, "hinic3_sq_ci", qid,
@@ -3781,14 +3782,6 @@ static const struct eth_dev_ops hinic3_pmd_vf_ops = {
 	.eth_dev_priv_dump             = hinic3_eth_dev_priv_dump,
 };
 
-static void hinic3_nic_tx_rx_ops_init(struct hinic3_nic_dev *nic_dev)
-{
-	if (HINIC3_SUPPORT_TX_WQE_COMPACT_TASK(nic_dev))
-		nic_dev->tx_ops->nic_tx_set_wqe_offload = hinic3_tx_set_compact_task_offload;
-	else
-		nic_dev->tx_ops->nic_tx_set_wqe_offload = hinic3_tx_set_normal_task_offload;
-}
-
 /**
  * Initialize the network function, including hardware configuration, memory
  * allocation for data structures, MAC address setup, and interrupt enabling.
@@ -3849,13 +3842,6 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 		goto alloc_eth_addr_fail;
 	}
 
-	nic_dev->tx_ops = rte_zmalloc("tx_ops", sizeof(struct hinic3_nic_tx_ops), 0);
-	if (!nic_dev->tx_ops) {
-		PMD_DRV_LOG(ERR, "Allocate tx_ops memory failed");
-		err = -ENOMEM;
-		goto alloc_tx_ops_fail;
-	}
-
 	nic_dev->mc_list = rte_zmalloc("hinic3_mc",
 		HINIC3_MAX_MC_MAC_ADDRS * sizeof(struct rte_ether_addr), 0);
 	if (!nic_dev->mc_list) {
@@ -3908,8 +3894,6 @@ hinic3_func_init(struct rte_eth_dev *eth_dev)
 			    eth_dev->data->name);
 		goto get_cap_fail;
 	}
-
-	hinic3_nic_tx_rx_ops_init(nic_dev);
 
 	err = hinic3_init_sw_rxtxqs(nic_dev);
 	if (err) {
@@ -4000,10 +3984,6 @@ alloc_hwdev_mem_fail:
 	nic_dev->mc_list = NULL;
 
 alloc_mc_list_fail:
-	rte_free(nic_dev->tx_ops);
-	nic_dev->tx_ops = NULL;
-
-alloc_tx_ops_fail:
 	rte_free(eth_dev->data->mac_addrs);
 	eth_dev->data->mac_addrs = NULL;
 
@@ -4179,12 +4159,16 @@ hinic3_dev_init(struct rte_eth_dev *eth_dev)
 	}
 
 	eth_dev->tx_pkt_prepare = hinic3_prep_pkts;
-	eth_dev->tx_pkt_burst = hinic3_xmit_pkts;
 
 	if (nic_dev->config.rx_cqe_compact_en != HINIC3_RX_CQE_COMPACT_EN)
 		eth_dev->rx_pkt_burst = hinic3_recv_pkts;
 	else
 		eth_dev->rx_pkt_burst = hinic3_recv_pkts_compact_cqe;
+
+	if (HINIC3_SUPPORT_TX_WQE_COMPACT_TASK(nic_dev))
+		eth_dev->tx_pkt_burst = hinic3_xmit_pkts_compact_cqe;
+	else
+		eth_dev->tx_pkt_burst = hinic3_xmit_pkts;
 
 	return 0;
 }
