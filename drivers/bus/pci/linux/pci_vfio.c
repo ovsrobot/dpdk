@@ -1091,6 +1091,8 @@ pci_vfio_unmap_resource_primary(struct rte_pci_device *dev)
 	vfio_dev_fd = rte_intr_dev_fd_get(dev->intr_handle);
 	if (vfio_dev_fd < 0)
 		return -1;
+	/* vfio_dev_fd is managed by VFIO layer, only clear reference here. */
+	rte_intr_dev_fd_set(dev->intr_handle, -1);
 
 	if (rte_pci_set_bus_master(dev, false)) {
 		PCI_LOG(ERR, "%s cannot unset bus mastering for PCI device!", pci_addr);
@@ -1135,6 +1137,8 @@ pci_vfio_unmap_resource_secondary(struct rte_pci_device *dev)
 	vfio_dev_fd = rte_intr_dev_fd_get(dev->intr_handle);
 	if (vfio_dev_fd < 0)
 		return -1;
+	/* vfio_dev_fd is managed by VFIO layer, only clear reference here. */
+	rte_intr_dev_fd_set(dev->intr_handle, -1);
 
 	ret = dev_vfio_release_device(rte_pci_get_sysfs_path(), pci_addr,
 				      vfio_dev_fd);
