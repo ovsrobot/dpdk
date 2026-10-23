@@ -57,6 +57,25 @@ static rte_thread_t intr_thread;
 
 static volatile int kq = -1;
 
+/*
+ * An interrupt source holds a copy of the handle it was registered with
+ * and owns none of the file descriptors. Clear the references before
+ * freeing the copy so they are not reported as leaks.
+ */
+static void
+eal_intr_source_free(struct rte_intr_source *src)
+{
+	struct rte_intr_handle *intr_handle = src->intr_handle;
+	int i;
+
+	rte_intr_fd_set(intr_handle, -1);
+	rte_intr_dev_fd_set(intr_handle, -1);
+	for (i = 0; i < rte_intr_nb_intr_get(intr_handle); i++)
+		rte_intr_efds_index_set(intr_handle, i, -1);
+	rte_intr_instance_free(intr_handle);
+	free(src);
+}
+
 static int
 intr_source_to_kevent(const struct rte_intr_handle *ih, struct kevent *ke)
 {
@@ -204,7 +223,7 @@ fail:
 			TAILQ_REMOVE(&(src->callbacks), callback, next);
 		if (TAILQ_EMPTY(&(src->callbacks))) {
 			TAILQ_REMOVE(&intr_sources, src, next);
-			free(src);
+			eal_intr_source_free(src);
 		}
 	}
 	free(callback);
@@ -347,7 +366,7 @@ rte_intr_callback_unregister(const struct rte_intr_handle *intr_handle,
 		/* all callbacks for that source are removed. */
 		if (TAILQ_EMPTY(&src->callbacks)) {
 			TAILQ_REMOVE(&intr_sources, src, next);
-			free(src);
+			eal_intr_source_free(src);
 		}
 	}
 out:
@@ -592,7 +611,7 @@ eal_intr_process_interrupts(struct kevent *events, int nfds)
 		/* all callbacks for that source are removed. */
 		if (TAILQ_EMPTY(&src->callbacks)) {
 			TAILQ_REMOVE(&intr_sources, src, next);
-			free(src);
+			eal_intr_source_free(src);
 		}
 
 		rte_spinlock_unlock(&intr_lock);
