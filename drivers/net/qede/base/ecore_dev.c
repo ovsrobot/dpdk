@@ -1544,7 +1544,7 @@ static u32 ecore_hw_bar_size(struct ecore_hwfn *p_hwfn,
 	if (ECORE_IS_CMT(p_hwfn->p_dev)) {
 		DP_INFO(p_hwfn,
 			"BAR size not configured. Assuming BAR size of 256kB for GRC and 512kB for DB\n");
-		val = BAR_ID_0 ? 256 * 1024 : 512 * 1024;
+		val = bar_id == BAR_ID_0 ? 256 * 1024 : 512 * 1024;
 	} else {
 		DP_INFO(p_hwfn,
 			"BAR size not configured. Assuming BAR size of 512kB for GRC and 512kB for DB\n");
