@@ -1499,6 +1499,9 @@ hinic3_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 	if (!rte_intr_dp_is_en(intr_handle) || !intr_handle->intr_vec)
 		return 0;
 
+	if (HINIC3_IS_SP230_NIC(nic_dev) && !dev->data->dev_conf.intr_conf.rxq)
+		return 0;
+
 	msix_intr = (uint16_t)intr_handle->intr_vec[queue_id];
 	hinic3_set_msix_auto_mask_state(nic_dev->hwdev, msix_intr,
 					HINIC3_SET_MSIX_AUTO_MASK);
@@ -1779,6 +1782,23 @@ hinic3_deinit_rxq_intr(struct rte_eth_dev *dev)
 	}
 }
 
+static int
+hinic3_sp230_mask_rxq_msix(struct rte_eth_dev *dev)
+{
+	struct hinic3_nic_dev *nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	uint32_t i;
+	int err;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		err = hinic3_init_rxq_msix_attr(nic_dev->hwdev,
+						(uint16_t)(i + HINIC3_RX_VEC_START));
+		if (err)
+			return err;
+	}
+
+	return 0;
+}
+
 /**
  * Initialize RX queue interrupts by enabling MSI-X, allocate interrupt vectors,
  * and configure interrupt attributes for each RX queue.
@@ -1803,8 +1823,20 @@ hinic3_init_rxq_intr(struct rte_eth_dev *dev)
 
 	intr_handle = dev->intr_handle;
 	nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
-	if (!dev->data->dev_conf.intr_conf.rxq)
+
+	if (!dev->data->dev_conf.intr_conf.rxq) {
+		/*
+		 * SP230 asserts the Rx MSI-X vector during aggregation; mask
+		 * those assertions so they don't preempt a core. Only the
+		 * coalescing/auto-mask programming is needed here, without
+		 * eventfds, intr_vec or dp_intr_en, so dev_start keeps working
+		 * on igb_uio/uio_pci_generic when Rx interrupts are disabled.
+		 */
+		if (HINIC3_IS_SP230_NIC(nic_dev))
+			return hinic3_sp230_mask_rxq_msix(dev);
+
 		return 0;
+	}
 
 	if (!rte_intr_cap_multiple(intr_handle)) {
 		PMD_DRV_LOG(ERR, "Rx queue interrupts require MSI-X interrupts (vfio-pci driver)");
