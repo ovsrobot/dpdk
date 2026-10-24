@@ -170,14 +170,21 @@ is_valid_ipv4_pkt(struct rte_ipv4_hdr *pkt, uint32_t link_len, uint64_t ol_flags
 		return -1;
 
 	/* 2. The IP checksum must be correct. */
-	/* if this is not checked in H/W, check it. */
-	if ((ol_flags & RTE_MBUF_F_RX_IP_CKSUM_MASK) == RTE_MBUF_F_RX_IP_CKSUM_NONE) {
-		uint16_t actual_cksum, expected_cksum;
-		actual_cksum = pkt->hdr_checksum;
-		pkt->hdr_checksum = 0;
-		expected_cksum = rte_ipv4_cksum(pkt);
-		if (actual_cksum != expected_cksum)
+	switch (ol_flags & RTE_MBUF_F_RX_IP_CKSUM_MASK) {
+	case RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN:
+		/* Not checked in H/W; check it. */
+		if (rte_ipv4_cksum(pkt) != 0)
 			return -2;
+		break;
+	case RTE_MBUF_F_RX_IP_CKSUM_GOOD:
+		break;
+	case RTE_MBUF_F_RX_IP_CKSUM_BAD:
+		return -2;
+	case RTE_MBUF_F_RX_IP_CKSUM_NONE:
+		/* Packet integrity known good, header field unset; set it. */
+		pkt->hdr_checksum = 0;
+		pkt->hdr_checksum = rte_ipv4_cksum(pkt);
+		break;
 	}
 
 	/*
@@ -199,8 +206,16 @@ is_valid_ipv4_pkt(struct rte_ipv4_hdr *pkt, uint32_t link_len, uint64_t ol_flags
 	 * datagram header, whose length is specified in the IP header length
 	 * field.
 	 */
-	if (rte_cpu_to_be_16(pkt->total_length) < sizeof(struct rte_ipv4_hdr))
+	if (rte_cpu_to_be_16(pkt->total_length) < rte_ipv4_hdr_len(pkt))
 		return -5;
+
+	/*
+	 * Additionally, the router SHOULD verify that the packet length
+	 * reported by the Link Layer is at least as large as the IP total
+	 * length recorded in the packet's IP header.
+	 */
+	if (link_len < rte_cpu_to_be_16(pkt->total_length))
+		return -6;
 
 	return 0;
 }
