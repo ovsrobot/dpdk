@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added NUMA domain selection to the FreeBSD contigmem module.**
+
+  Added the ``hw.contigmem.numa_domain`` tunable
+  to allocate contigmem buffers from a chosen NUMA domain.
+
 * **Added division round up macro.**
 
   Added the ``RTE_DIV_ROUND_UP`` macro in ``rte_common.h``

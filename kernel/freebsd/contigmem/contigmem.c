@@ -20,6 +20,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/sysctl.h>
 #include <sys/vmmeter.h>
 #include <sys/eventhandler.h>
+#include <sys/domainset.h>
 
 #include <machine/bus.h>
 
@@ -59,10 +60,14 @@ static struct contigmem_buffer contigmem_buffers[RTE_CONTIGMEM_MAX_NUM_BUFS];
 static struct cdev     *contigmem_cdev = NULL;
 static int              contigmem_refcnt;
 
+/* -1 = any domain (default) */
+static int contigmem_numa_domain = -1;
+
 TUNABLE_INT("hw.contigmem.num_buffers", &contigmem_num_buffers);
 TUNABLE_QUAD("hw.contigmem.buffer_size", &contigmem_buffer_size);
 TUNABLE_QUAD("hw.contigmem.buffer_size_MB", &contigmem_buffer_size_MB);
 TUNABLE_BOOL("hw.contigmem.coredump_enable", &contigmem_coredump_enable);
+TUNABLE_INT("hw.contigmem.numa_domain", &contigmem_numa_domain);
 
 static SYSCTL_NODE(_hw, OID_AUTO, contigmem, CTLFLAG_RD, 0, "contigmem");
 
@@ -77,6 +82,9 @@ SYSCTL_INT(_hw_contigmem, OID_AUTO, num_references, CTLFLAG_RD,
 	&contigmem_refcnt, 0, "Number of references to contigmem");
 SYSCTL_BOOL(_hw_contigmem, OID_AUTO, coredump_enable, CTLFLAG_RD,
 	&contigmem_coredump_enable, 0, "Include mapped buffers in core dump");
+SYSCTL_INT(_hw_contigmem, OID_AUTO, numa_domain, CTLFLAG_RD,
+	&contigmem_numa_domain, 0,
+	"NUMA domain for buffer allocation (-1 = any domain)");
 
 static SYSCTL_NODE(_hw_contigmem, OID_AUTO, physaddr, CTLFLAG_RD, 0,
 	"physaddr");
@@ -150,11 +158,31 @@ contigmem_load(void)
 		goto error;
 	}
 
+	if (contigmem_numa_domain < -1 ||
+			contigmem_numa_domain >= vm_ndomains) {
+		printf("contigmem: invalid numa_domain %d (valid: -1 to %d)\n",
+				contigmem_numa_domain, vm_ndomains - 1);
+		error = EINVAL;
+		goto error;
+	}
+
 	for (i = 0; i < contigmem_num_buffers; i++) {
-		addr = contigmalloc(contigmem_buffer_size, M_CONTIGMEM, M_ZERO,
-			0, BUS_SPACE_MAXADDR, contigmem_buffer_size, 0);
+		if (contigmem_numa_domain >= 0)
+			addr = contigmalloc_domainset(contigmem_buffer_size,
+				M_CONTIGMEM,
+				DOMAINSET_FIXED(contigmem_numa_domain),
+				M_ZERO, 0, BUS_SPACE_MAXADDR,
+				contigmem_buffer_size, 0);
+		else
+			addr = contigmalloc(contigmem_buffer_size, M_CONTIGMEM,
+				M_ZERO, 0, BUS_SPACE_MAXADDR,
+				contigmem_buffer_size, 0);
 		if (addr == NULL) {
-			printf("contigmalloc failed for buffer %d\n", i);
+			if (contigmem_numa_domain >= 0)
+				printf("contigmem: buffer %d: no contiguous memory in NUMA domain %d\n",
+						i, contigmem_numa_domain);
+			else
+				printf("contigmalloc failed for buffer %d\n", i);
 			error = ENOMEM;
 			goto error;
 		}

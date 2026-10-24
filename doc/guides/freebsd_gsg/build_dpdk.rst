@@ -107,6 +107,29 @@ Mapped buffers can be included in core dump using the following tunable::
    Buffers typically hold data processed by the application,
    like network packets, which may contain sensitive information.
 
+On multi-socket systems, the buffers can be allocated from a specific
+NUMA domain using the following tunable::
+
+   hw.contigmem.numa_domain=d
+
+Where d is a domain number from 0 to ``vm.ndomains`` - 1.
+Placing the buffers in the domain local to the NIC and to the cores
+running the DPDK application avoids cross-socket memory traffic.
+The default, -1, allocates buffers from any domain.
+The placement is strict: the module fails to load
+if the requested domain cannot provide all buffers
+or if the value is out of range.
+The tunable takes effect only when the module is loaded.
+The NUMA domain of a device can be found using
+``sysctl dev.<driver>.<unit>.%domain``,
+for example ``sysctl dev.ice.0.%domain``.
+
+.. note::
+
+   The FreeBSD EAL reports all lcores and all contigmem memory as socket 0.
+   This tunable changes only the physical placement of the buffers;
+   applications should keep requesting memory from socket 0 or ``SOCKET_ID_ANY``.
+
 The kernel environment variables can also be specified during boot by placing the
 following in ``/boot/loader.conf``:
 
