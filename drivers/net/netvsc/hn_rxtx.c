@@ -1131,15 +1131,19 @@ retry:
 
 		if (unlikely(ret == -ENOBUFS)) {
 			/* event buffer not large enough to read ring */
+			void *old_buf = rxq->event_buf;
 
 			PMD_DRV_LOG(DEBUG,
 				    "event buffer expansion (need %u)", len);
 			rxq->event_sz = len + len / 4;
-			rxq->event_buf = rte_realloc(rxq->event_buf, rxq->event_sz,
+			rxq->event_buf = rte_realloc(old_buf, rxq->event_sz,
 						     RTE_CACHE_LINE_SIZE);
 			if (rxq->event_buf)
 				goto retry;
-			/* out of memory, no more events now */
+			/*
+			 * out of memory, free the old buffer, no more events now
+			 */
+			rte_free(old_buf);
 			rxq->event_sz = 0;
 			break;
 		}
