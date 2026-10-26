@@ -597,6 +597,19 @@ bool
 mlx5_dev_is_pci(const struct rte_device *dev);
 
 /**
+ * Test device is an auxiliary bus device.
+ *
+ * @param dev
+ *   Pointer to EAL device.
+ *
+ * @return
+ *   True if device is an auxiliary bus device. False otherwise.
+ */
+__rte_internal
+bool
+mlx5_dev_is_auxiliary(const struct rte_device *dev);
+
+/**
  * Test PCI device is a VF device.
  *
  * @param pci_dev

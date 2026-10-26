@@ -138,6 +138,13 @@ driver_get(uint32_t class)
 	return NULL;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_dev_is_auxiliary)
+bool
+mlx5_dev_is_auxiliary(const struct rte_device *dev)
+{
+	return strcmp(dev->bus->name, "auxiliary") == 0;
+}
+
 RTE_EXPORT_INTERNAL_SYMBOL(mlx5_kvargs_process)
 int
 mlx5_kvargs_process(struct mlx5_kvargs_ctrl *mkvlist, const char *const keys[],
