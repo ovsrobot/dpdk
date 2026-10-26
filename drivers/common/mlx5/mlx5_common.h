@@ -565,6 +565,7 @@ mlx5_imported_pd_and_ctx(struct mlx5_common_device *cdev)
  * Initialization function for the driver called during device probing.
  */
 typedef int (mlx5_class_driver_probe_t)(struct mlx5_common_device *cdev,
+					struct rte_device *dev,
 					struct mlx5_kvargs_ctrl *mkvlist);
 
 /**
@@ -584,6 +585,7 @@ struct mlx5_class_driver {
 	const struct rte_pci_id *id_table;    /**< ID table, NULL terminated. */
 	uint32_t probe_again:1;
 	/**< Device already probed can be probed again to check new device. */
+	uint32_t probe_associated:1; /**< Supports probing using associated devices. */
 	uint32_t intr_lsc:1; /**< Supports link state interrupt. */
 	uint32_t intr_rmv:1; /**< Supports device remove interrupt. */
 };

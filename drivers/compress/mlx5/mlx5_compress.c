@@ -820,6 +820,7 @@ mlx5_compress_fill_caps(struct mlx5_compress_priv *priv,
 
 static int
 mlx5_compress_dev_probe(struct mlx5_common_device *cdev,
+			struct rte_device *dev __rte_unused,
 			struct mlx5_kvargs_ctrl *mkvlist)
 {
 	struct rte_compressdev *compressdev;

@@ -813,6 +813,7 @@ mlx5_vdpa_create_dev_resources(struct mlx5_vdpa_priv *priv)
 
 static int
 mlx5_vdpa_dev_probe(struct mlx5_common_device *cdev,
+		    struct rte_device *dev __rte_unused,
 		    struct mlx5_kvargs_ctrl *mkvlist)
 {
 	struct mlx5_vdpa_priv *priv = NULL;

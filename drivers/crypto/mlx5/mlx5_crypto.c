@@ -344,6 +344,7 @@ mlx5_crypto_parse_devargs(struct mlx5_kvargs_ctrl *mkvlist,
 
 static int
 mlx5_crypto_dev_probe(struct mlx5_common_device *cdev,
+		      struct rte_device *dev __rte_unused,
 		      struct mlx5_kvargs_ctrl *mkvlist)
 {
 	struct rte_cryptodev *crypto_dev;

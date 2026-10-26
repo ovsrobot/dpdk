@@ -900,6 +900,7 @@ mlx5_os_get_allmulti(struct rte_eth_dev *dev)
  */
 int
 mlx5_os_net_probe(struct mlx5_common_device *cdev,
+		  struct rte_device *dev __rte_unused,
 		  struct mlx5_kvargs_ctrl *mkvlist)
 {
 	struct rte_pci_device *pci_dev = RTE_BUS_DEVICE(cdev->dev, *pci_dev);

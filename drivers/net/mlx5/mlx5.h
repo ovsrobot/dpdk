@@ -2636,6 +2636,7 @@ struct rte_pci_driver;
 int mlx5_os_capabilities_prepare(struct mlx5_dev_ctx_shared *sh);
 void mlx5_os_free_shared_dr(struct mlx5_priv *priv);
 int mlx5_os_net_probe(struct mlx5_common_device *cdev,
+		      struct rte_device *dev,
 		      struct mlx5_kvargs_ctrl *mkvlist);
 void mlx5_os_dev_shared_handler_install(struct mlx5_dev_ctx_shared *sh);
 void mlx5_os_dev_shared_handler_uninstall(struct mlx5_dev_ctx_shared *sh);

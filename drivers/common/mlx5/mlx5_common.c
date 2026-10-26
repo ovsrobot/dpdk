@@ -470,13 +470,30 @@ mlx5_bus_match(const struct mlx5_class_driver *drv,
 	return true;
 }
 
+static bool
+mlx5_associated_device_contains(struct mlx5_common_device *cdev,
+			        const struct rte_device *rte_dev)
+{
+	struct mlx5_associated_device *assoc;
+
+	TAILQ_FOREACH(assoc, &cdev->associated_devices, next) {
+		if (assoc->is_rte_device && rte_dev == assoc->dev)
+			return true;
+
+		if (mlx5_dev_matches(rte_dev, assoc->info.bus_name, assoc->info.dev_name))
+			return true;
+	}
+
+	return false;
+}
+
 static struct mlx5_common_device *
 to_mlx5_device(const struct rte_device *rte_dev)
 {
 	struct mlx5_common_device *cdev;
 
 	TAILQ_FOREACH(cdev, &devices_list, next) {
-		if (rte_dev == cdev->dev)
+		if (mlx5_associated_device_contains(cdev, rte_dev))
 			return cdev;
 	}
 	return NULL;
@@ -981,7 +998,9 @@ drivers_remove(struct mlx5_common_device *cdev, uint32_t enabled_classes)
 }
 
 static int
-drivers_probe(struct mlx5_common_device *cdev, uint32_t user_classes,
+drivers_probe(struct mlx5_common_device *cdev,
+	      struct rte_device *dev,
+	      uint32_t user_classes,
 	      struct mlx5_kvargs_ctrl *mkvlist)
 {
 	struct mlx5_class_driver *driver;
@@ -992,16 +1011,21 @@ drivers_probe(struct mlx5_common_device *cdev, uint32_t user_classes,
 	TAILQ_FOREACH(driver, &drivers_list, next) {
 		if ((driver->drv_class & user_classes) == 0)
 			continue;
-		if (!mlx5_bus_match(driver, cdev->dev))
+		if (!mlx5_bus_match(driver, dev))
 			continue;
+		if (!driver->probe_associated && cdev->dev != dev) {
+			DRV_LOG(ERR, "Invalid device %s used to probe on common device %s",
+				dev->name, cdev->dev->name);
+			ret = -EINVAL;
+			goto probe_err;
+		}
 		already_loaded = cdev->classes_loaded & driver->drv_class;
 		if (already_loaded && driver->probe_again == 0) {
-			DRV_LOG(ERR, "Device %s is already probed",
-				cdev->dev->name);
+			DRV_LOG(ERR, "Device %s is already probed", dev->name);
 			ret = -EEXIST;
 			goto probe_err;
 		}
-		ret = driver->probe(cdev, mkvlist);
+		ret = driver->probe(cdev, dev, mkvlist);
 		if (ret < 0) {
 			DRV_LOG(ERR, "Failed to load driver %s",
 				driver->name);
@@ -1091,7 +1115,7 @@ mlx5_common_dev_probe(struct rte_device *eal_dev)
 		DRV_LOG(ERR, "Unsupported mlx5 classes combination.");
 		goto class_err;
 	}
-	ret = drivers_probe(cdev, classes, mkvlist_p);
+	ret = drivers_probe(cdev, eal_dev, classes, mkvlist_p);
 	if (ret)
 		goto class_err;
 	/*

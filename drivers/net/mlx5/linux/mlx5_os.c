@@ -3163,6 +3163,8 @@ mlx5_os_auxiliary_probe(struct mlx5_common_device *cdev,
  *
  * @param[in] cdev
  *   Pointer to the common mlx5 device.
+ * @param[in] dev
+ *   Pointer to the probed EAL device.
  * @param[in, out] mkvlist
  *   Pointer to mlx5 kvargs control, can be NULL if there is no devargs.
  *
@@ -3171,6 +3173,7 @@ mlx5_os_auxiliary_probe(struct mlx5_common_device *cdev,
  */
 int
 mlx5_os_net_probe(struct mlx5_common_device *cdev,
+		  struct rte_device *dev __rte_unused,
 		  struct mlx5_kvargs_ctrl *mkvlist)
 {
 	int ret;
