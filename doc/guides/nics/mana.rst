@@ -109,3 +109,11 @@ To distinguish a PCI hot-remove from a service reset,
 the driver registers for PCI device removal events.
 This requires the application to call ``rte_dev_event_monitor_start()``
 for removal events to be delivered (e.g. testpmd ``--hot-plug-handling`` option).
+
+Limitations
+-----------
+
+* For TSO packets where the first segment contains packet payload beyond the
+  headers, an additional scatter-gather entry is required for the header.
+  In this case, the effective maximum number of segments supported is
+  ``nb_seg_max - 1``.
