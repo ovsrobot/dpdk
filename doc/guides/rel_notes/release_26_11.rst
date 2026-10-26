@@ -264,6 +264,14 @@ New Features
   Added ``dpdk-validate-bpf`` tool to pre-validate eBPF programs
   for compatibility with the ``lib/bpf`` execution context.
 
+* **Added AMD NTB support to the NTB rawdev driver.**
+
+  Added support for the NTB endpoints integrated in AMD EPYC Embedded
+  "Turin", "Genoa" and "Siena" processors to the ``raw/ntb`` driver.
+  The NTB rawdev framework was generalized to support multiple vendors,
+  with AMD-specific hardware access, a primary/secondary topology and a
+  packed scratchpad handshake.
+
 
 Removed Items
 -------------
