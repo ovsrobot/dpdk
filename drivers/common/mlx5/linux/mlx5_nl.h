@@ -62,11 +62,17 @@ struct mlx5_nl_port_info {
 /* Maximum length of parent device bus name. */
 #define MLX5_PARENT_DEV_BUS_NAME_MAX 128
 
+/* Maximum length of a name stored inside netdev info */
+#define MLX5_NETDEV_INFO_NAME_MAX 128
+
 #define MLX5_NETDEV_INFO_FLAG_NUM_VF RTE_BIT32(0)
 #define MLX5_NETDEV_INFO_FLAG_PHYS_PORT_NAME RTE_BIT32(1)
 #define MLX5_NETDEV_INFO_FLAG_PHYS_SWITCH_ID RTE_BIT32(2)
 #define MLX5_NETDEV_INFO_FLAG_PARENT_DEV_NAME RTE_BIT32(3)
 #define MLX5_NETDEV_INFO_FLAG_PARENT_DEV_BUS_NAME RTE_BIT32(4)
+#define MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_BUS_NAME RTE_BIT32(5)
+#define MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_DEV_NAME RTE_BIT32(6)
+#define MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_INDEX RTE_BIT32(7)
 
 struct mlx5_netdev_info {
 	unsigned int ifindex; /* [in] */
@@ -76,7 +82,18 @@ struct mlx5_netdev_info {
 	uint64_t phys_switch_id; /* [out] */
 	char parent_dev_name[MLX5_PARENT_DEV_NAME_MAX]; /* [out] */
 	char parent_dev_bus_name[MLX5_PARENT_DEV_BUS_NAME_MAX]; /* [out] */
+	char devlink_port_bus_name[MLX5_NETDEV_INFO_NAME_MAX]; /* [out] */
+	char devlink_port_dev_name[MLX5_NETDEV_INFO_NAME_MAX]; /* [out] */
+	uint32_t devlink_port_index; /* [out] */
 };
+
+static inline bool
+mlx5_netdev_info_has_devlink_port(struct mlx5_netdev_info *info)
+{
+	return (info->flags & MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_BUS_NAME) &&
+	       (info->flags & MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_DEV_NAME) &&
+	       (info->flags & MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_INDEX);
+}
 
 __rte_internal
 int mlx5_nl_init(int protocol, int groups);

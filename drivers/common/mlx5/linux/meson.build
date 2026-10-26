@@ -158,6 +158,8 @@ has_sym_args = [
             'IFLA_PARENT_DEV_NAME' ],
         [ 'HAVE_IFLA_PARENT_DEV_BUS_NAME', 'linux/if_link.h',
             'IFLA_PARENT_DEV_BUS_NAME' ],
+        [ 'HAVE_IFLA_DEVLINK_PORT', 'linux/if_link.h',
+            'IFLA_DEVLINK_PORT' ],
         [ 'HAVE_RDMA_NL_NLDEV', 'rdma/rdma_netlink.h',
             'RDMA_NL_NLDEV' ],
         [ 'HAVE_RDMA_NLDEV_CMD_GET', 'rdma/rdma_netlink.h',

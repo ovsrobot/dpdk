@@ -119,6 +119,9 @@
 #ifndef HAVE_IFLA_PARENT_DEV_BUS_NAME
 #define IFLA_PARENT_DEV_BUS_NAME 57
 #endif
+#ifndef HAVE_IFLA_DEVLINK_PORT
+#define IFLA_DEVLINK_PORT 62
+#endif
 
 /*
  * Some Devlink defines may be missed in old kernel versions,
@@ -1385,6 +1388,64 @@ mlx5_nl_portnum(int nl, const char *name, struct mlx5_dev_info *dev_info)
 	return mlx5_dev_info_set_portnum(name, dev_info, &data);
 }
 
+static inline bool
+nla_ok(const struct nlattr *nla, const ssize_t len)
+{
+	return len >= NLA_HDRLEN &&
+	       nla->nla_len >= NLA_HDRLEN &&
+	       nla->nla_len <= len;
+}
+
+static inline struct nlattr *
+nla_next(struct nlattr *nla, ssize_t *len)
+{
+	ptrdiff_t off = NLA_ALIGN(nla->nla_len);
+
+	*len -= off;
+	return RTE_PTR_ADD(nla, off);
+}
+
+static void
+parse_ifla_devlink_port(void *payload, ssize_t len, struct mlx5_netdev_info *info)
+{
+	struct nlattr *nla = payload;
+	uint32_t *val;
+	size_t payload_len;
+	char *src;
+
+	while (nla_ok(nla, len)) {
+		payload_len = nla->nla_len - NLA_HDRLEN;
+
+		switch (nla->nla_type & NLA_TYPE_MASK) {
+		case DEVLINK_ATTR_BUS_NAME:
+			if (payload_len > 0 && payload_len < MLX5_NETDEV_INFO_NAME_MAX) {
+				src = RTE_PTR_ADD(nla, NLA_HDRLEN);
+				memcpy(info->devlink_port_bus_name, src, payload_len);
+				info->devlink_port_bus_name[payload_len] = 0;
+				info->flags |= MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_BUS_NAME;
+			}
+			break;
+		case DEVLINK_ATTR_DEV_NAME:
+			if (payload_len > 0 && payload_len < MLX5_NETDEV_INFO_NAME_MAX) {
+				src = RTE_PTR_ADD(nla, NLA_HDRLEN);
+				memcpy(info->devlink_port_dev_name, src, payload_len);
+				info->devlink_port_dev_name[payload_len] = 0;
+				info->flags |= MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_DEV_NAME;
+			}
+			break;
+		case DEVLINK_ATTR_PORT_INDEX:
+			if (payload_len < sizeof(uint32_t))
+				break;
+			val = RTE_PTR_ADD(nla, NLA_HDRLEN);
+			info->devlink_port_index = *val;
+			info->flags |= MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_INDEX;
+			break;
+		}
+
+		nla = nla_next(nla, &len);
+	}
+}
+
 static int
 mlx5_nl_netdev_info_cb(struct nlmsghdr *nh, void *arg)
 {
@@ -1409,7 +1470,7 @@ mlx5_nl_netdev_info_cb(struct nlmsghdr *nh, void *arg)
 		void *payload = RTA_DATA(ra);
 		unsigned int i;
 
-		switch (ra->rta_type) {
+		switch (ra->rta_type & NLA_TYPE_MASK) {
 		case IFLA_NUM_VF:
 			if (RTA_PAYLOAD(ra) < sizeof(uint32_t))
 				goto error;
@@ -1450,6 +1511,10 @@ mlx5_nl_netdev_info_cb(struct nlmsghdr *nh, void *arg)
 				info.parent_dev_bus_name[payload_len] = '\0';
 				info.flags |= MLX5_NETDEV_INFO_FLAG_PARENT_DEV_BUS_NAME;
 			}
+			break;
+		case IFLA_DEVLINK_PORT:
+			payload_len = RTA_PAYLOAD(ra);
+			parse_ifla_devlink_port(payload, payload_len, &info);
 			break;
 		}
 	}
