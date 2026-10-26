@@ -282,5 +282,6 @@ mlx5_os_interrupt_handler_destroy(struct rte_intr_handle *intr_handle,
 	(void)cb_arg;
 }
 
+int mlx5_os_fill_associated_devices(struct mlx5_common_device *cdev);
 
 #endif /* RTE_PMD_MLX5_COMMON_OS_H_ */

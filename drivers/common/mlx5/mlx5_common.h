@@ -515,6 +515,22 @@ struct mlx5_common_dev_config {
 	/* Whether memseg should be extended for MR creation. */
 };
 
+struct mlx5_associated_device_info {
+	const char *bus_name;
+	const char *dev_name;
+};
+
+struct mlx5_associated_device {
+	TAILQ_ENTRY(mlx5_associated_device) next;
+	bool is_rte_device;
+	union {
+		const struct rte_device *dev;
+		struct mlx5_associated_device_info info;
+	};
+};
+
+TAILQ_HEAD(mlx5_associated_device_list, mlx5_associated_device);
+
 struct mlx5_common_device {
 	struct rte_device *dev;
 	TAILQ_ENTRY(mlx5_common_device) next;
@@ -525,6 +541,7 @@ struct mlx5_common_device {
 	uint32_t pdn; /* Protection Domain Number. */
 	struct mlx5_mr_share_cache mr_scache; /* Global shared MR cache. */
 	struct mlx5_common_dev_config config; /* Device configuration. */
+	struct mlx5_associated_device_list associated_devices;
 };
 
 /**
@@ -668,5 +685,8 @@ mlx5_os_wrapped_mkey_create(void *ctx, void *pd, uint32_t pdn, void *addr,
 __rte_internal
 void
 mlx5_os_wrapped_mkey_destroy(struct mlx5_pmd_wrapped_mr *pmd_mr);
+
+__rte_internal
+bool mlx5_dev_matches(const struct rte_device *dev, const char *bus_name, const char *dev_name);
 
 #endif /* RTE_PMD_MLX5_COMMON_H_ */

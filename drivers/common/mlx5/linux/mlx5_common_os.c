@@ -1251,3 +1251,167 @@ end:
 	closedir(net_dir);
 	return result;
 }
+
+static bool
+associated_device_matches_dev(const struct mlx5_associated_device *assoc,
+			      const char *bus_name,
+			      const char *dev_name)
+{
+	return assoc->is_rte_device && mlx5_dev_matches(assoc->dev, bus_name, dev_name);
+}
+
+static bool
+associated_device_matches_info(const struct mlx5_associated_device *assoc,
+			       const char *bus_name,
+			       const char *dev_name)
+{
+	return !assoc->is_rte_device &&
+	       strcmp(assoc->info.bus_name, bus_name) == 0 &&
+	       strcmp(assoc->info.dev_name, dev_name) == 0;
+}
+
+static bool
+associated_device_exists(const struct mlx5_common_device *cdev,
+			 const char *bus_name,
+			 const char *dev_name)
+{
+	struct mlx5_associated_device *assoc;
+
+	TAILQ_FOREACH(assoc, &cdev->associated_devices, next) {
+		if (associated_device_matches_dev(assoc, bus_name, dev_name) ||
+		    associated_device_matches_info(assoc, bus_name, dev_name))
+			return true;
+	}
+
+	return false;
+}
+
+static struct mlx5_associated_device *
+associated_device_alloc(const char *bus_name, const char *dev_name)
+{
+	struct mlx5_associated_device *assoc;
+	size_t bus_name_len;
+	size_t dev_name_len;
+	size_t size;
+	char *dst;
+
+	bus_name_len = strlen(bus_name) + 1;
+	dev_name_len = strlen(dev_name) + 1;
+
+	size = sizeof(*assoc);
+	size += bus_name_len;
+	size += dev_name_len;
+
+	assoc = mlx5_malloc(MLX5_MEM_ZERO, size, 0, SOCKET_ID_ANY);
+	if (!assoc)
+		return NULL;
+
+	assoc->is_rte_device = false;
+
+	dst = (void *)(assoc + 1);
+	memcpy(dst, bus_name, bus_name_len);
+	assoc->info.bus_name = dst;
+
+	dst = RTE_PTR_ADD(dst, bus_name_len);
+	memcpy(dst, dev_name, dev_name_len);
+	assoc->info.dev_name = dst;
+
+	return assoc;
+}
+
+int
+mlx5_os_fill_associated_devices(struct mlx5_common_device *cdev)
+{
+	struct mlx5_associated_device *assoc;
+	struct ibv_device *ibdev;
+	unsigned int portnum;
+	int nl_route = -1;
+	int nl_rdma;
+	int ret = 0;
+
+	MLX5_ASSERT(cdev != NULL);
+	MLX5_ASSERT(cdev->dev != NULL);
+	MLX5_ASSERT(TAILQ_EMPTY(&cdev->associated_devices));
+
+	assoc = mlx5_malloc(MLX5_MEM_ZERO, sizeof(*assoc), 0, SOCKET_ID_ANY);
+	if (!assoc)
+		return -ENOMEM;
+	assoc->is_rte_device = true;
+	assoc->dev = cdev->dev;
+	TAILQ_INSERT_HEAD(&cdev->associated_devices, assoc, next);
+
+	ibdev = ((struct ibv_context *)cdev->ctx)->device;
+
+	nl_rdma = mlx5_nl_init(NETLINK_RDMA, 0);
+	if (nl_rdma < 0) {
+		ret = -rte_errno;
+		goto release_return;
+	}
+
+	portnum = mlx5_nl_portnum(nl_rdma, ibdev->name, NULL);
+	if (portnum == 0) {
+		ret = -rte_errno;
+		goto release_return;
+	}
+	if (portnum == 1) {
+		ret = 0;
+		goto release_return;
+	}
+
+	nl_route = mlx5_nl_init(NETLINK_ROUTE, 0);
+	if (nl_route < 0) {
+		ret = -rte_errno;
+		goto release_return;
+	}
+
+	for (unsigned int port = 1; port <= portnum; ++port) {
+		struct mlx5_netdev_info netdev_info = { 0 };
+
+		netdev_info.ifindex = mlx5_nl_ifindex(nl_rdma, ibdev->name, port, NULL);
+		if (netdev_info.ifindex == 0)
+			continue;
+
+		ret = mlx5_nl_netdev_info_get(nl_route, &netdev_info);
+		if (ret < 0) {
+			/*
+			 * On any failure just skip and don't add the device
+			 * to the associated devices list.
+			 */
+			DRV_LOG(DEBUG,
+				"ibdev %s port %u ifindex %u failed to get netdev info (%s)",
+				ibdev->name, port, netdev_info.ifindex, rte_strerror(-ret));
+			ret = 0;
+			continue;
+		}
+
+		if (!(netdev_info.flags & MLX5_NETDEV_INFO_FLAG_PARENT_DEV_NAME) ||
+		    !(netdev_info.flags & MLX5_NETDEV_INFO_FLAG_PARENT_DEV_BUS_NAME))
+			continue;
+
+		if (associated_device_exists(cdev,
+					     netdev_info.parent_dev_bus_name,
+					     netdev_info.parent_dev_name))
+			continue;
+
+		assoc = associated_device_alloc(netdev_info.parent_dev_bus_name,
+						netdev_info.parent_dev_name);
+		if (assoc == NULL) {
+			ret = -ENOMEM;
+			goto release_return;
+		}
+
+		TAILQ_INSERT_HEAD(&cdev->associated_devices, assoc, next);
+	}
+
+release_return:
+	while (ret < 0 && !TAILQ_EMPTY(&cdev->associated_devices)) {
+		assoc = TAILQ_FIRST(&cdev->associated_devices);
+		TAILQ_REMOVE(&cdev->associated_devices, assoc, next);
+		mlx5_free(assoc);
+	}
+	if (nl_rdma >= 0)
+		close(nl_rdma);
+	if (nl_route >= 0)
+		close(nl_route);
+	return ret;
+}

@@ -756,12 +756,25 @@ error:
 }
 
 static void
+mlx5_associated_devices_release(struct mlx5_common_device *cdev)
+{
+	struct mlx5_associated_device *assoc;
+
+	while (!TAILQ_EMPTY(&cdev->associated_devices)) {
+		assoc = TAILQ_FIRST(&cdev->associated_devices);
+		TAILQ_REMOVE(&cdev->associated_devices, assoc, next);
+		mlx5_free(assoc);
+	}
+}
+
+static void
 mlx5_common_dev_release(struct mlx5_common_device *cdev)
 {
 	pthread_mutex_lock(&devices_list_lock);
 	TAILQ_REMOVE(&devices_list, cdev, next);
 	pthread_mutex_unlock(&devices_list_lock);
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		mlx5_associated_devices_release(cdev);
 		if (TAILQ_EMPTY(&devices_list))
 			rte_mem_event_callback_unregister("MLX5_MEM_EVENT_CB",
 							  NULL);
@@ -791,6 +804,7 @@ mlx5_common_dev_create(struct rte_device *eal_dev, uint32_t classes,
 		return NULL;
 	}
 	cdev->dev = eal_dev;
+	TAILQ_INIT(&cdev->associated_devices);
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		goto exit;
 	/* Parse device parameters. */
@@ -822,6 +836,16 @@ mlx5_common_dev_create(struct rte_device *eal_dev, uint32_t classes,
 		rte_mem_event_callback_register("MLX5_MEM_EVENT_CB",
 						mlx5_mr_mem_event_cb, NULL);
 	cdev->dev_info.probe_opt = cdev->config.probe_opt;
+
+	ret = mlx5_os_fill_associated_devices(cdev);
+	if (ret < 0) {
+		DRV_LOG(DEBUG,
+			"cdev %s Failed to initialize associated devices list. "
+			"Only owner device is allowed",
+			cdev->dev->name);
+		rte_errno = 0;
+	}
+
 exit:
 	pthread_mutex_lock(&devices_list_lock);
 	TAILQ_INSERT_HEAD(&devices_list, cdev, next);
@@ -1466,6 +1490,34 @@ mlx5_devx_uar_prepare(struct mlx5_common_device *cdev, struct mlx5_uar *uar)
 	uar->cq_db.sl_p = &uar->cq_sl;
 #endif /* RTE_ARCH_64 */
 	return 0;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_dev_matches)
+bool
+mlx5_dev_matches(const struct rte_device *dev,
+		 const char *bus_name,
+		 const char *dev_name)
+{
+	if (strcmp(dev->bus->name, bus_name) != 0)
+		return false;
+
+	if (mlx5_dev_is_pci(dev)) {
+		const struct rte_pci_device *pci_dev = RTE_BUS_DEVICE(dev, *pci_dev);
+		struct rte_pci_addr addr;
+
+		if (rte_pci_addr_parse(dev_name, &addr) < 0)
+			return false;
+
+		return rte_pci_addr_cmp(&addr, &pci_dev->addr) == 0;
+	}
+
+	if (mlx5_dev_is_auxiliary(dev)) {
+		const struct rte_auxiliary_device *aux_dev = RTE_BUS_DEVICE(dev, *aux_dev);
+
+		return strcmp(dev_name, aux_dev->name) == 0;
+	}
+
+	return false;
 }
 
 RTE_PMD_EXPORT_NAME(mlx5_common_driver);

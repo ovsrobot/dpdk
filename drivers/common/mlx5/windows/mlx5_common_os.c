@@ -493,3 +493,22 @@ mlx5_os_wrapped_mkey_destroy(struct mlx5_pmd_wrapped_mr *wpmd_mr)
 	mlx5_os_dereg_mr(&pmd_mr);
 	memset(wpmd_mr, 0, sizeof(*wpmd_mr));
 }
+
+int
+mlx5_os_fill_associated_devices(struct mlx5_common_device *cdev)
+{
+	struct mlx5_associated_device *assoc;
+
+	MLX5_ASSERT(cdev != NULL);
+	MLX5_ASSERT(cdev->dev != NULL);
+	MLX5_ASSERT(TAILQ_EMPTY(&cdev->associated_devices));
+
+	assoc = mlx5_malloc(MLX5_MEM_ZERO, sizeof(*assoc), 0, SOCKET_ID_ANY);
+	if (!assoc)
+		return -ENOMEM;
+	assoc->is_rte_device = true;
+	assoc->dev = cdev->dev;
+	TAILQ_INSERT_HEAD(&cdev->associated_devices, assoc, next);
+
+	return 0;
+}

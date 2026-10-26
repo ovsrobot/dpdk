@@ -22,6 +22,8 @@
 #include "mlx5_glue.h"
 #include "mlx5_malloc.h"
 
+struct mlx5_common_device;
+
 /* verb enumerations translations to local enums. */
 enum {
 	MLX5_FS_NAME_MAX = IBV_SYSFS_NAME_MAX + 1,
@@ -325,5 +327,7 @@ mlx5_os_interrupt_handler_destroy(struct rte_intr_handle *intr_handle,
  */
 __rte_internal
 bool mlx5_os_is_device_bond(const void *dev);
+
+int mlx5_os_fill_associated_devices(struct mlx5_common_device *cdev);
 
 #endif /* RTE_PMD_MLX5_COMMON_OS_H_ */
