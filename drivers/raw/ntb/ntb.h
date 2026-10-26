@@ -88,7 +88,6 @@ enum ntb_spad_idx {
  * NTB device operations
  * @ntb_dev_init: Init ntb dev.
  * @get_peer_mw_addr: To get the addr of peer mw[mw_idx].
- * @mw_set_trans: Set translation of internal memory that remote can access.
  * @ioremap: Translate the remote host address to bar address.
  * @get_link_status: get link status, link speed and link width.
  * @set_link: Set local side up/down.
@@ -100,12 +99,21 @@ enum ntb_spad_idx {
  * for those db bits.
  * @peer_db_set: Set doorbell bit to generate peer interrupt for that bit.
  * @vector_bind: Bind vector source [intr] to msix vector [msix].
+ * @dev_handshake: Advertise the local configuration to the peer, program
+ * the memory-window translations and signal readiness.
+ * @peer_mw_validate: Validate that the peer's advertised memory-window
+ * layout matches the local one.
+ * @read_peer_config: Read and validate the peer configuration at start.
+ * @link_cleanup: Tear down the local scratchpad/translation state so the
+ * peer can no longer reach local memory.
+ * @mem_align: Base-address alignment required for a memory window memzone
+ * of a given length.
+ * @handle_hw_event: Optional. Process vendor-specific hardware events from
+ * the common interrupt handler. May be NULL.
  */
 struct ntb_dev_ops {
 	int (*ntb_dev_init)(const struct rte_rawdev *dev);
 	void *(*get_peer_mw_addr)(const struct rte_rawdev *dev, int mw_idx);
-	int (*mw_set_trans)(const struct rte_rawdev *dev, int mw_idx,
-			    uint64_t addr, uint64_t size);
 	void *(*ioremap)(const struct rte_rawdev *dev, uint64_t addr);
 	int (*get_link_status)(const struct rte_rawdev *dev);
 	int (*set_link)(const struct rte_rawdev *dev, bool up);
@@ -119,6 +127,13 @@ struct ntb_dev_ops {
 	int (*peer_db_set)(const struct rte_rawdev *dev, uint8_t db_bit);
 	int (*vector_bind)(const struct rte_rawdev *dev, uint8_t intr,
 			   uint8_t msix);
+	int (*dev_handshake)(const struct rte_rawdev *dev);
+	int (*peer_mw_validate)(const struct rte_rawdev *dev);
+	int (*read_peer_config)(const struct rte_rawdev *dev);
+	void (*link_cleanup)(const struct rte_rawdev *dev);
+	uint64_t (*mem_align)(const struct rte_rawdev *dev, uint32_t mw_id,
+			      uint64_t mw_len);
+	void (*handle_hw_event)(const struct rte_rawdev *dev);
 };
 
 struct ntb_desc {

@@ -545,6 +545,11 @@ API Changes
   * ``rte_tel_data_add_dict_uint_hex``
   * ``rte_telemetry_register_cmd_arg``
 
+* raw/ntb: Removed the ``mw_size_align`` field from ``struct ntb_dev_info``.
+  Applications must now query the required memory window base-address
+  alignment with the new ``rte_pmd_ntb_get_mem_align()`` function
+  instead of relying on this field.
+
 
 ABI Changes
 -----------
