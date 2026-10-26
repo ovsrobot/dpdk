@@ -53,6 +53,21 @@ struct mlx5_nl_port_info {
 #define MLX5_NL_RDMA_NETDEV_ATTACH_EVENT (1)
 #define MLX5_NL_RDMA_NETDEV_DETACH_EVENT (2)
 
+/* Maximal physical port name length. */
+#define MLX5_PHYS_PORT_NAME_MAX 128
+
+#define MLX5_NETDEV_INFO_FLAG_NUM_VF RTE_BIT32(0)
+#define MLX5_NETDEV_INFO_FLAG_PHYS_PORT_NAME RTE_BIT32(1)
+#define MLX5_NETDEV_INFO_FLAG_PHYS_SWITCH_ID RTE_BIT32(2)
+
+struct mlx5_netdev_info {
+	unsigned int ifindex; /* [in] */
+	uint32_t flags; /* [out] */
+	uint32_t num_vf; /* [out] */
+	char phys_port_name[MLX5_PHYS_PORT_NAME_MAX]; /* [out] */
+	uint64_t phys_switch_id; /* [out] */
+};
+
 __rte_internal
 int mlx5_nl_init(int protocol, int groups);
 __rte_internal
@@ -118,5 +133,7 @@ int mlx5_nl_rdma_monitor_cap_get(int nl, uint8_t *cap);
 
 __rte_internal
 int mlx5_nl_get_mtu_bounds(int nl, unsigned int ifindex, uint16_t *min_mtu, uint16_t *max_mtu);
+
+int mlx5_nl_netdev_info_get(int nl, struct mlx5_netdev_info *info);
 
 #endif /* RTE_PMD_MLX5_NL_H_ */

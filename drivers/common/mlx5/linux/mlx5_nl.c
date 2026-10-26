@@ -32,8 +32,6 @@
 #define MLX5_SEND_BUF_SIZE 32768
 /* Receive buffer size for the Netlink socket */
 #define MLX5_RECV_BUF_SIZE 32768
-/* Maximal physical port name length. */
-#define MLX5_PHYS_PORT_NAME_MAX 128
 
 /** Parameters of VLAN devices created by driver. */
 #define MLX5_VMWA_VLAN_DEVICE_PFX "evmlx"
@@ -1381,6 +1379,111 @@ mlx5_nl_portnum(int nl, const char *name, struct mlx5_dev_info *dev_info)
 	return mlx5_dev_info_set_portnum(name, dev_info, &data);
 }
 
+static int
+mlx5_nl_netdev_info_cb(struct nlmsghdr *nh, void *arg)
+{
+	struct mlx5_netdev_info *out = arg;
+	struct mlx5_netdev_info info;
+	struct rtattr *ra;
+	int payload_len;
+	int off;
+	int len;
+
+	if (nh->nlmsg_type != RTM_NEWLINK)
+		goto error;
+
+	memset(&info, 0, sizeof(info));
+	info.ifindex = out->ifindex;
+
+	off = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+	len = nh->nlmsg_len - off;
+	for (ra = RTE_PTR_ADD(nh, off);
+	     RTA_OK(ra, len);
+	     ra = RTA_NEXT(ra, len)) {
+		void *payload = RTA_DATA(ra);
+		unsigned int i;
+
+		switch (ra->rta_type) {
+		case IFLA_NUM_VF:
+			if (RTA_PAYLOAD(ra) < sizeof(uint32_t))
+				goto error;
+			info.num_vf = *(uint32_t *)payload;
+			info.flags |= MLX5_NETDEV_INFO_FLAG_NUM_VF;
+			break;
+		case IFLA_PHYS_PORT_NAME:
+			payload_len = RTA_PAYLOAD(ra);
+			/* Some kernels do not pad attributes with zero. */
+			if (payload_len > 0 && payload_len < MLX5_PHYS_PORT_NAME_MAX) {
+				memcpy(info.phys_port_name, payload, payload_len);
+				info.phys_port_name[payload_len] = '\0';
+				info.flags |= MLX5_NETDEV_INFO_FLAG_PHYS_PORT_NAME;
+			}
+			break;
+		case IFLA_PHYS_SWITCH_ID:
+			info.phys_switch_id = 0;
+			for (i = 0; i < RTA_PAYLOAD(ra); ++i) {
+				info.phys_switch_id <<= 8;
+				info.phys_switch_id |= ((uint8_t *)payload)[i];
+			}
+			info.flags |= MLX5_NETDEV_INFO_FLAG_PHYS_SWITCH_ID;
+			break;
+		}
+	}
+	*out = info;
+	return 0;
+error:
+	rte_errno = EINVAL;
+	return -rte_errno;
+}
+
+/**
+ * Query Linux netdev information through netlink.
+ *
+ * Information is queried only for a single interface, selected by ifindex field
+ * in @p info. flags field in @p info will be a bitmap of MLX5_NETDEV_INFO_FLAG_* flags.
+ * Each flag denotes that related field's value was returned by the kernel and can be used.
+ *
+ * @param[in] nl
+ *   Netlink socket file descriptor. Must be opened for NETLINK_ROUTE family.
+ * @param[in,out] info
+ *   Pointer to structure with netdev information.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+int
+mlx5_nl_netdev_info_get(int nl, struct mlx5_netdev_info *info)
+{
+	struct {
+		struct nlmsghdr nh;
+		struct ifinfomsg info;
+		struct rtattr rta;
+		uint32_t extmask;
+	} req = {
+		.nh = {
+			.nlmsg_len = NLMSG_LENGTH(sizeof(req.info) + RTA_LENGTH(sizeof(uint32_t))),
+			.nlmsg_type = RTM_GETLINK,
+			.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
+		},
+		.info = {
+			.ifi_family = AF_UNSPEC,
+			.ifi_index = info->ifindex,
+		},
+		.rta = {
+			.rta_type = IFLA_EXT_MASK,
+			.rta_len = RTA_LENGTH(sizeof(int32_t)),
+		},
+		.extmask = RTE_LE32(1),
+	};
+	uint32_t sn = MLX5_NL_SN_GENERATE;
+	int ret;
+
+	ret = mlx5_nl_send(nl, &req.nh, sn);
+	if (ret >= 0)
+		ret = mlx5_nl_recv(nl, sn, mlx5_nl_netdev_info_cb, info);
+	return ret;
+}
+
 /**
  * Analyze gathered port parameters via Netlink to recognize master
  * and representor devices for E-Switch configuration.
@@ -1435,88 +1538,6 @@ mlx5_nl_check_switch_info(bool num_vf_set,
 }
 
 /**
- * Process switch information from Netlink message.
- *
- * @param nh
- *   Pointer to Netlink message header.
- * @param arg
- *   Opaque data pointer for this callback.
- *
- * @return
- *   0 on success, a negative errno value otherwise and rte_errno is set.
- */
-static int
-mlx5_nl_switch_info_cb(struct nlmsghdr *nh, void *arg)
-{
-	struct mlx5_switch_info info = {
-		.master = 0,
-		.representor = 0,
-		.name_type = MLX5_PHYS_PORT_NAME_TYPE_NOTSET,
-		.port_name = 0,
-		.switch_id = 0,
-	};
-	size_t off = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	bool switch_id_set = false;
-	bool num_vf_set = false;
-	int len;
-
-	if (nh->nlmsg_type != RTM_NEWLINK)
-		goto error;
-	while (off < nh->nlmsg_len) {
-		struct rtattr *ra = (void *)((uintptr_t)nh + off);
-		void *payload = RTA_DATA(ra);
-		unsigned int i;
-
-		if (ra->rta_len > nh->nlmsg_len - off)
-			goto error;
-		switch (ra->rta_type) {
-		case IFLA_NUM_VF:
-			num_vf_set = true;
-			break;
-		case IFLA_PHYS_PORT_NAME:
-			len = RTA_PAYLOAD(ra);
-			/* Some kernels do not pad attributes with zero. */
-			if (len > 0 && len < MLX5_PHYS_PORT_NAME_MAX) {
-				char name[MLX5_PHYS_PORT_NAME_MAX];
-
-				/*
-				 * We can't just patch the message with padding
-				 * zero - it might corrupt the following items
-				 * in the message, we have to copy the string
-				 * by attribute length and pad the copied one.
-				 */
-				memcpy(name, payload, len);
-				name[len] = 0;
-				mlx5_translate_port_name(name, &info);
-			} else {
-				info.name_type =
-					MLX5_PHYS_PORT_NAME_TYPE_UNKNOWN;
-			}
-			break;
-		case IFLA_PHYS_SWITCH_ID:
-			info.switch_id = 0;
-			for (i = 0; i < RTA_PAYLOAD(ra); ++i) {
-				info.switch_id <<= 8;
-				info.switch_id |= ((uint8_t *)payload)[i];
-			}
-			switch_id_set = true;
-			break;
-		}
-		off += RTA_ALIGN(ra->rta_len);
-	}
-	if (switch_id_set) {
-		/* We have some E-Switch configuration. */
-		mlx5_nl_check_switch_info(num_vf_set, &info);
-	}
-	MLX5_ASSERT(!(info.master && info.representor));
-	memcpy(arg, &info, sizeof(info));
-	return 0;
-error:
-	rte_errno = EINVAL;
-	return -rte_errno;
-}
-
-/**
  * Get switch information associated with network interface.
  *
  * @param nl
@@ -1534,35 +1555,30 @@ int
 mlx5_nl_switch_info(int nl, unsigned int ifindex,
 		    struct mlx5_switch_info *info)
 {
-	struct {
-		struct nlmsghdr nh;
-		struct ifinfomsg info;
-		struct rtattr rta;
-		uint32_t extmask;
-	} req = {
-		.nh = {
-			.nlmsg_len = NLMSG_LENGTH
-					(sizeof(req.info) +
-					 RTA_LENGTH(sizeof(uint32_t))),
-			.nlmsg_type = RTM_GETLINK,
-			.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
-		},
-		.info = {
-			.ifi_family = AF_UNSPEC,
-			.ifi_index = ifindex,
-		},
-		.rta = {
-			.rta_type = IFLA_EXT_MASK,
-			.rta_len = RTA_LENGTH(sizeof(int32_t)),
-		},
-		.extmask = RTE_LE32(1),
+	struct mlx5_netdev_info netdev_info = {
+		.ifindex = ifindex,
 	};
-	uint32_t sn = MLX5_NL_SN_GENERATE;
+	bool num_vf_set;
 	int ret;
 
-	ret = mlx5_nl_send(nl, &req.nh, sn);
-	if (ret >= 0)
-		ret = mlx5_nl_recv(nl, sn, mlx5_nl_switch_info_cb, info);
+	ret = mlx5_nl_netdev_info_get(nl, &netdev_info);
+	if (ret < 0)
+		return ret;
+
+	memset(info, 0, sizeof(*info));
+
+	if (netdev_info.flags & MLX5_NETDEV_INFO_FLAG_PHYS_PORT_NAME)
+		mlx5_translate_port_name(netdev_info.phys_port_name, info);
+	else
+		info->name_type = MLX5_PHYS_PORT_NAME_TYPE_NOTSET;
+
+	num_vf_set = !!(netdev_info.flags & MLX5_NETDEV_INFO_FLAG_NUM_VF);
+
+	if (netdev_info.flags & MLX5_NETDEV_INFO_FLAG_PHYS_SWITCH_ID) {
+		info->switch_id = netdev_info.phys_switch_id;
+		mlx5_nl_check_switch_info(num_vf_set, info);
+	}
+
 	if (info->master && info->representor) {
 		DRV_LOG(ERR, "ifindex %u device is recognized as master"
 			     " and as representor", ifindex);
