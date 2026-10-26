@@ -144,7 +144,9 @@ __rte_internal
 int mlx5_nl_vf_mac_addr_modify(int nlsk_fd, unsigned int iface_idx,
 			       struct rte_ether_addr *mac, int vf_index);
 __rte_internal
-int mlx5_nl_switch_info(int nl, unsigned int ifindex,
+int mlx5_nl_switch_info(struct mlx5_common_device *cdev,
+			int nl,
+			unsigned int ifindex,
 			struct mlx5_switch_info *info);
 
 __rte_internal

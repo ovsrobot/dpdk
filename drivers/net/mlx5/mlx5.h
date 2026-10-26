@@ -234,6 +234,7 @@ struct mlx5_dev_spawn_data {
 	const char *phys_dev_name; /**< Name of physical device. */
 	struct rte_eth_dev *eth_dev; /**< Associated Ethernet device. */
 	struct rte_pci_device *pci_dev; /**< Backend PCI device. */
+	struct rte_device *dpdk_dev; /**< Backend DPDK device. */
 	struct mlx5_common_device *cdev; /**< Backend common device. */
 	struct mlx5_bond_info *bond_info;
 };

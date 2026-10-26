@@ -152,6 +152,7 @@ enum mlx5_nl_phys_port_name_type {
 	MLX5_PHYS_PORT_NAME_TYPE_PFVF, /* pf0vf0, kernel ver >= 5.0 */
 	MLX5_PHYS_PORT_NAME_TYPE_PFHPF, /* pf0, kernel ver >= 5.7, HPF rep */
 	MLX5_PHYS_PORT_NAME_TYPE_PFSF, /* pf0sf0, kernel ver >= 5.0 */
+	MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL, /* Virtual devlink port. */
 	MLX5_PHYS_PORT_NAME_TYPE_UNKNOWN, /* Unrecognized. */
 };
 
@@ -169,6 +170,8 @@ struct mlx5_dev_info {
 	struct mlx5_port_nl_info *port_info;
 };
 
+#define MLX5_SWITCH_INFO_PARENT_DEV_NAME_MAX (128)
+
 /** Switch information returned by mlx5_nl_switch_info(). */
 struct mlx5_switch_info {
 	uint32_t master:1; /**< Master device. */
@@ -179,6 +182,8 @@ struct mlx5_switch_info {
 	int32_t port_name; /**< Representor port name. */
 	int32_t mpesw_owner; /**< MPESW owner port number. */
 	uint64_t switch_id; /**< Switch identifier. */
+	char parent_dev_bus_name[MLX5_SWITCH_INFO_PARENT_DEV_NAME_MAX];
+	char parent_dev_name[MLX5_SWITCH_INFO_PARENT_DEV_NAME_MAX];
 };
 
 /* CQE status. */

@@ -177,10 +177,12 @@ mlx5_mac_addr_set(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr)
 	 * need to skip the special cases:
 	 * - HPF on BlueField,
 	 * - SF representors,
-	 * - uplink ports when running in MPESW mode.
+	 * - uplink ports when running in MPESW mode,
+	 * - VIRTUAL switch ports (nested E-Switch).
 	 */
 	if (priv->representor && !mlx5_is_hpf(dev) && !mlx5_is_sf_repr(dev) &&
-	    !priv->mpesw_uplink) {
+	    !priv->mpesw_uplink &&
+	    priv->port_info.type != MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL) {
 		DRV_LOG(DEBUG, "VF represented by port %u setting primary MAC address",
 			dev->data->port_id);
 		if (priv->pf_bond >= 0) {

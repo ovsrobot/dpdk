@@ -3881,7 +3881,7 @@ mlx5_net_remove(struct mlx5_common_device *cdev)
 	uint16_t port_id;
 	int ret = 0;
 
-	RTE_ETH_FOREACH_DEV_OF(port_id, cdev->dev) {
+	MLX5_ETH_FOREACH_SIBLING(port_id, cdev) {
 		/*
 		 * mlx5_dev_close() is not registered to secondary process,
 		 * call the close function explicitly for secondary process.
@@ -3999,6 +3999,7 @@ static struct mlx5_class_driver mlx5_net_driver = {
 	.probe = mlx5_os_net_probe,
 	.remove = mlx5_net_remove,
 	.probe_again = 1,
+	.probe_associated = 1,
 	.intr_lsc = 1,
 	.intr_rmv = 1,
 };

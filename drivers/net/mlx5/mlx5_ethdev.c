@@ -472,6 +472,8 @@ mlx5_representor_id_encode(const struct mlx5_switch_info *info,
 		type = RTE_ETH_REPRESENTOR_PF;
 		pf = info->mpesw_owner;
 		break;
+	case MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL:
+		return UINT16_MAX;
 	case MLX5_PHYS_PORT_NAME_TYPE_PFSF:
 		type = RTE_ETH_REPRESENTOR_SF;
 		break;
@@ -507,10 +509,13 @@ mlx5_representor_info_count_one(struct mlx5_priv *priv)
 	case MLX5_PHYS_PORT_NAME_TYPE_PFSF:
 		/* FALLTHROUGH */
 	case MLX5_PHYS_PORT_NAME_TYPE_UNKNOWN:
-		/* FALLTHROUGH */
-	default:
 		return 1;
+	case MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL:
+		return 0;
 	}
+
+	/* Suppress "control reaches end of non-void function" warning without adding "default". */
+	return 0;
 }
 
 static unsigned int
@@ -605,6 +610,10 @@ mlx5_representor_info_fill_one(struct mlx5_priv *priv,
 		range->id_base = priv->dev_data->port_id;
 		range->id_end = range->id_base;
 		snprintf(range->name, sizeof(range->name), "pf%dvf", range->pf);
+		break;
+	case MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL:
+		/* Rejected by mlx5_representor_info_count_one() */
+		MLX5_ASSERT(false);
 		break;
 	}
 

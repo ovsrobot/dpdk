@@ -1122,6 +1122,9 @@ build_port_name(struct rte_device *dpdk_dev,
 		written += ret;
 		if (written >= (int)name_sz)
 			return written;
+	} else if (spawn->info.name_type == MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL) {
+		/* All relevant information was put in the name. Finish here. */
+		goto end;
 	} else if (spawn->info.representor) {
 		/*
 		 * If port is a representor, then switchdev has been enabled.
@@ -1249,6 +1252,13 @@ mlx5_representor_match(struct mlx5_dev_spawn_data *spawn,
 	bool ignore_ctrl_num = eth_da->nb_mh_controllers == 0 ||
 			       switch_info->name_type == MLX5_PHYS_PORT_NAME_TYPE_UPLINK;
 
+	/*
+	 * Representor on virtual devlink port always match.
+	 * Probing logic filters out unwanted ports before mlx5_dev_spawn() is reached.
+	 */
+	if (switch_info->name_type == MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL)
+		return true;
+
 	switch (eth_da->type) {
 	case RTE_ETH_REPRESENTOR_PF:
 		if (switch_info->name_type != MLX5_PHYS_PORT_NAME_TYPE_UPLINK) {
@@ -1299,8 +1309,6 @@ mlx5_representor_match(struct mlx5_dev_spawn_data *spawn,
 /**
  * Spawn an Ethernet device from Verbs information.
  *
- * @param dpdk_dev
- *   Backing DPDK device.
  * @param spawn
  *   Verbs device parameters (name, port, switch_info) to spawn.
  * @param eth_da
@@ -1316,11 +1324,11 @@ mlx5_representor_match(struct mlx5_dev_spawn_data *spawn,
  *   EEXIST: device is already spawned
  */
 static struct rte_eth_dev *
-mlx5_dev_spawn(struct rte_device *dpdk_dev,
-	       struct mlx5_dev_spawn_data *spawn,
+mlx5_dev_spawn(struct mlx5_dev_spawn_data *spawn,
 	       struct rte_eth_devargs *eth_da,
 	       struct mlx5_kvargs_ctrl *mkvlist)
 {
+	struct rte_device *dpdk_dev = spawn->dpdk_dev;
 	const struct mlx5_switch_info *switch_info = &spawn->info;
 	struct mlx5_dev_ctx_shared *sh = NULL;
 	struct ibv_port_attr port_attr = { .state = IBV_PORT_NOP };
@@ -2477,6 +2485,7 @@ calc_nb_uplinks_hpfs(struct ibv_device **ibv_match,
  */
 static int
 mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
+		     struct rte_device *dev,
 		     struct rte_eth_devargs *req_eth_da,
 		     uint16_t owner_id, struct mlx5_kvargs_ctrl *mkvlist)
 {
@@ -2511,12 +2520,21 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 	 *  >= 0 - MPESW device. Value is the port index of the MPESW owner.
 	 */
 	int mpesw = MLX5_MPESW_PORT_INVALID;
-	struct rte_pci_device *pci_dev = RTE_BUS_DEVICE(cdev->dev, *pci_dev);
+	struct rte_pci_device *owner_pci_dev;
 	struct mlx5_dev_spawn_data *list = NULL;
 	struct rte_eth_devargs eth_da = *req_eth_da;
-	struct rte_pci_addr owner_pci = pci_dev->addr; /* Owner PF. */
+	struct rte_pci_addr owner_pci; /* Owner PF. */
 	struct mlx5_bond_info bond_info;
 	int ret = -1;
+
+	if (!mlx5_dev_is_pci(cdev->dev)) {
+		DRV_LOG(ERR, "Owner device is not PCI: dev %s owner %s",
+			dev->name, cdev->dev->name);
+		rte_errno = EINVAL;
+		return -rte_errno;
+	}
+	owner_pci_dev = RTE_BUS_DEVICE(cdev->dev, *owner_pci_dev);
+	owner_pci = owner_pci_dev->addr;
 
 	errno = 0;
 	ibv_list = mlx5_glue->get_device_list(&ret);
@@ -2699,8 +2717,9 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 			list[ns].phys_port = i;
 			list[ns].phys_dev_name = ibv_match[0]->name;
 			list[ns].eth_dev = NULL;
-			list[ns].pci_dev = pci_dev;
+			list[ns].pci_dev = owner_pci_dev;
 			list[ns].cdev = cdev;
+			list[ns].dpdk_dev = dev;
 			list[ns].pf_bond = bd;
 			list[ns].mpesw_port = MLX5_MPESW_PORT_INVALID;
 			list[ns].ifindex = mlx5_nl_ifindex(nl_rdma,
@@ -2718,7 +2737,7 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 			}
 			ret = -1;
 			if (nl_route >= 0)
-				ret = mlx5_nl_switch_info(nl_route,
+				ret = mlx5_nl_switch_info(cdev, nl_route,
 							  list[ns].ifindex,
 							  &list[ns].info);
 			if (ret || (!list[ns].info.representor &&
@@ -2731,6 +2750,11 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 				ret = mlx5_sysfs_switch_info(list[ns].ifindex,
 							     &list[ns].info);
 			}
+			/* Allow usage of associated devices only for VIRTUAL devlink ports. */
+			if (!ret &&
+			    list[ns].info.name_type != MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL &&
+			    cdev->dev != dev)
+				continue;
 			if (!ret && bd >= 0) {
 				switch (list[ns].info.name_type) {
 				case MLX5_PHYS_PORT_NAME_TYPE_UPLINK:
@@ -2790,13 +2814,26 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 					list[ns].info.mpesw_owner = mpesw;
 					ns++;
 					break;
+				case MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL:
+					list[ns].mpesw_port = mpesw;
+					list[ns].info.mpesw_owner = mpesw;
+					/* Spawn the device if and only if it matches. */
+					if (mlx5_dev_matches(list[ns].dpdk_dev,
+							     list[ns].info.parent_dev_bus_name,
+							     list[ns].info.parent_dev_name))
+						ns++;
+					break;
 				default:
 					break;
 				}
 				continue;
 			}
-			if (!ret && (list[ns].info.representor ^
-				     list[ns].info.master))
+			if (!ret && list[ns].info.name_type == MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL) {
+				if (mlx5_dev_matches(list[ns].dpdk_dev,
+						     list[ns].info.parent_dev_bus_name,
+						     list[ns].info.parent_dev_name))
+					ns++;
+			} else if (!ret && (list[ns].info.representor ^ list[ns].info.master))
 				ns++;
 		}
 	} else {
@@ -2824,8 +2861,9 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 			list[ns].phys_port = 1;
 			list[ns].phys_dev_name = ibv_match[i]->name;
 			list[ns].eth_dev = NULL;
-			list[ns].pci_dev = pci_dev;
+			list[ns].pci_dev = owner_pci_dev;
 			list[ns].cdev = cdev;
+			list[ns].dpdk_dev = dev;
 			list[ns].pf_bond = -1;
 			list[ns].mpesw_port = MLX5_MPESW_PORT_INVALID;
 			list[ns].ifindex = 0;
@@ -2872,7 +2910,7 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 			}
 			ret = -1;
 			if (nl_route >= 0)
-				ret = mlx5_nl_switch_info(nl_route,
+				ret = mlx5_nl_switch_info(cdev, nl_route,
 							  list[ns].ifindex,
 							  &list[ns].info);
 			if (ret || (!list[ns].info.representor &&
@@ -2885,6 +2923,11 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 				ret = mlx5_sysfs_switch_info(list[ns].ifindex,
 							     &list[ns].info);
 			}
+			/* Allow usage of associated devices only for VIRTUAL devlink ports. */
+			if (!ret &&
+			    list[ns].info.name_type != MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL &&
+			    cdev->dev != dev)
+				continue;
 			if (!ret && (list[ns].info.representor ^
 				     list[ns].info.master)) {
 				ns++;
@@ -2921,7 +2964,12 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 			list[0].info.representor = 0;
 		}
 	}
-	MLX5_ASSERT(ns);
+	if (ns == 0) {
+		DRV_LOG(ERR, "Unable to match any IB port to probed device");
+		rte_errno = ENOENT;
+		ret = -rte_errno;
+		goto exit;
+	}
 	/* Calculate number of uplinks and host PFs for each matched IB device. */
 	calc_nb_uplinks_hpfs(ibv_match, nd, list, ns);
 	/*
@@ -2934,7 +2982,7 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 		if (eth_da.nb_ports == 0 && ns > 0) {
 			if (list[0].pf_bond >= 0 && list[0].info.representor)
 				DRV_LOG(WARNING, "Representor on Bonding device should use pf#vf# syntax: %s",
-					pci_dev->device.devargs->args);
+					dev->devargs->args);
 			eth_da.nb_ports = 1;
 			eth_da.ports[0] = list[0].info.port_name;
 		}
@@ -2946,8 +2994,7 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 	for (i = 0; i != ns; ++i) {
 		uint32_t restore;
 
-		list[i].eth_dev = mlx5_dev_spawn(cdev->dev, &list[i], &eth_da,
-						 mkvlist);
+		list[i].eth_dev = mlx5_dev_spawn(&list[i], &eth_da, mkvlist);
 		if (!list[i].eth_dev) {
 			if (rte_errno != EBUSY && rte_errno != EEXIST)
 				break;
@@ -2955,7 +3002,7 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 			continue;
 		}
 		restore = list[i].eth_dev->data->dev_flags;
-		rte_eth_copy_pci_info(list[i].eth_dev, pci_dev);
+		rte_eth_copy_pci_info(list[i].eth_dev, list[i].pci_dev);
 		/**
 		 * Each representor has a dedicated interrupts vector.
 		 * rte_eth_copy_pci_info() assigns PF interrupts handle to
@@ -3070,21 +3117,22 @@ mlx5_os_parse_eth_devargs(struct rte_device *dev,
  */
 static int
 mlx5_os_pci_probe(struct mlx5_common_device *cdev,
+		  struct rte_device *dev,
 		  struct mlx5_kvargs_ctrl *mkvlist)
 {
-	struct rte_pci_device *pci_dev = RTE_BUS_DEVICE(cdev->dev, *pci_dev);
+	struct rte_pci_device *pci_dev = RTE_BUS_DEVICE(dev, *pci_dev);
 	struct rte_eth_devargs eth_da = { .nb_ports = 0 };
 	int ret = 0;
 	uint16_t p;
 
-	ret = mlx5_os_parse_eth_devargs(cdev->dev, &eth_da);
+	ret = mlx5_os_parse_eth_devargs(dev, &eth_da);
 	if (ret != 0)
 		return ret;
 
 	if (eth_da.nb_ports > 0) {
 		/* Iterate all port if devargs pf is range: "pf[0-1]vf[...]". */
 		for (p = 0; p < eth_da.nb_ports; p++) {
-			ret = mlx5_os_pci_probe_pf(cdev, &eth_da,
+			ret = mlx5_os_pci_probe_pf(cdev, dev, &eth_da,
 						   eth_da.ports[p], mkvlist);
 			if (ret) {
 				DRV_LOG(INFO, "Probe of PCI device " PCI_PRI_FMT " "
@@ -3098,7 +3146,7 @@ mlx5_os_pci_probe(struct mlx5_common_device *cdev,
 			}
 		}
 	} else {
-		ret = mlx5_os_pci_probe_pf(cdev, &eth_da, 0, mkvlist);
+		ret = mlx5_os_pci_probe_pf(cdev, dev, &eth_da, 0, mkvlist);
 	}
 	return ret;
 }
@@ -3106,6 +3154,7 @@ mlx5_os_pci_probe(struct mlx5_common_device *cdev,
 /* Probe a single SF device on auxiliary bus, no representor support. */
 static int
 mlx5_os_auxiliary_probe(struct mlx5_common_device *cdev,
+			struct rte_device *dev,
 			struct mlx5_kvargs_ctrl *mkvlist)
 {
 	struct rte_eth_devargs eth_da = { .nb_ports = 0 };
@@ -3113,11 +3162,16 @@ mlx5_os_auxiliary_probe(struct mlx5_common_device *cdev,
 		.pf_bond = -1,
 		.mpesw_port = MLX5_MPESW_PORT_INVALID,
 	};
-	struct rte_device *dev = cdev->dev;
 	struct rte_auxiliary_device *adev = RTE_BUS_DEVICE(dev, *adev);
 	struct rte_eth_dev *eth_dev;
 	int ret = 0;
 
+	if (cdev->dev != dev) {
+		DRV_LOG(ERR, "Invalid device %s used to probe common device %s",
+			dev->name, cdev->dev->name);
+		rte_errno = EINVAL;
+		return -rte_errno;
+	}
 	/* Parse ethdev devargs. */
 	ret = mlx5_os_parse_eth_devargs(dev, &eth_da);
 	if (ret != 0)
@@ -3133,8 +3187,9 @@ mlx5_os_auxiliary_probe(struct mlx5_common_device *cdev,
 	}
 	spawn.ifindex = ret;
 	spawn.cdev = cdev;
+	spawn.dpdk_dev = dev;
 	/* Spawn device. */
-	eth_dev = mlx5_dev_spawn(dev, &spawn, &eth_da, mkvlist);
+	eth_dev = mlx5_dev_spawn(&spawn, &eth_da, mkvlist);
 	if (eth_dev == NULL)
 		return -rte_errno;
 	/* Post create. */
@@ -3165,7 +3220,7 @@ mlx5_os_auxiliary_probe(struct mlx5_common_device *cdev,
  */
 int
 mlx5_os_net_probe(struct mlx5_common_device *cdev,
-		  struct rte_device *dev __rte_unused,
+		  struct rte_device *dev,
 		  struct mlx5_kvargs_ctrl *mkvlist)
 {
 	int ret;
@@ -3184,10 +3239,10 @@ mlx5_os_net_probe(struct mlx5_common_device *cdev,
 			strerror(rte_errno));
 		return -rte_errno;
 	}
-	if (mlx5_dev_is_pci(cdev->dev))
-		return mlx5_os_pci_probe(cdev, mkvlist);
+	if (mlx5_dev_is_pci(dev))
+		return mlx5_os_pci_probe(cdev, dev, mkvlist);
 	else
-		return mlx5_os_auxiliary_probe(cdev, mkvlist);
+		return mlx5_os_auxiliary_probe(cdev, dev, mkvlist);
 }
 
 /**

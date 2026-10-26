@@ -1620,7 +1620,7 @@ error:
 	return -rte_errno;
 }
 
-static int __rte_unused
+static int
 mlx5_nl_devlink_port_info_get(int nl, int family, struct mlx5_devlink_port_info *info)
 {
 	struct nlmsghdr *nlh;
@@ -1668,6 +1668,8 @@ mlx5_nl_devlink_port_info_get(int nl, int family, struct mlx5_devlink_port_info 
  * Analyze gathered port parameters via Netlink to recognize master
  * and representor devices for E-Switch configuration.
  *
+ * @param[in] parent_dev_match
+ *   True if underlying netdev's parent device is the same as for IB device.
  * @param[in] num_vf_set
  *   flag of presence of number of VFs port attribute.
  * @param[inout] switch_info
@@ -1679,7 +1681,8 @@ mlx5_nl_devlink_port_info_get(int nl, int family, struct mlx5_devlink_port_info 
  *   recognized parameters (if any).
  */
 static void
-mlx5_nl_check_switch_info(bool num_vf_set,
+mlx5_nl_check_switch_info(bool parent_dev_match,
+			  bool num_vf_set,
 			  struct mlx5_switch_info *switch_info)
 {
 	switch (switch_info->name_type) {
@@ -1714,12 +1717,67 @@ mlx5_nl_check_switch_info(bool num_vf_set,
 		/* New representors naming schema. */
 		switch_info->representor = 1;
 		break;
+	case MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL:
+		switch_info->master = parent_dev_match;
+		switch_info->representor = !parent_dev_match;
+		break;
 	}
+}
+
+static void
+check_virtual_port(struct mlx5_netdev_info *netdev_info,
+		   struct mlx5_switch_info *switch_info)
+{
+	struct mlx5_devlink_port_info devlink_port_info = {
+		.bus_name = netdev_info->devlink_port_bus_name,
+		.dev_name = netdev_info->devlink_port_dev_name,
+		.index = netdev_info->devlink_port_index,
+	};
+	int nl;
+	int family;
+	int ret = 0;
+
+	nl = mlx5_nl_init(NETLINK_GENERIC, 0);
+	if (nl < 0) {
+		DRV_LOG(DEBUG, "Unable to open NETLINK_GENERIC socket");
+		return;
+	}
+
+	family = mlx5_nl_devlink_family_id_get(nl);
+	if (family < 0) {
+		DRV_LOG(DEBUG, "Unable to query devlink genetlink family ID");
+		goto exit_end;
+	}
+
+	if (mlx5_netdev_info_has_devlink_port(netdev_info)) {
+		ret = mlx5_nl_devlink_port_info_get(nl, family, &devlink_port_info);
+	} else {
+		/*
+		 * TODO: Kernel too old. Devlink port must be found by dumping all ports
+		 * and matching by netdev_ifindex. Until this is done, log unsupported.
+		 */
+		DRV_LOG(DEBUG, "Kernel does not expose IFLA_DEVLINK_PORT");
+		ret = -ENOTSUP;
+	}
+
+	if (ret < 0) {
+		DRV_LOG(DEBUG, "Unable to query devlink port flavour");
+		goto exit_end;
+	}
+
+	if ((devlink_port_info.flags & MLX5_DEVLINK_PORT_INFO_FLAG_FLAVOUR) &&
+	    devlink_port_info.flavour == MLX5_DEVLINK_PORT_FLAVOUR_VIRTUAL)
+		switch_info->name_type = MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL;
+
+exit_end:
+	close(nl);
 }
 
 /**
  * Get switch information associated with network interface.
  *
+ * @param cdev
+ *   Pointer to common device.
  * @param nl
  *   Netlink socket of the ROUTE kind (NETLINK_ROUTE).
  * @param ifindex
@@ -1732,12 +1790,15 @@ mlx5_nl_check_switch_info(bool num_vf_set,
  */
 RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_switch_info)
 int
-mlx5_nl_switch_info(int nl, unsigned int ifindex,
+mlx5_nl_switch_info(struct mlx5_common_device *cdev,
+		    int nl,
+		    unsigned int ifindex,
 		    struct mlx5_switch_info *info)
 {
 	struct mlx5_netdev_info netdev_info = {
 		.ifindex = ifindex,
 	};
+	bool parent_dev_match;
 	bool num_vf_set;
 	int ret;
 
@@ -1756,7 +1817,33 @@ mlx5_nl_switch_info(int nl, unsigned int ifindex,
 
 	if (netdev_info.flags & MLX5_NETDEV_INFO_FLAG_PHYS_SWITCH_ID) {
 		info->switch_id = netdev_info.phys_switch_id;
-		mlx5_nl_check_switch_info(num_vf_set, info);
+
+		if (info->name_type == MLX5_PHYS_PORT_NAME_TYPE_NOTSET)
+			check_virtual_port(&netdev_info, info);
+
+		/* Port type could be updated to virtual. Recheck. */
+		if (info->name_type == MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL) {
+			if (!(netdev_info.flags & MLX5_NETDEV_INFO_FLAG_PARENT_DEV_NAME) ||
+			    !(netdev_info.flags & MLX5_NETDEV_INFO_FLAG_PARENT_DEV_BUS_NAME)) {
+				DRV_LOG(ERR, "ifindex %u cannot get parent dev", ifindex);
+				rte_errno = EINVAL;
+				return -rte_errno;
+			}
+
+			strlcpy(info->parent_dev_bus_name, netdev_info.parent_dev_bus_name,
+				sizeof(info->parent_dev_bus_name));
+			strlcpy(info->parent_dev_name, netdev_info.parent_dev_name,
+				sizeof(info->parent_dev_name));
+
+			parent_dev_match = mlx5_dev_matches(cdev->dev,
+							    netdev_info.parent_dev_bus_name,
+							    netdev_info.parent_dev_name);
+		} else {
+			/* Irrelevant for other port flavours. */
+			parent_dev_match = false;
+		}
+
+		mlx5_nl_check_switch_info(parent_dev_match, num_vf_set, info);
 	}
 
 	if (info->master && info->representor) {
