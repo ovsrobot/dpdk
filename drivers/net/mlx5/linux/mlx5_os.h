@@ -13,7 +13,7 @@
 
 #define MLX5_NAMESIZE IF_NAMESIZE
 
-int mlx5_auxiliary_get_ifindex(const char *sf_name);
+unsigned int mlx5_auxiliary_get_ifindex(const char *sf_name);
 
 
 enum mlx5_sw_parsing_offloads {

@@ -48,15 +48,20 @@
 #include "mlx5_utils.h"
 
 /* Get interface index from SubFunction device name. */
-int
+unsigned int
 mlx5_auxiliary_get_ifindex(const char *sf_name)
 {
 	char if_name[IF_NAMESIZE] = { 0 };
+	unsigned int ifindex;
 
 	if (mlx5_auxiliary_get_child_name(sf_name, "/net",
 					  if_name, sizeof(if_name)) != 0)
-		return -rte_errno;
-	return if_nametoindex(if_name);
+		return 0;
+
+	ifindex = if_nametoindex(if_name);
+	if (ifindex == 0)
+		rte_errno = errno;
+	return ifindex;
 }
 
 /**

@@ -3151,43 +3151,167 @@ mlx5_os_pci_probe(struct mlx5_common_device *cdev,
 	return ret;
 }
 
-/* Probe a single SF device on auxiliary bus, no representor support. */
+static int
+mlx5_auxiliary_fill_single_spawn_data(struct mlx5_common_device *cdev,
+				      struct rte_device *dev,
+				      struct mlx5_dev_spawn_data *spawn)
+{
+	unsigned int ifindex;
+
+	/* Probed device is the primary IB device. */
+	MLX5_ASSERT(cdev->dev == dev);
+	/* IB device is single port. */
+	MLX5_ASSERT(spawn->max_port == 1);
+	/* IB device name is provided. */
+	MLX5_ASSERT(spawn->phys_dev_name != NULL);
+
+	spawn->phys_port = 1;
+	ifindex = mlx5_auxiliary_get_ifindex(dev->name);
+	if (ifindex == 0) {
+		DRV_LOG(ERR, "dev %s failed to get ethdev ifindex (%s)",
+			dev->name, rte_strerror(rte_errno));
+		return -rte_errno;
+	}
+	spawn->ifindex = ifindex;
+	spawn->cdev = cdev;
+	spawn->dpdk_dev = dev;
+
+	return 0;
+}
+
+static int
+mlx5_auxiliary_fill_switch_spawn_data(struct mlx5_common_device *cdev,
+				      struct rte_device *dev,
+				      int nl_rdma,
+				      int nl_route,
+				      struct mlx5_dev_spawn_data *spawn)
+{
+	unsigned int dev_ifindex;
+	int ret;
+
+	/* IB device is multi port. */
+	MLX5_ASSERT(spawn->max_port > 1);
+	/* IB device name is provided. */
+	MLX5_ASSERT(spawn->phys_dev_name != NULL);
+
+	dev_ifindex = mlx5_auxiliary_get_ifindex(dev->name);
+	if (dev_ifindex == 0) {
+		DRV_LOG(ERR, "dev %s failed to get ethdev ifindex (%s)",
+			dev->name, rte_strerror(rte_errno));
+		return -rte_errno;
+	}
+
+	for (unsigned int port = 1; port <= spawn->max_port; ++port) {
+		struct mlx5_switch_info switch_info;
+		unsigned int ifindex;
+
+		ifindex = mlx5_nl_ifindex(nl_rdma, spawn->phys_dev_name, port, NULL);
+		if (ifindex == 0)
+			continue;
+
+		if (ifindex != dev_ifindex)
+			continue;
+
+		ret = mlx5_nl_switch_info(cdev, nl_route, ifindex, &switch_info);
+		if (ret < 0)
+			return ret;
+
+		if (switch_info.name_type != MLX5_PHYS_PORT_NAME_TYPE_VIRTUAL)
+			continue;
+
+		/* All checks passed. This IB port can be used. */
+		spawn->phys_port = port;
+		spawn->ifindex = ifindex;
+		spawn->cdev = cdev;
+		spawn->dpdk_dev = dev;
+		spawn->info = switch_info;
+		return 0;
+	}
+
+	/* If no valid port was found, then probed device cannot be used. */
+	rte_errno = ENODEV;
+	return -rte_errno;
+}
+
+static int
+mlx5_auxiliary_fill_spawn_data(struct mlx5_common_device *cdev,
+			       struct rte_device *dev,
+			       struct mlx5_dev_spawn_data *spawn)
+{
+	const char *phys_dev_name;
+	unsigned int portnum;
+	int nl_route = -1;
+	int nl_rdma = -1;
+	int ret;
+
+	phys_dev_name = mlx5_os_get_ctx_device_name(cdev->ctx);
+	if (phys_dev_name == NULL)
+		return -EINVAL;
+
+	nl_rdma = mlx5_nl_init(NETLINK_RDMA, 0);
+	if (nl_rdma < 0) {
+		/* If NETLINK_RDMA is not available, assume single port for fallback. */
+		DRV_LOG(DEBUG,
+			"cdev %s Unable to open NETLINK_RDMA socket, assume single IB port (%s)",
+			cdev->dev->name, rte_strerror(rte_errno));
+		rte_errno = 0;
+		portnum = 1;
+		goto fill_spawn_data;
+	}
+
+	portnum = mlx5_nl_portnum(nl_rdma, phys_dev_name, &cdev->dev_info);
+	if (portnum == 0) {
+		ret = -rte_errno;
+		goto exit;
+	}
+
+fill_spawn_data:
+	memset(spawn, 0, sizeof(*spawn));
+	spawn->pf_bond = -1;
+	spawn->mpesw_port = MLX5_MPESW_PORT_INVALID;
+	spawn->max_port = portnum;
+	spawn->phys_dev_name = phys_dev_name;
+
+	if (portnum == 1) {
+		ret = mlx5_auxiliary_fill_single_spawn_data(cdev, dev, spawn);
+	} else {
+		nl_route = mlx5_nl_init(NETLINK_ROUTE, 0);
+		if (nl_route < 0) {
+			ret = nl_route;
+			goto exit;
+		}
+		ret = mlx5_auxiliary_fill_switch_spawn_data(cdev, dev, nl_rdma, nl_route, spawn);
+	}
+
+exit:
+	if (nl_route >= 0)
+		close(nl_route);
+	if (nl_rdma >= 0)
+		close(nl_rdma);
+	return ret;
+}
+
 static int
 mlx5_os_auxiliary_probe(struct mlx5_common_device *cdev,
 			struct rte_device *dev,
 			struct mlx5_kvargs_ctrl *mkvlist)
 {
 	struct rte_eth_devargs eth_da = { .nb_ports = 0 };
-	struct mlx5_dev_spawn_data spawn = {
-		.pf_bond = -1,
-		.mpesw_port = MLX5_MPESW_PORT_INVALID,
-	};
+	struct mlx5_dev_spawn_data spawn;
 	struct rte_auxiliary_device *adev = RTE_BUS_DEVICE(dev, *adev);
 	struct rte_eth_dev *eth_dev;
 	int ret = 0;
 
-	if (cdev->dev != dev) {
-		DRV_LOG(ERR, "Invalid device %s used to probe common device %s",
-			dev->name, cdev->dev->name);
-		rte_errno = EINVAL;
-		return -rte_errno;
-	}
 	/* Parse ethdev devargs. */
 	ret = mlx5_os_parse_eth_devargs(dev, &eth_da);
 	if (ret != 0)
 		return ret;
 	/* Init spawn data. */
-	spawn.max_port = 1;
-	spawn.phys_port = 1;
-	spawn.phys_dev_name = mlx5_os_get_ctx_device_name(cdev->ctx);
-	ret = mlx5_auxiliary_get_ifindex(dev->name);
+	ret = mlx5_auxiliary_fill_spawn_data(cdev, dev, &spawn);
 	if (ret < 0) {
-		DRV_LOG(ERR, "failed to get ethdev ifindex: %s", dev->name);
+		DRV_LOG(ERR, "failed to fill spawn data: %s", dev->name);
 		return ret;
 	}
-	spawn.ifindex = ret;
-	spawn.cdev = cdev;
-	spawn.dpdk_dev = dev;
 	/* Spawn device. */
 	eth_dev = mlx5_dev_spawn(&spawn, &eth_da, mkvlist);
 	if (eth_dev == NULL)
