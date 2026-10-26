@@ -95,6 +95,25 @@ mlx5_netdev_info_has_devlink_port(struct mlx5_netdev_info *info)
 	       (info->flags & MLX5_NETDEV_INFO_FLAG_DEVLINK_PORT_INDEX);
 }
 
+#define MLX5_DEVLINK_PORT_INFO_FLAG_FLAVOUR RTE_BIT32(0)
+
+#define MLX5_DEVLINK_PORT_FLAVOUR_PHYSICAL (0)
+#define MLX5_DEVLINK_PORT_FLAVOUR_CPU (1)
+#define MLX5_DEVLINK_PORT_FLAVOUR_DSA (2)
+#define MLX5_DEVLINK_PORT_FLAVOUR_PCI_PF (3)
+#define MLX5_DEVLINK_PORT_FLAVOUR_PCI_VF (4)
+#define MLX5_DEVLINK_PORT_FLAVOUR_VIRTUAL (5)
+#define MLX5_DEVLINK_PORT_FLAVOUR_UNUSED (6)
+#define MLX5_DEVLINK_PORT_FLAVOUR_PCI_SF (7)
+
+struct mlx5_devlink_port_info {
+	const char *bus_name; /* [in] */
+	const char *dev_name; /* [in] */
+	uint32_t index; /* [in] */
+	uint32_t flags; /* [out] */
+	uint16_t flavour; /* [out] */
+};
+
 __rte_internal
 int mlx5_nl_init(int protocol, int groups);
 __rte_internal

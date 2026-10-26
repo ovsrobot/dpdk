@@ -190,6 +190,8 @@ static RTE_ATOMIC(uint32_t) atomic_sn;
 #define MLX5_NL_SN_GENERATE (rte_atomic_fetch_add_explicit(&atomic_sn, 1, \
 	rte_memory_order_relaxed) + 1)
 
+static void nl_attr_put(struct nlmsghdr *nlh, int type, const void *data, int alen);
+
 /**
  * Opens a Netlink socket.
  *
@@ -1570,6 +1572,95 @@ mlx5_nl_netdev_info_get(int nl, struct mlx5_netdev_info *info)
 	ret = mlx5_nl_send(nl, &req.nh, sn);
 	if (ret >= 0)
 		ret = mlx5_nl_recv(nl, sn, mlx5_nl_netdev_info_cb, info);
+	return ret;
+}
+
+static int
+mlx5_nl_devlink_port_info_get_cb(struct nlmsghdr *nh, void *arg)
+{
+	struct mlx5_devlink_port_info *out = arg;
+	struct mlx5_devlink_port_info info;
+	struct genlmsghdr *genlhdr;
+	struct nlattr *nla;
+	ssize_t len;
+
+	memset(&info, 0, sizeof(info));
+	info.bus_name = out->bus_name;
+	info.dev_name = out->dev_name;
+	info.index = out->index;
+
+	if (nh->nlmsg_len < NLMSG_LENGTH(GENL_HDRLEN))
+		goto error;
+
+	genlhdr = NLMSG_DATA(nh);
+	if (genlhdr->cmd != DEVLINK_CMD_PORT_NEW)
+		goto error;
+
+	nla = RTE_PTR_ADD(genlhdr, GENL_HDRLEN);
+	len = nh->nlmsg_len - NLMSG_LENGTH(GENL_HDRLEN);
+	while (nla_ok(nla, len)) {
+		void *payload = RTE_PTR_ADD(nla, NLA_HDRLEN);
+		size_t payload_len = nla->nla_len - NLA_HDRLEN;
+
+		switch (nla->nla_type & NLA_TYPE_MASK) {
+		case DEVLINK_ATTR_PORT_FLAVOUR:
+			if (payload_len < sizeof(uint16_t))
+				break;
+			info.flavour = *(uint16_t *)payload;
+			info.flags |= MLX5_DEVLINK_PORT_INFO_FLAG_FLAVOUR;
+			break;
+		}
+
+		nla = nla_next(nla, &len);
+	}
+	*out = info;
+	return 0;
+error:
+	rte_errno = EINVAL;
+	return -rte_errno;
+}
+
+static int __rte_unused
+mlx5_nl_devlink_port_info_get(int nl, int family, struct mlx5_devlink_port_info *info)
+{
+	struct nlmsghdr *nlh;
+	struct genlmsghdr *genl;
+	uint8_t *buf;
+	size_t bus_name_len = strlen(info->bus_name) + 1;
+	size_t dev_name_len = strlen(info->dev_name) + 1;
+	size_t buf_size;
+	uint32_t sn = MLX5_NL_SN_GENERATE;
+	int ret;
+
+	buf_size = NLMSG_ALIGN(sizeof(struct nlmsghdr));
+	buf_size += NLMSG_ALIGN(sizeof(struct genlmsghdr));
+	buf_size += NLMSG_ALIGN(sizeof(struct nlattr) + bus_name_len);
+	buf_size += NLMSG_ALIGN(sizeof(struct nlattr) + dev_name_len);
+	buf_size += NLMSG_ALIGN(sizeof(struct nlattr) + sizeof(info->index));
+	buf = calloc(1, buf_size);
+	if (buf == NULL) {
+		rte_errno = ENOMEM;
+		return -rte_errno;
+	}
+
+	nlh = (struct nlmsghdr *)buf;
+	nlh->nlmsg_len = NLMSG_ALIGN(sizeof(struct nlmsghdr));
+	nlh->nlmsg_type = family;
+	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+
+	genl = RTE_PTR_ADD(nlh, nlh->nlmsg_len);
+	genl->cmd = DEVLINK_CMD_PORT_GET;
+	genl->version = DEVLINK_GENL_VERSION;
+	nlh->nlmsg_len += NLMSG_ALIGN(sizeof(struct genlmsghdr));
+
+	nl_attr_put(nlh, DEVLINK_ATTR_BUS_NAME, info->bus_name, bus_name_len);
+	nl_attr_put(nlh, DEVLINK_ATTR_DEV_NAME, info->dev_name, dev_name_len);
+	nl_attr_put(nlh, DEVLINK_ATTR_PORT_INDEX, &info->index, sizeof(info->index));
+
+	ret = mlx5_nl_send(nl, nlh, sn);
+	if (ret >= 0)
+		ret = mlx5_nl_recv(nl, sn, mlx5_nl_devlink_port_info_get_cb, info);
+	free(buf);
 	return ret;
 }
 
