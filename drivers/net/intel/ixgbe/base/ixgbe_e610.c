@@ -42,41 +42,23 @@ void ixgbe_shutdown_aci(struct ixgbe_hw *hw)
 STATIC void ixgbe_aci_debug_array(struct ixgbe_hw *hw, u16 row_size, u8 *buf,
 				  u16 buf_size)
 {
-	char debug_portion[IXGBE_ACI_MAX_DEBUG_STRING_LENGTH] = {'\0'};
-	char debug_string[IXGBE_ACI_MAX_DEBUG_STRING_LENGTH] = {'\0'};
-	u16 i = 0, j = 0;
-	s16 remaining_space = IXGBE_ACI_MAX_DEBUG_STRING_LENGTH - 1;
-	s16 nbytes = 0;
-	if (!hw)
+	char line[IXGBE_ACI_MAX_DEBUG_STRING_LENGTH];
+	u32 i, j;
+
+	if (!hw || !buf || !row_size)
 		return;
-	if (buf && buf_size && row_size) {
-		if (buf_size >= row_size) {
-			for (i = 0; i < (buf_size - row_size); i += row_size) {
-				nbytes = snprintf(debug_string, sizeof(debug_string), "0x%04X : ", i);
-				remaining_space = IXGBE_ACI_MAX_DEBUG_STRING_LENGTH - nbytes - 1;
-				for (j = 0; j < row_size; j++) {
-					nbytes = snprintf(debug_portion, sizeof(debug_portion), "0x%02X ", buf[i + j]);
-					strncat(debug_string, debug_portion, remaining_space);
-					remaining_space -= nbytes;
-					if (remaining_space <= 0) break;
-				}
-				strncat(debug_string, "\n", remaining_space);
-				DEBUGOUT1("%s", debug_string);
-				memset(debug_string, 0, IXGBE_ACI_MAX_DEBUG_STRING_LENGTH);
-			}
+
+	for (i = 0; i < buf_size; i += row_size) {
+		size_t len;
+
+		len = snprintf(line, sizeof(line), "0x%04X : ", i);
+		for (j = 0; j < row_size && i + j < buf_size; j++) {
+			if (len >= sizeof(line))
+				break;
+			len += snprintf(line + len, sizeof(line) - len,
+					"0x%02X ", buf[i + j]);
 		}
-		if (i < buf_size) {
-			nbytes = snprintf(debug_string, sizeof(debug_string), "0x%04X : ", i);
-			remaining_space = IXGBE_ACI_MAX_DEBUG_STRING_LENGTH - nbytes - 1;
-			for (j = 0; j < (buf_size - i); j++) {
-				nbytes = snprintf(debug_portion, sizeof(debug_portion), "0x%02X ", buf[i + j]);
-				strncat(debug_string, debug_portion, remaining_space);
-				remaining_space -= nbytes;
-				if (remaining_space <= 0) break;
-			}
-			strncat(debug_string, "\n", remaining_space);
-			DEBUGOUT1("%s", debug_string);
-		}
+		DEBUGOUT1("%s\n", line);
 	}
 }
 
