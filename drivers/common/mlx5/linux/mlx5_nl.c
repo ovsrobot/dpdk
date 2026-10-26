@@ -1275,15 +1275,60 @@ mlx5_nl_port_state(int nl, const char *name, uint32_t pindex, struct mlx5_dev_in
 	return (int)data.state;
 }
 
+static unsigned int
+mlx5_dev_info_get_portnum(const char *ibname, struct mlx5_dev_info *dev_info)
+{
+	if (dev_info == NULL ||
+	    !dev_info->probe_opt ||
+	    dev_info->port_num == 0 ||
+	    strcmp(ibname, dev_info->ibname) != 0)
+		return 0;
+
+	return dev_info->port_num;
+}
+
+static unsigned int
+mlx5_dev_info_set_portnum(const char *ibname,
+			  struct mlx5_dev_info *dev_info,
+			  const struct mlx5_nl_port_info *data)
+{
+	size_t size;
+
+	/* If cache is not available or probe optimization is not enabled, just return portnum. */
+	if (dev_info == NULL || !dev_info->probe_opt)
+		return data->portnum;
+
+	MLX5_ASSERT(data->flags & MLX5_NL_CMD_GET_IB_NAME);
+	MLX5_ASSERT(data->flags & MLX5_NL_CMD_GET_IB_INDEX);
+	MLX5_ASSERT(data->flags & MLX5_NL_CMD_GET_PORT_INDEX);
+	MLX5_ASSERT(strlen(dev_info->ibname) == 0);
+
+	dev_info->port_num = data->portnum;
+	dev_info->ibindex = data->ibindex;
+	snprintf(dev_info->ibname, MLX5_FS_NAME_MAX, "%s", ibname);
+	if (data->portnum > 1) {
+		size = (data->portnum + 1) * sizeof(struct mlx5_port_nl_info);
+		dev_info->port_info = mlx5_malloc(MLX5_MEM_ZERO | MLX5_MEM_RTE, size,
+						  RTE_CACHE_LINE_SIZE,
+						  SOCKET_ID_ANY);
+		if (dev_info->port_info == NULL) {
+			memset(dev_info, 0, sizeof(*dev_info));
+			rte_errno = ENOMEM;
+			return 0;
+		}
+	}
+	return data->portnum;
+}
+
 /**
  * Get the number of physical ports of given IB device.
  *
- * @param nl
+ * @param[in] nl
  *   Netlink socket of the RDMA kind (NETLINK_RDMA).
  * @param[in] name
  *   IB device name.
- * @param[in] dev_info
- *   Cached mlx5 device info.
+ * @param[in,out] dev_info
+ *   Cached mlx5 device info. If NULL, netlink query is done and caching is skipped.
  *
  * @return
  *   A valid (nonzero) number of ports on success, 0 otherwise
@@ -1306,11 +1351,12 @@ mlx5_nl_portnum(int nl, const char *name, struct mlx5_dev_info *dev_info)
 		.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_DUMP,
 	};
 	uint32_t sn = MLX5_NL_SN_GENERATE;
-	int ret, size;
+	unsigned int portnum;
+	int ret;
 
-	if (dev_info->probe_opt && dev_info->port_num &&
-	    !strcmp(name, dev_info->ibname))
-		return dev_info->port_num;
+	portnum = mlx5_dev_info_get_portnum(name, dev_info);
+	if (portnum > 0)
+		return portnum;
 
 	ret = mlx5_nl_send(nl, &req, sn);
 	if (ret < 0)
@@ -1328,24 +1374,7 @@ mlx5_nl_portnum(int nl, const char *name, struct mlx5_dev_info *dev_info)
 		rte_errno = EINVAL;
 		return 0;
 	}
-	if (!dev_info->probe_opt)
-		return data.portnum;
-	MLX5_ASSERT(!strlen(dev_info->ibname));
-	dev_info->port_num = data.portnum;
-	dev_info->ibindex = data.ibindex;
-	snprintf(dev_info->ibname, MLX5_FS_NAME_MAX, "%s", name);
-	if (data.portnum > 1) {
-		size = (data.portnum + 1) * sizeof(struct mlx5_port_nl_info);
-		dev_info->port_info = mlx5_malloc(MLX5_MEM_ZERO | MLX5_MEM_RTE, size,
-						  RTE_CACHE_LINE_SIZE,
-						  SOCKET_ID_ANY);
-		if (dev_info->port_info == NULL) {
-			memset(dev_info, 0, sizeof(*dev_info));
-			rte_errno = ENOMEM;
-			return 0;
-		}
-	}
-	return data.portnum;
+	return mlx5_dev_info_set_portnum(name, dev_info, &data);
 }
 
 /**
