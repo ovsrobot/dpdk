@@ -1516,6 +1516,17 @@ mlx5_devx_uar_prepare(struct mlx5_common_device *cdev, struct mlx5_uar *uar)
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_dev_is_managed)
+bool
+mlx5_dev_is_managed(const struct rte_device *dev)
+{
+	if (dev == NULL || dev->driver == NULL || dev->driver->name == NULL)
+		return false;
+
+	return strcmp(dev->driver->name, MLX5_PCI_DRIVER_NAME) == 0 ||
+	       strcmp(dev->driver->name, MLX5_AUXILIARY_DRIVER_NAME) == 0;
+}
+
 RTE_EXPORT_INTERNAL_SYMBOL(mlx5_dev_matches)
 bool
 mlx5_dev_matches(const struct rte_device *dev,

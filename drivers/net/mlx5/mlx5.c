@@ -3499,13 +3499,7 @@ mlx5_eth_find_next(uint16_t port_id, struct rte_device *odev)
 
 		if (dev->state != RTE_ETH_DEV_UNUSED &&
 		    dev->device &&
-		    (dev->device == odev ||
-		     (dev->device->driver &&
-		     dev->device->driver->name &&
-		     ((strcmp(dev->device->driver->name,
-			      MLX5_PCI_DRIVER_NAME) == 0) ||
-		      (strcmp(dev->device->driver->name,
-			      MLX5_AUXILIARY_DRIVER_NAME) == 0)))))
+		    (dev->device == odev || mlx5_dev_is_managed(dev->device)))
 			break;
 		port_id++;
 	}

@@ -602,6 +602,20 @@ void
 mlx5_class_driver_register(struct mlx5_class_driver *driver);
 
 /**
+ * Check if given EAL device is managed by any mlx5 driver.
+ *
+ * @param dev
+ *   Pointer to device.
+ *
+ * @return
+ *   - True if device is managed by mlx5 driver.
+ *   - False otherwise.
+ */
+__rte_internal
+bool
+mlx5_dev_is_managed(const struct rte_device *dev);
+
+/**
  * Test device is a PCI bus device.
  *
  * @param dev
