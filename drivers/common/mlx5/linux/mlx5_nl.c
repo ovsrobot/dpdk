@@ -1181,14 +1181,14 @@ error:
  * when faced with port representors. Unfortunately it requires at least
  * Linux 4.17.
  *
- * @param nl
+ * @param[in] nl
  *   Netlink socket of the RDMA kind (NETLINK_RDMA).
  * @param[in] name
  *   IB device name.
  * @param[in] pindex
  *   IB device port index, starting from 1
- * @param[in] dev_info
- *   Cached mlx5 device information.
+ * @param[in,out] dev_info
+ *   Cached mlx5 device information. If NULL, netlink query is done and caching is skipped.
  * @return
  *   A valid (nonzero) interface index on success, 0 otherwise and rte_errno
  *   is set.
@@ -1206,6 +1206,9 @@ mlx5_nl_ifindex(int nl, const char *name, uint32_t pindex, struct mlx5_dev_info 
 			.flags = 0,
 	};
 
+	if (dev_info == NULL)
+		goto query_port_info;
+
 	if (dev_info->probe_opt && !strcmp(name, dev_info->ibname)) {
 		if (dev_info->port_info && pindex <= dev_info->port_num &&
 		    dev_info->port_info[pindex].valid) {
@@ -1222,8 +1225,9 @@ mlx5_nl_ifindex(int nl, const char *name, uint32_t pindex, struct mlx5_dev_info 
 		rte_errno = ENODEV;
 		return 0;
 	}
+query_port_info:
 	ret = mlx5_nl_port_info(nl, pindex, &data);
-	if (dev_info->probe_opt && !strcmp(dev_info->ibname, name)) {
+	if (dev_info != NULL && dev_info->probe_opt && !strcmp(dev_info->ibname, name)) {
 		if ((!ret || ret == -ENODEV) && dev_info->port_info &&
 		    pindex <= dev_info->port_num) {
 			if (!ret)
