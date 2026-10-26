@@ -424,15 +424,12 @@ mlx5_dev_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *info)
 	if (priv->representor) {
 		uint16_t port_id;
 
-		MLX5_ETH_FOREACH_DEV(port_id, dev->device) {
-			struct mlx5_priv *opriv =
-				rte_eth_devices[port_id].data->dev_private;
+		MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
+			struct mlx5_priv *opriv = rte_eth_devices[port_id].data->dev_private;
 
-			if (!opriv ||
-			    opriv->representor ||
-			    opriv->sh != priv->sh ||
-			    opriv->domain_id != priv->domain_id)
+			if (opriv->representor)
 				continue;
+
 			/*
 			 * Override switch name with that of the master
 			 * device.
@@ -523,13 +520,8 @@ mlx5_representor_info_count(struct rte_eth_dev *dev)
 	uint16_t port_id;
 	unsigned int count = 0;
 
-	MLX5_ETH_FOREACH_DEV(port_id, dev->device) {
+	MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
 		struct mlx5_priv *opriv = rte_eth_devices[port_id].data->dev_private;
-
-		if (!opriv ||
-		    opriv->sh != priv->sh ||
-		    opriv->domain_id != priv->domain_id)
-			continue;
 
 		count += mlx5_representor_info_count_one(opriv);
 	}
@@ -629,13 +621,8 @@ mlx5_representor_info_fill(struct rte_eth_dev *dev,
 	info->controller = priv->port_info.ctrl_num;
 	info->pf = RTE_BUS_DEVICE(dev->device, struct rte_pci_device)->addr.function;
 
-	MLX5_ETH_FOREACH_DEV(port_id, dev->device) {
+	MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
 		struct mlx5_priv *opriv = rte_eth_devices[port_id].data->dev_private;
-
-		if (!opriv ||
-		    opriv->sh != priv->sh ||
-		    opriv->domain_id != priv->domain_id)
-			continue;
 
 		mlx5_representor_info_fill_one(opriv, info);
 	}

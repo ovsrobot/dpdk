@@ -191,7 +191,7 @@ mlx5_mac_addr_set(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr)
 				mac_addr,
 				MLX5_REPRESENTOR_REPR(priv->representor_id));
 		}
-		RTE_ETH_FOREACH_DEV_SIBLING(port_id, dev->data->port_id) {
+		MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
 			pf_priv = rte_eth_devices[port_id].data->dev_private;
 			if (pf_priv->master == 1)
 				return mlx5_os_vf_mac_addr_modify

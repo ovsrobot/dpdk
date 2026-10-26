@@ -1578,13 +1578,11 @@ mlx5_hw_proxy_port_allowed_stop(struct rte_eth_dev *dev)
 	/* If transfer proxy port was not configured for HWS, then stopping it is allowed. */
 	if (!priv->dr_ctx)
 		return 0;
-	MLX5_ETH_FOREACH_DEV(port_id, dev->device) {
-		const struct rte_eth_dev *port_dev = &rte_eth_devices[port_id];
-		const struct mlx5_priv *port_priv = port_dev->data->dev_private;
+	MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
+		struct rte_eth_dev *odev = &rte_eth_devices[port_id];
+		struct mlx5_priv *opriv = odev->data->dev_private;
 
-		if (port_id != dev->data->port_id &&
-		    port_priv->domain_id == priv->domain_id &&
-		    port_dev->data->dev_started)
+		if (opriv->representor && odev->data->dev_started)
 			representor_started = true;
 	}
 	if (representor_started) {

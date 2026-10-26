@@ -2565,23 +2565,14 @@ mlx5_dev_close(struct rte_eth_dev *dev)
 	 * since 'mlx5_dev_interrupt_nl_cb' uses priv.
 	 */
 	rte_io_wmb();
-	/*
-	 * Free the shared context in last turn, because the cleanup
-	 * routines above may use some shared fields, like
-	 * mlx5_os_mac_addr_flush() uses ibdev_path for retrieving
-	 * ifindex if Netlink fails.
-	 */
-	mlx5_free_shared_dev_ctx(sh);
 	if (priv->domain_id != RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID) {
 		unsigned int c = 0;
 		uint16_t port_id;
 
-		MLX5_ETH_FOREACH_DEV(port_id, dev->device) {
-			struct mlx5_priv *opriv =
-				rte_eth_devices[port_id].data->dev_private;
+		MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
+			struct mlx5_priv *opriv = rte_eth_devices[port_id].data->dev_private;
 
-			if (!opriv ||
-			    opriv->domain_id != priv->domain_id ||
+			if (opriv->domain_id != priv->domain_id ||
 			    &rte_eth_devices[port_id] == dev)
 				continue;
 			++c;
@@ -2590,6 +2581,13 @@ mlx5_dev_close(struct rte_eth_dev *dev)
 		if (!c)
 			claim_zero(rte_eth_switch_domain_free(priv->domain_id));
 	}
+	/*
+	 * Free the shared context in last turn, because the cleanup
+	 * routines above may use some shared fields, like
+	 * mlx5_os_mac_addr_flush() uses ibdev_path for retrieving
+	 * ifindex if Netlink fails.
+	 */
+	mlx5_free_shared_dev_ctx(sh);
 	mlx5_flow_pools_destroy(priv);
 	memset(priv, 0, sizeof(*priv));
 	priv->domain_id = RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID;
@@ -3505,6 +3503,54 @@ mlx5_eth_find_next(uint16_t port_id, struct rte_device *odev)
 	}
 	if (port_id >= RTE_MAX_ETHPORTS)
 		return RTE_MAX_ETHPORTS;
+	return port_id;
+}
+
+/**
+ * Look for the ethernet device belonging to mlx5 driver, which share the device context.
+ *
+ * If port index is found, then caller can assume that:
+ *
+ * - Port is a valid ethdev port, managed by mlx5 driver.
+ * - Port has private device data set (mlx5_priv).
+ * - Port has shared mlx5 device context set (priv->sh).
+ * - Port is based on the @p cdev common device.
+ *
+ * @param[in] start_port_id
+ *   Port index to start looking for device.
+ * @param[in] cdev
+ *   Pointer to common device.
+ *
+ * @return
+ *   Port index of found device, RTE_MAX_ETHPORTS if not found.
+ */
+uint16_t
+mlx5_eth_find_next_sibling(uint16_t start_port_id, struct mlx5_common_device *cdev)
+{
+	struct mlx5_priv *priv;
+	uint16_t port_id;
+
+	if (cdev == NULL)
+		return RTE_MAX_ETHPORTS;
+
+	for (port_id = start_port_id; port_id < RTE_MAX_ETHPORTS; port_id++) {
+		if (rte_eth_dev_is_valid_port(port_id) == 0)
+			continue;
+
+		if (!mlx5_dev_is_managed(rte_eth_devices[port_id].device))
+			continue;
+
+		priv = rte_eth_devices[port_id].data->dev_private;
+		if (priv == NULL || priv->sh == NULL)
+			continue;
+
+		if (priv->sh->cdev == cdev)
+			break;
+	}
+
+	if (port_id >= RTE_MAX_ETHPORTS)
+		return RTE_MAX_ETHPORTS;
+
 	return port_id;
 }
 

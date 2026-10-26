@@ -2295,6 +2295,7 @@ void mlx5_proc_priv_uninit(struct rte_eth_dev *dev);
 int mlx5_udp_tunnel_port_add(struct rte_eth_dev *dev,
 			      struct rte_eth_udp_tunnel *udp_tunnel);
 uint16_t mlx5_eth_find_next(uint16_t port_id, struct rte_device *odev);
+uint16_t mlx5_eth_find_next_sibling(uint16_t port_id, struct mlx5_common_device *cdev);
 int mlx5_dev_close(struct rte_eth_dev *dev);
 int mlx5_net_remove(struct mlx5_common_device *cdev);
 bool mlx5_is_hpf(struct rte_eth_dev *dev);
@@ -2312,6 +2313,11 @@ int mlx5_disable_per_queue_hairpin_counter(struct rte_eth_dev *dev, uint64_t id)
 	for (port_id = mlx5_eth_find_next(0, dev); \
 	     port_id < RTE_MAX_ETHPORTS; \
 	     port_id = mlx5_eth_find_next(port_id + 1, dev))
+/* Macro to iterate over all valid ports for mlx5 driver spawned on given common device. */
+#define MLX5_ETH_FOREACH_SIBLING(port_id, cdev) \
+	for (port_id = mlx5_eth_find_next_sibling(0, cdev); \
+	     port_id < RTE_MAX_ETHPORTS; \
+	     port_id = mlx5_eth_find_next_sibling(port_id + 1, cdev))
 void mlx5_rt_timestamp_config(struct mlx5_dev_ctx_shared *sh,
 			      struct mlx5_hca_attr *hca_attr);
 struct mlx5_dev_ctx_shared *

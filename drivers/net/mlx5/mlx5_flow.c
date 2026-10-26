@@ -1665,15 +1665,12 @@ mlx5_flow_rxq_mark_flag_set(struct rte_eth_dev *dev)
 	if (priv->sh->shared_mark_enabled)
 		return;
 	if (priv->master || priv->representor) {
-		MLX5_ETH_FOREACH_DEV(port_id, dev->device) {
-			struct mlx5_priv *opriv =
-				rte_eth_devices[port_id].data->dev_private;
+		MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
+			struct mlx5_priv *opriv = rte_eth_devices[port_id].data->dev_private;
 
-			if (!opriv ||
-			    opriv->sh != priv->sh ||
-			    opriv->domain_id != priv->domain_id ||
-			    opriv->mark_enabled)
+			if (opriv->mark_enabled)
 				continue;
+
 			LIST_FOREACH(rxq_ctrl, &opriv->rxqsctrl, next) {
 				rxq_ctrl->rxq.mark = 1;
 			}
@@ -12290,12 +12287,9 @@ mlx5_flow_pick_transfer_proxy(struct rte_eth_dev *dev,
 		*proxy_port_id = dev->data->port_id;
 		return 0;
 	}
-	MLX5_ETH_FOREACH_DEV(port_id, dev->device) {
-		const struct rte_eth_dev *port_dev = &rte_eth_devices[port_id];
-		const struct mlx5_priv *port_priv = port_dev->data->dev_private;
-
-		if (port_priv->master &&
-		    port_priv->domain_id == priv->domain_id) {
+	MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
+		const struct mlx5_priv *port_priv = rte_eth_devices[port_id].data->dev_private;
+		if (port_priv->master) {
 			*proxy_port_id = port_id;
 			return 0;
 		}
@@ -12511,7 +12505,7 @@ flow_disable_steering_run_on_related(struct rte_eth_dev *dev,
 		}
 
 		/* Run callback on representors. */
-		MLX5_ETH_FOREACH_DEV(other_port_id, dev->device) {
+		MLX5_ETH_FOREACH_SIBLING(other_port_id, priv->sh->cdev) {
 			struct rte_eth_dev *other_dev = &rte_eth_devices[other_port_id];
 
 			if (other_port_id != proxy_port_id)

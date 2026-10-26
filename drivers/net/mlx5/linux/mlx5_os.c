@@ -1585,14 +1585,10 @@ err_secondary:
 	 * Look for sibling devices in order to reuse their switch domain
 	 * if any, otherwise allocate one.
 	 */
-	MLX5_ETH_FOREACH_DEV(port_id, dpdk_dev) {
-		const struct mlx5_priv *opriv =
-			rte_eth_devices[port_id].data->dev_private;
+	MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
+		const struct mlx5_priv *opriv = rte_eth_devices[port_id].data->dev_private;
 
-		if (!opriv ||
-		    opriv->sh != priv->sh ||
-			opriv->domain_id ==
-			RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID)
+		if (opriv->domain_id == RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID)
 			continue;
 		priv->domain_id = opriv->domain_id;
 		DRV_LOG(DEBUG, "dev_port-%u inherit domain_id=%u\n",
@@ -1711,13 +1707,9 @@ err_secondary:
 	if (priv->representor) {
 		eth_dev->data->dev_flags |= RTE_ETH_DEV_REPRESENTOR;
 		eth_dev->data->representor_id = eth_dev->data->port_id;
-		MLX5_ETH_FOREACH_DEV(port_id, dpdk_dev) {
-			struct mlx5_priv *opriv =
-				rte_eth_devices[port_id].data->dev_private;
-			if (opriv &&
-			    opriv->master &&
-			    opriv->domain_id == priv->domain_id &&
-			    opriv->sh == priv->sh) {
+		MLX5_ETH_FOREACH_SIBLING(port_id, priv->sh->cdev) {
+			struct mlx5_priv *opriv = rte_eth_devices[port_id].data->dev_private;
+			if (opriv->master) {
 				eth_dev->data->backer_port_id = port_id;
 				break;
 			}
