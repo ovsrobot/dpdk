@@ -113,6 +113,12 @@
 #ifndef HAVE_IFLA_PHYS_PORT_NAME
 #define IFLA_PHYS_PORT_NAME 38
 #endif
+#ifndef HAVE_IFLA_PARENT_DEV_NAME
+#define IFLA_PARENT_DEV_NAME 56
+#endif
+#ifndef HAVE_IFLA_PARENT_DEV_BUS_NAME
+#define IFLA_PARENT_DEV_BUS_NAME 57
+#endif
 
 /*
  * Some Devlink defines may be missed in old kernel versions,
@@ -1426,6 +1432,24 @@ mlx5_nl_netdev_info_cb(struct nlmsghdr *nh, void *arg)
 				info.phys_switch_id |= ((uint8_t *)payload)[i];
 			}
 			info.flags |= MLX5_NETDEV_INFO_FLAG_PHYS_SWITCH_ID;
+			break;
+		case IFLA_PARENT_DEV_NAME:
+			payload_len = RTA_PAYLOAD(ra);
+			/* Some kernels do not pad attributes with zero. */
+			if (payload_len > 0 && payload_len < MLX5_PARENT_DEV_NAME_MAX) {
+				memcpy(info.parent_dev_name, payload, payload_len);
+				info.parent_dev_name[payload_len] = '\0';
+				info.flags |= MLX5_NETDEV_INFO_FLAG_PARENT_DEV_NAME;
+			}
+			break;
+		case IFLA_PARENT_DEV_BUS_NAME:
+			payload_len = RTA_PAYLOAD(ra);
+			/* Some kernels do not pad attributes with zero. */
+			if (payload_len > 0 && payload_len < MLX5_PARENT_DEV_BUS_NAME_MAX) {
+				memcpy(info.parent_dev_bus_name, payload, payload_len);
+				info.parent_dev_bus_name[payload_len] = '\0';
+				info.flags |= MLX5_NETDEV_INFO_FLAG_PARENT_DEV_BUS_NAME;
+			}
 			break;
 		}
 	}

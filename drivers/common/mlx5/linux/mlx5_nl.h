@@ -56,9 +56,17 @@ struct mlx5_nl_port_info {
 /* Maximal physical port name length. */
 #define MLX5_PHYS_PORT_NAME_MAX 128
 
+/* Maximum length of parent device name. */
+#define MLX5_PARENT_DEV_NAME_MAX 128
+
+/* Maximum length of parent device bus name. */
+#define MLX5_PARENT_DEV_BUS_NAME_MAX 128
+
 #define MLX5_NETDEV_INFO_FLAG_NUM_VF RTE_BIT32(0)
 #define MLX5_NETDEV_INFO_FLAG_PHYS_PORT_NAME RTE_BIT32(1)
 #define MLX5_NETDEV_INFO_FLAG_PHYS_SWITCH_ID RTE_BIT32(2)
+#define MLX5_NETDEV_INFO_FLAG_PARENT_DEV_NAME RTE_BIT32(3)
+#define MLX5_NETDEV_INFO_FLAG_PARENT_DEV_BUS_NAME RTE_BIT32(4)
 
 struct mlx5_netdev_info {
 	unsigned int ifindex; /* [in] */
@@ -66,6 +74,8 @@ struct mlx5_netdev_info {
 	uint32_t num_vf; /* [out] */
 	char phys_port_name[MLX5_PHYS_PORT_NAME_MAX]; /* [out] */
 	uint64_t phys_switch_id; /* [out] */
+	char parent_dev_name[MLX5_PARENT_DEV_NAME_MAX]; /* [out] */
+	char parent_dev_bus_name[MLX5_PARENT_DEV_BUS_NAME_MAX]; /* [out] */
 };
 
 __rte_internal
