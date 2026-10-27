@@ -307,6 +307,7 @@ ice_acl_prof_init(struct ice_pf *pf)
 				goto err_assoc_prof;
 		}
 	}
+	ice_free(hw, seg);
 	return 0;
 
 err_assoc_prof:
