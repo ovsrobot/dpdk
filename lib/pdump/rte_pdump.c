@@ -8,6 +8,7 @@
 #include <rte_alarm.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
+#include <ethdev_driver.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_memzone.h>
@@ -263,6 +264,16 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 	for (; qid < end_q; qid++) {
 		struct pdump_rxtx_cbs *cbs = &rx_cbs[port][qid];
 
+		/* hairpin queues do not pass through rx burst */
+		if (rte_eth_dev_is_rx_hairpin_queue(&rte_eth_devices[port], qid)) {
+			if (queue == RTE_PDUMP_ALL_QUEUES)
+				continue;
+			PDUMP_LOG_LINE(ERR,
+				"cannot capture on hairpin rx queue port=%d queue=%d",
+				port, qid);
+			return -EINVAL;
+		}
+
 		if (operation == ENABLE) {
 			if (cbs->cb) {
 				PDUMP_LOG_LINE(ERR,
@@ -324,6 +335,16 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 	qid = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
 	for (; qid < end_q; qid++) {
 		struct pdump_rxtx_cbs *cbs = &tx_cbs[port][qid];
+
+		/* hairpin queues do not pass through tx burst */
+		if (rte_eth_dev_is_tx_hairpin_queue(&rte_eth_devices[port], qid)) {
+			if (queue == RTE_PDUMP_ALL_QUEUES)
+				continue;
+			PDUMP_LOG_LINE(ERR,
+				"cannot capture on hairpin tx queue port=%d queue=%d",
+				port, qid);
+			return -EINVAL;
+		}
 
 		if (operation == ENABLE) {
 			if (cbs->cb) {
