@@ -6173,6 +6173,11 @@ rte_eth_add_first_rx_callback(uint16_t port_id, uint16_t queue_id,
 		return NULL;
 	}
 
+	if (rte_eth_dev_is_rx_hairpin_queue(&rte_eth_devices[port_id], queue_id)) {
+		rte_errno = EINVAL;
+		return NULL;
+	}
+
 	struct rte_eth_rxtx_callback *cb = rte_zmalloc(NULL, sizeof(*cb), 0);
 
 	if (cb == NULL) {
