@@ -617,8 +617,6 @@ ice_get_base_incval(struct ice_hw *hw, enum ice_src_tmr_mode src_tmr_mode)
 
 /* E810 timer command register */
 #define E810_ETH_GLTSYN_CMD		0x03000344
-/* E830 timer command register */
-#define E830_ETH_GLTSYN_CMD		0x00088814
 
 /* Source timer incval macros */
 #define INCVAL_HIGH_M			0xFF
