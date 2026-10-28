@@ -3095,7 +3095,8 @@ ice_write_ts_desc(struct ci_tx_queue *txq,
 		  uint16_t ts_id)
 {
 	uint64_t txtime = *RTE_MBUF_DYNFIELD(tx_pkt, txq->tsq->ts_offset, uint64_t *);
-	uint32_t tstamp = (uint32_t)(txtime % NS_PER_S) >> ICE_TXTIME_CTX_RESOLUTION_128NS;
+	/* The hardware compares the low 19 bits of PHC time in 128ns units. */
+	uint32_t tstamp = (uint32_t)(txtime >> ICE_TXTIME_CTX_RESOLUTION_128NS);
 	const uint32_t desc_tx_id = (tx_id == 0) ? txq->nb_tx_desc : tx_id;
 	__le32 ts_desc = rte_cpu_to_le_32(FIELD_PREP(ICE_TXTIME_TX_DESC_IDX_M, desc_tx_id) |
 			FIELD_PREP(ICE_TXTIME_STAMP_M, tstamp));
