@@ -251,6 +251,39 @@ pdump_tx(uint16_t port, uint16_t queue,
 }
 
 
+/* Remove callbacks on queues [first, last) after a failed enable */
+static void
+pdump_unwind_rx_callbacks(uint16_t port, uint16_t first, uint16_t last)
+{
+	uint16_t qid;
+
+	for (qid = first; qid < last; qid++) {
+		struct pdump_rxtx_cbs *cbs = &rx_cbs[port][qid];
+
+		if (cbs->cb == NULL)
+			continue;
+		rte_eth_remove_rx_callback(port, qid, cbs->cb);
+		pdump_cb_wait(cbs);
+		cbs->cb = NULL;
+	}
+}
+
+static void
+pdump_unwind_tx_callbacks(uint16_t port, uint16_t first, uint16_t last)
+{
+	uint16_t qid;
+
+	for (qid = first; qid < last; qid++) {
+		struct pdump_rxtx_cbs *cbs = &tx_cbs[port][qid];
+
+		if (cbs->cb == NULL)
+			continue;
+		rte_eth_remove_tx_callback(port, qid, cbs->cb);
+		pdump_cb_wait(cbs);
+		cbs->cb = NULL;
+	}
+}
+
 static int
 pdump_register_rx_callbacks(enum pdump_version ver,
 			    uint16_t end_q, uint16_t port, uint16_t queue,
@@ -258,10 +291,11 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 			    struct rte_bpf *filter,
 			    uint16_t operation, uint32_t snaplen)
 {
-	uint16_t qid;
+	uint16_t first, qid;
+	int ret;
 
-	qid = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
-	for (; qid < end_q; qid++) {
+	first = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
+	for (qid = first; qid < end_q; qid++) {
 		struct pdump_rxtx_cbs *cbs = &rx_cbs[port][qid];
 
 		/* hairpin queues do not pass through rx burst */
@@ -279,6 +313,7 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 				PDUMP_LOG_LINE(ERR,
 					"rx callback for port=%d queue=%d, already exists",
 					port, qid);
+				pdump_unwind_rx_callbacks(port, first, qid);
 				return -EEXIST;
 			}
 			cbs->use_count = 0;
@@ -294,13 +329,13 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 				PDUMP_LOG_LINE(ERR,
 					"failed to add rx callback, errno=%d",
 					rte_errno);
-				return -rte_errno;
+				ret = -rte_errno;
+				pdump_unwind_rx_callbacks(port, first, qid);
+				return ret;
 			}
 
 			memset(&pdump_stats->rx[port][qid], 0, sizeof(struct rte_pdump_stats));
 		} else if (operation == DISABLE) {
-			int ret;
-
 			if (cbs->cb == NULL) {
 				PDUMP_LOG_LINE(ERR,
 					"no existing rx callback for port=%d queue=%d",
@@ -330,10 +365,11 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 			    uint16_t operation, uint32_t snaplen)
 {
 
-	uint16_t qid;
+	uint16_t first, qid;
+	int ret;
 
-	qid = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
-	for (; qid < end_q; qid++) {
+	first = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
+	for (qid = first; qid < end_q; qid++) {
 		struct pdump_rxtx_cbs *cbs = &tx_cbs[port][qid];
 
 		/* hairpin queues do not pass through tx burst */
@@ -351,6 +387,7 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 				PDUMP_LOG_LINE(ERR,
 					"tx callback for port=%d queue=%d, already exists",
 					port, qid);
+				pdump_unwind_tx_callbacks(port, first, qid);
 				return -EEXIST;
 			}
 			cbs->use_count = 0;
@@ -366,12 +403,12 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 				PDUMP_LOG_LINE(ERR,
 					"failed to add tx callback, errno=%d",
 					rte_errno);
-				return -rte_errno;
+				ret = -rte_errno;
+				pdump_unwind_tx_callbacks(port, first, qid);
+				return ret;
 			}
 			memset(&pdump_stats->tx[port][qid], 0, sizeof(struct rte_pdump_stats));
 		} else if (operation == DISABLE) {
-			int ret;
-
 			if (cbs->cb == NULL) {
 				PDUMP_LOG_LINE(ERR,
 					"no existing tx callback for port=%d queue=%d",
@@ -440,7 +477,8 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 		PDUMP_LOG_LINE(ERR,
 			  "failed to get port id for device id=%s",
 			  p->device);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto free_filter;
 	}
 
 	/* validation if packet capture is for all queues */
@@ -452,7 +490,7 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 			PDUMP_LOG_LINE(ERR,
 				"Error during getting device (port %u) info: %s",
 				port, strerror(-ret));
-			return ret;
+			goto free_filter;
 		}
 
 		nb_rx_q = dev_info.nb_rx_queues;
@@ -460,18 +498,21 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 		if (nb_rx_q == 0 && flags & RTE_PDUMP_FLAG_RX) {
 			PDUMP_LOG_LINE(ERR,
 				"number of rx queues cannot be 0");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_filter;
 		}
 		if (nb_tx_q == 0 && flags & RTE_PDUMP_FLAG_TX) {
 			PDUMP_LOG_LINE(ERR,
 				"number of tx queues cannot be 0");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_filter;
 		}
 		if ((nb_tx_q == 0 || nb_rx_q == 0) &&
 			flags == RTE_PDUMP_FLAG_RXTX) {
 			PDUMP_LOG_LINE(ERR,
 				"both tx&rx queues must be non zero");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_filter;
 		}
 	}
 
@@ -482,7 +523,7 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 						  ring, mp, filter,
 						  operation, p->snaplen);
 		if (ret < 0)
-			return ret;
+			goto free_filter;
 	}
 
 	/* register TX callback */
@@ -492,8 +533,20 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 						  ring, mp, filter,
 						  operation, p->snaplen);
 		if (ret < 0)
-			return ret;
+			goto unwind_rx;
 	}
+
+	return 0;
+
+unwind_rx:
+	if (operation == ENABLE && (flags & RTE_PDUMP_FLAG_RX)) {
+		end_q = (queue == RTE_PDUMP_ALL_QUEUES) ? nb_rx_q : queue + 1;
+		pdump_unwind_rx_callbacks(port,
+			(queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue, end_q);
+	}
+free_filter:
+	if (filter != NULL)
+		rte_bpf_destroy(filter);
 
 	return ret;
 }
