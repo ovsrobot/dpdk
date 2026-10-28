@@ -5613,25 +5613,6 @@ ice_ptp_write_direct_phc_time_e830(struct ice_hw *hw, u64 time)
 }
 
 /**
- * ice_ptp_port_cmd_e830 - Prepare all external PHYs for a timer command
- * @hw: pointer to HW struct
- * @cmd: Command to be sent to the port
- * @lock_sbq: true if the sideband queue lock must be acquired
- *
- * Prepare the external PHYs connected to this device for a timer sync
- * command.
- */
-static int
-ice_ptp_port_cmd_e830(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
-		      bool lock_sbq)
-{
-	u32 val = ice_ptp_tmr_cmd_to_port_reg(hw, cmd);
-
-	return ice_write_phy_reg_e810_lp(hw, E830_ETH_GLTSYN_CMD, val,
-					   lock_sbq);
-}
-
-/**
  * ice_read_phy_tstamp_e830 - Read a PHY timestamp out of the external PHY
  * @hw: pointer to the HW struct
  * @lport: the lport to read from
@@ -5881,7 +5862,8 @@ static int ice_ptp_port_cmd(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 	/* PHY models which can program all ports simultaneously */
 	switch (hw->phy_model) {
 	case ICE_PHY_E830:
-		return ice_ptp_port_cmd_e830(hw, cmd, lock_sbq);
+		/* The internal PHY follows the source timer command */
+		return 0;
 	case ICE_PHY_E810:
 		return ice_ptp_port_cmd_e810(hw, cmd, lock_sbq);
 	default:
