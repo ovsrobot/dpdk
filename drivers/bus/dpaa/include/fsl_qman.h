@@ -1577,6 +1577,7 @@ int qman_create_fq(u32 fqid, u32 flags, struct qman_fq *fq);
  * FQ must be in the 'out-of-service' state unless the QMAN_FQ_FREE_PARKED flag
  * is specified, in which case it may also be in the 'parked' state.
  */
+__rte_internal
 void qman_destroy_fq(struct qman_fq *fq, u32 flags);
 
 /**
@@ -1887,6 +1888,7 @@ static inline int qman_alloc_fqid(u32 *result)
  * This function can also be used to seed the allocator with ranges of FQIDs
  * that it can subsequently allocate from.
  */
+__rte_internal
 void qman_release_fqid_range(u32 fqid, unsigned int count);
 static inline void qman_release_fqid(u32 fqid)
 {
@@ -1896,7 +1898,16 @@ static inline void qman_release_fqid(u32 fqid)
 void qman_seed_fqid_range(u32 fqid, unsigned int count);
 
 __rte_internal
-int qman_shutdown_fq(u32 fqid);
+int qman_shutdown_fq(struct qman_fq *fq);
+
+static inline int qman_shutdown_fq_by_fqid(u32 fqid)
+{
+	struct qman_fq fq;
+
+	memset(&fq, 0, sizeof(struct qman_fq));
+	fq.fqid = fqid;
+	return qman_shutdown_fq(&fq);
+}
 
 /**
  * qman_reserve_fqid_range - Reserve the specified range of frame queue IDs
