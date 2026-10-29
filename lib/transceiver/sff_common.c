@@ -19,22 +19,22 @@ int sff_decode_module_eeprom(uint32_t type, const uint8_t *data, uint32_t length
 			     struct sff_output *d)
 {
 	switch (type) {
-	case RTE_ETH_MODULE_SFF_8079:
-		if (length < RTE_ETH_MODULE_SFF_8079_LEN)
+	case RTE_TRANSCEIVER_SFF_8079:
+		if (length < RTE_TRANSCEIVER_SFF_8079_LEN)
 			return -EINVAL;
 		sff_8079_show_all(data, d);
 		break;
-	case RTE_ETH_MODULE_SFF_8472:
-		if (length < RTE_ETH_MODULE_SFF_8079_LEN)
+	case RTE_TRANSCEIVER_SFF_8472:
+		if (length < RTE_TRANSCEIVER_SFF_8079_LEN)
 			return -EINVAL;
 		sff_8079_show_all(data, d);
 		/* diagnostics are in the second page (A2h) */
-		if (length >= RTE_ETH_MODULE_SFF_8472_LEN)
+		if (length >= RTE_TRANSCEIVER_SFF_8472_LEN)
 			sff_8472_show_all(data, d);
 		break;
-	case RTE_ETH_MODULE_SFF_8436:
-	case RTE_ETH_MODULE_SFF_8636:
-		if (length < RTE_ETH_MODULE_SFF_8636_LEN)
+	case RTE_TRANSCEIVER_SFF_8436:
+	case RTE_TRANSCEIVER_SFF_8636:
+		if (length < RTE_TRANSCEIVER_SFF_8636_LEN)
 			return -EINVAL;
 		sff_8636_show_all(data, length, d);
 		break;
@@ -299,21 +299,21 @@ void sff_8024_show_encoding(const uint8_t *data, int encoding_offset,
 		strlcat(val_string, " (NRZ)", sizeof(val_string));
 		break;
 	case SFF_8024_ENCODING_4h:
-		if (sff_type == RTE_ETH_MODULE_SFF_8472)
+		if (sff_type == RTE_TRANSCEIVER_SFF_8472)
 			strlcat(val_string, " (Manchester)", sizeof(val_string));
-		else if (sff_type == RTE_ETH_MODULE_SFF_8636)
+		else if (sff_type == RTE_TRANSCEIVER_SFF_8636)
 			strlcat(val_string, " (SONET Scrambled)", sizeof(val_string));
 		break;
 	case SFF_8024_ENCODING_5h:
-		if (sff_type == RTE_ETH_MODULE_SFF_8472)
+		if (sff_type == RTE_TRANSCEIVER_SFF_8472)
 			strlcat(val_string, " (SONET Scrambled)", sizeof(val_string));
-		else if (sff_type == RTE_ETH_MODULE_SFF_8636)
+		else if (sff_type == RTE_TRANSCEIVER_SFF_8636)
 			strlcat(val_string, " (64B/66B)", sizeof(val_string));
 		break;
 	case SFF_8024_ENCODING_6h:
-		if (sff_type == RTE_ETH_MODULE_SFF_8472)
+		if (sff_type == RTE_TRANSCEIVER_SFF_8472)
 			strlcat(val_string, " (64B/66B)", sizeof(val_string));
-		else if (sff_type == RTE_ETH_MODULE_SFF_8636)
+		else if (sff_type == RTE_TRANSCEIVER_SFF_8636)
 			strlcat(val_string, " (Manchester)", sizeof(val_string));
 		break;
 	case SFF_8024_ENCODING_256B:

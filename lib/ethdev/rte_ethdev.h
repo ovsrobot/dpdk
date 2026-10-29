@@ -5258,6 +5258,9 @@ typedef void (*rte_eth_module_eeprom_field_cb)(const char *name,
  *
  * Decode pluggable module EEPROM data according to the SFF specifications.
  *
+ * This is a wrapper of rte_transceiver_decode()
+ * for the RTE_ETH_MODULE_SFF_* module types.
+ *
  * The data may come from rte_eth_dev_get_module_eeprom()
  * or from any other source using the same layout,
  * for example the Linux ethtool ioctls ETHTOOL_GMODULEINFO

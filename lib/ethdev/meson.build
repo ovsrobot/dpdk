@@ -15,10 +15,6 @@ sources = files(
         'rte_mtr.c',
         'rte_tm.c',
         'sff_telemetry.c',
-        'sff_common.c',
-        'sff_8079.c',
-        'sff_8472.c',
-        'sff_8636.c',
 )
 
 headers = files(
@@ -55,7 +51,7 @@ if is_linux
     )
 endif
 
-deps += ['net', 'kvargs', 'meter', 'telemetry']
+deps += ['net', 'kvargs', 'meter', 'telemetry', 'transceiver']
 
 if is_freebsd
     annotate_locks = false

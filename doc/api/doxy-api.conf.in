@@ -86,6 +86,7 @@ INPUT                   = @TOPDIR@/doc/api/doxy-api-index.md \
                           @TOPDIR@/lib/table \
                           @TOPDIR@/lib/telemetry \
                           @TOPDIR@/lib/timer \
+                          @TOPDIR@/lib/transceiver \
                           @TOPDIR@/lib/vhost
 INPUT                   += @API_EXAMPLES@
 FILE_PATTERNS           = rte_*.h \

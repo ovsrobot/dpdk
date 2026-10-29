@@ -8,7 +8,8 @@
 
 #include "rte_ethdev.h"
 #include <rte_common.h>
-#include "sff_common.h"
+#include <rte_string_fns.h>
+#include <rte_transceiver.h>
 #include "sff_telemetry.h"
 #include <telemetry_data.h>
 
@@ -43,7 +44,6 @@ sff_tel_add_field(const char *name_str, const char *value_str, void *arg)
 static void
 sff_port_module_eeprom_parse(uint16_t port_id, struct rte_tel_data *d)
 {
-	struct sff_output out = { .field_cb = sff_tel_add_field, .arg = d };
 	struct rte_eth_dev_module_info minfo;
 	struct rte_dev_eeprom_info einfo;
 	int ret;
@@ -100,7 +100,8 @@ sff_port_module_eeprom_parse(uint16_t port_id, struct rte_tel_data *d)
 		return;
 	}
 
-	ret = sff_decode_module_eeprom(minfo.type, einfo.data, einfo.length, &out);
+	ret = rte_transceiver_decode(minfo.type, einfo.data, einfo.length,
+				     sff_tel_add_field, d);
 	if (ret == -ENOTSUP)
 		RTE_ETHDEV_LOG_LINE(NOTICE, "Unsupported module type: %u", minfo.type);
 	else if (ret != 0)
