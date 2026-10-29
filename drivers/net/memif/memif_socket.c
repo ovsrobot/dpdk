@@ -590,65 +590,85 @@ memif_intr_unregister_handler(const struct rte_intr_handle *intr_handle, void *a
 	rte_free(cc);
 }
 
+/*
+ * Detach a control channel that is no longer reachable from its device.
+ *
+ * If its callback is running on the interrupt thread, wait for it to
+ * return so that the device can be released safely by the caller.
+ * If called from that callback, defer the free until it returns.
+ */
+static void
+memif_cc_release(struct memif_control_channel *cc)
+{
+	struct rte_intr_handle *ih = cc->intr_handle;
+	int ret;
+
+	ret = rte_intr_callback_unregister(ih, memif_intr_handler, cc);
+	if (ret == -EAGAIN) {
+		if (rte_thread_is_intr()) {
+			ret = rte_intr_callback_unregister_pending(ih,
+					memif_intr_handler, cc,
+					memif_intr_unregister_handler);
+			if (ret <= 0)
+				MIF_LOG(WARNING,
+					"Failed to unregister control channel callback.");
+			return;
+		}
+		ret = rte_intr_callback_unregister_sync(ih, memif_intr_handler, cc);
+	}
+	if (ret < 0 && ret != -ENOENT && ret != -EINVAL)
+		MIF_LOG(WARNING, "Failed to unregister control channel callback.");
+
+	memif_intr_unregister_handler(ih, cc);
+}
+
 void
 memif_disconnect(struct rte_eth_dev *dev)
 {
 	struct pmd_internals *pmd = dev->data->dev_private;
 	struct memif_msg_queue_elt *elt, *next;
+	struct memif_control_channel *cc;
 	struct memif_queue *mq;
-	struct rte_intr_handle *ih;
 	int i;
-	int ret;
 
+	/*
+	 * Called from the application (stop/close) and from the interrupt
+	 * thread (peer hangup, bad descriptor). Take ownership of the control
+	 * channel under the lock so only one caller releases it.
+	 */
+	rte_spinlock_lock(&pmd->cc_lock);
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 	pmd->flags &= ~ETH_MEMIF_FLAG_CONNECTING;
 	pmd->flags &= ~ETH_MEMIF_FLAG_CONNECTED;
 
-	rte_spinlock_lock(&pmd->cc_lock);
-	if (pmd->cc != NULL) {
+	cc = pmd->cc;
+	pmd->cc = NULL;
+	if (cc != NULL) {
 		/* Clear control message queue (except disconnect message if any). */
-		for (elt = TAILQ_FIRST(&pmd->cc->msg_queue); elt != NULL; elt = next) {
+		for (elt = TAILQ_FIRST(&cc->msg_queue); elt != NULL; elt = next) {
 			next = TAILQ_NEXT(elt, next);
 			if (elt->msg.type != MEMIF_MSG_TYPE_DISCONNECT) {
-				TAILQ_REMOVE(&pmd->cc->msg_queue, elt, next);
+				TAILQ_REMOVE(&cc->msg_queue, elt, next);
 				rte_free(elt);
 			}
 		}
 		/* send disconnect message (if there is any in queue) */
-		memif_msg_send_from_queue(pmd->cc);
+		memif_msg_send_from_queue(cc);
 
 		/* at this point, there should be no more messages in queue */
-		if (TAILQ_FIRST(&pmd->cc->msg_queue) != NULL) {
+		if (TAILQ_FIRST(&cc->msg_queue) != NULL) {
 			MIF_LOG(WARNING,
 				"Unexpected message(s) in message queue.");
 		}
-
-		ih = pmd->cc->intr_handle;
-		if (rte_intr_fd_get(ih) > 0) {
-			ret = rte_intr_callback_unregister(ih,
-							memif_intr_handler,
-							pmd->cc);
-			/*
-			 * If callback is active (disconnecting based on
-			 * received control message).
-			 */
-			if (ret == -EAGAIN) {
-				ret = rte_intr_callback_unregister_pending(ih,
-							memif_intr_handler,
-							pmd->cc,
-							memif_intr_unregister_handler);
-			} else if (ret > 0) {
-				rte_intr_fd_close(ih);
-				rte_intr_instance_free(ih);
-				rte_free(pmd->cc);
-			}
-			pmd->cc = NULL;
-			if (ret <= 0)
-				MIF_LOG(WARNING,
-					"Failed to unregister control channel callback.");
-		}
 	}
 	rte_spinlock_unlock(&pmd->cc_lock);
+
+	/* Must not hold cc_lock here, the running callback may need it. */
+	if (cc != NULL)
+		memif_cc_release(cc);
+
+	/* Serialize teardown against a concurrent disconnect from the other thread. */
+	rte_spinlock_lock(&pmd->cc_lock);
 
 	/* unconfig interrupts */
 	for (i = 0; i < pmd->cfg.num_c2s_rings; i++) {
@@ -686,6 +706,7 @@ memif_disconnect(struct rte_eth_dev *dev)
 
 	/* reset connection configuration */
 	memset(&pmd->run, 0, sizeof(pmd->run));
+	rte_spinlock_unlock(&pmd->cc_lock);
 
 	MIF_LOG(DEBUG, "Disconnected, id: %d, role: %s.", pmd->id,
 		(pmd->role == MEMIF_ROLE_SERVER) ? "server" : "client");
@@ -862,6 +883,8 @@ static void
 memif_intr_handler(void *arg)
 {
 	struct memif_control_channel *cc = arg;
+	struct pmd_internals *pmd;
+	bool owned;
 	int ret;
 
 	ret = memif_msg_receive(cc);
@@ -892,6 +915,18 @@ memif_intr_handler(void *arg)
 		MIF_LOG(WARNING, "eth dev not allocated");
 		return;
 	}
+
+	/*
+	 * If the device was stopped on another thread, the channel was
+	 * already taken from it and that thread is waiting for this callback
+	 * to return before releasing the channel.
+	 */
+	pmd = cc->dev->data->dev_private;
+	rte_spinlock_lock(&pmd->cc_lock);
+	owned = (pmd->cc == cc);
+	rte_spinlock_unlock(&pmd->cc_lock);
+	if (!owned)
+		return;
 	memif_disconnect(cc->dev);
 }
 
