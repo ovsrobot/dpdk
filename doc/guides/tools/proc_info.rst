@@ -21,7 +21,7 @@ The application has a number of command line options:
    --stats-reset | --xstats-reset] [ --show-port | --show-tm | --show-crypto |
    --show-ring[=name] | --show-mempool[=name] | --iter-mempool=name |
    --show-port-private | --version | --firmware-version | --show-rss-reta |
-   --show-module-eeprom | --show-rx-descriptor queue_id:offset:num |
+   --show-module-eeprom[=decode] | --show-rx-descriptor queue_id:offset:num |
    --show-tx-descriptor queue_id:offset:num | --show-edev-queue-xstats=queue_num:evdev_id |
    --show-edev-port-xstats=port_num :evdev_id | --edev-dump-xstats=evdev_id |
    --edev-reset-xstats=evdev_id | --show-edev-device-xstats=evdev_id]
@@ -87,8 +87,11 @@ The firmware-version parameter displays ethdev firmware version.
 **--show-rss-reta**
 The show-rss-reta parameter displays ports rss redirection table.
 
-**--show-module-eeprom**
-The show-module-eeprom parameter displays ports module eeprom information.
+**--show-module-eeprom[=decode]**
+The show-module-eeprom parameter displays ports module eeprom information
+as a hexdump. With the decode value, the module eeprom is decoded
+according to the SFF specifications, for example the vendor,
+the transceiver type and the digital diagnostics.
 
 **--show-rx-descriptor queue_id:offset:num**
 The show-rx-descriptor parameter displays ports Rx descriptor information

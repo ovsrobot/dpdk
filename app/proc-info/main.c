@@ -39,6 +39,7 @@
 #include <rte_cryptodev.h>
 #include <rte_tm.h>
 #include <rte_hexdump.h>
+#include <rte_transceiver.h>
 #include <rte_version.h>
 #include <rte_eventdev.h>
 
@@ -117,6 +118,8 @@ static uint32_t enable_shw_fw_version;
 static uint32_t enable_shw_rss_reta;
 /* Enable show module eeprom information. */
 static uint32_t enable_shw_module_eeprom;
+/* Decode module eeprom instead of a hexdump. */
+static uint32_t module_eeprom_decode;
 
 /* Enable dump Rx/Tx descriptor. */
 static uint32_t enable_shw_rx_desc_dump;
@@ -184,7 +187,8 @@ proc_info_usage(const char *prgname)
 		"  --version: to display DPDK version\n"
 		"  --firmware-version: to display ethdev firmware version\n"
 		"  --show-rss-reta: to display ports redirection table\n"
-		"  --show-module-eeprom: to display ports module eeprom information\n"
+		"  --show-module-eeprom[=decode]: to display ports module eeprom information, "
+			"as a hexdump or decoded\n"
 		"  --show-rx-descriptor queue_id:offset:num to display ports Rx descriptor information. "
 			"queue_id: A Rx queue identifier on this port. "
 			"offset: The offset of the descriptor starting from tail. "
@@ -445,7 +449,7 @@ proc_info_parse_args(int argc, char **argv)
 		{"version", 0, NULL, 0},
 		{"firmware-version", 0, NULL, 0},
 		{"show-rss-reta", 0, NULL, 0},
-		{"show-module-eeprom", 0, NULL, 0},
+		{"show-module-eeprom", optional_argument, NULL, 0},
 		{"show-rx-descriptor", required_argument, NULL, 1},
 		{"show-tx-descriptor", required_argument, NULL, 1},
 		{"show-edev-queue-xstats", required_argument, NULL, 0},
@@ -539,8 +543,17 @@ proc_info_parse_args(int argc, char **argv)
 					"show-rss-reta", MAX_LONG_OPT_SZ))
 				enable_shw_rss_reta = 1;
 			else if (!strncmp(long_option[option_index].name,
-					"show-module-eeprom", MAX_LONG_OPT_SZ))
+					"show-module-eeprom", MAX_LONG_OPT_SZ)) {
 				enable_shw_module_eeprom = 1;
+				if (optarg != NULL) {
+					if (strcmp(optarg, "decode") != 0) {
+						fprintf(stderr, "Invalid show-module-eeprom value: %s\n",
+							optarg);
+						return -1;
+					}
+					module_eeprom_decode = 1;
+				}
+			}
 			else if (!strncmp(long_option[option_index].name,
 					"edev-dump-xstats", MAX_LONG_OPT_SZ)) {
 				int ret = parse_eventdev_dump_xstats_params(optarg);
@@ -1851,6 +1864,13 @@ show_port_rss_reta_info(void)
 }
 
 static void
+module_eeprom_field_print(const char *name, const char *value,
+		__rte_unused void *arg)
+{
+	printf("\t%-41s : %s\n", name, value);
+}
+
+static void
 show_module_eeprom_info(void)
 {
 	unsigned char bytes_eeprom[EEPROM_DUMP_CHUNKSIZE];
@@ -1888,6 +1908,16 @@ show_module_eeprom_info(void)
 		if (ret != 0) {
 			fprintf(stderr, "Port %u module EEPROM read error: %s\n",
 				i, strerror(-ret));
+			continue;
+		}
+
+		if (module_eeprom_decode) {
+			ret = rte_transceiver_decode(module_info.type,
+					eeprom_info.data, eeprom_info.length,
+					module_eeprom_field_print, NULL);
+			if (ret != 0)
+				fprintf(stderr, "Port %u module EEPROM decode error: %s\n",
+					i, strerror(-ret));
 			continue;
 		}
 
