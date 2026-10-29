@@ -69,6 +69,8 @@ static uint32_t enabled_port_mask = 0;
 /* Set by the SIGINT handler to stop the worker loops. */
 static volatile sig_atomic_t quit;
 
+static RTE_ATOMIC(bool) stop_workers;
+
 /* Promiscuous mode */
 static uint32_t promiscuous;
 
@@ -1242,7 +1244,7 @@ switch_worker(void *arg)
 		}
 	}
 
-	while (!quit) {
+	while (!rte_atomic_load_explicit(&stop_workers, rte_memory_order_relaxed)) {
 		drain_mbuf_table(tx_q);
 		drain_vhost_table();
 		/*
