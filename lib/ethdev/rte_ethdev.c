@@ -33,7 +33,6 @@
 #include "ethdev_profile.h"
 #include "ethdev_private.h"
 #include "ethdev_trace.h"
-#include <rte_transceiver.h>
 
 #define ETH_XSTATS_ITER_NUM	0x100
 
@@ -6996,29 +6995,6 @@ rte_eth_dev_get_module_eeprom(uint16_t port_id,
 	rte_ethdev_trace_get_module_eeprom(port_id, info, ret);
 
 	return ret;
-}
-
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_module_eeprom_parse, 26.11)
-int
-rte_eth_module_eeprom_parse(uint32_t type, const uint8_t *data, uint32_t length,
-		rte_eth_module_eeprom_field_cb cb, void *arg)
-{
-	RTE_BUILD_BUG_ON(RTE_ETH_MODULE_SFF_8079 != RTE_TRANSCEIVER_SFF_8079);
-	RTE_BUILD_BUG_ON(RTE_ETH_MODULE_SFF_8472 != RTE_TRANSCEIVER_SFF_8472);
-	RTE_BUILD_BUG_ON(RTE_ETH_MODULE_SFF_8636 != RTE_TRANSCEIVER_SFF_8636);
-	RTE_BUILD_BUG_ON(RTE_ETH_MODULE_SFF_8436 != RTE_TRANSCEIVER_SFF_8436);
-
-	if (data == NULL) {
-		RTE_ETHDEV_LOG_LINE(ERR, "Cannot parse module EEPROM from NULL data");
-		return -EINVAL;
-	}
-
-	if (cb == NULL) {
-		RTE_ETHDEV_LOG_LINE(ERR, "Cannot parse module EEPROM with NULL callback");
-		return -EINVAL;
-	}
-
-	return rte_transceiver_decode(type, data, length, cb, arg);
 }
 
 RTE_EXPORT_SYMBOL(rte_eth_dev_get_dcb_info)
