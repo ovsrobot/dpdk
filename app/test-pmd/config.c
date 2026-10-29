@@ -55,6 +55,7 @@
 #include <rte_gro.h>
 #endif
 #include <rte_hexdump.h>
+#include <rte_transceiver.h>
 
 #include "testpmd.h"
 #include "cmdline_mtr.h"
@@ -1244,7 +1245,7 @@ port_module_eeprom_decode_display(portid_t port_id)
 
 	printf("Port %u module EEPROM (type 0x%x, %u bytes):\n",
 		port_id, minfo.type, einfo.length);
-	ret = rte_eth_module_eeprom_parse(minfo.type, einfo.data, einfo.length,
+	ret = rte_transceiver_decode(minfo.type, einfo.data, einfo.length,
 			port_module_eeprom_field_print, NULL);
 	if (ret == -ENOTSUP)
 		fprintf(stderr, "Unsupported module type: 0x%x\n", minfo.type);
