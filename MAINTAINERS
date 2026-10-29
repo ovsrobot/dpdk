@@ -451,6 +451,7 @@ Transceiver module EEPROM
 M: Roman Khromenok <roma55592@yandex.ru>
 T: git://dpdk.org/next/dpdk-next-net
 F: lib/transceiver/
+F: app/test/test_transceiver.c
 F: doc/guides/prog_guide/transceiver_lib.rst
 
 Flow API
