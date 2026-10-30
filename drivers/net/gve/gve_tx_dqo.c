@@ -138,7 +138,7 @@ gve_tx_validate_pkt(const struct rte_mbuf *tx_pkt, bool is_tso)
 	 */
 	headlen = tx_pkt->l2_len + tx_pkt->l3_len + tx_pkt->l4_len;
 	if (tx_pkt->l4_len == 0 || headlen > GVE_TX_MAX_HDR_SIZE_DQO ||
-	    tx_pkt->data_len < headlen || tx_pkt->pkt_len <= headlen)
+	    tx_pkt->pkt_len <= headlen)
 		return false;
 
 	return tx_pkt->pkt_len - headlen <= GVE_TX_MAX_TSO_LEN_DQO &&
@@ -167,20 +167,41 @@ static inline bool
 gve_tx_validate_descs(const struct gve_tx_queue *txq, struct rte_mbuf *tx_pkt,
 		      uint16_t nb_descs, bool is_tso)
 {
+	int headlen = tx_pkt->l2_len + tx_pkt->l3_len + tx_pkt->l4_len;
+	int num_descs, seg_offset, mbuf_len;
+	int tso_segsz = tx_pkt->tso_segsz;
+	int header_remain = headlen;
+	uint16_t num_header_descs;
+
 	if (nb_descs > gve_tx_max_pkt_descs(txq))
 		return false;
 
 	if (!is_tso)
 		return nb_descs <= GVE_TX_MAX_DATA_DESCS;
 
-	int tso_segsz = tx_pkt->tso_segsz;
-	int num_descs, seg_offset, mbuf_len;
-	int headlen = tx_pkt->l2_len + tx_pkt->l3_len + tx_pkt->l4_len;
+	/* Process headers. Headers can span up to 3 descriptors. */
+	if (headlen == 0)
+		return false;
 
-	/* Headers will be split into their own buffer. */
-	num_descs = 1;
+	num_header_descs = 1;
+	while (tx_pkt != NULL) {
+		if (header_remain <= tx_pkt->data_len)
+			break;
+
+		if (likely(tx_pkt->data_len > 0)) {
+			header_remain -= tx_pkt->data_len;
+			num_header_descs++;
+		}
+
+		tx_pkt = tx_pkt->next;
+	}
+
+	if (tx_pkt == NULL || num_header_descs > GVE_TX_MAX_HEADER_DESCS_TSO)
+		return false;
+
+	num_descs = num_header_descs;
 	seg_offset = 0;
-	mbuf_len = tx_pkt->data_len - headlen;
+	mbuf_len = tx_pkt->data_len - header_remain;
 
 	while (tx_pkt) {
 		if (!mbuf_len)
@@ -207,7 +228,7 @@ gve_tx_validate_descs(const struct gve_tx_queue *txq, struct rte_mbuf *tx_pkt,
 			 * segment in this mbuf is divided between two
 			 * descriptors, both must be counted.
 			 */
-			num_descs = 1 + !!(seg_offset) +
+			num_descs = num_header_descs + !!(seg_offset) +
 				(mbuf_remain < seg_offset && mbuf_remain);
 		} else {
 			seg_offset += mbuf_len;
@@ -219,7 +240,6 @@ next_mbuf:
 		if (tx_pkt)
 			mbuf_len = tx_pkt->data_len;
 	}
-
 
 	return true;
 }

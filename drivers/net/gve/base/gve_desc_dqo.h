@@ -45,6 +45,7 @@ GVE_CHECK_STRUCT_LEN(16, gve_tx_pkt_desc_dqo);
 
 /* Maximum number of data descriptors allowed per packet, or per-TSO segment. */
 #define GVE_TX_MAX_DATA_DESCS 10
+#define GVE_TX_MAX_HEADER_DESCS_TSO 3
 
 /* Min gap between tail and head to avoid cacheline overlap */
 #define GVE_TX_MIN_DESC_PREVENT_CACHE_OVERLAP 4
