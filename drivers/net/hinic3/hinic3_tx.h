@@ -55,10 +55,10 @@ struct hinic3_wqe_info {
 	uint16_t sge_cnt;
 
 	uint8_t offload;
-	uint8_t rsvd0; /**< Reserved field 0. */
+	uint8_t wrapped;
 	uint16_t payload_offset;
 
-	uint8_t rsvd1; /**< Reserved field 1. */
+	uint32_t queue_info_sp600;
 	uint8_t owner;
 	uint16_t pi;
 
@@ -387,42 +387,13 @@ struct __rte_cache_aligned hinic3_txq {
 #endif
 };
 
-/* Tx WQE offload set callback function */
-typedef void  (*nic_tx_set_wqe_offload_t)(struct hinic3_wqe_info *wqe_info,
-					  struct hinic3_sq_wqe_combo *wqe_combo);
-
-struct hinic3_nic_tx_ops {
-	nic_tx_set_wqe_offload_t	nic_tx_set_wqe_offload;
-};
-
 void hinic3_flush_txqs(struct hinic3_nic_dev *nic_dev);
 void hinic3_free_txq_mbufs(struct hinic3_txq *txq);
 void hinic3_free_all_txq_mbufs(struct hinic3_nic_dev *nic_dev);
+uint16_t hinic3_xmit_pkts_compact_cqe(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 uint16_t hinic3_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 uint16_t hinic3_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 int hinic3_stop_sq(struct hinic3_txq *txq);
 int hinic3_start_all_sqs(struct rte_eth_dev *eth_dev);
 int hinic3_tx_done_cleanup(void *txq, uint32_t free_cnt);
-
-/**
- * Set wqe task section
- *
- * @param[in] wqe_info
- * Packet info parsed according to mbuf
- * @param[in] wqe_combo
- * Wqe need to format
- */
-void hinic3_tx_set_normal_task_offload(struct hinic3_wqe_info *wqe_info,
-				       struct hinic3_sq_wqe_combo *wqe_combo);
-
-/**
- * Set compact wqe task section
- *
- * @param[in] wqe_info
- * Packet info parsed according to mbuf
- * @param[in] wqe_combo
- * Wqe need to format
- */
-void hinic3_tx_set_compact_task_offload(struct hinic3_wqe_info *wqe_info,
-					struct hinic3_sq_wqe_combo *wqe_combo);
 #endif /**< _HINIC3_TX_H_ */
