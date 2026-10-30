@@ -7376,7 +7376,7 @@ ixgbe_get_eeprom(struct rte_eth_dev *dev,
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return -E_RTE_SECONDARY;
 
-	if (eeprom->ops.write_buffer == NULL)
+	if (eeprom->ops.read_buffer == NULL)
 		return -ENOTSUP;
 
 	first = in_eeprom->offset >> 1;
@@ -7406,6 +7406,9 @@ ixgbe_set_eeprom(struct rte_eth_dev *dev,
 	 */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return -E_RTE_SECONDARY;
+
+	if (eeprom->ops.write_buffer == NULL)
+		return -ENOTSUP;
 
 	first = in_eeprom->offset >> 1;
 	length = in_eeprom->length >> 1;
