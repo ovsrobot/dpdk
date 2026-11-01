@@ -548,6 +548,19 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #endif
 
 /**
+ * Inline every call made by a function into it, where the callee's body
+ * is available, whatever the callee's own inline annotation.
+ *
+ * Useful where a call inside a hot loop is costly in itself,
+ * for example where values are held in registers that no call preserves.
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_flatten
+#else
+#define __rte_flatten __attribute__((flatten))
+#endif
+
+/**
  * Hint function in the hot path
  *
  * The compiler may optimize the function more aggressively,
