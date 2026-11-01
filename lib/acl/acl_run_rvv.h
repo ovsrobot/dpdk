@@ -182,9 +182,11 @@ transition_vec(vuint32m1_t v_next_input, const uint64_t *trans,
 }
 
 /*
- * Execute trie traversal with 8 traversals in parallel
+ * Execute trie traversal with 8 traversals in parallel.
+ * Flattened: a vector value live across a call is spilled, and the
+ * frame is then addressed through vlenb.
  */
-static inline int
+static inline __rte_flatten int
 search_rvv_8(const struct rte_acl_ctx *ctx, const uint8_t **data,
 	uint32_t *results, uint32_t total_packets, uint32_t categories)
 {
@@ -270,7 +272,7 @@ search_rvv_8(const struct rte_acl_ctx *ctx, const uint8_t **data,
 /*
  * Execute trie traversal with 4 traversals in parallel
  */
-static inline int
+static inline __rte_flatten int
 search_rvv_4(const struct rte_acl_ctx *ctx, const uint8_t **data,
 	uint32_t *results, uint32_t total_packets, uint32_t categories)
 {
