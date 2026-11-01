@@ -3731,6 +3731,14 @@ Limitations
      and the first IP fragment is received,
      then this IP fragment will miss on that flow rule.
 
+#. Matching ``RTE_FLOW_ITEM_TYPE_VLAN`` together with an exact
+   ``next_hdr`` of ``RTE_FLOW_ITEM_TYPE_IPV6_FRAG_EXT``
+   is not supported on group 0 (HW root table).
+   The rule is accepted, but matching packets do not hit it.
+   Create this pattern in a non-root group.
+   On group 0, a VLAN item with a wildcard fragment ``next_hdr``,
+   and an exact ``next_hdr`` without a VLAN item, are supported.
+
 
 .. _mlx5_nat64:
 
