@@ -45,6 +45,7 @@
 #define ICE_RL_BURST_SIZE_ARG     "rl_burst_size"
 #define ICE_SOURCE_PRUNE_ARG      "source-prune"
 #define ICE_LINK_STATE_ON_CLOSE   "link_state_on_close"
+#define ICE_AUTO_NEG_DISABLE_ARG  "auto_neg_disable"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -64,6 +65,7 @@ static const char * const ice_valid_args[] = {
 	ICE_RL_BURST_SIZE_ARG,
 	ICE_SOURCE_PRUNE_ARG,
 	ICE_LINK_STATE_ON_CLOSE,
+	ICE_AUTO_NEG_DISABLE_ARG,
 	NULL
 };
 
@@ -2542,6 +2544,11 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_LINK_STATE_ON_CLOSE,
 				 &parse_link_state_on_close, &ad->devargs.link_state_on_close);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_AUTO_NEG_DISABLE_ARG,
+				 &parse_bool, &ad->devargs.auto_neg_disable);
 
 bail:
 	rte_kvargs_free(kvlist);
@@ -5092,6 +5099,15 @@ ice_atomic_write_link_status(struct rte_eth_dev *dev,
 	return 0;
 }
 
+static bool
+ice_link_autoneg_enabled(const struct rte_eth_dev *dev)
+{
+	const struct ice_adapter *ad = ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+
+	return !ad->devargs.auto_neg_disable ||
+			(dev->data->dev_conf.link_speeds & RTE_ETH_LINK_SPEED_FIXED) == 0;
+}
+
 static int
 ice_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 {
@@ -5180,8 +5196,7 @@ ice_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 		break;
 	}
 
-	link.link_autoneg = !(dev->data->dev_conf.link_speeds &
-			      RTE_ETH_LINK_SPEED_FIXED);
+	link.link_autoneg = ice_link_autoneg_enabled(dev);
 
 out:
 	ice_atomic_write_link_status(dev, &link);
@@ -5248,8 +5263,7 @@ ice_apply_link_speed(struct rte_eth_dev *dev)
 		return -EINVAL;
 	}
 
-	bool link_autoneg = (conf->link_speeds & RTE_ETH_LINK_SPEED_FIXED) == 0;
-	return ice_phy_conf_link(hw, speed, true, link_autoneg);
+	return ice_phy_conf_link(hw, speed, true, ice_link_autoneg_enabled(dev));
 }
 
 static int
@@ -8198,6 +8212,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_RL_BURST_SIZE_ARG "=<N>"
 			      ICE_SOURCE_PRUNE_ARG "=<0|1>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>"
+			      ICE_AUTO_NEG_DISABLE_ARG "=<0|1>"
 			      ICE_LINK_STATE_ON_CLOSE "=<down|up|initial>");
 
 RTE_LOG_REGISTER_SUFFIX(ice_logtype_init, init, NOTICE);

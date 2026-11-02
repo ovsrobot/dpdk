@@ -634,6 +634,7 @@ struct ice_pf {
 struct ice_devargs {
 	bool rx_low_latency;
 	bool safe_mode_support;
+	bool auto_neg_disable;
 	uint8_t proto_xtr_dflt;
 	bool default_mac_disable;
 	uint8_t proto_xtr[ICE_MAX_QUEUE_NUM];

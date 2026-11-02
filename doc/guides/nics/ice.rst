@@ -107,6 +107,16 @@ Configuration
 Runtime Configuration
 ~~~~~~~~~~~~~~~~~~~~~
 
+``auto_neg_disable`` (default ``0``)
+   Control hardware link negotiation when a fixed speed is requested with ``RTE_ETH_LINK_SPEED_FIXED``.
+   By default, the firmware's negotiation settings are preserved,
+   allowing a fixed-speed link to use negotiation such as Clause 37 when required by its peer.
+   Set ``auto_neg_disable=1`` to disable Clause 28, Clause 37 and Clause 73 negotiation.
+   This option has no effect when automatic speed selection is requested.
+   For example::
+
+      -a 80:00.0,auto_neg_disable=1
+
 - ``Safe Mode Support`` (default ``0``)
 
   If driver failed to load OS package, by default driver's initialization failed.

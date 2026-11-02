@@ -175,6 +175,8 @@ New Features
 
 * **Updated Intel ice driver.**
 
+  * Added ``auto_neg_disable`` devarg to disable hardware link negotiation for fixed-speed links.
+    By default, fixed-speed links now preserve the firmware's negotiation settings.
   * Added chip temperature to the extended statistics.
   * Added Tx context descriptor support to the AVX2 and AVX512 vector Tx paths,
     enabling QinQ tag insertion and outer IPv4/UDP checksum offloads on those paths.
