@@ -1424,6 +1424,12 @@ than initially provided will be rejected.
 Limitations
 ^^^^^^^^^^^
 
+#. A pattern template supports at most four range-matched fields.
+   The exact limit depends on the protocol fields being matched,
+   so some combinations of three or four fields are not supported.
+   Split unsupported combinations across separate pattern templates
+   and template tables.
+
 #. With E-Switch enabled, ports which share the E-Switch domain
    should be started and stopped in a specific order:
 
