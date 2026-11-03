@@ -304,6 +304,12 @@ mempool_ops_alloc_once(struct rte_mempool *mp)
 		ret = rte_mempool_ops_alloc(mp);
 		if (ret != 0)
 			return ret;
+		/*
+		 * rte_mempool_walk() and rte_mempool_list_dump() access the
+		 * store of pools with this flag set. Make the store visible
+		 * before the flag.
+		 */
+		rte_atomic_thread_fence(rte_memory_order_release);
 		mp->flags |= RTE_MEMPOOL_F_POOL_CREATED;
 	}
 	return 0;
@@ -1412,6 +1418,11 @@ rte_mempool_list_dump(FILE *f)
 
 	TAILQ_FOREACH(te, mempool_list, next) {
 		mp = (struct rte_mempool *) te->data;
+		/* skip mempools that are not populated yet */
+		if ((mp->flags & RTE_MEMPOOL_F_POOL_CREATED) == 0)
+			continue;
+		/* pairs with the release fence in mempool_ops_alloc_once() */
+		rte_atomic_thread_fence(rte_memory_order_acquire);
 		rte_mempool_dump(f, mp);
 	}
 
@@ -1460,7 +1471,14 @@ void rte_mempool_walk(void (*func)(struct rte_mempool *, void *),
 	rte_mcfg_mempool_read_lock();
 
 	RTE_TAILQ_FOREACH_SAFE(te, mempool_list, next, tmp_te) {
-		(*func)((struct rte_mempool *) te->data, arg);
+		struct rte_mempool *mp = (struct rte_mempool *) te->data;
+
+		/* skip mempools that are not populated yet */
+		if ((mp->flags & RTE_MEMPOOL_F_POOL_CREATED) == 0)
+			continue;
+		/* pairs with the release fence in mempool_ops_alloc_once() */
+		rte_atomic_thread_fence(rte_memory_order_acquire);
+		(*func)(mp, arg);
 	}
 
 	rte_mcfg_mempool_read_unlock();

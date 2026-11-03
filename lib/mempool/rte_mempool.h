@@ -1907,6 +1907,8 @@ static inline void *rte_mempool_get_priv(struct rte_mempool *mp)
 /**
  * Dump the status of all mempools on the console
  *
+ * Mempools that are not populated yet are skipped.
+ *
  * @param f
  *   A pointer to a file for output
  */
@@ -1949,6 +1951,7 @@ uint32_t rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
  *
  * The mempool list is locked while the iterator function runs, so the
  * iterator function must not create or free a mempool.
+ * Mempools that are not populated yet are skipped.
  *
  * @param func
  *   Iterator function
