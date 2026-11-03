@@ -294,6 +294,21 @@ rte_mempool_free_memchunks(struct rte_mempool *mp)
 	}
 }
 
+/*
+ * Check whether the mempool driver has allocated its store. Mempools are on
+ * the mempool list before that, so rte_mempool_dump() and rte_mempool_walk()
+ * callbacks can find them while another thread populates them.
+ * Acquire: pairs with the release in mempool_ops_alloc_once().
+ */
+static bool
+mempool_is_created(const struct rte_mempool *mp)
+{
+	return (rte_atomic_load_explicit(
+			(const RTE_ATOMIC(unsigned int) *)&mp->flags,
+			rte_memory_order_acquire) &
+		RTE_MEMPOOL_F_POOL_CREATED) != 0;
+}
+
 static int
 mempool_ops_alloc_once(struct rte_mempool *mp)
 {
@@ -304,7 +319,13 @@ mempool_ops_alloc_once(struct rte_mempool *mp)
 		ret = rte_mempool_ops_alloc(mp);
 		if (ret != 0)
 			return ret;
-		mp->flags |= RTE_MEMPOOL_F_POOL_CREATED;
+		/*
+		 * Release: make the store visible before the flag, see
+		 * mempool_is_created().
+		 */
+		rte_atomic_fetch_or_explicit(
+			(RTE_ATOMIC(unsigned int) *)&mp->flags,
+			RTE_MEMPOOL_F_POOL_CREATED, rte_memory_order_release);
 	}
 	return 0;
 }
@@ -1283,9 +1304,13 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 	unsigned common_count;
 	unsigned cache_count;
 	size_t mem_len = 0;
+	bool created;
 
 	RTE_ASSERT(f != NULL);
 	RTE_ASSERT(mp != NULL);
+
+	/* the mempool driver can only be queried once the store exists */
+	created = mempool_is_created(mp);
 
 	fprintf(f, "mempool <%s>@%p\n", mp->name, mp);
 	fprintf(f, "  flags=%x\n", mp->flags);
@@ -1318,14 +1343,16 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 	}
 
 	cache_count = rte_mempool_dump_cache(f, mp);
-	common_count = rte_mempool_ops_get_count(mp);
+	common_count = created ? rte_mempool_ops_get_count(mp) : 0;
 	if ((cache_count + common_count) > mp->size)
 		common_count = mp->size - cache_count;
 	fprintf(f, "  common_pool_count=%u\n", common_count);
 
 	/* sum and dump statistics */
 #ifdef RTE_LIBRTE_MEMPOOL_STATS
-	rte_mempool_ops_get_info(mp, &info);
+	memset(&info, 0, sizeof(info));
+	if (created)
+		rte_mempool_ops_get_info(mp, &info);
 	memset(&sum, 0, sizeof(sum));
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE + 1; lcore_id++) {
 		sum.put_bulk += mp->stats[lcore_id].put_bulk;
@@ -1653,7 +1680,8 @@ mempool_info_cb(struct rte_mempool *mp, void *arg)
 			cache_count += cache->len;
 	}
 	rte_tel_data_add_dict_uint(info->d, "total_cache_count", cache_count);
-	common_count = rte_mempool_ops_get_count(mp);
+	/* the mempool driver can only be queried once the store exists */
+	common_count = mempool_is_created(mp) ? rte_mempool_ops_get_count(mp) : 0;
 	if ((cache_count + common_count) > mp->size)
 		common_count = mp->size - cache_count;
 	rte_tel_data_add_dict_uint(info->d, "common_pool_count", common_count);

@@ -1325,6 +1325,9 @@ void rte_mempool_stats_reset(struct rte_mempool *mp);
 /**
  * Dump the status of the mempool to a file.
  *
+ * For a mempool that is not populated yet, the mempool driver is not
+ * queried, and the common pool count is reported as 0.
+ *
  * @param f
  *   A pointer to a file for output
  * @param mp
@@ -1949,6 +1952,12 @@ uint32_t rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
  *
  * The mempool list is locked while the iterator function runs, so the
  * iterator function must not create or free a mempool.
+ *
+ * The iterator function is also called for mempools that are not
+ * populated yet, which do not have RTE_MEMPOOL_F_POOL_CREATED set in
+ * their flags. Such a mempool has no store yet, so the iterator function
+ * must check this flag before calling functions that query the mempool
+ * driver, such as rte_mempool_avail_count().
  *
  * @param func
  *   Iterator function
