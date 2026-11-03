@@ -1106,6 +1106,8 @@ tap_dev_close(struct rte_eth_dev *dev)
 		return 0;
 	}
 
+	tap_intr_handle_set(dev, 0);
+
 	if (!internals->persist)
 		tap_link_set_down(dev);
 
@@ -1958,6 +1960,9 @@ tap_lsc_intr_handle_set(struct rte_eth_dev *dev, int set)
 
 clean:
 	rte_eal_alarm_cancel(tap_lsc_register_alarm, dev);
+	if (rte_intr_fd_get(pmd->intr_handle) < 0)
+		return 0;
+
 	do {
 		ret = rte_intr_callback_unregister(pmd->intr_handle,
 			tap_dev_intr_handler, dev);
