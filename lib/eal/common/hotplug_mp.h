@@ -5,6 +5,7 @@
 #ifndef _HOTPLUG_MP_H_
 #define _HOTPLUG_MP_H_
 
+#include "rte_eal.h"
 #include "rte_dev.h"
 
 #define EAL_DEV_MP_ACTION_REQUEST      "eal_dev_mp_request"
@@ -12,7 +13,9 @@
 
 #define EAL_DEV_MP_DEV_NAME_MAX_LEN RTE_DEV_NAME_MAX_LEN
 #define EAL_DEV_MP_BUS_NAME_MAX_LEN 32
-#define EAL_DEV_MP_DEV_ARGS_MAX_LEN 128
+#define EAL_DEV_MP_DEV_ARGS_MAX_LEN (RTE_MP_MAX_PARAM_LEN \
+	- sizeof(enum eal_dev_req_type) - sizeof(int))
+	/* minus t and result from struct eal_dev_mp_req */
 
 enum eal_dev_req_type {
 	EAL_DEV_REQ_TYPE_ATTACH,
@@ -26,6 +29,9 @@ struct eal_dev_mp_req {
 	char devargs[EAL_DEV_MP_DEV_ARGS_MAX_LEN];
 	int result;
 };
+
+static_assert(sizeof(struct eal_dev_mp_req) <= RTE_MP_MAX_PARAM_LEN,
+	"Hotplug message struct exceeds IPC parameter capacity");
 
 /**
  * Register all mp action callbacks for hotplug.

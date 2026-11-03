@@ -278,7 +278,7 @@ rte_dev_probe(const char *devargs)
 		goto skip_mp_req;
 
 	if (strlen(devargs) >= EAL_DEV_MP_DEV_ARGS_MAX_LEN) {
-		EAL_LOG(ERR, "devargs truncated (len %zu, max %d)",
+		EAL_LOG(ERR, "devargs truncated (len %zu, max %zu)",
 			strlen(devargs), EAL_DEV_MP_DEV_ARGS_MAX_LEN);
 		return -E2BIG;
 	}
