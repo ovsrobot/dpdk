@@ -1947,6 +1947,9 @@ uint32_t rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
 /**
  * Walk list of all memory pools
  *
+ * The mempool list is locked while the iterator function runs, so the
+ * iterator function must not create or free a mempool.
+ *
  * @param func
  *   Iterator function
  * @param arg
