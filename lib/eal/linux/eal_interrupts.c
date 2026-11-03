@@ -1019,9 +1019,20 @@ eal_intr_process_interrupts(struct epoll_event *events, int nfds)
 		rte_spinlock_lock(&intr_lock);
 
 		if (call) {
+			struct rte_intr_callback *last;
+
+			/*
+			 * Only invoke the callbacks which were registered before
+			 * this event was dispatched. A callback may register a
+			 * new one (e.g. net/tap re-arming its LSC interrupt on
+			 * netns change, possibly on a different FD). It must not
+			 * receive the current event.
+			 */
+			last = TAILQ_LAST(&src->callbacks, rte_intr_cb_list);
 			active_events = epoll_to_intr_events(events[n].events);
 			/* Finally, call all callbacks. */
-			TAILQ_FOREACH(cb, &src->callbacks, next) {
+			for (cb = TAILQ_FIRST(&src->callbacks); cb != NULL; cb = next) {
+				next = TAILQ_NEXT(cb, next);
 
 				/* make a copy and unlock. */
 				active_cb = *cb;
@@ -1032,6 +1043,9 @@ eal_intr_process_interrupts(struct epoll_event *events, int nfds)
 
 				/*get the lock back. */
 				rte_spinlock_lock(&intr_lock);
+
+				if (cb == last)
+					break;
 			}
 			active_events = 0;
 		}
