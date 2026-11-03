@@ -1938,15 +1938,21 @@ tap_lsc_intr_handle_set(struct rte_eth_dev *dev, int set)
 		return 0;
 	}
 	if (set) {
+		int fd;
+
 		/*
 		 * Subscribe to RTMGRP_LINK to receive RTM_NEWLINK (link state
 		 * changes) events. Also receives RTM_DELLINK events which are
 		 * used for namespace change detection when TUNGETDEVNETNS is
 		 * available.
 		 */
-		rte_intr_fd_set(pmd->intr_handle, tap_nl_init(RTMGRP_LINK));
-		if (unlikely(rte_intr_fd_get(pmd->intr_handle) == -1))
+		fd = tap_nl_init(RTMGRP_LINK);
+		if (unlikely(fd == -1))
 			return -EBADF;
+		/* Close the socket of the previous namespace, if any. */
+		if (rte_intr_fd_get(pmd->intr_handle) >= 0)
+			tap_nl_final(rte_intr_fd_get(pmd->intr_handle));
+		rte_intr_fd_set(pmd->intr_handle, fd);
 		return rte_intr_callback_register(
 			pmd->intr_handle, tap_dev_intr_handler, dev);
 	}
