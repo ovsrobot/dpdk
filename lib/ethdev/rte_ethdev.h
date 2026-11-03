@@ -296,6 +296,11 @@ struct rte_eth_stats {
 #define RTE_ETH_LINK_SPEED_200G    RTE_BIT32(15) /**< 200 Gbps */
 #define RTE_ETH_LINK_SPEED_400G    RTE_BIT32(16) /**< 400 Gbps */
 #define RTE_ETH_LINK_SPEED_800G    RTE_BIT32(17) /**< 800 Gbps */
+/*
+ * 800 Gbps is standardized in IEEE 802.3df; IEEE P802.3dj is
+ * standardizing 1.6 Tbps as the next rate.
+ */
+#define RTE_ETH_LINK_SPEED_1600G   RTE_BIT32(18) /**< 1.6 Tbps */
 /**@}*/
 
 /**@{@name Link speed
@@ -317,6 +322,7 @@ struct rte_eth_stats {
 #define RTE_ETH_SPEED_NUM_200G    200000 /**< 200 Gbps */
 #define RTE_ETH_SPEED_NUM_400G    400000 /**< 400 Gbps */
 #define RTE_ETH_SPEED_NUM_800G    800000 /**< 800 Gbps */
+#define RTE_ETH_SPEED_NUM_1600G  1600000 /**< 1.6 Tbps */
 #define RTE_ETH_SPEED_NUM_UNKNOWN UINT32_MAX /**< Unknown */
 /**@}*/
 
