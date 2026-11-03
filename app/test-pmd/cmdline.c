@@ -726,8 +726,8 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"port config (port_id|all)"
 			" speed (10|100|1000|2500|5000|10000|25000|40000|50000|"
 			"100000|200000|400000|800000|auto)"
-			" duplex (half|full|auto)\n"
-			"    Set speed and duplex for all ports or port_id\n\n"
+			" [fixed] duplex (half|full|auto)\n"
+			"    Set speed and duplex; fixed disables link autonegotiation\n\n"
 
 			"port config (port_id|all) loopback (mode)\n"
 			"    Set loopback mode for all ports or port_id\n\n"
@@ -1395,10 +1395,11 @@ struct cmd_config_speed_all {
 	cmdline_fixed_string_t item2;
 	cmdline_fixed_string_t value1;
 	cmdline_fixed_string_t value2;
+	cmdline_fixed_string_t fixed;
 };
 
 static int
-parse_and_check_speed_duplex(char *speedstr, char *duplexstr, uint32_t *speed)
+parse_and_check_speed_duplex(char *speedstr, char *duplexstr, bool fixed, uint32_t *speed)
 {
 
 	int duplex;
@@ -1455,8 +1456,13 @@ parse_and_check_speed_duplex(char *speedstr, char *duplexstr, uint32_t *speed)
 		}
 	}
 
-	if (*speed != RTE_ETH_LINK_SPEED_AUTONEG)
+	if (fixed) {
+		if (*speed == RTE_ETH_LINK_SPEED_AUTONEG) {
+			fprintf(stderr, "A fixed link requires a specific speed\n");
+			return -1;
+		}
 		*speed |= RTE_ETH_LINK_SPEED_FIXED;
+	}
 
 	return 0;
 }
@@ -1464,7 +1470,7 @@ parse_and_check_speed_duplex(char *speedstr, char *duplexstr, uint32_t *speed)
 static void
 cmd_config_speed_all_parsed(void *parsed_result,
 			__rte_unused struct cmdline *cl,
-			__rte_unused void *data)
+			void *data)
 {
 	struct cmd_config_speed_all *res = parsed_result;
 	uint32_t link_speed;
@@ -1476,7 +1482,7 @@ cmd_config_speed_all_parsed(void *parsed_result,
 	}
 
 	if (parse_and_check_speed_duplex(res->value1, res->value2,
-			&link_speed) < 0)
+			data != NULL, &link_speed) < 0)
 		return;
 
 	RTE_ETH_FOREACH_DEV(pid) {
@@ -1504,6 +1510,8 @@ static cmdline_parse_token_string_t cmd_config_speed_all_item2 =
 static cmdline_parse_token_string_t cmd_config_speed_all_value2 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_all, value2,
 						"half#full#auto");
+static cmdline_parse_token_string_t cmd_config_speed_all_fixed_token =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_all, fixed, "fixed");
 
 static cmdline_parse_inst_t cmd_config_speed_all = {
 	.f = cmd_config_speed_all_parsed,
@@ -1524,6 +1532,26 @@ static cmdline_parse_inst_t cmd_config_speed_all = {
 	},
 };
 
+static cmdline_parse_inst_t cmd_config_speed_all_fixed = {
+	.f = cmd_config_speed_all_parsed,
+	.data = &cmd_config_speed_all_fixed,
+	.help_str = "port config all speed "
+		"10|100|1000|2500|5000|10000|25000|40000|50000|"
+		"100000|200000|400000|800000 "
+		"fixed duplex half|full|auto",
+	.tokens = {
+		(void *)&cmd_config_speed_all_port,
+		(void *)&cmd_config_speed_all_keyword,
+		(void *)&cmd_config_speed_all_all,
+		(void *)&cmd_config_speed_all_item1,
+		(void *)&cmd_config_speed_all_value1,
+		(void *)&cmd_config_speed_all_fixed_token,
+		(void *)&cmd_config_speed_all_item2,
+		(void *)&cmd_config_speed_all_value2,
+		NULL,
+	},
+};
+
 /* *** configure speed for specific port *** */
 struct cmd_config_speed_specific {
 	cmdline_fixed_string_t port;
@@ -1533,12 +1561,13 @@ struct cmd_config_speed_specific {
 	cmdline_fixed_string_t item2;
 	cmdline_fixed_string_t value1;
 	cmdline_fixed_string_t value2;
+	cmdline_fixed_string_t fixed;
 };
 
 static void
 cmd_config_speed_specific_parsed(void *parsed_result,
 				__rte_unused struct cmdline *cl,
-				__rte_unused void *data)
+				void *data)
 {
 	struct cmd_config_speed_specific *res = parsed_result;
 	uint32_t link_speed;
@@ -1552,7 +1581,7 @@ cmd_config_speed_specific_parsed(void *parsed_result,
 	}
 
 	if (parse_and_check_speed_duplex(res->value1, res->value2,
-			&link_speed) < 0)
+			data != NULL, &link_speed) < 0)
 		return;
 
 	ports[res->id].dev_conf.link_speeds = link_speed;
@@ -1582,6 +1611,8 @@ static cmdline_parse_token_string_t cmd_config_speed_specific_item2 =
 static cmdline_parse_token_string_t cmd_config_speed_specific_value2 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_specific, value2,
 							"half#full#auto");
+static cmdline_parse_token_string_t cmd_config_speed_specific_fixed_token =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_specific, fixed, "fixed");
 
 static cmdline_parse_inst_t cmd_config_speed_specific = {
 	.f = cmd_config_speed_specific_parsed,
@@ -1596,6 +1627,26 @@ static cmdline_parse_inst_t cmd_config_speed_specific = {
 		(void *)&cmd_config_speed_specific_id,
 		(void *)&cmd_config_speed_specific_item1,
 		(void *)&cmd_config_speed_specific_value1,
+		(void *)&cmd_config_speed_specific_item2,
+		(void *)&cmd_config_speed_specific_value2,
+		NULL,
+	},
+};
+
+static cmdline_parse_inst_t cmd_config_speed_specific_fixed = {
+	.f = cmd_config_speed_specific_parsed,
+	.data = &cmd_config_speed_specific_fixed,
+	.help_str = "port config <port_id> speed "
+		"10|100|1000|2500|5000|10000|25000|40000|50000|"
+		"100000|200000|400000|800000 "
+		"fixed duplex half|full|auto",
+	.tokens = {
+		(void *)&cmd_config_speed_specific_port,
+		(void *)&cmd_config_speed_specific_keyword,
+		(void *)&cmd_config_speed_specific_id,
+		(void *)&cmd_config_speed_specific_item1,
+		(void *)&cmd_config_speed_specific_value1,
+		(void *)&cmd_config_speed_specific_fixed_token,
 		(void *)&cmd_config_speed_specific_item2,
 		(void *)&cmd_config_speed_specific_value2,
 		NULL,
@@ -14357,7 +14408,9 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_operate_detach_device,
 	&cmd_set_port_setup_on,
 	&cmd_config_speed_all,
+	&cmd_config_speed_all_fixed,
 	&cmd_config_speed_specific,
+	&cmd_config_speed_specific_fixed,
 	&cmd_config_speed_lanes_all,
 	&cmd_config_speed_lanes_specific,
 	&cmd_show_speed_lanes,

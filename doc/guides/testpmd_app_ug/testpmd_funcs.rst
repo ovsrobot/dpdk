@@ -2167,7 +2167,15 @@ port config - speed
 Set the speed and duplex mode for all ports or a specific port::
 
    testpmd> port config (port_id|all) speed (10|100|1000|2500|5000|10000|25000|40000|50000|100000|200000|400000|800000|auto) \
-            duplex (half|full|auto)
+            [fixed] duplex (half|full|auto)
+
+Without ``fixed``, the selected speed is advertised with link autonegotiation enabled.
+With ``fixed``, link autonegotiation is disabled and the selected speed is forced.
+The ``auto`` speed advertises all supported speeds and cannot be combined with ``fixed``.
+The ``auto`` duplex value selects full duplex; it does not control link autonegotiation.
+Support for these settings depends on the driver and hardware.
+
+
 
 port config - queues/descriptors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -341,6 +341,14 @@ New Features
   for compatibility with the ``lib/bpf`` execution context.
 
 
+* **Added explicit fixed-speed selection in testpmd.**
+
+  Added an optional ``fixed`` keyword to the port speed configuration command.
+  Numeric speeds now leave link autonegotiation enabled unless ``fixed`` is specified.
+  Add ``fixed`` between the speed value and ``duplex`` to disable link autonegotiation,
+  preserving the previous behavior.
+
+
 Removed Items
 -------------
 
