@@ -742,6 +742,11 @@ eal_rand_init(void);
 bool __rte_mp_enable(void);
 
 /**
+ * Check whether multi-process is enabled.
+ */
+bool eal_mp_is_enabled(void);
+
+/**
  * Init per-lcore info in current thread.
  *
  * @param lcore_id
