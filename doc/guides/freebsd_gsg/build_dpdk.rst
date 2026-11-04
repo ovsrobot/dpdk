@@ -228,11 +228,19 @@ kernel environment variable prior to loading ``nic_uio``, as follows::
 
 Where a comma separated list of selectors is set, the list must not contain any
 whitespace.
+Selectors can use colon-separated decimal FreeBSD addresses (``b:d:f`` or ``pciD:b:d:f``)
+or fixed-width hexadecimal Linux/DPDK addresses with final "." separator (``bb:dd.f`` or ``dddd:bb:dd.f``).
+An omitted domain is zero.
+Invalid selectors cause module loading to fail before any devices are detached.
 
 For example to re-bind ``ix2@pci0:2:0:0`` and ``ix3@pci0:2:0:1`` to the ``nic_uio`` module
 upon loading, use the following command::
 
     kenv hw.nic_uio.bdfs="2:0:0,2:0:1"
+
+The equivalent DPDK addresses can also be used::
+
+    kenv hw.nic_uio.bdfs="02:00.0,02:00.1"
 
 The variable can also be specified during boot by placing the following into
 ``/boot/loader.conf``, before the previously-described ``nic_uio_load`` line - as
