@@ -8,6 +8,10 @@ The ``dpdk-devbind`` tool is a Data Plane Development Kit (DPDK) utility
 that helps binding and unbinding devices from specific drivers.
 As well as checking their status in that regard.
 
+PCI addresses use the hexadecimal ``dddd:bb:dd.f`` format on both Linux and FreeBSD.
+For example, FreeBSD's ``pci0:152:0:1`` is displayed as ``0000:98:00.1``,
+and this address can be used directly in EAL device arguments.
+
 
 Running the Application
 -----------------------
