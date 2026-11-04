@@ -9,7 +9,6 @@ __FBSDID("$FreeBSD$");
 #include <sys/kernel.h> /* types used in module initialization */
 #include <sys/conf.h> /* cdevsw struct */
 #include <sys/bus.h> /* structs, prototypes for pci bus stuff and DEVMETHOD */
-#include <sys/ctype.h>
 #include <sys/rman.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
@@ -25,6 +24,8 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
+/* the PCI BDF parsing functions are kept separate so we can unit test them from userspace */
+#include "pci_bdf.h"
 
 #define MAX_BARS (PCIR_MAX_BAR_0 + 1)
 
@@ -72,111 +73,6 @@ struct device {
     int vend;
     int dev;
 };
-
-struct pci_bdf {
-	uint32_t domain;
-	uint32_t bus;
-	uint32_t devid;
-	uint32_t function;
-};
-
-
-static int
-nic_uio_parse_bdf_linux(const char *token, const size_t token_len, unsigned long *values)
-{
-	static const char *long_fmt = "FFFF:FF:FF.F";
-	static const char *short_fmt = "FF:FF.F";
-	const char *fmt = NULL;
-	int bus_ofs = 0;
-
-	if (token_len == strlen(long_fmt))
-		fmt = long_fmt;
-	else if (token_len == strlen(short_fmt))
-		fmt = short_fmt;
-	else
-		return EINVAL;
-
-	/* validate the token against the expected format */
-	for (size_t i = 0; i < token_len; i++)
-		if (fmt[i] == 'F') {
-			if (!isxdigit(token[i]))
-				return EINVAL;
-		} else if (token[i] != fmt[i])
-			return EINVAL;
-
-	if (fmt == long_fmt) {
-		values[0] = strtoul(token, NULL, 16);
-		bus_ofs = 5;
-	}
-	values[1] = strtoul(token + bus_ofs, NULL, 16);
-	values[2] = strtoul(token + bus_ofs + 3, NULL, 16);
-	values[3] = strtoul(token + bus_ofs + 6, NULL, 16);
-	return 0;
-}
-
-static int
-nic_uio_parse_bdf_bsd(const char *token, const size_t token_len, unsigned long *values)
-{
-	char *endptr;
-
-	/* skip the "pci" prefix if present */
-	if (strncmp(token, "pci", 3) == 0) {
-		token += 3;
-		if (!isdigit(*token))
-			return EINVAL;
-
-		values[0] = strtoul(token, &endptr, 10);
-		if (*endptr != ':' || !isdigit(*(endptr + 1)))
-			return EINVAL;
-		token = endptr + 1;
-	} else if (!isdigit(*token))
-		return EINVAL;
-
-	/* parse bus */
-	values[1] = strtoul(token, &endptr, 10);
-	if (*endptr != ':' || !isdigit(*(endptr + 1)))
-		return EINVAL;
-	token = endptr + 1;
-	/* parse device */
-	values[2] = strtoul(token, &endptr, 10);
-	if (*endptr != ':' || !isdigit(*(endptr + 1)))
-		return EINVAL;
-	token = endptr + 1;
-	/* parse function */
-	values[3] = strtoul(token, &endptr, 10);
-	if (*endptr != '\0')
-		return EINVAL;
-
-	return 0;
-}
-
-static int
-nic_uio_parse_bdf(char *token, struct pci_bdf *bdf)
-{
-	static const unsigned long bdf_field_limits[4] = {UINT16_MAX, 255, 31, 7};
-	const size_t token_len = strlen(token);
-	unsigned long values[4] = {0};
-
-	if (token_len < 5)
-		return EINVAL;
-
-	/* linux uses '.' for final separator */
-	int ret = token[token_len - 2] == '.' ?
-			nic_uio_parse_bdf_linux(token, token_len, values) :
-			nic_uio_parse_bdf_bsd(token, token_len, values);
-	if (ret != 0)
-		return ret;
-
-	for (int i = 0; i < 4; i++)
-		if (values[i] > bdf_field_limits[i])
-			return EINVAL;
-
-	bdf->domain = values[0];
-	bdf->bus = values[1];
-	bdf->devid = values[2];
-	bdf->function = values[3];
-	return 0;
-}
 
 DEFINE_CLASS_0(nic_uio, nic_uio_driver, nic_uio_methods, sizeof(struct nic_uio_softc));
 
@@ -278,7 +174,7 @@ nic_uio_probe (device_t dev)
 		struct pci_bdf bdf;
 
 		token = strsep(&remaining, ",");
-		if (nic_uio_parse_bdf(token, &bdf) != 0) {
+		if (pci_bdf_parse(token, &bdf) != 0) {
 			device_printf(dev, "Invalid PCI address in hw.nic_uio.bdfs\n");
 			return ENXIO;
 		}
@@ -365,7 +261,7 @@ nic_uio_load(void)
 	printf("nic_uio: hw.nic_uio.bdfs = '%s'\n", bdf_str);
 	while (remaining != NULL && remaining[0] != '\0') {
 		token = strsep(&remaining, ",");
-		if (count == nitems(bdfs) || nic_uio_parse_bdf(token, &bdfs[count]) != 0 ||
+		if (count == nitems(bdfs) || pci_bdf_parse(token, &bdfs[count]) != 0 ||
 				(remaining != NULL && remaining[0] == '\0')) {
 			printf("nic_uio: invalid PCI address list in hw.nic_uio.bdfs\n");
 			return EINVAL;
