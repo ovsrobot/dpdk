@@ -820,6 +820,8 @@ ntb_dev_start(struct rte_rawdev *dev)
 
 err_up:
 	rte_free(hw->peer_mw_base);
+	hw->peer_mw_base = NULL;
+	hw->peer_used_mws = 0;
 err_q_init:
 	for (i = 0; i < hw->queue_pairs; i++) {
 		ntb_rxq_release_mbufs(hw->rx_queues[i]);
@@ -872,6 +874,10 @@ clean:
 		ntb_txq_release_mbufs(hw->tx_queues[i]);
 	}
 
+	rte_free(hw->peer_mw_base);
+	hw->peer_mw_base = NULL;
+	hw->peer_used_mws = 0;
+
 	dev->started = 0;
 }
 
@@ -889,6 +895,9 @@ ntb_dev_close(struct rte_rawdev *dev)
 	for (i = 0; i < hw->queue_pairs; i++)
 		ntb_queue_release(dev, i);
 	hw->queue_pairs = 0;
+
+	rte_free(hw->mw_size);
+	hw->mw_size = NULL;
 
 	intr_handle = hw->pci_dev->intr_handle;
 	/* Disable interrupt only once */
