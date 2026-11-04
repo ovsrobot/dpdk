@@ -290,6 +290,7 @@ struct iavf_info {
 	struct iavf_tm_conf tm_conf;
 
 	RTE_ATOMIC(bool)in_reset_recovery;
+	RTE_ATOMIC(uint32_t)reset_events_pending;
 	bool reset_pending;
 	bool pf_reset_in_progress;
 	bool start_pending;
@@ -454,9 +455,10 @@ struct iavf_cmd_info {
 
 int iavf_check_api_version(struct iavf_adapter *adapter);
 int iavf_get_vf_resource(struct iavf_adapter *adapter);
-void iavf_dev_event_post(struct rte_eth_dev *dev,
+int iavf_dev_event_post(struct rte_eth_dev *dev,
 		enum rte_eth_event_type event,
 		void *param, size_t param_alloc_size);
+void iavf_dev_reset_event_post(struct rte_eth_dev *dev);
 void iavf_dev_event_handler_fini(void);
 int iavf_dev_event_handler_init(void);
 void iavf_handle_virtchnl_msg(struct rte_eth_dev *dev);

@@ -81,14 +81,17 @@ iavf_dev_event_handle(void *param __rte_unused)
 			TAILQ_REMOVE(&pending, pos, next);
 
 			struct iavf_adapter *adapter = pos->dev->data->dev_private;
-			if (pos->event == RTE_ETH_EVENT_INTR_RESET &&
-			    adapter->devargs.auto_reset) {
-				iavf_handle_hw_reset(pos->dev, false);
-				rte_free(pos);
-				continue;
+			if (pos->event == RTE_ETH_EVENT_INTR_RESET) {
+				if (adapter->devargs.auto_reset)
+					iavf_handle_hw_reset(pos->dev, false);
+				else
+					rte_eth_dev_callback_process(pos->dev, pos->event,
+									pos->param);
+				rte_atomic_fetch_sub_explicit(&adapter->vf.reset_events_pending, 1,
+						rte_memory_order_release);
+			} else {
+				rte_eth_dev_callback_process(pos->dev, pos->event, pos->param);
 			}
-
-			rte_eth_dev_callback_process(pos->dev, pos->event, pos->param);
 			rte_free(pos);
 		}
 	}
@@ -96,7 +99,7 @@ iavf_dev_event_handle(void *param __rte_unused)
 	return 0;
 }
 
-void
+int
 iavf_dev_event_post(struct rte_eth_dev *dev,
 		enum rte_eth_event_type event,
 		void *param, size_t param_alloc_size)
@@ -105,7 +108,7 @@ iavf_dev_event_post(struct rte_eth_dev *dev,
 	char notify_byte = 0;
 	struct iavf_event_element *elem = rte_malloc(NULL, sizeof(*elem) + param_alloc_size, 0);
 	if (!elem)
-		return;
+		return -ENOMEM;
 
 	elem->dev = dev;
 	elem->event = event;
@@ -122,6 +125,18 @@ iavf_dev_event_post(struct rte_eth_dev *dev,
 
 	ssize_t nw = write(handler->fd[1], &notify_byte, 1);
 	RTE_SET_USED(nw);
+
+	return 0;
+}
+
+void
+iavf_dev_reset_event_post(struct rte_eth_dev *dev)
+{
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+
+	if (iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET, NULL, 0) != 0)
+		rte_atomic_fetch_sub_explicit(&vf->reset_events_pending, 1,
+				rte_memory_order_release);
 }
 
 int
@@ -332,14 +347,16 @@ iavf_read_msg_from_pf(struct iavf_adapter *adapter, uint16_t buf_len,
 			 */
 			vf->link_up = false;
 			if (!vf->vf_reset) {
+				rte_atomic_fetch_add_explicit(&vf->reset_events_pending, 1,
+						rte_memory_order_relaxed);
+				/* publish the count before vf_reset is visible */
+				rte_atomic_thread_fence(rte_memory_order_release);
 				vf->vf_reset = true;
 				iavf_set_no_poll(adapter, false);
 				iavf_dev_watchdog_enable(adapter);
 				if (adapter->devargs.no_poll_on_link_down)
 					iavf_dev_tx_drain(dev);
-				iavf_dev_event_post(dev,
-					RTE_ETH_EVENT_INTR_RESET,
-					NULL, 0);
+				iavf_dev_reset_event_post(dev);
 			}
 			PMD_DRV_LOG(DEBUG, "VF is resetting");
 			break;
@@ -573,13 +590,16 @@ iavf_handle_pf_event_msg(struct rte_eth_dev *dev, uint8_t *msg,
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_RESET_IMPENDING event");
 		vf->link_up = false;
 		if (!vf->vf_reset) {
+			rte_atomic_fetch_add_explicit(&vf->reset_events_pending, 1,
+					rte_memory_order_relaxed);
+			/* publish the count before vf_reset is visible */
+			rte_atomic_thread_fence(rte_memory_order_release);
 			vf->vf_reset = true;
 			iavf_set_no_poll(adapter, false);
 			iavf_dev_watchdog_enable(adapter);
 			if (adapter->devargs.no_poll_on_link_down)
 				iavf_dev_tx_drain(dev);
-			iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET,
-				NULL, 0);
+			iavf_dev_reset_event_post(dev);
 		}
 		break;
 	case VIRTCHNL_EVENT_LINK_CHANGE:

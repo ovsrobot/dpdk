@@ -336,11 +336,14 @@ iavf_dev_watchdog(void *cb_arg)
 
 	/* If in reset then poll vfr_inprogress register for completion */
 	if (adapter->vf.vf_reset) {
+		/* pair with the release fence before vf_reset is set */
+		rte_atomic_thread_fence(rte_memory_order_acquire);
 		vfr_inprogress = iavf_vfr_inprogress(hw);
 
-		if (!vfr_inprogress) {
-			PMD_DRV_LOG(INFO, "VF \"%s\" reset has completed",
-				dev->data->name);
+		if (!vfr_inprogress &&
+		    rte_atomic_load_explicit(&adapter->vf.reset_events_pending,
+				rte_memory_order_acquire) == 0) {
+			PMD_DRV_LOG(INFO, "VF \"%s\" reset has completed", dev->data->name);
 			adapter->vf.vf_reset = false;
 			iavf_set_no_poll(adapter, false);
 		}
@@ -354,12 +357,15 @@ iavf_dev_watchdog(void *cb_arg)
 				dev->data->name);
 
 			/* enter reset state with VFLR event */
+			rte_atomic_fetch_add_explicit(&adapter->vf.reset_events_pending, 1,
+					rte_memory_order_relaxed);
+			/* publish the count before vf_reset is visible */
+			rte_atomic_thread_fence(rte_memory_order_release);
 			adapter->vf.vf_reset = true;
 			iavf_set_no_poll(adapter, false);
 			adapter->vf.link_up = false;
 
-			iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET,
-				NULL, 0);
+			iavf_dev_reset_event_post(dev);
 		}
 	}
 
