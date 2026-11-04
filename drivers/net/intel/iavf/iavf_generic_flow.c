@@ -2148,16 +2148,9 @@ iavf_parse_engine_validate(struct iavf_adapter *ad,
 			continue;
 
 		engine = parser_node->parser->engine;
-		if (engine->validation == NULL) {
-			rte_free(meta);
-			meta = NULL;
-			rte_flow_error_set(error, EINVAL,
-				RTE_FLOW_ERROR_TYPE_HANDLE,
-				NULL, "Validation not support");
-			continue;
-		}
-
-		ret = engine->validation(ad, flow, meta, error);
+		ret = 0;
+		if (engine->validation != NULL)
+			ret = engine->validation(ad, flow, meta, error);
 		rte_free(meta);
 		meta = NULL;
 		if (ret != 0) {
