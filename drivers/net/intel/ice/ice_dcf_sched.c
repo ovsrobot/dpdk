@@ -813,6 +813,7 @@ static int ice_dcf_hierarchy_commit(struct rte_eth_dev *dev,
 		if (ret_val)
 			goto fail_clear;
 
+		rte_free(hw->qos_bw_cfg[vf_id]);
 		hw->qos_bw_cfg[vf_id] = rte_zmalloc("vf_bw_cfg", size, 0);
 		if (!hw->qos_bw_cfg[vf_id]) {
 			ret_val = ICE_ERR_NO_MEMORY;
@@ -840,6 +841,7 @@ static int ice_dcf_hierarchy_commit(struct rte_eth_dev *dev,
 		goto fail_clear;
 
 	/* store TC node bw configuration */
+	rte_free(hw->qos_bw_cfg[ICE_DCF_VFID]);
 	hw->qos_bw_cfg[ICE_DCF_VFID] = rte_zmalloc("tc_bw_cfg", size, 0);
 	if (!hw->qos_bw_cfg[ICE_DCF_VFID]) {
 		ret_val = ICE_ERR_NO_MEMORY;
