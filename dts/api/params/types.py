@@ -203,3 +203,14 @@ class TestPmdParamsDict(EalParamsDict, total=False):
     mempool_allocation_mode: SimpleMempoolAllocationMode | AnonMempoolAllocationMode | None
     record_core_cycles: Switch
     record_burst_status: Switch
+
+
+class EventdevParamsDict(EalParamsDict, total=False):
+    """:class:`TypedDict` equivalent of :class:`~.eventdev.config.EventdevParams`."""
+
+    test: str
+    wlcores: str | None
+    stlist: str | None
+    pool_sz: int | None
+    nb_eth_queues: int | None
+    prod_type_ethdev: Switch
