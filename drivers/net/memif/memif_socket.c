@@ -590,67 +590,23 @@ memif_intr_unregister_handler(const struct rte_intr_handle *intr_handle, void *a
 	rte_free(cc);
 }
 
-void
-memif_disconnect(struct rte_eth_dev *dev)
+/*
+ * Device-level teardown: mark the link down, close the per-queue interrupt
+ * eventfds and release the shared-memory regions. Idempotent and independent
+ * of the control channel, so it is safe to run from whichever thread owns the
+ * disconnect.
+ */
+static void
+memif_disconnect_queues(struct rte_eth_dev *dev)
 {
 	struct pmd_internals *pmd = dev->data->dev_private;
-	struct memif_msg_queue_elt *elt, *next;
 	struct memif_queue *mq;
-	struct rte_intr_handle *ih;
 	int i;
-	int ret;
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 	pmd->flags &= ~ETH_MEMIF_FLAG_CONNECTING;
 	pmd->flags &= ~ETH_MEMIF_FLAG_CONNECTED;
 
-	rte_spinlock_lock(&pmd->cc_lock);
-	if (pmd->cc != NULL) {
-		/* Clear control message queue (except disconnect message if any). */
-		for (elt = TAILQ_FIRST(&pmd->cc->msg_queue); elt != NULL; elt = next) {
-			next = TAILQ_NEXT(elt, next);
-			if (elt->msg.type != MEMIF_MSG_TYPE_DISCONNECT) {
-				TAILQ_REMOVE(&pmd->cc->msg_queue, elt, next);
-				rte_free(elt);
-			}
-		}
-		/* send disconnect message (if there is any in queue) */
-		memif_msg_send_from_queue(pmd->cc);
-
-		/* at this point, there should be no more messages in queue */
-		if (TAILQ_FIRST(&pmd->cc->msg_queue) != NULL) {
-			MIF_LOG(WARNING,
-				"Unexpected message(s) in message queue.");
-		}
-
-		ih = pmd->cc->intr_handle;
-		if (rte_intr_fd_get(ih) >= 0) {
-			ret = rte_intr_callback_unregister(ih,
-							memif_intr_handler,
-							pmd->cc);
-			/*
-			 * If callback is active (disconnecting based on
-			 * received control message).
-			 */
-			if (ret == -EAGAIN) {
-				ret = rte_intr_callback_unregister_pending(ih,
-							memif_intr_handler,
-							pmd->cc,
-							memif_intr_unregister_handler);
-			} else if (ret > 0) {
-				rte_intr_fd_close(ih);
-				rte_intr_instance_free(ih);
-				rte_free(pmd->cc);
-			}
-			pmd->cc = NULL;
-			if (ret <= 0)
-				MIF_LOG(WARNING,
-					"Failed to unregister control channel callback.");
-		}
-	}
-	rte_spinlock_unlock(&pmd->cc_lock);
-
-	/* unconfig interrupts */
 	for (i = 0; i < pmd->cfg.num_c2s_rings; i++) {
 		if (pmd->role == MEMIF_ROLE_CLIENT) {
 			if (dev->data->tx_queues != NULL)
@@ -695,6 +651,88 @@ memif_disconnect(struct rte_eth_dev *dev)
 
 	MIF_LOG(DEBUG, "Disconnected, id: %d, role: %s.", pmd->id,
 		(pmd->role == MEMIF_ROLE_SERVER) ? "server" : "client");
+}
+
+/*
+ * Release a control channel and free it. Exactly one thread must do this
+ * per channel: the caller that cleared pmd->cc under cc_lock owns the free.
+ *
+ * On the interrupt thread the running callback cannot be waited for (it may
+ * be us), so the free is deferred to the pending-unregister callback, which
+ * EAL runs - and which removes the fd from the epoll set - once the current
+ * dispatch finishes. The handler therefore never returns leaving its own fd
+ * registered and hot, so it cannot re-fire on a half-torn-down channel.
+ *
+ * On an application thread the handler (if any) is waited out and the channel
+ * freed directly.
+ */
+static void
+memif_cc_release(struct memif_control_channel *cc)
+{
+	struct rte_intr_handle *ih = cc->intr_handle;
+	int ret;
+
+	if (rte_intr_fd_get(ih) < 0) {
+		/* Never registered; free directly. */
+		memif_intr_unregister_handler(ih, cc);
+		return;
+	}
+
+	if (rte_thread_is_intr()) {
+		ret = rte_intr_callback_unregister_pending(ih,
+				memif_intr_handler, cc,
+				memif_intr_unregister_handler);
+		if (ret < 0)
+			MIF_LOG(WARNING,
+				"Failed to defer control channel callback unregister.");
+	} else {
+		ret = rte_intr_callback_unregister_sync(ih,
+				memif_intr_handler, cc);
+		if (ret > 0 || ret == -ENOENT)
+			memif_intr_unregister_handler(ih, cc);
+		else
+			MIF_LOG(WARNING,
+				"Failed to unregister control channel callback.");
+	}
+}
+
+void
+memif_disconnect(struct rte_eth_dev *dev)
+{
+	struct pmd_internals *pmd = dev->data->dev_private;
+	struct memif_msg_queue_elt *elt, *next;
+	struct memif_control_channel *cc;
+
+	/*
+	 * Detach the control channel: whoever clears pmd->cc under the lock
+	 * becomes the single owner of the free. If it is already NULL another
+	 * thread (the interrupt handler, or a concurrent disconnect) has taken
+	 * ownership and will release it; we only do the device-level teardown.
+	 */
+	rte_spinlock_lock(&pmd->cc_lock);
+	cc = pmd->cc;
+	pmd->cc = NULL;
+	if (cc != NULL) {
+		/* Clear control message queue (except disconnect message if any). */
+		for (elt = TAILQ_FIRST(&cc->msg_queue); elt != NULL; elt = next) {
+			next = TAILQ_NEXT(elt, next);
+			if (elt->msg.type != MEMIF_MSG_TYPE_DISCONNECT) {
+				TAILQ_REMOVE(&cc->msg_queue, elt, next);
+				rte_free(elt);
+			}
+		}
+		/* send disconnect message (if there is any in queue) */
+		memif_msg_send_from_queue(cc);
+		/* at this point, there should be no more messages in queue */
+		if (TAILQ_FIRST(&cc->msg_queue) != NULL)
+			MIF_LOG(WARNING, "Unexpected message(s) in message queue.");
+	}
+	rte_spinlock_unlock(&pmd->cc_lock);
+
+	if (cc != NULL)
+		memif_cc_release(cc);
+
+	memif_disconnect_queues(dev);
 }
 
 static int
@@ -868,6 +906,8 @@ static void
 memif_intr_handler(void *arg)
 {
 	struct memif_control_channel *cc = arg;
+	struct pmd_internals *pmd;
+	bool owned;
 	int ret;
 
 	ret = memif_msg_receive(cc);
@@ -898,7 +938,40 @@ memif_intr_handler(void *arg)
 		MIF_LOG(WARNING, "eth dev not allocated");
 		return;
 	}
-	memif_disconnect(cc->dev);
+
+	/*
+	 * Self-unregister first. rte_intr_callback_unregister_pending() marks
+	 * this callback for deletion once the current dispatch returns, which
+	 * removes the fd from the epoll set. This is essential: the control
+	 * socket is at EOF and level-triggered, so without removing it the
+	 * handler would be re-dispatched forever (livelock) and starve any
+	 * application thread waiting in rte_intr_callback_unregister_sync().
+	 *
+	 * Ownership of the free is decided under cc_lock: whoever clears
+	 * pmd->cc frees the channel.
+	 *   - If this handler wins, it passes memif_intr_unregister_handler as
+	 *     the pending-unregister callback so EAL frees the channel after
+	 *     the dispatch, and it runs the device teardown.
+	 *   - If an application thread already cleared pmd->cc, it owns the
+	 *     free (it waits for us via unregister_sync, then frees); this
+	 *     handler passes a NULL unregister callback and does nothing else.
+	 */
+	pmd = cc->dev->data->dev_private;
+	rte_spinlock_lock(&pmd->cc_lock);
+	owned = (pmd->cc == cc);
+	if (owned)
+		pmd->cc = NULL;
+	rte_spinlock_unlock(&pmd->cc_lock);
+
+	ret = rte_intr_callback_unregister_pending(cc->intr_handle,
+			memif_intr_handler, cc,
+			owned ? memif_intr_unregister_handler : NULL);
+	if (ret < 0)
+		MIF_LOG(WARNING,
+			"Failed to defer control channel callback unregister.");
+
+	if (owned)
+		memif_disconnect_queues(cc->dev);
 }
 
 static void
