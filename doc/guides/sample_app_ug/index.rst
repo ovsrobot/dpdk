@@ -50,7 +50,7 @@ Sample Applications User Guides
     vm_power_management
     ptpclient
     ptp_tap_relay_sw
-    fips_validation
+    crypto_validation
     ipsec_secgw
     bbdev_app
     ntb

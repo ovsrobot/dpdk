@@ -2040,10 +2040,10 @@ Ethtool example
 F: examples/ethtool/
 F: doc/guides/sample_app_ug/ethtool.rst
 
-FIPS validation example
+FIPS validation application
 M: Gowrishankar Muthukrishnan <gmuthukrishn@marvell.com>
-F: examples/fips_validation/
-F: doc/guides/sample_app_ug/fips_validation.rst
+F: app/fips_validation/
+F: doc/guides/sample_app_ug/crypto_validation.rst
 
 Flow filtering example
 M: Ori Kam <orika@nvidia.com>
