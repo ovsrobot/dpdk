@@ -340,6 +340,12 @@ New Features
   Added ``dpdk-validate-bpf`` tool to pre-validate eBPF programs
   for compatibility with the ``lib/bpf`` execution context.
 
+* **Added Wycheproof validation application.**
+
+  Added a new application that validates a DPDK cryptodev PMD against
+  the Google Wycheproof JSON test vectors, covering AEAD, MAC, DSA, ECDH and
+  ECDSA algorithm families.
+
 
 Removed Items
 -------------
