@@ -15,5 +15,6 @@ drivers = [
         'opdl',
         'skeleton',
         'sw',
+        'slb',
 ]
 std_deps = ['eventdev', 'kvargs']
