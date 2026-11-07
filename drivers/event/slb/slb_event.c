@@ -3,6 +3,7 @@
  */
 
 #include <stdbool.h>
+#include <limits.h>
 #include <rte_bitops.h>
 #include <rte_cycles.h>
 #include <rte_ring_elem.h>
@@ -163,12 +164,204 @@ slb_flow_hash(uint32_t flow_id)
 	return (flow_id * 2654435761U) & SLB_ATOMIC_FLOWS_MASK;
 }
 
+static int32_t
+slb_find_lightest_flow_on_port(struct slb_queue *queue, uint8_t port_id,
+			       uint64_t now, uint64_t cooldown_cycles)
+{
+	struct rte_event_ring *ering = queue->per_port_rings[port_id];
+	struct slb_atomic_state *astate = queue->atomic_state;
+	struct rte_ring *r;
+	uint32_t cons;
+	uint32_t prod;
+	uint32_t count;
+	uint16_t counts[SLB_ATOMIC_FLOWS];
+	int32_t best_flow_idx = -1;
+	uint32_t min_events = UINT32_MAX;
+
+	if (unlikely(ering == NULL || astate == NULL))
+		return -1;
+
+	if (astate->port_stats[port_id].flow_count <= 1)
+		return -1;
+
+	r = &ering->r;
+	cons = rte_atomic_load_explicit(&r->cons.tail, rte_memory_order_relaxed);
+	prod = rte_atomic_load_explicit(&r->prod.tail, rte_memory_order_relaxed);
+	count = prod - cons;
+
+	memset(counts, 0, sizeof(counts));
+	if (count > 0) {
+		struct rte_event *ring_events = (struct rte_event *)(r + 1);
+
+		for (uint32_t i = 0; i < count; i++) {
+			uint32_t slot = (cons + i) & r->mask;
+			uint32_t f_idx = slb_flow_hash(ring_events[slot].flow_id);
+
+			counts[f_idx]++;
+		}
+	}
+
+	for (uint32_t f = 0; f < SLB_ATOMIC_FLOWS; f++) {
+		if (rte_atomic_load_explicit(&astate->flow_map.flows[f].port_id,
+					     rte_memory_order_relaxed) == (int32_t)port_id) {
+			if (astate->flow_last_migrated[f] != 0 &&
+			    (now - astate->flow_last_migrated[f]) < cooldown_cycles)
+				continue;
+
+			if (counts[f] < min_events) {
+				min_events = counts[f];
+				best_flow_idx = (int32_t)f;
+			}
+		}
+	}
+
+	return best_flow_idx;
+}
+
+static void
+slb_check_and_trigger_migration(struct slb_evdev *slb, struct slb_queue *queue,
+				struct slb_atomic_state *astate, uint8_t full_port_id)
+{
+	struct slb_atomic_port_stats *pstats = &astate->port_stats[full_port_id];
+	uint64_t now;
+	uint64_t hz;
+	uint64_t cooldown_cycles;
+	int32_t flow_to_migrate;
+
+	pstats->load_counter++;
+	if (pstats->load_counter < SLB_MIGRATION_LOAD_THRESHOLD)
+		return;
+
+	if (astate->migration.in_progress)
+		return;
+
+	if (slb->ports[full_port_id].is_loaded)
+		return;
+
+	if (pstats->flow_count <= 1)
+		return;
+
+	now = rte_get_timer_cycles();
+	hz = rte_get_timer_hz();
+	cooldown_cycles = (hz * SLB_MIGRATION_COOLDOWN_MS) / 1000;
+
+	if (slb->ports[full_port_id].last_migrated_time != 0 &&
+	    (now - slb->ports[full_port_id].last_migrated_time) < cooldown_cycles)
+		return;
+
+	flow_to_migrate = slb_find_lightest_flow_on_port(
+		queue, full_port_id, now, cooldown_cycles);
+	if (flow_to_migrate < 0)
+		return;
+
+	pstats->load_counter = 0;
+	slb->ports[full_port_id].is_loaded = true;
+	astate->migration.in_progress = true;
+	astate->migration.port_id = full_port_id;
+	astate->migration.flow_idx = (uint32_t)flow_to_migrate;
+}
+
+static inline int
+slb_find_migration_target_port(struct slb_evdev *slb, struct slb_queue *queue,
+			       struct slb_atomic_state *astate, uint8_t mig_port,
+			       uint64_t now, uint64_t cooldown_cycles)
+{
+	uint64_t temp_mask = queue->serving_ports_mask;
+	int target_port = -1;
+	int min_flows = INT_MAX;
+
+	while (temp_mask != 0) {
+		uint8_t cand_port = rte_ctz64(temp_mask);
+		struct slb_port *cp = &slb->ports[cand_port];
+
+		temp_mask &= ~(1ULL << cand_port);
+		if (cand_port == mig_port || cp->is_loaded)
+			continue;
+
+		if (cp->last_migrated_time == 0 ||
+		    (now - cp->last_migrated_time) >= cooldown_cycles) {
+			if ((int)astate->port_stats[cand_port].flow_count < min_flows) {
+				min_flows = (int)astate->port_stats[cand_port].flow_count;
+				target_port = cand_port;
+			}
+		} else if (target_port == -1) {
+			target_port = cand_port;
+		}
+	}
+	return target_port;
+}
+
+static inline void
+slb_complete_flow_migration(struct slb_evdev *slb, struct slb_atomic_state *astate,
+			    uint8_t mig_port, int target_port, uint64_t now)
+{
+	uint32_t f_idx = astate->migration.flow_idx;
+
+	rte_atomic_store_explicit(&astate->flow_map.flows[f_idx].port_id,
+				  target_port, rte_memory_order_release);
+
+	for (uint16_t h = 0; h < astate->hold_count; h++) {
+		if (astate->hold_ports[h] == mig_port &&
+		    slb_flow_hash(astate->hold_buffer[h].flow_id) == f_idx) {
+			astate->hold_ports[h] = (uint8_t)target_port;
+		}
+	}
+
+	astate->flow_last_migrated[f_idx] = now;
+	slb->ports[mig_port].last_migrated_time = now;
+	slb->ports[target_port].last_migrated_time = now;
+
+	if (astate->port_stats[mig_port].flow_count > 0)
+		astate->port_stats[mig_port].flow_count--;
+	astate->port_stats[target_port].flow_count++;
+	astate->migrations_count++;
+
+	slb->ports[mig_port].flow_migrations++;
+	slb->ports[mig_port].migrations_out++;
+	slb->ports[target_port].migrations_in++;
+
+	astate->port_stats[mig_port].load_counter = 0;
+	slb->ports[mig_port].is_loaded = false;
+	astate->migration.in_progress = false;
+}
+
+static inline uint8_t
+slb_assign_unmapped_flow_port(struct slb_evdev *slb, struct slb_atomic_state *astate,
+			      uint64_t serving_mask, uint16_t num_serving_ports)
+{
+	uint32_t rr_counter = astate->next_port_rr++;
+	int port_offset = rr_counter % num_serving_ports;
+	uint64_t temp_mask = serving_mask;
+	uint8_t assigned_port = 0;
+
+	for (int j = 0; j <= port_offset; j++) {
+		assigned_port = rte_ctz64(temp_mask);
+		temp_mask &= (temp_mask - 1);
+	}
+
+	if (slb->ports[assigned_port].is_loaded) {
+		uint64_t cand_mask = serving_mask;
+
+		while (cand_mask != 0) {
+			uint8_t cp = rte_ctz64(cand_mask);
+
+			cand_mask &= (cand_mask - 1);
+			if (!slb->ports[cp].is_loaded) {
+				assigned_port = cp;
+				break;
+			}
+		}
+	}
+	return assigned_port;
+}
+
 /* If port queue is empty for an atomic queue, pull events from main atomic queue to fill
  * up port queues.
  */
 static void
-slb_atomic_refill(struct slb_port *port __rte_unused, struct slb_queue *queue)
+slb_atomic_refill(struct slb_port *port, struct slb_queue *queue)
 {
+	struct slb_evdev *slb = port->slb;
 	struct rte_event master_events[SLB_MAX_PORT_DEQUEUE_DEPTH];
 	uint16_t n_deq;
 	uint16_t i;
@@ -182,6 +375,35 @@ slb_atomic_refill(struct slb_port *port __rte_unused, struct slb_queue *queue)
 
 	if (!rte_spinlock_trylock(&astate->refill_lock))
 		return;
+
+	/* 0. Detect migration in progress before hold buffer processing */
+	if (astate->migration.in_progress) {
+		uint8_t mig_port = astate->migration.port_id;
+		uint64_t enq_cnt = astate->port_stats[mig_port].q_enqueued;
+		uint64_t ret_cnt = astate->port_stats[mig_port].q_returned;
+
+		if (enq_cnt == ret_cnt) {
+			uint64_t now = rte_get_timer_cycles();
+			uint64_t hz = rte_get_timer_hz();
+			uint64_t cooldown_cycles =
+				(hz * SLB_MIGRATION_COOLDOWN_MS) / 1000;
+			int target_port = slb_find_migration_target_port(
+				slb, queue, astate, mig_port, now,
+				cooldown_cycles);
+
+			if (target_port != -1)
+				slb_complete_flow_migration(
+					slb, astate, mig_port, target_port, now);
+			else {
+				astate->port_stats[mig_port].load_counter = 0;
+				slb->ports[mig_port].is_loaded = false;
+				astate->migration.in_progress = false;
+			}
+		}
+	}
+
+	if (astate->migration.in_progress)
+		full_ports_mask |= (1ULL << astate->migration.port_id);
 
 	/* 1. Process Hold Buffer first */
 	if (astate->hold_count > 0) {
@@ -216,6 +438,10 @@ slb_atomic_refill(struct slb_port *port __rte_unused, struct slb_queue *queue)
 				&astate->hold_buffer[i], burst_len, NULL);
 			astate->port_stats[dest_port_id].q_enqueued += enqueued;
 
+			if (enqueued > 0 &&
+			    astate->port_stats[dest_port_id].load_counter > 0)
+				astate->port_stats[dest_port_id].load_counter--;
+
 			if (enqueued < burst_len) {
 				uint16_t rem = burst_len - enqueued;
 				uint16_t start_idx = i + enqueued;
@@ -230,6 +456,9 @@ slb_atomic_refill(struct slb_port *port __rte_unused, struct slb_queue *queue)
 						rem);
 				}
 				retained += rem;
+				if (enqueued == 0)
+					slb_check_and_trigger_migration(
+						slb, queue, astate, dest_port_id);
 			}
 
 			i += burst_len;
@@ -274,17 +503,8 @@ slb_atomic_refill(struct slb_port *port __rte_unused, struct slb_queue *queue)
 					rte_memory_order_acquire);
 
 			if (unlikely(dest_port_id == -1)) {
-				uint32_t rr_counter = astate->next_port_rr++;
-				int port_offset = rr_counter % num_serving_ports;
-				uint64_t temp_mask = serving_mask;
-				uint8_t assigned_port = 0;
-
-				for (int j = 0; j <= port_offset; j++) {
-					assigned_port = rte_ctz64(temp_mask);
-					temp_mask &= (temp_mask - 1);
-				}
-
-				dest_port_id = assigned_port;
+				dest_port_id = slb_assign_unmapped_flow_port(
+					slb, astate, serving_mask, num_serving_ports);
 				rte_atomic_store_explicit(
 					&astate->flow_map.flows[flow_idx].port_id,
 					dest_port_id, rte_memory_order_release);
@@ -346,7 +566,10 @@ slb_atomic_refill(struct slb_port *port __rte_unused, struct slb_queue *queue)
 				queue->per_port_rings[p], &sorted_events[p_start], p_count, NULL);
 			astate->port_stats[p].q_enqueued += enqueued;
 
-			if (enqueued < p_count) {
+			if (enqueued == p_count) {
+				if (unlikely(astate->port_stats[p].load_counter > 0))
+					astate->port_stats[p].load_counter--;
+			} else {
 				uint16_t rem = p_count - enqueued;
 				uint16_t space = SLB_HOLD_BUFFER_SIZE - astate->hold_count;
 				uint16_t to_copy = RTE_MIN(rem, space);
@@ -359,6 +582,9 @@ slb_atomic_refill(struct slb_port *port __rte_unused, struct slb_queue *queue)
 					memset(&astate->hold_ports[astate->hold_count], p, to_copy);
 					astate->hold_count += to_copy;
 				}
+				if (enqueued == 0)
+					slb_check_and_trigger_migration(
+						slb, queue, astate, p);
 			}
 		}
 	}
