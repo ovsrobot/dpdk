@@ -26,6 +26,7 @@ slb_port_reset_history(struct slb_port *port)
 {
 	port->history[0].active = false;
 	port->history[0].next_free = SLB_PORT_HISTORY_FREE_END;
+	/* 1 -> 2 -> 3 ..... 255 -> END */
 	for (int i = 1; i < SLB_PORT_HISTORY_SIZE; i++) {
 		port->history[i].active = false;
 		port->history[i].next_free = i + 1;
@@ -36,7 +37,7 @@ slb_port_reset_history(struct slb_port *port)
 	port->history_avail = SLB_PORT_HISTORY_MAX_TOKENS;
 }
 
-/* Setup Eventdev port. Reset all mapped queues */
+/* Setup Eventdev port. Reset all mapped queues and history tracking */
 static int
 slb_port_setup(struct rte_eventdev *dev, uint8_t port_id,
 	       const struct rte_event_port_conf *conf)
@@ -103,12 +104,18 @@ slb_port_setup(struct rte_eventdev *dev, uint8_t port_id,
 
 /* Default Eventdev port configuration for SLB */
 static void
-slb_port_def_conf(struct rte_eventdev *dev __rte_unused,
+slb_port_def_conf(struct rte_eventdev *dev,
 		  uint8_t port_id __rte_unused,
 		  struct rte_event_port_conf *port_conf)
 {
+	int32_t threshold = SLB_IN_RING_SIZE / 4;
+
+	if (dev->data->dev_conf.nb_events_limit > 0 &&
+	    threshold > dev->data->dev_conf.nb_events_limit)
+		threshold = dev->data->dev_conf.nb_events_limit;
+
 	*port_conf = (struct rte_event_port_conf) {
-		.new_event_threshold = 1024,
+		.new_event_threshold = threshold,
 		.dequeue_depth = SLB_MAX_PORT_DEQUEUE_DEPTH / 4,
 		.enqueue_depth = SLB_MAX_PORT_ENQUEUE_DEPTH / 4
 	};
@@ -146,7 +153,9 @@ slb_queue_release(struct rte_eventdev *dev, uint8_t queue_id)
 	}
 }
 
-/* Setup Eventdev queue. Eventdev queues are implemented as DPDK rings */
+/* Setup Eventdev queue. Eventdev queues are implemented as DPDK rings.
+ *  SLB Supports single-link, atomic, parallel, and ordered queues.
+ */
 static int
 slb_queue_setup(struct rte_eventdev *dev, uint8_t queue_id,
 		const struct rte_event_queue_conf *conf)
@@ -190,12 +199,15 @@ slb_queue_setup(struct rte_eventdev *dev, uint8_t queue_id,
 		return -ENOMEM;
 
 	queue->q_ring = ring;
-	queue->schedule_type = conf->schedule_type;
+	/* Single-link queue uses atomic schedule type */
+	queue->schedule_type = queue->is_single_link ?
+			       RTE_SCHED_TYPE_ATOMIC : conf->schedule_type;
 	queue->serving_ports_mask = 0;
 	queue->num_serving_ports = 0;
 
-	/* Atomic queue allocation */
-	if (conf->schedule_type == RTE_SCHED_TYPE_ATOMIC) {
+	/* Atomic queue state allocation */
+	if (!queue->is_single_link &&
+	    conf->schedule_type == RTE_SCHED_TYPE_ATOMIC) {
 		for (int i = 0; i < SLB_MAX_PORTS; i++)
 			queue->per_port_rings[i] = NULL;
 
@@ -224,7 +236,8 @@ slb_queue_setup(struct rte_eventdev *dev, uint8_t queue_id,
 	}
 
 	/* Ordered queue reorder buffer allocation */
-	if (conf->schedule_type == RTE_SCHED_TYPE_ORDERED) {
+	if (!queue->is_single_link &&
+	    conf->schedule_type == RTE_SCHED_TYPE_ORDERED) {
 		queue->reorder_buffer = rte_zmalloc_socket("slb_reorder_buf",
 			sizeof(struct slb_reorder_entry) * ring->r.size,
 			RTE_CACHE_LINE_SIZE, dev->data->socket_id);
@@ -293,7 +306,8 @@ slb_port_link_one(struct slb_port *port, struct slb_queue *queue,
 		port->single_linked_q = queue;
 		port->single_linked_ring = queue->q_ring;
 	} else {
-		if (queue->schedule_type == RTE_SCHED_TYPE_ATOMIC &&
+		if (!queue->is_single_link &&
+		    queue->schedule_type == RTE_SCHED_TYPE_ATOMIC &&
 		    queue->per_port_rings[port->id] == NULL) {
 			char ring_name[RTE_RING_NAMESIZE];
 			struct rte_event_ring *ring;
@@ -332,7 +346,8 @@ slb_port_link_one(struct slb_port *port, struct slb_queue *queue,
 		if (!found) {
 			uint16_t slot = port->num_q[prio];
 			struct rte_event_ring *dq_ring =
-				(queue->schedule_type == RTE_SCHED_TYPE_ATOMIC) ?
+				(!queue->is_single_link &&
+				 queue->schedule_type == RTE_SCHED_TYPE_ATOMIC) ?
 				queue->per_port_rings[port->id] : queue->q_ring;
 
 			if (slot >= SLB_PORT_MAX_Q_MAP_PER_PRIO) {
@@ -344,6 +359,8 @@ slb_port_link_one(struct slb_port *port, struct slb_queue *queue,
 			port->q_entries[prio][slot].queue_id = qid;
 			port->q_entries[prio][slot].schedule_type =
 				queue->schedule_type;
+			port->q_entries[prio][slot].is_single_link =
+				queue->is_single_link;
 			port->num_q[prio]++;
 		}
 
@@ -464,7 +481,6 @@ slb_info_get(struct rte_eventdev *dev __rte_unused,
 		RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE |
 		RTE_EVENT_DEV_CAP_NONSEQ_MODE |
 		RTE_EVENT_DEV_CAP_MULTIPLE_QUEUE_PORT |
-		RTE_EVENT_DEV_CAP_RUNTIME_PORT_LINK |
 		RTE_EVENT_DEV_CAP_CARRY_FLOW_ID |
 		RTE_EVENT_DEV_CAP_MAINTENANCE_FREE |
 		RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ
@@ -555,22 +571,52 @@ slb_stop(struct rte_eventdev *dev)
 	for (uint8_t qid = 0; qid < slb->num_queues; qid++) {
 		struct slb_queue *q = &slb->queues[qid];
 
-		if (q->schedule_type == RTE_SCHED_TYPE_ATOMIC && q->atomic_state != NULL) {
+		if (q->schedule_type == RTE_SCHED_TYPE_ATOMIC &&
+		    q->atomic_state != NULL) {
+			struct slb_atomic_state *astate = q->atomic_state;
+
+			for (uint16_t h = 0; h < astate->hold_count; h++) {
+				if (flush != NULL)
+					flush(dev_id, astate->hold_buffer[h],
+					      flush_arg);
+			}
+			astate->hold_count = 0;
+			astate->next_port_rr = 0;
+			astate->migration.in_progress = false;
+
 			for (int f = 0; f < SLB_ATOMIC_FLOWS; f++) {
 				rte_atomic_store_explicit(
-					&q->atomic_state->flow_map.flows[f].port_id,
+					&astate->flow_map.flows[f].port_id,
 					-1, rte_memory_order_relaxed);
-				q->atomic_state->flow_last_migrated[f] = 0;
+				astate->flow_last_migrated[f] = 0;
 			}
-			q->atomic_state->migration.in_progress = false;
+
+			memset(astate->port_stats, 0,
+			       sizeof(astate->port_stats));
 
 			for (uint16_t pid = 0; pid < slb->num_ports; pid++) {
-				q->atomic_state->port_stats[pid].load_counter = 0;
 				if (q->per_port_rings[pid] != NULL)
 					slb_drain_ring(dev_id,
 						       q->per_port_rings[pid],
 						       flush, flush_arg);
 			}
+		} else if (q->schedule_type == RTE_SCHED_TYPE_ORDERED &&
+			   q->reorder_buffer != NULL && q->q_ring != NULL) {
+			for (uint32_t s = 0; s < q->q_ring->r.size; s++) {
+				uint8_t st = rte_atomic_load_explicit(
+					&q->reorder_buffer[s].state,
+					rte_memory_order_relaxed);
+
+				if (st == SLB_REORDER_READY && flush != NULL)
+					flush(dev_id,
+					      q->reorder_buffer[s].event,
+					      flush_arg);
+				rte_atomic_store_explicit(
+					&q->reorder_buffer[s].state,
+					SLB_REORDER_EMPTY,
+					rte_memory_order_relaxed);
+			}
+			q->reorder_drain_idx = 0;
 		}
 
 		if (q->q_ring != NULL)
@@ -581,7 +627,10 @@ slb_stop(struct rte_eventdev *dev)
 		struct slb_port *port = &slb->ports[i];
 		port->inflight_credits = 0;
 		port->credits_drained = false;
+		port->pending_releases = 0;
 		port->is_loaded = false;
+		port->last_migrated_time = 0;
+		slb_port_reset_history(port);
 		for (int p = 0; p < SLB_MAX_PRIORITIES; p++)
 			port->next_q[p] = 0;
 	}

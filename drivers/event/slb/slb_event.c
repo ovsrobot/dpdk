@@ -976,8 +976,10 @@ slb_port_dequeue(struct slb_port *port, struct rte_event events[],
 			return 0;
 		dequeued = rte_event_ring_dequeue_burst(port->single_linked_ring,
 							events, num, NULL);
-		for (uint16_t j = 0; j < dequeued; j++)
+		for (uint16_t j = 0; j < dequeued; j++) {
+			events[j].sched_type = RTE_SCHED_TYPE_ATOMIC;
 			events[j].impl_opaque = 0;
+		}
 		return dequeued;
 	}
 
@@ -1015,8 +1017,11 @@ slb_port_dequeue(struct slb_port *port, struct rte_event events[],
 				continue;
 
 			uint8_t sched_type = qent->schedule_type;
-			bool is_ordered = (sched_type == RTE_SCHED_TYPE_ORDERED);
-			bool is_atomic = (sched_type == RTE_SCHED_TYPE_ATOMIC);
+			bool is_single_link = qent->is_single_link;
+			bool is_ordered = !is_single_link &&
+					  (sched_type == RTE_SCHED_TYPE_ORDERED);
+			bool is_atomic = !is_single_link &&
+					 (sched_type == RTE_SCHED_TYPE_ATOMIC);
 
 			if (is_ordered || is_atomic) {
 				if (unlikely(port->history_avail == 0))
@@ -1050,8 +1055,16 @@ slb_port_dequeue(struct slb_port *port, struct rte_event events[],
 			} else {
 				dequeued = rte_event_ring_dequeue_burst(
 					ring_to_dq, events, num, NULL);
-				for (uint16_t j = 0; j < dequeued; j++)
-					events[j].impl_opaque = 0;
+				if (is_single_link) {
+					for (uint16_t j = 0; j < dequeued; j++) {
+						events[j].sched_type =
+							RTE_SCHED_TYPE_ATOMIC;
+						events[j].impl_opaque = 0;
+					}
+				} else {
+					for (uint16_t j = 0; j < dequeued; j++)
+						events[j].impl_opaque = 0;
+				}
 			}
 
 			if (dequeued > 0) {

@@ -28,7 +28,7 @@
 #define SLB_MAX_FLOWS_MASK (SLB_MAX_FLOWS - 1)
 
 /* Avoid making small 'loans' from the central in-flight event credit pool */
-#define SLB_MIN_CREDIT_LOAN (512)
+#define SLB_MIN_CREDIT_LOAN (256)
 #define SLB_PORT_MAX_CREDITS (2 * SLB_MIN_CREDIT_LOAN)
 #define SLB_PORT_MIN_CREDITS (SLB_MIN_CREDIT_LOAN)
 
@@ -56,7 +56,8 @@ struct slb_port_q_entry {
 	struct slb_queue *queue;
 	uint8_t queue_id;
 	uint8_t schedule_type;
-	uint8_t pad[6];
+	bool is_single_link;
+	uint8_t pad[5];
 };
 
 #define SLB_PORT_HISTORY_SIZE 256

@@ -362,6 +362,12 @@ test_ordered_forward(void)
 					     cons_rx, rx[i].u64);
 				return -1;
 			}
+			if (rx[i].sched_type != RTE_SCHED_TYPE_ATOMIC) {
+				SLB_LOG_LINE(ERR,
+					     "Single-link dequeue sched_type expected %u, got %u",
+					     RTE_SCHED_TYPE_ATOMIC, rx[i].sched_type);
+				return -1;
+			}
 			cons_rx++;
 			rx[i].op = RTE_EVENT_OP_RELEASE;
 		}
@@ -416,6 +422,12 @@ test_single_link(void)
 	for (i = 0; i < 16; i++) {
 		if (rx[i].u64 != (uint64_t)(5000 + i))
 			return -1;
+		if (rx[i].sched_type != RTE_SCHED_TYPE_ATOMIC) {
+			SLB_LOG_LINE(ERR,
+				     "Single-link dequeue sched_type expected %u, got %u",
+				     RTE_SCHED_TYPE_ATOMIC, rx[i].sched_type);
+			return -1;
+		}
 		rx[i].op = RTE_EVENT_OP_RELEASE;
 	}
 	rte_event_enqueue_burst(g_dev_id, PORT_CONS, rx, 16);
