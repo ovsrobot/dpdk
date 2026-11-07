@@ -20,3 +20,4 @@ application through the eventdev API.
     sw
     octeontx
     opdl
+    slb

@@ -758,6 +758,7 @@ static struct eventdev_ops slb_evdev_ops = {
 	.xstats_get = slb_xstats_get,
 	.xstats_get_names = slb_xstats_get_names,
 	.xstats_get_by_name = slb_xstats_get_by_name,
+	.dev_selftest = test_slb_eventdev,
 };
 
 static int

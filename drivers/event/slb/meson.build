@@ -11,6 +11,7 @@ sources = files(
         'slb_evdev.c',
         'slb_event.c',
         'slb_xstats.c',
+        'slb_selftest.c',
 )
 
 deps += ['bus_vdev', 'ring']
