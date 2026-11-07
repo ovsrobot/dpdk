@@ -17,6 +17,25 @@
 
 #define EVENTDEV_NAME_SLB_PMD event_slb
 
+/* Reset history tracking table for a port.
+ * Token 0 is reserved for parallel and single-link events without history.
+ * Tokens 1 to 255 (255 total) are available for ordered and atomic queue events.
+ */
+static void
+slb_port_reset_history(struct slb_port *port)
+{
+	port->history[0].active = false;
+	port->history[0].next_free = SLB_PORT_HISTORY_FREE_END;
+	for (int i = 1; i < SLB_PORT_HISTORY_SIZE; i++) {
+		port->history[i].active = false;
+		port->history[i].next_free = i + 1;
+	}
+	port->history[SLB_PORT_HISTORY_SIZE - 1].next_free =
+		SLB_PORT_HISTORY_FREE_END;
+	port->history_head = 1;
+	port->history_avail = SLB_PORT_HISTORY_MAX_TOKENS;
+}
+
 /* Setup Eventdev port. Reset all mapped queues */
 static int
 slb_port_setup(struct rte_eventdev *dev, uint8_t port_id,
@@ -54,6 +73,7 @@ slb_port_setup(struct rte_eventdev *dev, uint8_t port_id,
 		.credits_drained = false,
 		.total_dequeues = 0,
 		.empty_dequeues = 0,
+		.pending_releases = 0,
 		.single_linked_q = NULL,
 		.single_linked_ring = NULL,
 	};
@@ -70,6 +90,8 @@ slb_port_setup(struct rte_eventdev *dev, uint8_t port_id,
 		port->num_q[p] = 0;
 		memset(port->q_entries[p], 0, sizeof(port->q_entries[p]));
 	}
+
+	slb_port_reset_history(port);
 
 	return 0;
 }
@@ -99,6 +121,10 @@ slb_queue_release(struct rte_eventdev *dev, uint8_t queue_id)
 	struct slb_evdev *slb = slb_pmd_priv(dev);
 	struct slb_queue *queue = &slb->queues[queue_id];
 
+	if (queue->reorder_buffer) {
+		rte_free(queue->reorder_buffer);
+		queue->reorder_buffer = NULL;
+	}
 	if (queue->q_ring) {
 		rte_event_ring_free(queue->q_ring);
 		queue->q_ring = NULL;
@@ -128,7 +154,8 @@ slb_queue_setup(struct rte_eventdev *dev, uint8_t queue_id,
 		queue->is_single_link = true;
 		ring = rte_event_ring_create(ring_name, q_size,
 			dev->data->socket_id, RING_F_SC_DEQ | RING_F_EXACT_SZ);
-	} else if (conf->schedule_type == RTE_SCHED_TYPE_PARALLEL) {
+	} else if (conf->schedule_type == RTE_SCHED_TYPE_PARALLEL ||
+		   conf->schedule_type == RTE_SCHED_TYPE_ORDERED) {
 		/* MP -> MC ring for parallel queues */
 		queue->is_single_link = false;
 		ring = rte_event_ring_create(ring_name, q_size,
@@ -146,6 +173,21 @@ slb_queue_setup(struct rte_eventdev *dev, uint8_t queue_id,
 	queue->schedule_type = conf->schedule_type;
 	queue->serving_ports_mask = 0;
 	queue->num_serving_ports = 0;
+
+	/* Ordered queue reorder buffer allocation */
+	if (conf->schedule_type == RTE_SCHED_TYPE_ORDERED) {
+		queue->reorder_buffer = rte_zmalloc_socket("slb_reorder_buf",
+			sizeof(struct slb_reorder_entry) * ring->r.size,
+			RTE_CACHE_LINE_SIZE, dev->data->socket_id);
+		if (queue->reorder_buffer == NULL) {
+			rte_event_ring_free(ring);
+			return -ENOMEM;
+		}
+		queue->reorder_drain_idx = 0;
+		rte_spinlock_init(&queue->reorder_lock);
+	} else {
+		queue->reorder_buffer = NULL;
+	}
 
 	return 0;
 }
@@ -337,6 +379,7 @@ slb_info_get(struct rte_eventdev *dev __rte_unused,
 		.max_profiles_per_port = 1,
 		.event_dev_cap = RTE_EVENT_DEV_CAP_BURST_MODE |
 		RTE_EVENT_DEV_CAP_PARALLEL |
+		RTE_EVENT_DEV_CAP_ORDERED |
 		RTE_EVENT_DEV_CAP_DISTRIBUTED_SCHED |
 		RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE |
 		RTE_EVENT_DEV_CAP_NONSEQ_MODE |
