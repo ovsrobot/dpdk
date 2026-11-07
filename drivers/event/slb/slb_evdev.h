@@ -231,6 +231,17 @@ void slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue);
 
 void slb_dump(struct rte_eventdev *dev, FILE *f);
 
+int slb_xstats_get_names(const struct rte_eventdev *dev,
+			 enum rte_event_dev_xstats_mode mode,
+			 uint8_t queue_port_id,
+			 struct rte_event_dev_xstats_name *xstats_names,
+			 uint64_t *ids, unsigned int capacity);
+int slb_xstats_get(const struct rte_eventdev *dev,
+		   enum rte_event_dev_xstats_mode mode, uint8_t queue_port_id,
+		   const uint64_t ids[], uint64_t values[], unsigned int n);
+uint64_t slb_xstats_get_by_name(const struct rte_eventdev *dev,
+				const char *name, uint64_t *id);
+
 static inline struct slb_evdev *
 slb_pmd_priv(const struct rte_eventdev *eventdev)
 {
