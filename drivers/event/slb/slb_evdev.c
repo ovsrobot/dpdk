@@ -84,10 +84,6 @@ slb_port_setup(struct rte_eventdev *dev, uint8_t port_id,
 		.last_migrated_time = 0,
 	};
 
-	port->remap_input_q = false;
-	rte_atomic_store_explicit(&port->active_queues, 0,
-				  rte_memory_order_relaxed);
-
 	dev->data->ports[port_id] = port;
 
 	/* Reset all queues mapped to this port */
@@ -199,9 +195,7 @@ slb_queue_setup(struct rte_eventdev *dev, uint8_t queue_id,
 		return -ENOMEM;
 
 	queue->q_ring = ring;
-	/* Single-link queue uses atomic schedule type */
-	queue->schedule_type = queue->is_single_link ?
-			       RTE_SCHED_TYPE_ATOMIC : conf->schedule_type;
+	queue->schedule_type = conf->schedule_type;
 	queue->serving_ports_mask = 0;
 	queue->num_serving_ports = 0;
 
@@ -270,16 +264,20 @@ slb_queue_def_conf(struct rte_eventdev *dev __rte_unused,
 static void
 slb_port_unlink_queue_from_prio(struct slb_port *port, int prio, int slot)
 {
+	/* Shift the queue entries to overwriting the unlinked queue slot */
 	for (int k = slot; k < port->num_q[prio] - 1; k++)
 		port->q_entries[prio][k] = port->q_entries[prio][k + 1];
 
+	/* Decrement mapped queue count and Clear the last slot after shifting */
 	port->num_q[prio]--;
 	memset(&port->q_entries[prio][port->num_q[prio]], 0,
 	       sizeof(struct slb_port_q_entry));
+	/* Adjust the next queue index if it points beyond the new count */
 	if (port->next_q[prio] >= port->num_q[prio])
 		port->next_q[prio] = 0;
 }
 
+/* Find the slot of a queue in a specific priority level, returning -1 if not found */
 static int
 slb_port_find_queue_slot(struct slb_port *port, int prio, uint8_t qid)
 {
@@ -290,24 +288,67 @@ slb_port_find_queue_slot(struct slb_port *port, int prio, uint8_t qid)
 	return -1;
 }
 
+/* Link a queue to a port at a specific priority level */
 static int
 slb_port_link_one(struct slb_port *port, struct slb_queue *queue,
 		  uint8_t qid, uint8_t app_prio, bool has_prio)
 {
+	struct rte_event_ring *dq_ring;
+	uint16_t slot;
 	int prio;
-	bool found = false;
 
 	if (port->is_single_linked) {
-		if (port->single_linked_q != NULL &&
-		    port->single_linked_q != queue) {
+		/* Only a single-link queue can be linked to a single-linked port */
+		if (!queue->is_single_link) {
+			rte_errno = EINVAL;
+			return -EINVAL;
+		}
+		/* Only one queue can be linked to a single-linked port */
+		if (port->single_linked_q != NULL) {
+			if (port->single_linked_q == queue)
+				return 0;
+			rte_errno = EINVAL;
+			return -EINVAL;
+		}
+		/* A single-link queue can only be linked to one port */
+		if (queue->serving_ports_mask != 0) {
 			rte_errno = EINVAL;
 			return -EINVAL;
 		}
 		port->single_linked_q = queue;
 		port->single_linked_ring = queue->q_ring;
 	} else {
-		if (!queue->is_single_link &&
-		    queue->schedule_type == RTE_SCHED_TYPE_ATOMIC &&
+		/* A single-link queue cannot be linked to a regular port */
+		if (queue->is_single_link) {
+			rte_errno = EINVAL;
+			return -EINVAL;
+		}
+
+		/* Convert application priority to internal priority level (0 or 1) */
+		if (has_prio)
+			prio = (app_prio < RTE_EVENT_DEV_PRIORITY_NORMAL) ? 0 : 1;
+		else
+			prio = SLB_MAX_PRIORITIES - 1;
+
+		/* Check if queue is already mapped to this port at requested priority */
+		for (int pr = 0; pr < SLB_MAX_PRIORITIES; pr++) {
+			if (slb_port_find_queue_slot(port, pr, qid) >= 0) {
+				if (pr == prio)
+					return 0;
+				rte_errno = EINVAL;
+				return -EINVAL;
+			}
+		}
+
+		/* Ensure a free mapping slot is available at the requested priority */
+		slot = port->num_q[prio];
+		if (slot >= SLB_PORT_MAX_Q_MAP_PER_PRIO) {
+			rte_errno = ENOSPC;
+			return -ENOSPC;
+		}
+
+		/* Allocate per-port ring when linking an atomic queue */
+		if (queue->schedule_type == RTE_SCHED_TYPE_ATOMIC &&
 		    queue->per_port_rings[port->id] == NULL) {
 			char ring_name[RTE_RING_NAMESIZE];
 			struct rte_event_ring *ring;
@@ -327,53 +368,23 @@ slb_port_link_one(struct slb_port *port, struct slb_queue *queue,
 			queue->per_port_rings[port->id] = ring;
 		}
 
-		if (has_prio)
-			prio = (app_prio < RTE_EVENT_DEV_PRIORITY_NORMAL) ? 0 : 1;
-		else
-			prio = SLB_MAX_PRIORITIES - 1;
+		dq_ring = (queue->schedule_type == RTE_SCHED_TYPE_ATOMIC) ?
+			  queue->per_port_rings[port->id] : queue->q_ring;
 
-		for (int pr = 0; pr < SLB_MAX_PRIORITIES; pr++) {
-			int s = slb_port_find_queue_slot(port, pr, qid);
-
-			if (s >= 0) {
-				if (pr == prio)
-					found = true;
-				else
-					slb_port_unlink_queue_from_prio(port, pr, s);
-				break;
-			}
-		}
-		if (!found) {
-			uint16_t slot = port->num_q[prio];
-			struct rte_event_ring *dq_ring =
-				(!queue->is_single_link &&
-				 queue->schedule_type == RTE_SCHED_TYPE_ATOMIC) ?
-				queue->per_port_rings[port->id] : queue->q_ring;
-
-			if (slot >= SLB_PORT_MAX_Q_MAP_PER_PRIO) {
-				rte_errno = ENOSPC;
-				return -ENOSPC;
-			}
-			port->q_entries[prio][slot].dq_ring = dq_ring;
-			port->q_entries[prio][slot].queue = queue;
-			port->q_entries[prio][slot].queue_id = qid;
-			port->q_entries[prio][slot].schedule_type =
-				queue->schedule_type;
-			port->q_entries[prio][slot].is_single_link =
-				queue->is_single_link;
-			port->num_q[prio]++;
-		}
-
-		rte_atomic_fetch_or_explicit(&port->active_queues,
-					     (1ULL << qid),
-					     rte_memory_order_release);
+		port->q_entries[prio][slot].dq_ring = dq_ring;
+		port->q_entries[prio][slot].queue = queue;
+		port->q_entries[prio][slot].queue_id = qid;
+		port->q_entries[prio][slot].schedule_type = queue->schedule_type;
+		port->num_q[prio]++;
 	}
 
+	/* Add newly linked port to the queue's serving ports mask */
 	queue->serving_ports_mask |= (1ULL << port->id);
 	queue->num_serving_ports = rte_popcount64(queue->serving_ports_mask);
 	return 0;
 }
 
+/* Unlink a queue from a port */
 static int
 slb_port_unlink_one(struct slb_port *port, struct slb_queue *queue, uint8_t qid)
 {
@@ -386,7 +397,7 @@ slb_port_unlink_one(struct slb_port *port, struct slb_queue *queue, uint8_t qid)
 		}
 		port->single_linked_q = NULL;
 		port->single_linked_ring = NULL;
-	} else {
+	} else { /* Unlink queue by finding its slot */
 		for (int prio = 0; prio < SLB_MAX_PRIORITIES; prio++) {
 			int s = slb_port_find_queue_slot(port, prio, qid);
 
@@ -396,21 +407,17 @@ slb_port_unlink_one(struct slb_port *port, struct slb_queue *queue, uint8_t qid)
 				break;
 			}
 		}
-		if (!found) {
+		if (!found) { /* No link found */
 			rte_errno = EINVAL;
 			return -EINVAL;
 		}
 
+		/* For atomic queues, free the per-port ring if it exists */
 		if (queue->schedule_type == RTE_SCHED_TYPE_ATOMIC &&
 		    queue->per_port_rings[port->id] != NULL) {
 			rte_event_ring_free(queue->per_port_rings[port->id]);
 			queue->per_port_rings[port->id] = NULL;
 		}
-
-		rte_atomic_fetch_and_explicit(&port->active_queues,
-					      ~(1ULL << qid),
-					      rte_memory_order_release);
-		port->remap_input_q = true;
 	}
 
 	queue->serving_ports_mask &= ~(1ULL << port->id);
@@ -418,6 +425,7 @@ slb_port_unlink_one(struct slb_port *port, struct slb_queue *queue, uint8_t qid)
 	return 0;
 }
 
+/* Link all queues to a port at specific priorities */
 static int
 slb_port_link(struct rte_eventdev *dev, void *p, const uint8_t queues[],
 	      const uint8_t priorities[], uint16_t num)
@@ -439,6 +447,7 @@ slb_port_link(struct rte_eventdev *dev, void *p, const uint8_t queues[],
 	return num;
 }
 
+/* Unlink all queues from a port */
 static int
 slb_port_unlink(struct rte_eventdev *dev, void *p, uint8_t queues[],
 		uint16_t num)
@@ -458,6 +467,7 @@ slb_port_unlink(struct rte_eventdev *dev, void *p, uint8_t queues[],
 	return num;
 }
 
+/* Get information about the event device */
 static void
 slb_info_get(struct rte_eventdev *dev __rte_unused,
 	     struct rte_event_dev_info *info)
@@ -467,7 +477,7 @@ slb_info_get(struct rte_eventdev *dev __rte_unused,
 		.max_event_queues = SLB_MAX_QUEUES,
 		.max_event_queue_flows = SLB_MAX_FLOWS,
 		.max_event_queue_priority_levels = SLB_MAX_PRIORITIES,
-		.max_event_priority_levels = SLB_MAX_PRIORITIES,
+		.max_event_priority_levels = 1,
 		.max_event_ports = SLB_MAX_PORTS,
 		.max_event_port_dequeue_depth = SLB_MAX_PORT_DEQUEUE_DEPTH,
 		.max_event_port_enqueue_depth = SLB_MAX_PORT_ENQUEUE_DEPTH,
@@ -487,13 +497,13 @@ slb_info_get(struct rte_eventdev *dev __rte_unused,
 	};
 }
 
+/* Configure the event device */
 static int
 slb_configure(const struct rte_eventdev *dev)
 {
 	struct slb_evdev *slb = slb_pmd_priv(dev);
 	const struct rte_event_dev_config *conf = &dev->data->dev_conf;
 	int32_t min_max_in_flight;
-	uint32_t q_size;
 
 	if (conf->nb_events_limit <= 0 ||
 	    conf->nb_events_limit > SLB_MAX_EVENTS) {
@@ -503,36 +513,60 @@ slb_configure(const struct rte_eventdev *dev)
 		return -EINVAL;
 	}
 
+	/* Validate max event ports and queues that SLB can support */
+	if (conf->nb_event_ports == 0 ||
+	    conf->nb_event_ports > SLB_MAX_PORTS) {
+		SLB_LOG_DP_LINE(INFO,
+			"nb_event_ports (%u) invalid, max is %d",
+			conf->nb_event_ports, SLB_MAX_PORTS);
+		return -EINVAL;
+	}
+
+	if (conf->nb_event_queues == 0 ||
+	    conf->nb_event_queues > SLB_MAX_QUEUES) {
+		SLB_LOG_DP_LINE(INFO,
+			"nb_event_queues (%u) invalid, max is %d",
+			conf->nb_event_queues, SLB_MAX_QUEUES);
+		return -EINVAL;
+	}
+
 	slb->num_ports = conf->nb_event_ports;
 	slb->num_queues = conf->nb_event_queues;
 
+	/* Compute minimum credits required to avoid deadlock */
 	min_max_in_flight = conf->nb_event_ports * SLB_PORT_MAX_CREDITS;
 	if (min_max_in_flight > SLB_MAX_EVENTS)
 		min_max_in_flight = SLB_MAX_EVENTS;
 
-	q_size = rte_align32pow2((uint32_t)RTE_MAX(conf->nb_events_limit,
-						   min_max_in_flight));
-	if (q_size > SLB_MAX_EVENTS)
-		q_size = SLB_MAX_EVENTS;
-
-	slb->max_inflight = (int32_t)q_size;
+	/* Set credit pool size to max of nb_events_limit and minimum required to avoid deadlock */
+	slb->max_inflight = RTE_MAX(conf->nb_events_limit, min_max_in_flight);
+	slb->migration_cooldown_cycles =
+		(rte_get_timer_hz() * SLB_MIGRATION_COOLDOWN_MS) / 1000;
 	return 0;
 }
 
+/* Start the event device */
 static int
 slb_start(struct rte_eventdev *dev)
 {
 	struct slb_evdev *slb = slb_pmd_priv(dev);
 
+	/* Make sure all queues are set up and have at least one linked port */
 	for (int i = 0; i < slb->num_queues; i++) {
-		if (slb->queues[i].serving_ports_mask == 0)
-			SLB_LOG_DP_LINE(INFO,
-				"Queue %d has no linked ports on start", i);
+		if (slb->queues[i].q_ring == NULL ||
+		    slb->queues[i].serving_ports_mask == 0) {
+			SLB_LOG_DP_LINE(ERR,
+				"Queue %d is not configured or has no linked ports",
+				i);
+			return -ENOLINK;
+		}
 	}
 
+	/* No events in flight */
 	rte_atomic_store_explicit(&slb->credits_on_loan, 0,
 				  rte_memory_order_relaxed);
 
+	/* Reset port states */
 	for (int i = 0; i < slb->num_ports; i++) {
 		struct slb_port *port = &slb->ports[i];
 		port->inflight_credits = 0;
@@ -544,6 +578,7 @@ slb_start(struct rte_eventdev *dev)
 	return 0;
 }
 
+/* Empty the event queue */
 static void
 slb_drain_ring(uint8_t dev_id, struct rte_event_ring *ring,
 	       eventdev_stop_flush_t flush, void *flush_arg)
@@ -553,6 +588,7 @@ slb_drain_ring(uint8_t dev_id, struct rte_event_ring *ring,
 	if (ring == NULL)
 		return;
 
+	/* Dequeue all events from the ring and call user callback if provided */
 	while (rte_event_ring_dequeue_burst(ring, &ev, 1, NULL)) {
 		if (flush != NULL)
 			flush(dev_id, ev, flush_arg);
@@ -560,6 +596,7 @@ slb_drain_ring(uint8_t dev_id, struct rte_event_ring *ring,
 	rte_ring_reset(&ring->r);
 }
 
+/* Stop the event device */
 static void
 slb_stop(struct rte_eventdev *dev)
 {
@@ -575,6 +612,7 @@ slb_stop(struct rte_eventdev *dev)
 		    q->atomic_state != NULL) {
 			struct slb_atomic_state *astate = q->atomic_state;
 
+			/* Call user callback for each held event */
 			for (uint16_t h = 0; h < astate->hold_count; h++) {
 				if (flush != NULL)
 					flush(dev_id, astate->hold_buffer[h],
@@ -584,6 +622,7 @@ slb_stop(struct rte_eventdev *dev)
 			astate->next_port_rr = 0;
 			astate->migration.in_progress = false;
 
+			/* Reset flow to port mapping */
 			for (int f = 0; f < SLB_ATOMIC_FLOWS; f++) {
 				rte_atomic_store_explicit(
 					&astate->flow_map.flows[f].port_id,
@@ -594,6 +633,7 @@ slb_stop(struct rte_eventdev *dev)
 			memset(astate->port_stats, 0,
 			       sizeof(astate->port_stats));
 
+			/* Drain all events from per-port rings */
 			for (uint16_t pid = 0; pid < slb->num_ports; pid++) {
 				if (q->per_port_rings[pid] != NULL)
 					slb_drain_ring(dev_id,
@@ -606,11 +646,12 @@ slb_stop(struct rte_eventdev *dev)
 				uint8_t st = rte_atomic_load_explicit(
 					&q->reorder_buffer[s].state,
 					rte_memory_order_relaxed);
-
+				/* Flush all ready events from the reorder buffer. */
 				if (st == SLB_REORDER_READY && flush != NULL)
 					flush(dev_id,
 					      q->reorder_buffer[s].event,
 					      flush_arg);
+				/* Mark freed slot as empty */
 				rte_atomic_store_explicit(
 					&q->reorder_buffer[s].state,
 					SLB_REORDER_EMPTY,
@@ -623,6 +664,7 @@ slb_stop(struct rte_eventdev *dev)
 			slb_drain_ring(dev_id, q->q_ring, flush, flush_arg);
 	}
 
+	/* Reset each port's state, history lists and queue mappings */
 	for (int i = 0; i < slb->num_ports; i++) {
 		struct slb_port *port = &slb->ports[i];
 		port->inflight_credits = 0;
@@ -635,21 +677,25 @@ slb_stop(struct rte_eventdev *dev)
 			port->next_q[p] = 0;
 	}
 
+	/* Reset the credit pool to all available */
 	rte_atomic_store_explicit(&slb->credits_on_loan, 0,
 				  rte_memory_order_relaxed);
 }
 
+/* Close the event device */
 static int
 slb_close(struct rte_eventdev *dev)
 {
 	struct slb_evdev *slb = slb_pmd_priv(dev);
 
+	/* Release all resources acquired by the queues */
 	for (int i = 0; i < slb->num_queues; i++)
 		slb_queue_release(dev, i);
 
 	return 0;
 }
 
+/* Dump the event device current state and statistics */
 void
 slb_dump(struct rte_eventdev *dev, FILE *f)
 {
@@ -689,14 +735,12 @@ slb_dump(struct rte_eventdev *dev, FILE *f)
 	fprintf(f, "\n  PORT STATISTICS & QUEUE LINKAGES:\n");
 	for (i = 0; i < slb->num_ports; i++) {
 		struct slb_port *p = &slb->ports[i];
-		uint64_t aq = rte_atomic_load_explicit(&p->active_queues,
-						       rte_memory_order_acquire);
 		int linked_count = 0;
 
 		fprintf(f,
-			"    Port %2u (credits=%3d, active=0x%08" PRIx64
-			", loaded=%d, mig_in=%" PRIu64 ", mig_out=%" PRIu64 "): ",
-			i, p->inflight_credits, aq, p->is_loaded,
+			"    Port %2u (credits=%3d, loaded=%d"
+			", mig_in=%" PRIu64 ", mig_out=%" PRIu64 "): ",
+			i, p->inflight_credits, p->is_loaded,
 			p->migrations_in, p->migrations_out);
 
 		if (p->is_single_linked) {
@@ -743,7 +787,8 @@ slb_dump(struct rte_eventdev *dev, FILE *f)
 			i, count, ring_size, q->serving_ports_mask,
 			q->num_serving_ports, q->schedule_type,
 			q->is_single_link);
-		if (q->schedule_type == RTE_SCHED_TYPE_ATOMIC) {
+		if (!q->is_single_link &&
+		    q->schedule_type == RTE_SCHED_TYPE_ATOMIC) {
 			if (q->atomic_state) {
 				fprintf(f,
 					"      Atomic State: total_migrations=%" PRIu64
@@ -774,7 +819,8 @@ slb_dump(struct rte_eventdev *dev, FILE *f)
 					}
 				}
 			}
-		} else if (q->schedule_type == RTE_SCHED_TYPE_ORDERED) {
+		} else if (!q->is_single_link &&
+			   q->schedule_type == RTE_SCHED_TYPE_ORDERED) {
 			fprintf(f, "      Ordered reorder_drain_idx=%u\n",
 				q->reorder_drain_idx);
 		}

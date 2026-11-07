@@ -16,8 +16,8 @@
 #define SLB_PMD_NAME RTE_STR(event_slb)
 
 #define SLB_MAX_PORTS (64)
-#define SLB_MAX_PORT_DEQUEUE_DEPTH (128)
-#define SLB_MAX_PORT_ENQUEUE_DEPTH (128)
+#define SLB_MAX_PORT_DEQUEUE_DEPTH (128u)
+#define SLB_MAX_PORT_ENQUEUE_DEPTH (128u)
 
 #define SLB_MAX_QUEUES (64)
 
@@ -36,13 +36,13 @@
 
 /* Maximum number of queues that can be linked to a port per priority */
 #define SLB_PORT_MAX_Q_MAP_PER_PRIO (SLB_MAX_QUEUES)
-/* Number of priority levels supported by SLB. Configure 1..4. */
+/* Number of priority levels supported by SLB. Currently fixed to 2 */
 #ifndef SLB_MAX_PRIORITIES
 #define SLB_MAX_PRIORITIES 2
 #endif
 
-#if (SLB_MAX_PRIORITIES < 1) || (SLB_MAX_PRIORITIES > 4)
-#error "SLB_MAX_PRIORITIES must be between 1 and 4"
+#if (SLB_MAX_PRIORITIES != 2)
+#error "SLB_MAX_PRIORITIES must be set to 2 for now"
 #endif
 
 /* Total max mapping slots (per-prio * priorities) */
@@ -56,8 +56,7 @@ struct slb_port_q_entry {
 	struct slb_queue *queue;
 	uint8_t queue_id;
 	uint8_t schedule_type;
-	bool is_single_link;
-	uint8_t pad[5];
+	uint8_t pad[6];
 };
 
 #define SLB_PORT_HISTORY_SIZE 256
@@ -139,15 +138,13 @@ struct __rte_cache_aligned slb_port {
 	uint16_t pending_releases;
 	int32_t inflight_credits;
 	int32_t new_event_threshold;
-	RTE_ATOMIC(uint64_t) active_queues;
 	uint16_t num_q[SLB_MAX_PRIORITIES];
 	uint16_t next_q[SLB_MAX_PRIORITIES];
 	bool is_single_linked;
 	bool implicit_release;
 	bool credits_drained;
-	bool remap_input_q;
 	bool is_loaded; /* Port marked loaded for atomic flow migration */
-	uint8_t pad_port[3];
+	uint8_t pad_port[4];
 	struct rte_event_ring *single_linked_ring;
 	struct slb_evdev *slb;
 
@@ -196,7 +193,7 @@ struct slb_queue {
 	rte_spinlock_t reorder_lock;
 };
 
-/* Limited by the size of 'serving_ports_mask' and 'active_queues' bitmasks */
+/* Limited by the size of 64-bit port and queue bitmasks */
 static_assert(SLB_MAX_PORTS <= 64, "Max compile-time port count exceeded");
 static_assert(SLB_MAX_QUEUES <= 64, "Max compile-time queue count exceeded");
 
@@ -208,6 +205,7 @@ struct slb_evdev {
 	struct slb_queue queues[SLB_MAX_QUEUES];
 	uint8_t num_queues;
 	int32_t max_inflight;
+	uint64_t migration_cooldown_cycles;
 
 	alignas(RTE_CACHE_LINE_SIZE) RTE_ATOMIC(int32_t) credits_on_loan;
 };
@@ -261,26 +259,5 @@ extern int event_slb_logtype;
 
 #define SLB_LOG_DP_PORT_LINE(level, port_id, fmt, ...)			\
 	SLB_LOG_DP_LINE(level, "<Port %d> " fmt, port_id, ## __VA_ARGS__)
-
-/* Obtain serving port masks for the specified queue and set corresponding
- * active queue bits for all served ports.
- */
-static inline void
-slb_port_wakeup_queues(struct slb_evdev *slb, struct slb_queue *queue)
-{
-	uint8_t queue_id = queue - slb->queues;
-	uint64_t port_mask = queue->serving_ports_mask;
-	struct slb_port *port;
-	uint8_t port_id;
-
-	while (port_mask) {
-		port_id = rte_ctz64(port_mask);
-		port = &slb->ports[port_id];
-		rte_atomic_fetch_or_explicit(&port->active_queues,
-					     (1ULL << queue_id),
-					     rte_memory_order_release);
-		port_mask &= ~(1ULL << port_id);
-	}
-}
 
 #endif /* _SLB_EVDEV_H_ */
