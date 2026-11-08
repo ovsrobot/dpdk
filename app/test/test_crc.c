@@ -8,6 +8,7 @@
 #include <rte_malloc.h>
 #include <rte_memcpy.h>
 #include <rte_net_crc.h>
+#include <rte_random.h>
 
 #define CRC_VEC_LEN        32
 #define CRC32_VEC_LEN1     1512
@@ -102,6 +103,46 @@ crc_all_algs(const char *desc, enum rte_net_crc_type type,
 }
 
 static int
+crc_length_sweep(void)
+{
+	static const enum rte_net_crc_alg algs[] = {
+		RTE_NET_CRC_SSE42, RTE_NET_CRC_AVX512, RTE_NET_CRC_NEON,
+	};
+	static const enum rte_net_crc_type types[] = {
+		RTE_NET_CRC16_CCITT, RTE_NET_CRC32_ETH,
+	};
+	uint8_t buf[512 + 8];
+	unsigned int i, a, t, off, len;
+
+	for (i = 0; i < sizeof(buf); i++)
+		buf[i] = rte_rand();
+
+	for (t = 0; t < RTE_DIM(types); t++) {
+		struct rte_net_crc *ref =
+			rte_net_crc_set_alg(RTE_NET_CRC_SCALAR, types[t]);
+
+		for (a = 0; a < RTE_DIM(algs); a++) {
+			struct rte_net_crc *ctx =
+				rte_net_crc_set_alg(algs[a], types[t]);
+
+			for (off = 0; off < 8; off++)
+				for (len = 0; len <= 512; len++)
+					if (rte_net_crc_calc(ctx, buf + off, len) !=
+							rte_net_crc_calc(ref, buf + off, len)) {
+						printf("alg %u type %u off %u len %u\n",
+								algs[a], types[t], off, len);
+						rte_net_crc_free(ctx);
+						rte_net_crc_free(ref);
+						return TEST_FAILED;
+					}
+			rte_net_crc_free(ctx);
+		}
+		rte_net_crc_free(ref);
+	}
+	return TEST_SUCCESS;
+}
+
+static int
 crc_autotest(void)
 {	uint8_t *test_data;
 	uint32_t i;
@@ -128,7 +169,7 @@ crc_autotest(void)
 		CRC32_VEC_LEN2, crc32_vec2_res);
 
 	/* 16-bit CCITT CRC:  Test 4 */
-	crc_all_algs("16-bit CCITT CRC:  Test 4", RTE_NET_CRC16_CCITT, crc_vec,
+	ret |= crc_all_algs("16-bit CCITT CRC:  Test 4", RTE_NET_CRC16_CCITT, crc_vec,
 		sizeof(crc_vec), crc16_vec_res);
 
 	/* 16-bit CCITT CRC:  Test 5 */
@@ -145,6 +186,7 @@ crc_autotest(void)
 		rte_memcpy(&test_data[i], crc16_vec1, 12);
 	ret |= crc_all_algs("16-bit CCITT CRC: Test 7", RTE_NET_CRC16_CCITT, test_data,
 		CRC16_VEC_LEN3, crc16_vec3_res);
+	ret |= crc_length_sweep();
 	return ret;
 }
 
