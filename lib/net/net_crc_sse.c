@@ -12,15 +12,13 @@
 #include "net_crc.h"
 
 /** PCLMULQDQ CRC computation context structure */
-struct crc_pclmulqdq_ctx {
-	__m128i rk1_rk2;
-	__m128i rk3_rk4;
-	__m128i rk5_rk6;
-	__m128i rk7_rk8;
+struct __rte_aligned(XMM_SIZE) crc_pclmulqdq_ctx {
+	uint64_t rk1_rk2[2];
+	uint64_t rk3_rk4[2];
+	uint64_t rk5_rk6[2];
+	uint64_t rk7_rk8[2];
 };
 
-static alignas(16) struct crc_pclmulqdq_ctx crc32_eth_pclmulqdq;
-static alignas(16) struct crc_pclmulqdq_ctx crc16_ccitt_pclmulqdq;
 /**
  * @brief Performs one folding round
  *
@@ -162,7 +160,7 @@ crc32_eth_calc_pclmulqdq(
 		fold3 = _mm_loadu_si128((const __m128i *)(data + 32));
 		fold4 = _mm_loadu_si128((const __m128i *)(data + 48));
 		fold1 = _mm_xor_si128(fold1, temp);
-		k = params->rk1_rk2;
+		k = _mm_load_si128((const __m128i *)params->rk1_rk2);
 
 		for (n = 64; (n + 64) <= data_len; n += 64) {
 			temp1 = _mm_loadu_si128((const __m128i *)&data[n]);
@@ -175,7 +173,7 @@ crc32_eth_calc_pclmulqdq(
 			fold4 = crcr32_folding_round(temp4, k, fold4);
 		}
 
-		k = params->rk3_rk4;
+		k = _mm_load_si128((const __m128i *)params->rk3_rk4);
 		fold1 = crcr32_folding_round(fold2, k, fold1);
 		fold1 = crcr32_folding_round(fold3, k, fold1);
 		fold = crcr32_folding_round(fold4, k, fold1);
@@ -205,7 +203,7 @@ crc32_eth_calc_pclmulqdq(
 	fold = _mm_xor_si128(fold, temp);
 
 	/** Single folding loop - the last 16 bytes is processed separately */
-	k = params->rk3_rk4;
+	k = _mm_load_si128((const __m128i *)params->rk3_rk4);
 	n = 16;
 
 single_fold_loop:
@@ -235,11 +233,11 @@ single_fold_loop:
 
 	/** Reduction 128 -> 32 Assumes: fold holds 128bit folded data */
 reduction_128_64:
-	k = params->rk5_rk6;
+	k = _mm_load_si128((const __m128i *)params->rk5_rk6);
 	fold = crcr32_reduce_128_to_64(fold, k);
 
 barret_reduction:
-	k = params->rk7_rk8;
+	k = _mm_load_si128((const __m128i *)params->rk7_rk8);
 	n = crcr32_reduce_64_to_32(fold, k);
 
 	return n;
@@ -248,45 +246,17 @@ barret_reduction:
 void
 rte_net_crc_sse42_init(void)
 {
-	uint64_t k1, k2, k3, k4, k5, k6;
-	uint64_t p = 0, q = 0;
-
-	/** Initialize CRC16 data */
-	k1 = 0x14ff2LLU;
-	k2 = 0x19a3cLLU;
-	k3 = 0x189aeLLU;
-	k4 = 0x8e10LLU;
-	k5 = 0x189aeLLU;
-	k6 = 0x114aaLLU;
-	q =  0x11c581910LLU;
-	p =  0x10811LLU;
-
-	/** Save the params in context structure */
-	crc16_ccitt_pclmulqdq.rk1_rk2 = _mm_set_epi64x(k2, k1);
-	crc16_ccitt_pclmulqdq.rk3_rk4 = _mm_set_epi64x(k4, k3);
-	crc16_ccitt_pclmulqdq.rk5_rk6 = _mm_set_epi64x(k6, k5);
-	crc16_ccitt_pclmulqdq.rk7_rk8 = _mm_set_epi64x(p, q);
-
-	/** Initialize CRC32 data */
-	k1 = 0x1c6e41596LLU;
-	k2 = 0x154442bd4LLU;
-	k3 = 0xccaa009eLLU;
-	k4 = 0x1751997d0LLU;
-	k5 = 0xccaa009eLLU;
-	k6 = 0x163cd6124LLU;
-	q =  0x1f7011640LLU;
-	p =  0x1db710641LLU;
-
-	/** Save the params in context structure */
-	crc32_eth_pclmulqdq.rk1_rk2 = _mm_set_epi64x(k2, k1);
-	crc32_eth_pclmulqdq.rk3_rk4 = _mm_set_epi64x(k4, k3);
-	crc32_eth_pclmulqdq.rk5_rk6 = _mm_set_epi64x(k6, k5);
-	crc32_eth_pclmulqdq.rk7_rk8 = _mm_set_epi64x(p, q);
 }
 
 uint32_t
 rte_crc16_ccitt_sse42_handler(const uint8_t *data, uint32_t data_len)
 {
+	static const struct crc_pclmulqdq_ctx crc16_ccitt_pclmulqdq = {
+		.rk1_rk2 = { 0x14ff2LLU, 0x19a3cLLU },
+		.rk3_rk4 = { 0x189aeLLU, 0x8e10LLU },
+		.rk5_rk6 = { 0x189aeLLU, 0x114aaLLU },
+		.rk7_rk8 = { 0x11c581910LLU, 0x10811LLU },
+	};
 	/** return 16-bit CRC value */
 	return (uint16_t)~crc32_eth_calc_pclmulqdq(data,
 		data_len,
@@ -297,6 +267,12 @@ rte_crc16_ccitt_sse42_handler(const uint8_t *data, uint32_t data_len)
 uint32_t
 rte_crc32_eth_sse42_handler(const uint8_t *data, uint32_t data_len)
 {
+	static const struct crc_pclmulqdq_ctx crc32_eth_pclmulqdq = {
+		.rk1_rk2 = { 0x1c6e41596LLU, 0x154442bd4LLU },
+		.rk3_rk4 = { 0xccaa009eLLU, 0x1751997d0LLU },
+		.rk5_rk6 = { 0xccaa009eLLU, 0x163cd6124LLU },
+		.rk7_rk8 = { 0x1f7011640LLU, 0x1db710641LLU },
+	};
 	return ~crc32_eth_calc_pclmulqdq(data,
 		data_len,
 		0xffffffffUL,
