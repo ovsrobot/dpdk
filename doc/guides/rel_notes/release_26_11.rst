@@ -68,6 +68,14 @@ New Features
   and use pointer arithmetic instead of integer casts to enable compiler optimizations.
   See API changes below.
 
+* **Added RISC-V Zawrs support for wait-until-equal helpers.**
+
+  On RISC-V targets built with the Zawrs extension in the ISA string
+  (for example ``-Dcpu_instruction_set=rv64gcv_zawrs``),
+  ``rte_wait_until_equal_*`` and ``RTE_WAIT_UNTIL_MASKED`` now stall the hart
+  with ``wrs.nto`` until the polled address is written instead of spinning
+  on ``pause``.
+
 * **Added API to get CPU socket ID.**
 
   Added the experimental ``rte_cpu_socket_id()`` function

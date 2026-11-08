@@ -153,6 +153,15 @@ if (riscv_extension_macros and
     endif
 endif
 
+# detect Zawrs (wait-on-reservation-set) extension, used by rte_wait_until_equal_*
+# to stall the hart until the polled memory location is written instead of spinning
+if (riscv_extension_macros and
+        (cc.get_define('__riscv_zawrs', args: machine_args) != ''))
+    message('Compiling with the Zawrs extension')
+    machine_args += ['-DRTE_RISCV_FEATURE_ZAWRS']
+    dpdk_flags += [['RTE_RISCV_FEATURE_ZAWRS', 1],]
+endif
+
 # apply flags
 foreach flag: dpdk_flags
     if flag.length() > 0

@@ -115,3 +115,29 @@ Currently the following targets are supported:
 To add a new target support, ``config/riscv/meson.build`` has to be modified by
 adding a new vendor/architecture id and a corresponding cross-file has to be
 added to ``config/riscv`` directory.
+
+
+Optional ISA extensions
+-----------------------
+
+Some optimisations are enabled at build time when the target ISA string
+includes the extension.
+The build looks at the per-extension macros the compiler defines when
+``__riscv_arch_test`` is available, such as ``__riscv_zawrs``:
+
+``v``
+   Vector implementations (``RTE_RISCV_FEATURE_V``).
+
+``zawrs``
+   ``rte_wait_until_equal_*`` stall the hart with ``wrs.nto``
+   instead of spinning (``RTE_RISCV_FEATURE_ZAWRS``).
+
+Pass the full ISA string to enable them.
+For native builds use ``-Dcpu_instruction_set``::
+
+   meson setup build -Dcpu_instruction_set=rv64gcv_zawrs
+
+For cross builds, set ``cpu`` in the cross-file instead::
+
+   [host_machine]
+   cpu = 'rv64gcv_zawrs'
