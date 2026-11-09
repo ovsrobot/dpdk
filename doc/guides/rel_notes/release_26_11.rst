@@ -82,6 +82,13 @@ New Features
   but objects within each bulk are not ordered as expected by a stack.
   Furthermore, it is not strictly bounded by its size, but might hold more objects.
 
+* **Added function to check if a mempool is created.**
+
+  Added the ``rte_mempool_is_created()`` function
+  to check whether the store of a mempool has been created.
+  ``rte_mempool_walk()`` callbacks can use it to skip mempools
+  that are not populated yet before querying the mempool driver.
+
 * **Added unplug operation support to DPAA bus.**
 
   Implemented device unplug operation to allow runtime removal of DPAA devices.

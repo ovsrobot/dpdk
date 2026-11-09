@@ -1325,6 +1325,9 @@ void rte_mempool_stats_reset(struct rte_mempool *mp);
 /**
  * Dump the status of the mempool to a file.
  *
+ * For a mempool that is not populated yet, the mempool driver is not
+ * queried, and the common pool count is reported as 0.
+ *
  * @param f
  *   A pointer to a file for output
  * @param mp
@@ -1792,6 +1795,24 @@ rte_mempool_get_contig_blocks(struct rte_mempool *mp,
 }
 
 /**
+ * Check if the mempool driver has created the store of a mempool.
+ *
+ * rte_mempool_create_empty() adds a mempool to the mempool list, and
+ * assigns the default mempool driver, before the store exists. The
+ * mempool driver can still be changed with rte_mempool_set_ops_byname()
+ * until the store is created by the first populate call. Functions that
+ * query the mempool driver, such as rte_mempool_avail_count(), must only
+ * be called for a mempool that is created. rte_mempool_walk() callbacks
+ * can see mempools that are not created yet.
+ *
+ * @param mp
+ *   A pointer to the mempool structure.
+ * @return
+ *   true if the store has been created, false otherwise.
+ */
+bool rte_mempool_is_created(const struct rte_mempool *mp);
+
+/**
  * Return the number of entries in the mempool.
  *
  * When cache is enabled, this function has to browse the length of
@@ -1949,6 +1970,11 @@ uint32_t rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
  *
  * The mempool list is locked while the iterator function runs, so the
  * iterator function must not create or free a mempool.
+ *
+ * The iterator function is also called for mempools that are not
+ * populated yet. Such a mempool has no store yet, so the iterator function
+ * must check rte_mempool_is_created() before calling functions that query
+ * the mempool driver, such as rte_mempool_avail_count().
  *
  * @param func
  *   Iterator function
