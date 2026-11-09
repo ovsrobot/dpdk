@@ -1268,4 +1268,15 @@ rte_lpm_delete_all(struct rte_lpm *lpm)
 
 	/* Delete all rules form the rules table. */
 	memset(i_lpm->rules_tbl, 0, sizeof(i_lpm->rules_tbl[0]) * i_lpm->max_rules);
+
+	/*
+	 * The tbl8 groups waiting in the defer queue have just been
+	 * cleared and may be allocated again. Reclaim them now, otherwise
+	 * the deferred reclamation would invalidate a reused group.
+	 */
+	if (i_lpm->dq != NULL) {
+		rte_rcu_qsbr_synchronize(i_lpm->v, RTE_QSBR_THRID_INVALID);
+		rte_rcu_qsbr_dq_reclaim(i_lpm->dq, i_lpm->number_tbl8s,
+			NULL, NULL, NULL);
+	}
 }

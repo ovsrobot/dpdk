@@ -44,6 +44,7 @@ static int32_t test18(void);
 static int32_t test19(void);
 static int32_t test20(void);
 static int32_t test21(void);
+static int32_t test22(void);
 
 rte_lpm_test tests[] = {
 /* Test Cases */
@@ -68,7 +69,8 @@ rte_lpm_test tests[] = {
 	test18,
 	test19,
 	test20,
-	test21
+	test21,
+	test22
 };
 
 #define MAX_DEPTH 32
@@ -1561,6 +1563,77 @@ error:
 	rte_free(g_v);
 
 	return (status == 0) ? PASS : -1;
+}
+
+/*
+ * rte_lpm_delete_all with RCU QSBR in defer queue mode.
+ *  - Add a rule using a tbl8 group, delete it: the group goes to the
+ *    defer queue
+ *  - Delete all rules, add another rule using a tbl8 group
+ *  - Add one more rule needing a tbl8 group: there is none left
+ *  - Check that the second rule is still found
+ */
+int32_t
+test22(void)
+{
+	struct rte_lpm *lpm = NULL;
+	struct rte_lpm_config config;
+	size_t sz;
+	struct rte_rcu_qsbr *qsv;
+	int32_t status;
+	uint32_t ip1, ip2, ip3, next_hop_return;
+	uint8_t depth = 25;
+	struct rte_lpm_rcu_config rcu_cfg = {0};
+
+	config.max_rules = MAX_RULES;
+	config.number_tbl8s = 1;
+	config.flags = 0;
+
+	lpm = rte_lpm_create(__func__, SOCKET_ID_ANY, &config);
+	TEST_LPM_ASSERT(lpm != NULL);
+
+	/* Create RCU QSBR variable */
+	sz = rte_rcu_qsbr_get_memsize(1);
+	qsv = (struct rte_rcu_qsbr *)rte_zmalloc_socket(NULL, sz,
+				RTE_CACHE_LINE_SIZE, SOCKET_ID_ANY);
+	TEST_LPM_ASSERT(qsv != NULL);
+
+	status = rte_rcu_qsbr_init(qsv, 1);
+	TEST_LPM_ASSERT(status == 0);
+
+	rcu_cfg.v = qsv;
+	rcu_cfg.mode = RTE_LPM_QSBR_MODE_DQ;
+	/* Attach RCU QSBR to LPM table */
+	status = rte_lpm_rcu_qsbr_add(lpm, &rcu_cfg);
+	TEST_LPM_ASSERT(status == 0);
+
+	ip1 = RTE_IPV4(192, 0, 2, 0);
+	ip2 = RTE_IPV4(198, 51, 100, 0);
+	ip3 = RTE_IPV4(203, 0, 113, 0);
+
+	status = rte_lpm_add(lpm, ip1, depth, 1);
+	TEST_LPM_ASSERT(status == 0);
+	status = rte_lpm_delete(lpm, ip1, depth);
+	TEST_LPM_ASSERT(status == 0);
+
+	rte_lpm_delete_all(lpm);
+
+	status = rte_lpm_add(lpm, ip2, depth, 2);
+	TEST_LPM_ASSERT(status == 0);
+
+	/* No tbl8 group left, the one used by ip2 must not be reclaimed */
+	status = rte_lpm_add(lpm, ip3, depth, 3);
+	TEST_LPM_ASSERT(status != 0);
+
+	status = rte_lpm_lookup(lpm, ip2, &next_hop_return);
+	TEST_LPM_ASSERT(status == 0 && next_hop_return == 2);
+	status = rte_lpm_lookup(lpm, ip3, &next_hop_return);
+	TEST_LPM_ASSERT(status != 0);
+
+	rte_lpm_free(lpm);
+	rte_free(qsv);
+
+	return PASS;
 }
 
 /*
