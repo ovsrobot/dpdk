@@ -47,6 +47,7 @@ Network Interface Controller Drivers
     ixgbe
     mana
     memif
+    mcdma
     mlx4
     mlx5
     mvneta

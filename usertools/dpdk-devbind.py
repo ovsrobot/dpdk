@@ -30,6 +30,7 @@ device_types = {
             {'Class': '05', 'Vendor': '1af4', 'Device': '1110'},  # AVP vNIC
             {'Class': '08', 'Vendor': '177d', 'Device': 'a0dd,a049'},  # Cavium PKX
             {'Class': '12', 'Vendor': '8086', 'Device': '0b30'},  # Intel FPGA
+            {'Class': '06', 'Vendor': '8086', 'Device': '1172'},  # Altera FPGA
         ]
     },
     'baseband': {

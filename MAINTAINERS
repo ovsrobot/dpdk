@@ -1166,6 +1166,10 @@ F: doc/guides/nics/memif.rst
 F: doc/guides/nics/features/memif.ini
 F: app/test/test_pmd_memif.c
 
+Altera MCDMA PMD
+M: Subhransu S. Prusty <subhransu.sekhar.prusty@altera.com>
+M: Cheryl Bansal <cheryl.bansal@altera.com>
+F: drivers/net/altera/mcdma/
 
 Crypto Drivers
 --------------
