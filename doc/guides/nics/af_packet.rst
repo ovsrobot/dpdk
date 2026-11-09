@@ -72,6 +72,8 @@ Prerequisites
 This is a Linux-specific PMD, thus the following prerequisites apply:
 
 *  A Linux Kernel;
+*  Kernel headers defining ``PACKET_IGNORE_OUTGOING`` (Linux 4.20 or later),
+   otherwise the PMD is not built;
 *  A Kernel bound interface to attach to (e.g. a tap interface).
 
 Set up an af_packet interface
