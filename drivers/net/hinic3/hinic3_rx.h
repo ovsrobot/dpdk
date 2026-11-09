@@ -358,6 +358,7 @@ struct __rte_cache_aligned hinic3_rxq {
 	rte_iova_t cqe_start_paddr;
 	void *cqe_start_vaddr;
 	uint8_t dp_intr_en;
+	uint8_t rss_en; /**< RSS was enabled when this queue was started. */
 	uint16_t msix_entry_idx;
 
 	bool rx_deferred_start; /* don't start this queue in dev start */
