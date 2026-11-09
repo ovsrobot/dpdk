@@ -729,6 +729,13 @@ rte_mempool_free(struct rte_mempool *mp)
 		return;
 
 	mempool_list = RTE_TAILQ_CAST(rte_mempool_tailq.head, rte_mempool_list);
+	/*
+	 * Take the mempool list lock as well, like rte_mempool_create_empty(),
+	 * so that the entry is not unlinked and freed while
+	 * rte_mempool_walk(), rte_mempool_lookup() or rte_mempool_list_dump()
+	 * is traversing the list.
+	 */
+	rte_mcfg_mempool_write_lock();
 	rte_mcfg_tailq_write_lock();
 	/* find out tailq entry */
 	TAILQ_FOREACH(te, mempool_list, next) {
@@ -741,6 +748,7 @@ rte_mempool_free(struct rte_mempool *mp)
 		rte_free(te);
 	}
 	rte_mcfg_tailq_write_unlock();
+	rte_mcfg_mempool_write_unlock();
 
 	mempool_event_callback_invoke(RTE_MEMPOOL_EVENT_DESTROY, mp);
 	rte_mempool_trace_free(mp);
