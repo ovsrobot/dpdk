@@ -10,4 +10,7 @@ sources += files(
         'mcdma_eth.c',
         'mcdma_eth_ops.c',
         'mcdma_eth_rxtx.c',
+        'rte_pmd_mcdma.c',
 )
+
+headers = files('rte_pmd_mcdma.h')
