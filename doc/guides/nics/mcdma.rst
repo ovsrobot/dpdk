@@ -107,8 +107,14 @@ defined by the FPGA application connected to the MCDMA IP.
 Experimental driver API
 -----------------------
 
-The header ``rte_pmd_mcdma.h`` provides experimental helpers to access
- the PIO BAR:
+The header ``rte_pmd_mcdma.h`` provides experimental helpers to inspect queue
+state and access the PIO BAR:
+
+rte_pmd_mcdma_qcsr_read()
+   Read QCSR registers and software queue indices for one queue.
+
+rte_pmd_mcdma_qcsr_dump()
+   Dump decoded QCSR state to a ``FILE`` stream.
 
 rte_pmd_mcdma_pio_read64() / rte_pmd_mcdma_pio_write64()
    Read or write 64-bit registers in the mapped PIO BAR. ``pio_read64`` returns
