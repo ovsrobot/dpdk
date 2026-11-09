@@ -327,6 +327,8 @@ static inline void mcdma_pio_reg_write64(void *pio, uint64_t offset, uint64_t va
 }
 
 void mcdma_ethdev_ops_init(struct rte_eth_dev *dev);
+uint16_t mcdma_xmit_pkts(void *txq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
+uint16_t mcdma_recv_pkts(void *rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts);
 int mcdma_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 			struct eth_queue_stats *qstats);
 

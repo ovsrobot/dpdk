@@ -9,4 +9,5 @@ endif
 sources += files(
         'mcdma_eth.c',
         'mcdma_eth_ops.c',
+        'mcdma_eth_rxtx.c',
 )

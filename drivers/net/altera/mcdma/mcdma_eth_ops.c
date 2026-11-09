@@ -928,4 +928,6 @@ static struct eth_dev_ops mcdma_ethdev_ops = {
 void mcdma_ethdev_ops_init(struct rte_eth_dev *dev)
 {
 	dev->dev_ops = &mcdma_ethdev_ops;
+	dev->rx_pkt_burst = &mcdma_recv_pkts;
+	dev->tx_pkt_burst = &mcdma_xmit_pkts;
 }
