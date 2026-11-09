@@ -514,10 +514,37 @@ hinic3_init_qp_ctxts(struct hinic3_nic_dev *nic_dev)
 	uint32_t rq_depth = 0;
 	uint32_t sq_depth = 0;
 	uint16_t q_id;
+	uint16_t i;
 	int err;
 
 	if (!nic_dev)
 		return -EINVAL;
+
+	/*
+	 * The root context carries a single depth per direction, taken from
+	 * queue 0, and a queue setup cannot change the other queues. A partial
+	 * reconfiguration would therefore leave the rings sized differently
+	 * from the root context, so refuse to start unless every configured
+	 * queue is present and shares the depth of queue 0.
+	 */
+	for (i = 0; i < nic_dev->num_rqs; i++) {
+		if (nic_dev->rxqs[i] == NULL ||
+		    nic_dev->rxqs[i]->q_depth != nic_dev->rxqs[0]->q_depth) {
+			PMD_DRV_LOG(ERR,
+				    "rxq%u is missing or has a different depth than rxq0.",
+				    i);
+			return -EINVAL;
+		}
+	}
+	for (i = 0; i < nic_dev->num_sqs; i++) {
+		if (nic_dev->txqs[i] == NULL ||
+		    nic_dev->txqs[i]->q_depth != nic_dev->txqs[0]->q_depth) {
+			PMD_DRV_LOG(ERR,
+				    "txq%u is missing or has a different depth than txq0.",
+				    i);
+			return -EINVAL;
+		}
+	}
 
 	hwdev = nic_dev->hwdev;
 
