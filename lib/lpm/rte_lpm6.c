@@ -189,6 +189,10 @@ rule_key_init(struct rte_lpm6_rule_key *key, const struct rte_ipv6_addr *ip, uin
 	key->depth = depth;
 }
 
+static int
+add_rule_to_tbl(struct rte_lpm6 *lpm, struct rte_ipv6_addr *masked_ip,
+		uint8_t depth, uint32_t next_hop, uint8_t is_new_rule);
+
 /*
  * Rebuild the entire LPM tree by reinserting all rules
  */
@@ -197,12 +201,21 @@ rebuild_lpm(struct rte_lpm6 *lpm)
 {
 	uint64_t next_hop;
 	struct rte_lpm6_rule_key *rule_key;
+	struct rte_ipv6_addr ip;
 	uint32_t iter = 0;
 
+	/*
+	 * The rules are already in the rules table, so rte_lpm6_add() would
+	 * treat them as existing ones and would not account them in the
+	 * reference counters of the freshly allocated tbl8 groups.
+	 * Insert them as new rules instead.
+	 */
 	while (rte_hash_iterate(lpm->rules_tbl, (void *) &rule_key,
-			(void **) &next_hop, &iter) >= 0)
-		rte_lpm6_add(lpm, &rule_key->ip, rule_key->depth,
-			(uint32_t) next_hop);
+			(void **) &next_hop, &iter) >= 0) {
+		ip = rule_key->ip;
+		add_rule_to_tbl(lpm, &ip, rule_key->depth,
+			(uint32_t) next_hop, 1);
+	}
 }
 
 /*
@@ -828,13 +841,7 @@ int
 rte_lpm6_add(struct rte_lpm6 *lpm, const struct rte_ipv6_addr *ip, uint8_t depth,
 	     uint32_t next_hop)
 {
-	struct rte_lpm6_tbl_entry *tbl;
-	struct rte_lpm6_tbl_entry *tbl_next = NULL;
-	/* init to avoid compiler warning */
-	uint32_t tbl_next_num = 123456;
-	int status;
 	struct rte_ipv6_addr masked_ip;
-	int i;
 
 	/* Check user arguments. */
 	if ((lpm == NULL) || (depth < 1) || (depth > RTE_IPV6_MAX_DEPTH))
@@ -855,10 +862,28 @@ rte_lpm6_add(struct rte_lpm6 *lpm, const struct rte_ipv6_addr *ip, uint8_t depth
 	if (is_new_rule < 0)
 		return is_new_rule;
 
+	return add_rule_to_tbl(lpm, &masked_ip, depth, next_hop, is_new_rule);
+}
+
+/*
+ * Add a rule to the data structure (tbl24+tbl8s).
+ * The rule must be already present in the rules table.
+ */
+static int
+add_rule_to_tbl(struct rte_lpm6 *lpm, struct rte_ipv6_addr *masked_ip,
+		uint8_t depth, uint32_t next_hop, uint8_t is_new_rule)
+{
+	struct rte_lpm6_tbl_entry *tbl;
+	struct rte_lpm6_tbl_entry *tbl_next = NULL;
+	/* init to avoid compiler warning */
+	uint32_t tbl_next_num = 123456;
+	int status;
+	int i;
+
 	/* Inspect the first three bytes through tbl24 on the first step. */
 	tbl = lpm->tbl24;
 	status = add_step(lpm, tbl, TBL24_IND, &tbl_next, &tbl_next_num,
-		&masked_ip, ADD_FIRST_BYTE, 1, depth, next_hop,
+		masked_ip, ADD_FIRST_BYTE, 1, depth, next_hop,
 		is_new_rule);
 	assert(status >= 0);
 
@@ -869,7 +894,7 @@ rte_lpm6_add(struct rte_lpm6 *lpm, const struct rte_ipv6_addr *ip, uint8_t depth
 	for (i = ADD_FIRST_BYTE; i < RTE_IPV6_ADDR_SIZE && status == 1; i++) {
 		tbl = tbl_next;
 		status = add_step(lpm, tbl, tbl_next_num, &tbl_next,
-			&tbl_next_num, &masked_ip, 1, (uint8_t)(i + 1),
+			&tbl_next_num, masked_ip, 1, (uint8_t)(i + 1),
 			depth, next_hop, is_new_rule);
 		assert(status >= 0);
 	}

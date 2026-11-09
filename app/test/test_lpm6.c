@@ -52,6 +52,7 @@ static int32_t test25(void);
 static int32_t test26(void);
 static int32_t test27(void);
 static int32_t test28(void);
+static int32_t test29(void);
 
 rte_lpm6_test tests6[] = {
 /* Test Cases */
@@ -84,6 +85,7 @@ rte_lpm6_test tests6[] = {
 	test26,
 	test27,
 	test28,
+	test29,
 };
 
 #define MAX_DEPTH                                                    128
@@ -1740,6 +1742,71 @@ test28(void)
 
 	status = rte_lpm6_delete(lpm, &ip, depth);
 	TEST_LPM_ASSERT(status == 0);
+	rte_lpm6_free(lpm);
+
+	return PASS;
+}
+
+/*
+ * Add three nested rules deeper than 24 bits and one more rule.
+ * Delete the last rule with the delete_bulk function, which rebuilds
+ * the tables. Then delete the middle rule with the incremental delete
+ * function and check that the most specific rule is still found,
+ * i.e. the tbl8 groups were not freed while still in use.
+ */
+int32_t
+test29(void)
+{
+	struct rte_lpm6 *lpm = NULL;
+	struct rte_lpm6_config config;
+	struct rte_ipv6_addr ip_16 = RTE_IPV6(0x2001, 0, 0, 0, 0, 0, 0, 0);
+	struct rte_ipv6_addr ip_32 = RTE_IPV6(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0);
+	struct rte_ipv6_addr ip_48 = RTE_IPV6(0x2001, 0xdb8, 1, 0, 0, 0, 0, 0);
+	struct rte_ipv6_addr ip_del = RTE_IPV6(0x2001, 0xdb8, 2, 0, 0, 0, 0, 0);
+	uint8_t depth_del = 48;
+	uint32_t next_hop_return = 0;
+	int32_t status = 0;
+
+	config.max_rules = MAX_RULES;
+	config.number_tbl8s = NUMBER_TBL8S;
+	config.flags = 0;
+
+	lpm = rte_lpm6_create(__func__, SOCKET_ID_ANY, &config);
+	TEST_LPM_ASSERT(lpm != NULL);
+
+	status = rte_lpm6_add(lpm, &ip_16, 16, 16);
+	TEST_LPM_ASSERT(status == 0);
+	status = rte_lpm6_add(lpm, &ip_32, 32, 32);
+	TEST_LPM_ASSERT(status == 0);
+	status = rte_lpm6_add(lpm, &ip_48, 48, 48);
+	TEST_LPM_ASSERT(status == 0);
+	status = rte_lpm6_add(lpm, &ip_del, 48, 100);
+	TEST_LPM_ASSERT(status == 0);
+
+	status = rte_lpm6_delete_bulk_func(lpm, &ip_del, &depth_del, 1);
+	TEST_LPM_ASSERT(status == 0);
+
+	status = rte_lpm6_lookup(lpm, &ip_48, &next_hop_return);
+	TEST_LPM_ASSERT((status == 0) && (next_hop_return == 48));
+
+	status = rte_lpm6_delete(lpm, &ip_32, 32);
+	TEST_LPM_ASSERT(status == 0);
+
+	status = rte_lpm6_lookup(lpm, &ip_48, &next_hop_return);
+	TEST_LPM_ASSERT((status == 0) && (next_hop_return == 48));
+
+	status = rte_lpm6_delete(lpm, &ip_48, 48);
+	TEST_LPM_ASSERT(status == 0);
+
+	status = rte_lpm6_lookup(lpm, &ip_48, &next_hop_return);
+	TEST_LPM_ASSERT((status == 0) && (next_hop_return == 16));
+
+	status = rte_lpm6_delete(lpm, &ip_16, 16);
+	TEST_LPM_ASSERT(status == 0);
+
+	status = rte_lpm6_lookup(lpm, &ip_48, &next_hop_return);
+	TEST_LPM_ASSERT(status == -ENOENT);
+
 	rte_lpm6_free(lpm);
 
 	return PASS;
