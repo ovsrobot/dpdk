@@ -839,6 +839,146 @@ exit:
 
 #pragma pop_macro("RTE_TEST_TRACE_FAILURE")
 
+/*
+ * Walk, look up and dump the mempool list on some lcores while other lcores
+ * create and free mempools. In the first phase the creators free mempools as
+ * fast as possible. In the second phase every other mempool is created empty
+ * and populated after a short delay, so that the walkers also find mempools
+ * that are not populated yet, and dump them.
+ */
+#define LIST_RACE_PHASE_MS	500
+#define LIST_RACE_NB_OBJ	63
+#define LIST_RACE_ELT_SIZE	64
+
+static RTE_ATOMIC(uint32_t) list_race_stop;
+static int list_race_populate_later;
+static FILE *list_race_dump;
+
+static int
+test_mempool_list_race_create(__rte_unused void *arg)
+{
+	char name[RTE_MEMPOOL_NAMESIZE];
+	struct rte_mempool *mp;
+	int populate_later = 0;
+
+	snprintf(name, sizeof(name), "test_list_race_%u", rte_lcore_id());
+	while (rte_atomic_load_explicit(&list_race_stop,
+			rte_memory_order_relaxed) == 0) {
+		if (populate_later) {
+			mp = rte_mempool_create_empty(name, LIST_RACE_NB_OBJ,
+				LIST_RACE_ELT_SIZE, 0, 0, SOCKET_ID_ANY, 0);
+			if (mp == NULL)
+				RET_ERR();
+			rte_delay_us(100);
+			if (rte_mempool_set_ops_byname(mp,
+					rte_mbuf_best_mempool_ops(), NULL) < 0 ||
+					rte_mempool_populate_default(mp) < 0) {
+				rte_mempool_free(mp);
+				RET_ERR();
+			}
+		} else {
+			mp = rte_mempool_create(name, LIST_RACE_NB_OBJ,
+				LIST_RACE_ELT_SIZE, 0, 0, NULL, NULL, NULL, NULL,
+				SOCKET_ID_ANY, 0);
+			if (mp == NULL)
+				RET_ERR();
+		}
+		rte_mempool_free(mp);
+		if (list_race_populate_later)
+			populate_later = !populate_later;
+	}
+	return 0;
+}
+
+static void
+test_mempool_list_race_walk_cb(struct rte_mempool *mp, void *arg)
+{
+	unsigned int *count = arg;
+
+	/* rte_mempool_dump() must handle mempools that are not populated yet */
+	if (list_race_dump != NULL)
+		rte_mempool_dump(list_race_dump, mp);
+
+	/* as documented for rte_mempool_walk(), check this first */
+	if (!rte_mempool_is_created(mp))
+		return;
+	/* access the store */
+	*count += mp->size + rte_mempool_avail_count(mp);
+}
+
+static int
+test_mempool_list_race_walk(__rte_unused void *arg)
+{
+	unsigned int count = 0;
+
+	while (rte_atomic_load_explicit(&list_race_stop,
+			rte_memory_order_relaxed) == 0) {
+		rte_mempool_walk(test_mempool_list_race_walk_cb, &count);
+		if (rte_mempool_lookup("test_list_race_none") != NULL)
+			RET_ERR();
+		if (list_race_dump != NULL)
+			rte_mempool_list_dump(list_race_dump);
+	}
+	return 0;
+}
+
+static int
+test_mempool_list_race_phase(int populate_later, FILE *dump)
+{
+	unsigned int nb_creators = (rte_lcore_count() - 1) / 2;
+	unsigned int lcore_id, i = 0;
+	int ret = 0;
+
+	list_race_populate_later = populate_later;
+	list_race_dump = dump;
+	rte_atomic_store_explicit(&list_race_stop, 0, rte_memory_order_relaxed);
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
+		lcore_function_t *func = i++ < nb_creators ?
+			test_mempool_list_race_create :
+			test_mempool_list_race_walk;
+
+		if (rte_eal_remote_launch(func, NULL, lcore_id) != 0)
+			ret = -1;
+	}
+
+	rte_delay_ms(LIST_RACE_PHASE_MS);
+	rte_atomic_store_explicit(&list_race_stop, 1, rte_memory_order_relaxed);
+
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
+		if (rte_eal_wait_lcore(lcore_id) < 0)
+			ret = -1;
+	}
+	return ret;
+}
+
+static int
+test_mempool_list_race(void)
+{
+	FILE *f;
+	int ret;
+
+	if (rte_lcore_count() < 3) {
+		printf("%s skipped: needs at least 3 lcores\n", __func__);
+		return 0;
+	}
+
+	/* mempools freed while the list is walked */
+	ret = test_mempool_list_race_phase(0, NULL);
+	if (ret != 0) {
+		LOG_ERR();
+		return ret;
+	}
+
+	/* mempools not populated yet while the list is walked and dumped */
+	f = fopen("/dev/null", "w");
+	ret = test_mempool_list_race_phase(1, f);
+	if (f != NULL)
+		fclose(f);
+	if (ret != 0)
+		LOG_ERR();
+	return ret;
+}
+
 static int
 test_mempool(void)
 {
@@ -1103,6 +1243,10 @@ test_mempool(void)
 	if (test_mempool_flag_non_io_set_when_no_iova_contig_set() < 0)
 		GOTO_ERR(ret, err);
 	if (test_mempool_flag_non_io_unset_when_populated_with_valid_iova() < 0)
+		GOTO_ERR(ret, err);
+
+	/* test walking the mempool list while mempools are created and freed */
+	if (test_mempool_list_race() < 0)
 		GOTO_ERR(ret, err);
 
 	rte_mempool_list_dump(stdout);
