@@ -287,8 +287,9 @@ def init_devices_cache_bsd():
             # Parse slot/address from first part
             name_addr, fields = line.split(maxsplit=1)
             devname, addr = name_addr.split('@')
-            # Remove trailing colon from address
-            addr = addr.rstrip(':')
+            # Convert the decimal pciconf address to hexadecimal DPDK format.
+            domain, bus, slot, function = map(int, addr[3:].rstrip(':').split(':'))
+            addr = f"{domain:04x}:{bus:02x}:{slot:02x}.{function:x}"
 
             current_dev = {}
             current_dev["Slot"] = addr
