@@ -1443,6 +1443,52 @@ acl_build_log(const struct acl_build_context *ctx)
 	}
 }
 
+/*
+ * Check that for all RANGE fields lower bound doesn't exceed upper bound.
+ */
+static int
+acl_check_rule_ranges(const struct rte_acl_config *cfg,
+	const struct rte_acl_rule *rule)
+{
+	uint32_t n;
+	uint64_t lo, hi;
+	const struct rte_acl_field *fld;
+
+	for (n = 0; n != cfg->num_fields; n++) {
+		if (cfg->defs[n].type != RTE_ACL_FIELD_TYPE_RANGE)
+			continue;
+
+		fld = rule->field + cfg->defs[n].field_index;
+		switch (cfg->defs[n].size) {
+		case sizeof(uint8_t):
+			lo = fld->value.u8;
+			hi = fld->mask_range.u8;
+			break;
+		case sizeof(uint16_t):
+			lo = fld->value.u16;
+			hi = fld->mask_range.u16;
+			break;
+		case sizeof(uint32_t):
+			lo = fld->value.u32;
+			hi = fld->mask_range.u32;
+			break;
+		default:
+			lo = fld->value.u64;
+			hi = fld->mask_range.u64;
+			break;
+		}
+
+		if (lo > hi) {
+			ACL_LOG(ERR,
+				"Error in rule[%u]: invalid range for %u-th field",
+				rule->data.userdata, n);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
 static int
 acl_build_rules(struct acl_build_context *bcx)
 {
@@ -1467,6 +1513,8 @@ acl_build_rules(struct acl_build_context *bcx)
 		rule = (const struct rte_acl_rule *)
 			((uintptr_t)bcx->acx->rules + bcx->acx->rule_sz * i);
 		if ((rule->data.category_mask & bcx->category_mask) != 0) {
+			if (acl_check_rule_ranges(&bcx->cfg, rule) != 0)
+				return -EINVAL;
 			br[num].next = head;
 			br[num].config = &bcx->cfg;
 			br[num].f = rule;
