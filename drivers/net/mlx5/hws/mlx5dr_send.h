@@ -138,6 +138,12 @@ struct mlx5dr_completed_poll_entry {
 
 struct mlx5dr_completed_poll {
 	struct mlx5dr_completed_poll_entry *entries;
+	/*
+	 * Keep counters unmasked to distinguish full from empty, and mask
+	 * only when indexing entries. The power-of-two capacity divides 2^16,
+	 * so uint16_t wrap preserves masked indices. Capacity is less than
+	 * 2^16 and bounds outstanding completions, so equal counters mean empty.
+	 */
 	uint16_t ci;
 	uint16_t pi;
 	uint16_t mask;
@@ -279,11 +285,12 @@ static inline void mlx5dr_send_engine_gen_comp(struct mlx5dr_send_engine *queue,
 					       int comp_status)
 {
 	struct mlx5dr_completed_poll *comp = &queue->completed;
+	uint16_t idx = comp->pi & comp->mask;
 
-	comp->entries[comp->pi].status = comp_status;
-	comp->entries[comp->pi].user_data = user_data;
+	comp->entries[idx].status = comp_status;
+	comp->entries[idx].user_data = user_data;
 
-	comp->pi = (comp->pi + 1) & comp->mask;
+	comp->pi++;
 }
 
 static inline bool mlx5dr_send_engine_err(struct mlx5dr_send_engine *queue)

@@ -646,12 +646,14 @@ static void mlx5dr_send_engine_poll_list(struct mlx5dr_send_engine *queue,
 
 	while (comp->ci != comp->pi) {
 		if (*polled < res_nb) {
+			uint16_t idx = comp->ci & comp->mask;
+
 			res[*polled].status =
-				comp->entries[comp->ci].status;
+				comp->entries[idx].status;
 			res[*polled].user_data =
-				comp->entries[comp->ci].user_data;
+				comp->entries[idx].user_data;
 			(*polled)++;
-			comp->ci = (comp->ci + 1) & comp->mask;
+			comp->ci++;
 			mlx5dr_send_engine_dec_rule(queue);
 		} else {
 			return;
