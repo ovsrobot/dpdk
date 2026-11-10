@@ -277,6 +277,12 @@ extra_flags = [
         '-fno-strict-aliasing',
 ]
 
+# LTO inlines soring acquire into the test, gcc then flags the
+# unreachable 16-byte element copy path (false positive).
+if get_option('b_lto') and cc.get_id() == 'gcc'
+	ldflags += '-Wno-stringop-overflow'
+endif
+
 foreach arg: extra_flags
     if cc.has_argument(arg)
         cflags += arg
