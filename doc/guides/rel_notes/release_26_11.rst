@@ -340,6 +340,12 @@ New Features
   Added ``dpdk-validate-bpf`` tool to pre-validate eBPF programs
   for compatibility with the ``lib/bpf`` execution context.
 
+* **Added explicit link autonegotiation control in testpmd.**
+
+  Added an optional ``autoneg on|off`` setting after ``duplex`` in the port speed configuration command.
+  For compatibility with older behavior, if unspecified,
+  auto-negotiation is disabled by default for numeric speeds, and enabled for "auto" speed selection.
+
 
 Removed Items
 -------------
