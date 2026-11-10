@@ -2,6 +2,7 @@
  * Copyright 2022 Microsoft Corporation
  */
 
+#include <sched.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -451,14 +452,24 @@ mana_reset_trylock(struct mana_priv *priv)
 }
 
 /*
- * Like mana_reset_trylock(), but wait for the lock. Used by Rx interrupt
- * enable/disable, which every queue calls on each sleep and wakeup: they
- * must not fail just because another queue holds the lock for a moment.
+ * Like mana_reset_trylock(), but wait while the device is active. Used by
+ * Rx interrupt enable/disable, which every queue calls on each sleep and
+ * wakeup: they must not fail just because another queue holds the lock
+ * for a moment. Outside a reset the lock is held by another queue's Rx
+ * interrupt call or by a control operation; the data path must be stopped
+ * before dev_stop/dev_close, so in a correct application the wait is
+ * short. Once a reset has started, fail at once instead of waiting for
+ * its teardown or re-probe step.
  */
 static int
 mana_reset_lock(struct mana_priv *priv)
 {
-	pthread_mutex_lock(&priv->reset_ops_lock);
+	while (pthread_mutex_trylock(&priv->reset_ops_lock)) {
+		if (rte_atomic_load_explicit(&priv->dev_state,
+		    rte_memory_order_relaxed) != MANA_DEV_ACTIVE)
+			return -EBUSY;
+		sched_yield();
+	}
 
 	if (rte_atomic_load_explicit(&priv->dev_state,
 	    rte_memory_order_acquire) != MANA_DEV_ACTIVE) {
