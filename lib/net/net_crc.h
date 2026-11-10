@@ -13,9 +13,6 @@
 
 /* SSE4.2 */
 
-void
-rte_net_crc_sse42_init(void);
-
 uint32_t
 rte_crc16_ccitt_sse42_handler(const uint8_t *data, uint32_t data_len);
 

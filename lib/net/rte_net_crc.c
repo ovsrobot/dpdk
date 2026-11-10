@@ -151,15 +151,6 @@ avx512_vpclmulqdq_init(void)
 #define SSE42_PCLMULQDQ_CPU_SUPPORTED \
 	rte_cpu_get_flag_enabled(RTE_CPUFLAG_PCLMULQDQ)
 
-static void
-sse42_pclmulqdq_init(void)
-{
-#ifdef RTE_ARCH_X86_64
-	if (SSE42_PCLMULQDQ_CPU_SUPPORTED)
-		rte_net_crc_sse42_init();
-#endif
-}
-
 /* NEON/PMULL handling */
 
 #define NEON_PMULL_CPU_SUPPORTED \
@@ -272,7 +263,6 @@ uint32_t rte_net_crc_calc(const struct rte_net_crc *ctx, const void *data, const
 RTE_INIT(rte_net_crc_init)
 {
 	rte_net_crc_scalar_init();
-	sse42_pclmulqdq_init();
 	avx512_vpclmulqdq_init();
 	neon_pmull_init();
 	handlers_init(RTE_NET_CRC_SCALAR);

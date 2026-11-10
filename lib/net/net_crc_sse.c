@@ -12,15 +12,23 @@
 #include "net_crc.h"
 
 /** PCLMULQDQ CRC computation context structure */
-struct crc_pclmulqdq_ctx {
-	__m128i rk1_rk2;
-	__m128i rk3_rk4;
-	__m128i rk5_rk6;
-	__m128i rk7_rk8;
+struct __rte_aligned(XMM_SIZE) crc_pclmulqdq_ctx {
+	/**
+	 * The constants are derived as below:
+	 * P is assumed to be degree 64 polynomial. If the degree is less,
+	 * then P = (poly << (64 - deg)) to have a 64-bit polynomial.
+	 * rk1 = bitreverse64(x^575 MOD P)
+	 * rk2 = bitreverse64(x^511 MOD P)
+	 * rk3 = bitreverse64(x^191 MOD P)
+	 * rk4 = bitreverse64(x^127 MOD P)
+	 * rk5 = (bitreverse64(floor(x^128 / P) - x^64) << 1) | 1
+	 * rk6 = (bitreverse64(P - x^64) << 1)
+	 */
+	rte_xmm_t rk1_rk2;
+	rte_xmm_t rk3_rk4;
+	rte_xmm_t rk5_rk6;
 };
 
-static alignas(16) struct crc_pclmulqdq_ctx crc32_eth_pclmulqdq;
-static alignas(16) struct crc_pclmulqdq_ctx crc16_ccitt_pclmulqdq;
 /**
  * @brief Performs one folding round
  *
@@ -47,65 +55,56 @@ crcr32_folding_round(__m128i data_block,
 		__m128i precomp,
 		__m128i fold)
 {
-	__m128i tmp0 = _mm_clmulepi64_si128(fold, precomp, 0x01);
-	__m128i tmp1 = _mm_clmulepi64_si128(fold, precomp, 0x10);
+	__m128i tmp0 = _mm_clmulepi64_si128(fold, precomp, 0x00);
+	__m128i tmp1 = _mm_clmulepi64_si128(fold, precomp, 0x11);
 
 	return _mm_xor_si128(tmp1, _mm_xor_si128(data_block, tmp0));
 }
 
 /**
- * Performs reduction from 128 bits to 64 bits
+ * Fold the low qword (upper 64 coefficients) with rk4 = x^127 mod P
+ * and XOR into the high qword.
  *
  * @param data128
  *   128 bits data to be reduced
  * @param precomp
- *   precomputed constants rk5, rk6
+ *   precomputed constants rk3, rk4
  *
  * @return
- *  64 bits reduced data
+ *  128 bits reduced data
  */
 
 static __rte_always_inline __m128i
-crcr32_reduce_128_to_64(__m128i data128, __m128i precomp)
+crcr32_reduce_to_128(__m128i data128, __m128i precomp)
 {
-	__m128i tmp0, tmp1, tmp2;
+	__m128i tmp0, tmp1;
 
-	/* 64b fold */
-	tmp0 = _mm_clmulepi64_si128(data128, precomp, 0x00);
+	tmp0 = _mm_clmulepi64_si128(data128, precomp, 0x10);
 	tmp1 = _mm_srli_si128(data128, 8);
-	tmp0 = _mm_xor_si128(tmp0, tmp1);
-
-	/* 32b fold */
-	tmp2 = _mm_slli_si128(tmp0, 4);
-	tmp1 = _mm_clmulepi64_si128(tmp2, precomp, 0x10);
-
 	return _mm_xor_si128(tmp1, tmp0);
 }
 
 /**
- * Performs Barret's reduction from 64 bits to 32 bits
+ * Performs Barret's reduction from 128 bits to 32 bits.
  *
- * @param data64
- *   64 bits data to be reduced
+ * @param data128
+ *   128 bits data to be reduced
  * @param precomp
- *   rk7 precomputed constant
+ *   rk5, rk6 precomputed constant
  *
  * @return
  *   reduced 32 bits data
  */
 
 static __rte_always_inline uint32_t
-crcr32_reduce_64_to_32(__m128i data64, __m128i precomp)
+crcr32_reduce_128_to_32(__m128i data128, __m128i precomp)
 {
 	__m128i tmp0, tmp1, tmp2;
 
-	tmp0 = _mm_blend_epi16(data64, _mm_setzero_si128(), 0x3);
+	tmp0 = _mm_clmulepi64_si128(data128, precomp, 0x00);
+	tmp1 = _mm_clmulepi64_si128(tmp0, precomp, 0x10);
 
-	tmp1 = _mm_clmulepi64_si128(tmp0, precomp, 0x00);
-	tmp1 = _mm_xor_si128(tmp1, tmp0);
-
-	tmp2 = _mm_clmulepi64_si128(tmp1, precomp, 0x10);
-	tmp2 = _mm_xor_si128(tmp2, tmp0);
+	tmp2 = _mm_xor_si128(tmp1, data128);
 
 	return _mm_extract_epi32(tmp2, 2);
 }
@@ -162,7 +161,7 @@ crc32_eth_calc_pclmulqdq(
 		fold3 = _mm_loadu_si128((const __m128i *)(data + 32));
 		fold4 = _mm_loadu_si128((const __m128i *)(data + 48));
 		fold1 = _mm_xor_si128(fold1, temp);
-		k = params->rk1_rk2;
+		k = params->rk1_rk2.x;
 
 		for (n = 64; (n + 64) <= data_len; n += 64) {
 			temp1 = _mm_loadu_si128((const __m128i *)&data[n]);
@@ -175,7 +174,7 @@ crc32_eth_calc_pclmulqdq(
 			fold4 = crcr32_folding_round(temp4, k, fold4);
 		}
 
-		k = params->rk3_rk4;
+		k = params->rk3_rk4.x;
 		fold1 = crcr32_folding_round(fold2, k, fold1);
 		fold1 = crcr32_folding_round(fold3, k, fold1);
 		fold = crcr32_folding_round(fold4, k, fold1);
@@ -196,7 +195,8 @@ crc32_eth_calc_pclmulqdq(
 			goto barret_reduction;
 		}
 		fold = xmm_shift_left(fold, 16 - data_len);
-		goto reduction_128_64;
+		k = params->rk3_rk4.x;
+		goto reduction_128;
 	}
 
 	/** At least 16 bytes in the buffer */
@@ -205,7 +205,7 @@ crc32_eth_calc_pclmulqdq(
 	fold = _mm_xor_si128(fold, temp);
 
 	/** Single folding loop - the last 16 bytes is processed separately */
-	k = params->rk3_rk4;
+	k = params->rk3_rk4.x;
 	n = 16;
 
 single_fold_loop:
@@ -234,59 +234,25 @@ single_fold_loop:
 	}
 
 	/** Reduction 128 -> 32 Assumes: fold holds 128bit folded data */
-reduction_128_64:
-	k = params->rk5_rk6;
-	fold = crcr32_reduce_128_to_64(fold, k);
+reduction_128:
+	fold = crcr32_reduce_to_128(fold, k);
 
 barret_reduction:
-	k = params->rk7_rk8;
-	n = crcr32_reduce_64_to_32(fold, k);
+	k = params->rk5_rk6.x;
+	n = crcr32_reduce_128_to_32(fold, k);
 
 	return n;
-}
-
-void
-rte_net_crc_sse42_init(void)
-{
-	uint64_t k1, k2, k3, k4, k5, k6;
-	uint64_t p = 0, q = 0;
-
-	/** Initialize CRC16 data */
-	k1 = 0x14ff2LLU;
-	k2 = 0x19a3cLLU;
-	k3 = 0x189aeLLU;
-	k4 = 0x8e10LLU;
-	k5 = 0x189aeLLU;
-	k6 = 0x114aaLLU;
-	q =  0x11c581910LLU;
-	p =  0x10811LLU;
-
-	/** Save the params in context structure */
-	crc16_ccitt_pclmulqdq.rk1_rk2 = _mm_set_epi64x(k2, k1);
-	crc16_ccitt_pclmulqdq.rk3_rk4 = _mm_set_epi64x(k4, k3);
-	crc16_ccitt_pclmulqdq.rk5_rk6 = _mm_set_epi64x(k6, k5);
-	crc16_ccitt_pclmulqdq.rk7_rk8 = _mm_set_epi64x(p, q);
-
-	/** Initialize CRC32 data */
-	k1 = 0x1c6e41596LLU;
-	k2 = 0x154442bd4LLU;
-	k3 = 0xccaa009eLLU;
-	k4 = 0x1751997d0LLU;
-	k5 = 0xccaa009eLLU;
-	k6 = 0x163cd6124LLU;
-	q =  0x1f7011640LLU;
-	p =  0x1db710641LLU;
-
-	/** Save the params in context structure */
-	crc32_eth_pclmulqdq.rk1_rk2 = _mm_set_epi64x(k2, k1);
-	crc32_eth_pclmulqdq.rk3_rk4 = _mm_set_epi64x(k4, k3);
-	crc32_eth_pclmulqdq.rk5_rk6 = _mm_set_epi64x(k6, k5);
-	crc32_eth_pclmulqdq.rk7_rk8 = _mm_set_epi64x(p, q);
 }
 
 uint32_t
 rte_crc16_ccitt_sse42_handler(const uint8_t *data, uint32_t data_len)
 {
+	static const struct crc_pclmulqdq_ctx crc16_ccitt_pclmulqdq = {
+		.rk1_rk2 = { .u64 = { 0x922dULL, 0x47e3ULL } },
+		.rk3_rk4 = { .u64 = { 0x8e10ULL, 0x81bfULL } },
+		.rk5_rk6 = { .u64 = { 0x859b040b1c581911ULL, 0x10810ULL } },
+	};
+
 	/** return 16-bit CRC value */
 	return (uint16_t)~crc32_eth_calc_pclmulqdq(data,
 		data_len,
@@ -297,6 +263,12 @@ rte_crc16_ccitt_sse42_handler(const uint8_t *data, uint32_t data_len)
 uint32_t
 rte_crc32_eth_sse42_handler(const uint8_t *data, uint32_t data_len)
 {
+	static const struct crc_pclmulqdq_ctx crc32_eth_pclmulqdq = {
+		.rk1_rk2 = { .u64 = { 0x8f352d95ULL, 0x1d9513d7ULL } },
+		.rk3_rk4 = { .u64 = { 0xae689191ULL, 0xccaa009eULL } },
+		.rk5_rk6 = { .u64 = { 0xb4e5b025f7011641ULL, 0x1db710640ULL } },
+	};
+
 	return ~crc32_eth_calc_pclmulqdq(data,
 		data_len,
 		0xffffffffUL,
