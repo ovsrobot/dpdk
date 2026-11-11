@@ -689,18 +689,7 @@ mlx5_alloc_shared_dr(struct rte_eth_dev *eth_dev)
 	return 0;
 error:
 	/* Rollback the created objects. */
-	if (sh->rx_domain) {
-		mlx5_glue->dr_destroy_domain(sh->rx_domain);
-		sh->rx_domain = NULL;
-	}
-	if (sh->tx_domain) {
-		mlx5_glue->dr_destroy_domain(sh->tx_domain);
-		sh->tx_domain = NULL;
-	}
-	if (sh->fdb_domain) {
-		mlx5_glue->dr_destroy_domain(sh->fdb_domain);
-		sh->fdb_domain = NULL;
-	}
+	mlx5_os_free_shared_domains(sh);
 	if (sh->dr_drop_action) {
 		mlx5_glue->destroy_flow_action(sh->dr_drop_action);
 		sh->dr_drop_action = NULL;
@@ -775,6 +764,32 @@ mlx5_destroy_send_to_kernel_action(struct mlx5_dev_ctx_shared *sh)
 #endif /* HAVE_MLX5DV_DR */
 
 /**
+ * Destroy the shared DR domains.
+ *
+ * The domains are per shared context. ASO steering actions are created in
+ * them, so callers must release those actions before calling this.
+ *
+ * @param[in] sh
+ *   Pointer to the shared device context.
+ */
+void
+mlx5_os_free_shared_domains(struct mlx5_dev_ctx_shared *sh)
+{
+	if (sh->rx_domain != NULL) {
+		claim_zero(mlx5_glue->dr_destroy_domain(sh->rx_domain));
+		sh->rx_domain = NULL;
+	}
+	if (sh->tx_domain != NULL) {
+		claim_zero(mlx5_glue->dr_destroy_domain(sh->tx_domain));
+		sh->tx_domain = NULL;
+	}
+	if (sh->fdb_domain != NULL) {
+		claim_zero(mlx5_glue->dr_destroy_domain(sh->fdb_domain));
+		sh->fdb_domain = NULL;
+	}
+}
+
+/**
  * Destroy DR related data within private structure.
  *
  * @param[in] priv
@@ -801,19 +816,7 @@ mlx5_os_free_shared_dr(struct mlx5_priv *priv)
 	MLX5_ASSERT(LIST_EMPTY(&sh->shared_rxqs));
 #ifdef HAVE_MLX5DV_DR
 	mlx5_destroy_send_to_kernel_action(sh);
-	if (sh->rx_domain) {
-		mlx5_glue->dr_destroy_domain(sh->rx_domain);
-		sh->rx_domain = NULL;
-	}
-	if (sh->tx_domain) {
-		mlx5_glue->dr_destroy_domain(sh->tx_domain);
-		sh->tx_domain = NULL;
-	}
 #ifdef HAVE_MLX5DV_DR_ESWITCH
-	if (sh->fdb_domain) {
-		mlx5_glue->dr_destroy_domain(sh->fdb_domain);
-		sh->fdb_domain = NULL;
-	}
 	if (sh->dr_drop_action) {
 		mlx5_glue->destroy_flow_action(sh->dr_drop_action);
 		sh->dr_drop_action = NULL;

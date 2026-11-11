@@ -2129,6 +2129,12 @@ mlx5_free_shared_dev_ctx(struct mlx5_dev_ctx_shared *sh)
 	}
 	if (sh->mtrmng)
 		mlx5_aso_flow_mtrs_mng_close(sh);
+	/*
+	 * DR domains belong to the shared context, as the ASO managers do.
+	 * ASO steering actions are created in these domains, so destroy the
+	 * domains only after those actions are released.
+	 */
+	mlx5_os_free_shared_domains(sh);
 	mlx5_flow_ipool_destroy(sh);
 	mlx5_os_dev_shared_handler_uninstall(sh);
 	mlx5_rxtx_uars_release(sh);

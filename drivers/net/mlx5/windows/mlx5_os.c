@@ -311,6 +311,19 @@ mlx5_os_free_shared_dr(struct mlx5_priv *priv)
 }
 
 /**
+ * Destroy shared DR domains.
+ * Windows has no DR domains.
+ *
+ * @param[in] sh
+ *   Pointer to the shared device context.
+ */
+void
+mlx5_os_free_shared_domains(struct mlx5_dev_ctx_shared *sh)
+{
+	RTE_SET_USED(sh);
+}
+
+/**
  * Set the completion channel file descriptor interrupt as non-blocking.
  * Currently it has no support under Windows.
  *
