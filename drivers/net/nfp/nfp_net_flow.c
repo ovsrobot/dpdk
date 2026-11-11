@@ -296,7 +296,7 @@ nfp_net_flow_merge_ipv6(struct rte_flow *nfp_flow,
 	ipv6 = (struct nfp_net_cmsg_match_v6 *)nfp_flow->payload.match_data;
 
 	ipv6->l4_protocol_mask = mask->hdr.proto;
-	for (i = 0; i < sizeof(ipv6->src_ipv6); i += 4) {
+	for (i = 0; i < sizeof(ipv6->src_ipv6_mask); i += 4) {
 		ipv6->src_ipv6_mask[i] = mask->hdr.src_addr.a[i + 3];
 		ipv6->src_ipv6_mask[i + 1] = mask->hdr.src_addr.a[i + 2];
 		ipv6->src_ipv6_mask[i + 2] = mask->hdr.src_addr.a[i + 1];
