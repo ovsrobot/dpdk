@@ -13967,6 +13967,11 @@ cmd_set_raw_parsed_sample(const struct buffer *in)
 		action = in->args.vc.actions + i;
 		if (action->type == RTE_FLOW_ACTION_TYPE_END)
 			break;
+		/* Reserve the last slot for the terminating END action. */
+		if (i >= ACTION_SAMPLE_ACTIONS_NUM - 1) {
+			fprintf(stderr, "Error - too many sample actions\n");
+			return;
+		}
 		switch (action->type) {
 		case RTE_FLOW_ACTION_TYPE_MARK:
 			size = sizeof(struct rte_flow_action_mark);
