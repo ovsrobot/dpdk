@@ -654,6 +654,7 @@ struct axgbe_port {
 	pthread_mutex_t i2c_mutex;
 	pthread_mutex_t an_mutex;
 	pthread_mutex_t phy_mutex;
+	pthread_mutex_t link_status_mutex;
 
 	/* Flow control settings */
 	unsigned int pause_autoneg;

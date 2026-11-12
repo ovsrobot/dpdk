@@ -760,7 +760,9 @@ axgbe_dev_link_update(struct rte_eth_dev *dev,
 	PMD_INIT_FUNC_TRACE();
 	rte_delay_ms(800);
 
+	pthread_mutex_lock(&pdata->link_status_mutex);
 	pdata->phy_if.phy_status(pdata);
+	pthread_mutex_unlock(&pdata->link_status_mutex);
 
 	memset(&link, 0, sizeof(struct rte_eth_link));
 	link.link_duplex = pdata->phy.duplex;
@@ -2406,6 +2408,7 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 	rte_thread_mutex_init_shared(&pdata->i2c_mutex);
 	rte_thread_mutex_init_shared(&pdata->an_mutex);
 	rte_thread_mutex_init_shared(&pdata->phy_mutex);
+	rte_thread_mutex_init_shared(&pdata->link_status_mutex);
 
 	ret = pdata->phy_if.phy_init(pdata);
 	if (ret) {

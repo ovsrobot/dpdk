@@ -531,6 +531,10 @@ again2:
 	return ret;
 }
 
+#define AXGBE_I2C_RETRYABLE(_ret) \
+	((_ret) == -EAGAIN || (_ret) == -ENOTCONN || (_ret) == -ETIMEDOUT)
+#define AXGBE_I2C_RETRY_DELAY_MS	2
+
 static int axgbe_phy_i2c_read(struct axgbe_port *pdata, unsigned int target,
 			      void *reg, unsigned int reg_len,
 			      void *val, unsigned int val_len)
@@ -547,8 +551,10 @@ again1:
 	i2c_op.buf = reg;
 	ret = axgbe_phy_i2c_xfer(pdata, &i2c_op);
 	if (ret) {
-		if ((ret == -EAGAIN) && retry--)
+		if (AXGBE_I2C_RETRYABLE(ret) && retry--) {
+			rte_delay_ms(AXGBE_I2C_RETRY_DELAY_MS);
 			goto again1;
+	}
 
 		return ret;
 	}
@@ -561,8 +567,10 @@ again2:
 	i2c_op.len = val_len;
 	i2c_op.buf = val;
 	ret = axgbe_phy_i2c_xfer(pdata, &i2c_op);
-	if ((ret == -EAGAIN) && retry--)
+	if (ret && AXGBE_I2C_RETRYABLE(ret) && retry--) {
+		rte_delay_ms(AXGBE_I2C_RETRY_DELAY_MS);
 		goto again2;
+	}
 
 	return ret;
 }
@@ -605,9 +613,12 @@ static int axgbe_phy_sfp_get_mux(struct axgbe_port *pdata)
 	return axgbe_phy_i2c_xfer(pdata, &i2c_op);
 }
 
+static pthread_mutex_t axgbe_i2c_mdio_bus_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static void axgbe_phy_put_comm_ownership(struct axgbe_port *pdata)
 {
 	pthread_mutex_unlock(&pdata->phy_mutex);
+	pthread_mutex_unlock(&axgbe_i2c_mdio_bus_mutex);
 }
 
 static int axgbe_phy_get_comm_ownership(struct axgbe_port *pdata)
@@ -615,6 +626,8 @@ static int axgbe_phy_get_comm_ownership(struct axgbe_port *pdata)
 	struct axgbe_phy_data *phy_data = pdata->phy_data;
 	uint64_t timeout;
 	unsigned int mutex_id;
+
+	pthread_mutex_lock(&axgbe_i2c_mdio_bus_mutex);
 
 	/* The I2C and MDIO/GPIO bus is multiplexed between multiple devices,
 	 * the driver needs to take the software mutex and then the hardware
@@ -648,6 +661,7 @@ static int axgbe_phy_get_comm_ownership(struct axgbe_port *pdata)
 	}
 
 	pthread_mutex_unlock(&pdata->phy_mutex);
+	pthread_mutex_unlock(&axgbe_i2c_mdio_bus_mutex);
 
 	PMD_DRV_LOG_LINE(ERR, "unable to obtain hardware mutexes");
 
