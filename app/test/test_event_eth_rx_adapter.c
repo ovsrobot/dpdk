@@ -34,7 +34,7 @@ test_event_eth_rx_intr_adapter_common(void)
 #include <rte_event_eth_rx_adapter.h>
 
 #define MAX_NUM_RX_QUEUE	64
-#define NB_MBUFS		(8192 * num_ports * MAX_NUM_RX_QUEUE)
+#define NB_MBUFS		(1024 * num_ports * MAX_NUM_RX_QUEUE)
 #define MBUF_CACHE_SIZE		512
 #define MBUF_PRIV_SIZE		0
 #define TEST_INST_ID		0
