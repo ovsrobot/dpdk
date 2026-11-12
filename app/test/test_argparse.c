@@ -501,9 +501,10 @@ test_argparse_opt_autosave_parse_int_of_optional_val(void)
 }
 
 static int
-test_argparse_opt_parse_corelist_of_required_val(void)
+test_argparse_opt_parse_corelist(void)
 {
 	struct rte_argparse *obj;
+	rte_cpuset_t default_cpuset;
 	rte_cpuset_t val_cpuset;
 	char *argv[3];
 	int ret;
@@ -530,6 +531,21 @@ test_argparse_opt_parse_corelist_of_required_val(void)
 	TEST_ASSERT(CPU_ISSET(4, &val_cpuset), "Core 4 should be set in corelist!");
 	TEST_ASSERT(CPU_ISSET(5, &val_cpuset), "Core 5 should be set in corelist!");
 	TEST_ASSERT(!CPU_ISSET(6, &val_cpuset), "Core 6 should not be set in corelist!");
+
+	CPU_ZERO(&default_cpuset);
+	CPU_SET(2, &default_cpuset);
+	obj->args[0].value_required = RTE_ARGPARSE_VALUE_OPTIONAL;
+	obj->args[0].val_set = &default_cpuset;
+	ret = rte_argparse_parse(obj, 2, argv);
+	TEST_ASSERT(ret == 2, "Default corelist should be accepted, got %d", ret);
+	TEST_ASSERT(memcmp(&val_cpuset, &default_cpuset, sizeof(val_cpuset)) == 0,
+			"Default corelist was not copied");
+
+	obj->args[0].val_set = NULL;
+	ret = rte_argparse_parse(obj, 2, argv);
+	TEST_ASSERT(ret == -EINVAL, "Missing default should return -EINVAL, got %d", ret);
+	TEST_ASSERT(memcmp(&val_cpuset, &default_cpuset, sizeof(val_cpuset)) == 0,
+			"Rejected corelist changed the saved value");
 
 	return 0;
 }
@@ -965,6 +981,10 @@ test_argparse_parse_type_corelist(void)
 	ret = rte_argparse_parse_type(corelist_invalid_out_of_range,
 			RTE_ARGPARSE_VALUE_TYPE_CORELIST, &val_cpuset);
 	TEST_ASSERT(ret != 0, "Argparse parse type for corelist (out of range) should have failed!");
+
+	ret = rte_argparse_parse_type(NULL, RTE_ARGPARSE_VALUE_TYPE_CORELIST,
+			&val_cpuset);
+	TEST_ASSERT(ret == -EINVAL, "NULL corelist should return -EINVAL, got %d", ret);
 
 	return 0;
 }
@@ -1588,7 +1608,7 @@ static struct unit_test_suite argparse_test_suite = {
 		TEST_CASE(test_argparse_opt_autosave_parse_int_of_no_val),
 		TEST_CASE(test_argparse_opt_autosave_parse_int_of_required_val),
 		TEST_CASE(test_argparse_opt_autosave_parse_int_of_optional_val),
-		TEST_CASE(test_argparse_opt_parse_corelist_of_required_val),
+		TEST_CASE(test_argparse_opt_parse_corelist),
 		TEST_CASE(test_argparse_opt_callback_parse_int_of_no_val),
 		TEST_CASE(test_argparse_opt_callback_parse_int_of_required_val),
 		TEST_CASE(test_argparse_opt_callback_parse_int_of_optional_val),

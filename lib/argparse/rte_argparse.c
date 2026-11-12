@@ -576,6 +576,8 @@ parse_arg_corelist(const struct rte_argparse_arg *arg, const char *value)
 	int min = -1;
 
 	if (value == NULL) {
+		if (arg->val_set == NULL)
+			return -EINVAL;
 		*cpuset = *(rte_cpuset_t *)arg->val_set;
 		return 0;
 	}
