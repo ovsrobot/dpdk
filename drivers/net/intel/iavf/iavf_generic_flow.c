@@ -2199,14 +2199,10 @@ iavf_flow_process_filter(struct rte_eth_dev *dev,
 	if (*engine)
 		return 0;
 
-	if (!*engine) {
-		rte_flow_error_set(error, EINVAL,
-				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
-				   "Failed to create parser engine.");
-		return -rte_errno;
-	}
-
-	return 0;
+	rte_flow_error_set(error, EINVAL,
+			   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+			   "Failed to create parser engine.");
+	return -rte_errno;
 }
 
 static int
