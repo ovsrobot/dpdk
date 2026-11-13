@@ -96,7 +96,10 @@ the speed at which a core can access its own cache for a specific memory pool wi
 The cache is composed of a small, per-core table of pointers and its length (used as a stack).
 This internal cache can be enabled or disabled at creation of the pool.
 
-The maximum size of the cache is static and is defined at compilation time (RTE_MEMPOOL_CACHE_MAX_SIZE).
+The size of the cache is specified at pool creation, up to the number of objects in the pool.
+When the cache is full, half of it is flushed to the pool's ring,
+and when it is empty, half of it is refilled from the pool's ring.
+Requests of more than half of the cache size are served, fully or partly, by the pool's ring.
 
 :numref:`mempool_figure_cache` shows a cache in operation.
 
