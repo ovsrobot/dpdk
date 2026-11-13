@@ -238,8 +238,11 @@ xsc_rxq_initialize(struct xsc_dev *xdev, struct xsc_rxq_data *rxq_data)
 					jumbo_buffer_va =
 						(void *)rte_malloc_virt2iova(jumbo_buffer_pa);
 					if ((rte_iova_t)jumbo_buffer_va == RTE_BAD_IOVA) {
+						rte_free(jumbo_buffer_pa);
+						jumbo_buffer_pa = NULL;
+						jumbo_buffer_va = NULL;
 						seg->seg_len = XSC_MAX_RECV_LEN;
-						PMD_DRV_LOG(ERR, "Failed to turn jumbo_buffer");
+						PMD_DRV_LOG(ERR, "Failed to get IOVA of jumbo_buffer");
 						continue;
 					}
 				}
