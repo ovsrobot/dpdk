@@ -289,7 +289,7 @@ rte_swx_table_selector_create(struct rte_swx_table_selector_params *params,
 
 	/* Group. */
 	group_size = params->n_members_per_group_max * sizeof(uint32_t);
-	t->group_table_size = params->n_groups_max * group_size;
+	t->group_table_size = (uint64_t)params->n_groups_max * group_size;
 
 	t->group_table = env_calloc(t->group_table_size, RTE_CACHE_LINE_SIZE, numa_node);
 	if (!t->group_table)
