@@ -415,8 +415,10 @@ qed_fill_dev_info(struct ecore_dev *edev, struct qed_dev_info *dev_info)
 			ecore_ptt_release(ECORE_LEADING_HWFN(edev), ptt);
 		}
 	} else {
-		ecore_mcp_get_mfw_ver(ECORE_LEADING_HWFN(edev), ptt,
-				      &dev_info->mfw_rev, NULL);
+		ptt = ecore_ptt_acquire(ECORE_LEADING_HWFN(edev));
+		if (ptt)
+			ecore_mcp_get_mfw_ver(ECORE_LEADING_HWFN(edev), ptt,
+					      &dev_info->mfw_rev, NULL);
 	}
 
 	return 0;
