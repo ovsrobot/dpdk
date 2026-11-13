@@ -3828,6 +3828,13 @@ nfp_pre_tun_table_check_del(struct nfp_flower_representor *repr,
 	}
 
 	nfp_flow_meta = nfp_flow->payload.meta;
+
+	if (find_entry == NULL) {
+		PMD_DRV_LOG(ERR, "Pre-tunnel table search failed.");
+		ret = -EINVAL;
+		goto free_entry;
+	}
+
 	nfp_mac_idx = (find_entry->mac_index << 8) |
 			NFP_FLOWER_CMSG_PORT_TYPE_OTHER_PORT |
 			NFP_TUN_PRE_TUN_IDX_BIT;
