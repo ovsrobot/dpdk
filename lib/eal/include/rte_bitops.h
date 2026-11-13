@@ -1307,6 +1307,9 @@ rte_align64pow2(uint64_t v)
 	v--;
 	v = rte_combine64ms1b(v);
 
+	if (v == UINT64_MAX)
+		v--;
+
 	return v + 1;
 }
 
