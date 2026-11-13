@@ -50,6 +50,10 @@
 #define IGC_CTRL_SPEED_MASK		(7u << 8)
 #define IGC_CTRL_SPEED_2500		(6u << 8)
 
+/* TIPG.IPGT values for the I225 2.5G inter-packet-gap erratum workaround */
+#define IGC_TIPG_IPGT_DEFAULT		0x08	/* 12-byte IPG (hardware default) */
+#define IGC_TIPG_IPGT_2500_WA		0x0b	/* 15-byte IPG */
+
 /* External VLAN Ether Type bit mask and shift */
 #define IGC_VET_EXT			0xFFFF0000
 #define IGC_VET_EXT_SHIFT		16
@@ -469,6 +473,24 @@ eth_igc_interrupt_get_status(struct rte_eth_dev *dev)
 		intr->flags |= IGC_FLAG_NEED_LINK_UPDATE;
 }
 
+/* I226 is a later stepping that does not carry the I225 IPG erratum. */
+static bool
+igc_is_i225(const struct e1000_hw *hw)
+{
+	switch (hw->device_id) {
+	case E1000_DEV_ID_I225_LM:
+	case E1000_DEV_ID_I225_V:
+	case E1000_DEV_ID_I225_I:
+	case E1000_DEV_ID_I225_K:
+	case E1000_DEV_ID_I225_K2:
+	case E1000_DEV_ID_I225_IT:
+	case E1000_DEV_ID_I225_LMVP:
+		return true;
+	default:
+		return false;
+	}
+}
+
 /* return 0 means link status changed, -1 means not changed */
 static int
 eth_igc_link_update(struct rte_eth_dev *dev, int wait_to_complete)
@@ -528,11 +550,22 @@ eth_igc_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 		link.link_speed = speed;
 		link.link_status = RTE_ETH_LINK_UP;
 
-		if (speed == SPEED_2500) {
+		/*
+		 * I225 back-to-back 2.5G receive-IPG erratum: widen the TX
+		 * inter-packet gap (TIPG.IPGT) from the 0x08 default (12 byte
+		 * times) to 0x0b (15 byte times) so a link-partner I225 does
+		 * not drop packets; restore the default at other speeds. Only
+		 * affected I225 steppings (revision_id < E1000_REVISION_2) need
+		 * this; later I225 steppings and I226 are excluded.
+		 */
+		if (igc_is_i225(hw) && hw->revision_id < E1000_REVISION_2) {
 			uint32_t tipg = E1000_READ_REG(hw, E1000_TIPG);
-			if ((tipg & E1000_TIPG_IPGT_MASK) != 0x0b) {
+			uint32_t ipgt = (speed == SPEED_2500) ?
+				IGC_TIPG_IPGT_2500_WA : IGC_TIPG_IPGT_DEFAULT;
+
+			if ((tipg & E1000_TIPG_IPGT_MASK) != ipgt) {
 				tipg &= ~E1000_TIPG_IPGT_MASK;
-				tipg |= 0x0b;
+				tipg |= ipgt;
 				E1000_WRITE_REG(hw, E1000_TIPG, tipg);
 			}
 		}
