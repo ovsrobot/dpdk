@@ -6481,6 +6481,13 @@ static enum _ecore_status_t ecore_init_wfq_param(struct ecore_hwfn *p_hwfn,
 		return ECORE_INVAL;
 	}
 
+	/* Validate non_requested_count is non-zero */
+	if (non_requested_count == 0) {
+		DP_VERBOSE(p_hwfn, ECORE_MSG_LINK,
+			   "The number of vports is equal to the number of requests\n");
+		return ECORE_INVAL;
+	}
+
 	/* Data left for non requested vports */
 	total_left_rate = min_pf_rate - total_req_min_rate;
 	left_rate_per_vp = total_left_rate / non_requested_count;
