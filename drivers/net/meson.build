@@ -58,6 +58,7 @@ drivers = [
         'rnp',
         'sfc',
         'softnic',
+        'stmmac',
         'sxe2',
         'tap',
         'thunderx',

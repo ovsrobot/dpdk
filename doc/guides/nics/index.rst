@@ -68,6 +68,7 @@ Network Interface Controller Drivers
     rnp
     sfc_efx
     softnic
+	stmmac
     sxe2
     tap
     thunderx
