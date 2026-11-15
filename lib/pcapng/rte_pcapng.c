@@ -707,36 +707,35 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 		epb->timestamp_lo = (uint32_t)timestamp;
 
 		/*
-		 * Handle case of highly fragmented and large burst size
-		 * Note: this assumes that max segments per mbuf < IOV_MAX
-		 */
-		if (unlikely(cnt + m->nb_segs >= IOV_MAX)) {
-			ret = writev(self->outfd, iov, cnt);
-			if (unlikely(ret < 0)) {
-				rte_errno = errno;
-				return -1;
-			}
-			total += ret;
-			cnt = 0;
-		}
-
-		/*
 		 * The DPDK port is recorded during pcapng_copy.
 		 * Map that to PCAPNG interface in file.
 		 */
 		do {
 			iov[cnt].iov_base = rte_pktmbuf_mtod(m, void *);
 			iov[cnt].iov_len = rte_pktmbuf_data_len(m);
-			++cnt;
+
+			/* If current iov is maxed out then send it */
+			if (++cnt == IOV_MAX) {
+				ret = writev(self->outfd, iov, cnt);
+				if (unlikely(ret < 0)) {
+					rte_errno = errno;
+					return -1;
+				}
+				cnt = 0;
+				total += ret;
+			}
 		} while ((m = m->next));
 	}
 
-	ret = writev(self->outfd, iov, cnt);
-	if (unlikely(ret < 0)) {
-		rte_errno = errno;
-		return -1;
+	if (likely(cnt > 0)) {
+		ret = writev(self->outfd, iov, cnt);
+		if (unlikely(ret < 0)) {
+			rte_errno = errno;
+			return -1;
+		}
+		total += ret;
 	}
-	return total + ret;
+	return total;
 }
 
 /* Create new pcapng writer handle */
