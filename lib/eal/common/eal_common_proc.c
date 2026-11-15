@@ -717,7 +717,7 @@ rte_mp_channel_cleanup(void)
 		memcpy(&msg.param, &req, sizeof(req));
 		msg.len_param = sizeof(req);
 
-		rte_mp_sendmsg(&msg);
+		(void)rte_mp_sendmsg(&msg);
 	} else {
 		rte_mp_action_unregister(EAL_MP);
 	}
