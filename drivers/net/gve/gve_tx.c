@@ -19,6 +19,7 @@ gve_free_bulk_mbuf(struct rte_mbuf **txep, int num)
 	for (s = 0; s < num; s++) {
 		if (txep[s] != NULL) {
 			m = rte_pktmbuf_prefree_seg(txep[s]);
+			txep[s] = NULL;
 			if (m != NULL)
 				break;
 		}
@@ -200,7 +201,7 @@ gve_tx_fill_seg_desc(volatile union gve_tx_desc *desc, uint64_t ol_flags,
 }
 
 static inline bool
-is_fifo_avail(struct gve_tx_queue *txq, uint16_t len)
+is_fifo_avail(struct gve_tx_queue *txq, uint32_t len)
 {
 	if (txq->fifo_avail < len)
 		return false;
@@ -209,6 +210,26 @@ is_fifo_avail(struct gve_tx_queue *txq, uint16_t len)
 	    txq->fifo_size - txq->fifo_head + len > txq->fifo_avail)
 		return false;
 	return true;
+}
+
+static inline bool
+gve_tx_reclaim_fifo_qpl(struct gve_tx_queue *txq, uint32_t tx_tail,
+			uint32_t need)
+{
+	if (txq->tx_tail != tx_tail) {
+		rte_write32(rte_cpu_to_be_32(tx_tail), txq->qtx_tail);
+		txq->tx_tail = tx_tail;
+	}
+
+	do {
+		uint32_t prev_ntc = txq->next_to_clean;
+
+		gve_tx_clean(txq);
+		if (is_fifo_avail(txq, need))
+			return true;
+		if (txq->next_to_clean == prev_ntc)
+			return false;
+	} while (true);
 }
 static inline uint64_t
 gve_tx_alloc_from_fifo(struct gve_tx_queue *txq, uint16_t tx_id, uint16_t len)
@@ -266,7 +287,8 @@ gve_tx_burst_qpl(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 
 	txr = txq->tx_desc_ring;
 
-	if (txq->nb_free < txq->free_thresh || txq->fifo_avail == 0)
+	if (txq->nb_free < txq->free_thresh ||
+	    txq->fifo_avail < (txq->fifo_size >> 1))
 		gve_tx_clean(txq);
 
 	if (txq->sw_nb_free < txq->free_thresh)
@@ -304,21 +326,22 @@ gve_tx_burst_qpl(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 			(uint32_t)(tx_offload.l2_len + tx_offload.l3_len + tx_offload.l4_len) :
 			tx_pkt->pkt_len;
 
-		if (!is_fifo_avail(txq, hlen)) {
-			gve_tx_clean(txq);
-			if (!is_fifo_avail(txq, hlen))
+		if (ol_flags & RTE_MBUF_F_TX_TCP_SEG) {
+			uint32_t data_len, need;
+
+			if (unlikely(tx_pkt->pkt_len <= hlen))
 				goto end_of_tx;
+			data_len = tx_pkt->pkt_len - hlen;
+			need = RTE_ALIGN(hlen, RTE_CACHE_LINE_SIZE) +
+			       RTE_ALIGN(data_len, RTE_CACHE_LINE_SIZE);
+			if (!is_fifo_avail(txq, need) &&
+			    !gve_tx_reclaim_fifo_qpl(txq, tx_tail, need))
+				goto end_of_tx;
+		} else if (!is_fifo_avail(txq, hlen) &&
+			   !gve_tx_reclaim_fifo_qpl(txq, tx_tail, hlen)) {
+			goto end_of_tx;
 		}
 		fifo_addr = gve_tx_alloc_from_fifo(txq, tx_id, hlen);
-
-		/* For TSO, check if there's enough fifo space for data first */
-		if (ol_flags & RTE_MBUF_F_TX_TCP_SEG) {
-			if (!is_fifo_avail(txq, tx_pkt->pkt_len - hlen)) {
-				gve_tx_clean(txq);
-				if (!is_fifo_avail(txq, tx_pkt->pkt_len - hlen))
-					goto end_of_tx;
-			}
-		}
 
 		qpl_write_addr = (void *)(size_t)(fifo_addr + txq->fifo_base);
 		mbuf_header_addr = rte_pktmbuf_read(tx_pkt, 0, hlen, qpl_write_addr);
@@ -370,13 +393,14 @@ gve_tx_burst_qpl(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 
 end_of_tx:
 	if (nb_tx) {
-		rte_write32(rte_cpu_to_be_32(tx_tail), txq->qtx_tail);
-		txq->tx_tail = tx_tail;
+		if (txq->tx_tail != tx_tail) {
+			rte_write32(rte_cpu_to_be_32(tx_tail), txq->qtx_tail);
+			txq->tx_tail = tx_tail;
+		}
 		txq->sw_tail = sw_id;
 
 		txq->stats.packets += nb_tx;
 		txq->stats.bytes += bytes;
-		txq->stats.errors += nb_pkts - nb_tx;
 	}
 
 	return nb_tx;
@@ -411,8 +435,11 @@ gve_tx_burst_ra(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 		if (ol_flags & RTE_MBUF_F_TX_TCP_SEG)
 			nb_used++;
 
-		if (txq->nb_free < nb_used)
-			goto end_of_tx;
+		if (txq->nb_free < nb_used) {
+			gve_tx_clean(txq);
+			if (txq->nb_free < nb_used)
+				goto end_of_tx;
+		}
 
 		tx_offload.l2_len = tx_pkt->l2_len;
 		tx_offload.l3_len = tx_pkt->l3_len;
@@ -424,7 +451,7 @@ gve_tx_burst_ra(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 
 		hlen = ol_flags & RTE_MBUF_F_TX_TCP_SEG ?
 			(uint32_t)(tx_offload.l2_len + tx_offload.l3_len + tx_offload.l4_len) :
-			tx_pkt->pkt_len;
+			tx_pkt->data_len;
 		/*
 		 * if tso, the driver needs to fill 2 descs for 1 mbuf
 		 * so only put this mbuf into the 1st tx entry in sw ring
@@ -465,7 +492,6 @@ end_of_tx:
 
 		txq->stats.packets += nb_tx;
 		txq->stats.bytes += bytes;
-		txq->stats.errors += nb_pkts - nb_tx;
 	}
 
 	return nb_tx;
