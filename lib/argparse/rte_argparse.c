@@ -576,6 +576,8 @@ parse_arg_corelist(const struct rte_argparse_arg *arg, const char *value)
 	int min = -1;
 
 	if (value == NULL) {
+		if (arg->val_set == NULL)
+			return -EINVAL;
 		*cpuset = *(rte_cpuset_t *)arg->val_set;
 		return 0;
 	}
@@ -971,6 +973,12 @@ rte_argparse_parse_type(const char *str, enum rte_argparse_value_type val_type, 
 		.val_set = NULL,
 		.value_type = val_type,
 	};
+
+	if (str == NULL || val == NULL) {
+		ARGPARSE_LOG(ERR, "argument and value must both be non-NULL!");
+		return -EINVAL;
+	}
+
 	if (val_type == RTE_ARGPARSE_VALUE_TYPE_NONE) {
 		ARGPARSE_LOG(ERR, "argument %s doesn't have value-type!", str);
 		return -EINVAL;
