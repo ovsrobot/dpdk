@@ -4549,27 +4549,19 @@ i40e_free_virt_mem_d(__rte_unused struct i40e_hw *hw,
 static int
 i40e_get_cap(struct i40e_hw *hw)
 {
-	struct i40e_aqc_list_capabilities_element_resp *buf;
+	struct i40e_aqc_list_capabilities_element_resp buf[I40E_MAX_CAP_ELE_NUM] = {0};
 	uint16_t len, size = 0;
 	int ret;
 
 	/* Calculate a huge enough buff for saving response data temporarily */
 	len = sizeof(struct i40e_aqc_list_capabilities_element_resp) *
 						I40E_MAX_CAP_ELE_NUM;
-	buf = rte_zmalloc("i40e", len, 0);
-	if (!buf) {
-		PMD_DRV_LOG(ERR, "Failed to allocate memory");
-		return I40E_ERR_NO_MEMORY;
-	}
 
 	/* Get, parse the capabilities and save it to hw */
 	ret = i40e_aq_discover_capabilities(hw, buf, len, &size,
 			i40e_aqc_opc_list_func_capabilities, NULL);
 	if (ret != I40E_SUCCESS)
 		PMD_DRV_LOG(ERR, "Failed to discover capabilities");
-
-	/* Free the temporary buffer after being used */
-	rte_free(buf);
 
 	return ret;
 }
@@ -4775,29 +4767,23 @@ static int
 i40e_pf_get_switch_config(struct i40e_pf *pf)
 {
 	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
-	struct i40e_aqc_get_switch_config_resp *switch_config;
+	RTE_DEFINE_FLEX_BYTES(struct i40e_aqc_get_switch_config_resp, switch_config,
+			I40E_AQ_LARGE_BUF);
 	struct i40e_aqc_switch_config_element_resp *element;
 	uint16_t start_seid = 0, num_reported;
 	int ret;
-
-	switch_config = (struct i40e_aqc_get_switch_config_resp *)\
-			rte_zmalloc("i40e", I40E_AQ_LARGE_BUF, 0);
-	if (!switch_config) {
-		PMD_DRV_LOG(ERR, "Failed to allocated memory");
-		return -ENOMEM;
-	}
 
 	/* Get the switch configurations */
 	ret = i40e_aq_get_switch_config(hw, switch_config,
 		I40E_AQ_LARGE_BUF, &start_seid, NULL);
 	if (ret != I40E_SUCCESS) {
 		PMD_DRV_LOG(ERR, "Failed to get switch configurations");
-		goto fail;
+		return ret;
 	}
 	num_reported = rte_le_to_cpu_16(switch_config->header.num_reported);
 	if (num_reported != 1) { /* The number should be 1 */
 		PMD_DRV_LOG(ERR, "Wrong number of switch config reported");
-		goto fail;
+		return ret;
 	}
 
 	/* Parse the switch configuration elements */
@@ -4807,9 +4793,6 @@ i40e_pf_get_switch_config(struct i40e_pf *pf)
 		pf->main_vsi_seid = rte_le_to_cpu_16(element->seid);
 	} else
 		PMD_DRV_LOG(INFO, "Unknown element type");
-
-fail:
-	rte_free(switch_config);
 
 	return ret;
 }

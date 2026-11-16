@@ -1616,7 +1616,8 @@ cmd_ddp_get_list_parsed(__rte_unused void *parsed_result,
 	__rte_unused void *data)
 {
 	struct cmd_ddp_get_list_result *res = parsed_result;
-	struct rte_pmd_i40e_profile_list *p_list;
+	RTE_DEFINE_FLEX_BYTES(struct rte_pmd_i40e_profile_list, p_list,
+			PROFILE_INFO_SIZE * MAX_PROFILE_NUM + 4);
 	struct rte_pmd_i40e_profile_info *p_info;
 	uint32_t p_num;
 	uint32_t size;
@@ -1624,11 +1625,6 @@ cmd_ddp_get_list_parsed(__rte_unused void *parsed_result,
 	int ret = -ENOTSUP;
 
 	size = PROFILE_INFO_SIZE * MAX_PROFILE_NUM + 4;
-	p_list = (struct rte_pmd_i40e_profile_list *)malloc(size);
-	if (!p_list) {
-		fprintf(stderr, "%s: Failed to malloc buffer\n", __func__);
-		return;
-	}
 
 	if (ret == -ENOTSUP)
 		ret = rte_pmd_i40e_get_ddp_list(res->port_id,
@@ -1650,8 +1646,6 @@ cmd_ddp_get_list_parsed(__rte_unused void *parsed_result,
 			printf("Profile name: %s\n\n", p_info->name);
 		}
 	}
-
-	free(p_list);
 
 	if (ret < 0)
 		fprintf(stderr, "Failed to get ddp list\n");
