@@ -463,15 +463,15 @@ int
 idpf_vc_rss_key_set(struct idpf_vport *vport)
 {
 	struct idpf_adapter *adapter = vport->adapter;
-	struct virtchnl2_rss_key *rss_key;
+	RTE_DEFINE_FLEX(struct virtchnl2_rss_key, rss_key, key, IDPF_RSS_KEY_LEN - 1);
 	struct idpf_cmd_info args;
 	int len, err;
 
+	if (vport->rss_key_size > IDPF_RSS_KEY_LEN)
+		return -EINVAL;
+
 	len = sizeof(*rss_key) + sizeof(rss_key->key[0]) *
 		(vport->rss_key_size - 1);
-	rss_key = rte_zmalloc("rss_key", len, 0);
-	if (rss_key == NULL)
-		return -ENOMEM;
 
 	rss_key->vport_id = vport->vport_id;
 	rss_key->key_len = vport->rss_key_size;
@@ -489,7 +489,6 @@ idpf_vc_rss_key_set(struct idpf_vport *vport)
 	if (err != 0)
 		DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_SET_RSS_KEY");
 
-	rte_free(rss_key);
 	return err;
 }
 
@@ -781,15 +780,13 @@ idpf_vc_ena_dis_one_queue(struct idpf_vport *vport, uint16_t qid,
 			  uint32_t type, bool on)
 {
 	struct idpf_adapter *adapter = vport->adapter;
-	struct virtchnl2_del_ena_dis_queues *queue_select;
+	struct virtchnl2_del_ena_dis_queues queue_select_msg = {0};
+	struct virtchnl2_del_ena_dis_queues *queue_select = &queue_select_msg;
 	struct virtchnl2_queue_chunk *queue_chunk;
 	struct idpf_cmd_info args;
 	int err, len;
 
 	len = sizeof(struct virtchnl2_del_ena_dis_queues);
-	queue_select = rte_zmalloc("queue_select", len, 0);
-	if (queue_select == NULL)
-		return -ENOMEM;
 
 	queue_chunk = queue_select->chunks.chunks;
 	queue_select->chunks.num_chunks = 1;
@@ -810,7 +807,6 @@ idpf_vc_ena_dis_one_queue(struct idpf_vport *vport, uint16_t qid,
 		DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_%s_QUEUES",
 			on ? "ENABLE" : "DISABLE");
 
-	rte_free(queue_select);
 	return err;
 }
 
@@ -819,15 +815,13 @@ int
 idpf_vc_ena_dis_one_queue_vcpf(struct idpf_adapter *adapter, uint16_t qid,
 			  uint32_t type, bool on)
 {
-	struct virtchnl2_del_ena_dis_queues *queue_select;
+	struct virtchnl2_del_ena_dis_queues queue_select_msg = {0};
+	struct virtchnl2_del_ena_dis_queues *queue_select = &queue_select_msg;
 	struct virtchnl2_queue_chunk *queue_chunk;
 	struct idpf_cmd_info args;
 	int err, len;
 
 	len = sizeof(struct virtchnl2_del_ena_dis_queues);
-	queue_select = rte_zmalloc("queue_select", len, 0);
-	if (queue_select == NULL)
-		return -ENOMEM;
 
 	queue_chunk = queue_select->chunks.chunks;
 	queue_select->chunks.num_chunks = 1;
@@ -848,7 +842,6 @@ idpf_vc_ena_dis_one_queue_vcpf(struct idpf_adapter *adapter, uint16_t qid,
 		DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_%s_QUEUES",
 			on ? "ENABLE" : "DISABLE");
 
-	rte_free(queue_select);
 	return err;
 }
 
@@ -893,16 +886,18 @@ idpf_vc_queue_switch(struct idpf_vport *vport, uint16_t qid,
 }
 
 #define IDPF_RXTX_QUEUE_CHUNKS_NUM	2
+#define IDPF_RXTX_QUEUE_CHUNKS_MAX	(IDPF_RXTX_QUEUE_CHUNKS_NUM + 2)
 RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queues_ena_dis)
 int
 idpf_vc_queues_ena_dis(struct idpf_vport *vport, bool enable)
 {
 	struct idpf_adapter *adapter = vport->adapter;
-	struct virtchnl2_del_ena_dis_queues *queue_select;
+	RTE_DEFINE_FLEX(struct virtchnl2_del_ena_dis_queues, queue_select, chunks.chunks,
+			IDPF_RXTX_QUEUE_CHUNKS_MAX - 1);
 	struct virtchnl2_queue_chunk *queue_chunk;
 	uint32_t type;
 	struct idpf_cmd_info args;
-	uint16_t num_chunks;
+	uint16_t num_chunks, idx = 0;
 	int err, len;
 
 	num_chunks = IDPF_RXTX_QUEUE_CHUNKS_NUM;
@@ -913,38 +908,35 @@ idpf_vc_queues_ena_dis(struct idpf_vport *vport, bool enable)
 
 	len = sizeof(struct virtchnl2_del_ena_dis_queues) +
 		sizeof(struct virtchnl2_queue_chunk) * (num_chunks - 1);
-	queue_select = rte_zmalloc("queue_select", len, 0);
-	if (queue_select == NULL)
-		return -ENOMEM;
 
 	queue_chunk = queue_select->chunks.chunks;
 	queue_select->chunks.num_chunks = num_chunks;
 	queue_select->vport_id = vport->vport_id;
 
 	type = VIRTCHNL_QUEUE_TYPE_RX;
-	queue_chunk[type].type = type;
-	queue_chunk[type].start_queue_id = vport->chunks_info.rx_start_qid;
-	queue_chunk[type].num_queues = vport->num_rx_q;
+	queue_chunk[idx].type = type;
+	queue_chunk[idx].start_queue_id = vport->chunks_info.rx_start_qid;
+	queue_chunk[idx++].num_queues = vport->num_rx_q;
 
 	type = VIRTCHNL2_QUEUE_TYPE_TX;
-	queue_chunk[type].type = type;
-	queue_chunk[type].start_queue_id = vport->chunks_info.tx_start_qid;
-	queue_chunk[type].num_queues = vport->num_tx_q;
+	queue_chunk[idx].type = type;
+	queue_chunk[idx].start_queue_id = vport->chunks_info.tx_start_qid;
+	queue_chunk[idx++].num_queues = vport->num_tx_q;
 
 	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
 		type = VIRTCHNL2_QUEUE_TYPE_RX_BUFFER;
-		queue_chunk[type].type = type;
-		queue_chunk[type].start_queue_id =
+		queue_chunk[idx].type = type;
+		queue_chunk[idx].start_queue_id =
 			vport->chunks_info.rx_buf_start_qid;
-		queue_chunk[type].num_queues = vport->num_rx_bufq;
+		queue_chunk[idx++].num_queues = vport->num_rx_bufq;
 	}
 
 	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
 		type = VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION;
-		queue_chunk[type].type = type;
-		queue_chunk[type].start_queue_id =
+		queue_chunk[idx].type = type;
+		queue_chunk[idx].start_queue_id =
 			vport->chunks_info.tx_compl_start_qid;
-		queue_chunk[type].num_queues = vport->num_tx_complq;
+		queue_chunk[idx++].num_queues = vport->num_tx_complq;
 	}
 
 	args.ops = enable ? VIRTCHNL2_OP_ENABLE_QUEUES :
@@ -958,7 +950,6 @@ idpf_vc_queues_ena_dis(struct idpf_vport *vport, bool enable)
 		DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_%s_QUEUES",
 			enable ? "ENABLE" : "DISABLE");
 
-	rte_free(queue_select);
 	return err;
 }
 
@@ -1044,7 +1035,8 @@ int
 idpf_vc_rxq_config(struct idpf_vport *vport, struct idpf_rx_queue *rxq)
 {
 	struct idpf_adapter *adapter = vport->adapter;
-	struct virtchnl2_config_rx_queues *vc_rxqs = NULL;
+	RTE_DEFINE_FLEX(struct virtchnl2_config_rx_queues, vc_rxqs, qinfo,
+			IDPF_RXQ_PER_GRP + IDPF_RX_BUFQ_PER_GRP - 1);
 	struct virtchnl2_rxq_info *rxq_info;
 	struct idpf_cmd_info args;
 	uint16_t num_qs;
@@ -1057,12 +1049,6 @@ idpf_vc_rxq_config(struct idpf_vport *vport, struct idpf_rx_queue *rxq)
 
 	size = sizeof(*vc_rxqs) + (num_qs - 1) *
 		sizeof(struct virtchnl2_rxq_info);
-	vc_rxqs = rte_zmalloc("cfg_rxqs", size, 0);
-	if (vc_rxqs == NULL) {
-		DRV_LOG(ERR, "Failed to allocate virtchnl2_config_rx_queues");
-		err = -ENOMEM;
-		return err;
-	}
 	vc_rxqs->vport_id = vport->vport_id;
 	vc_rxqs->num_qinfo = num_qs;
 	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
@@ -1122,7 +1108,6 @@ idpf_vc_rxq_config(struct idpf_vport *vport, struct idpf_rx_queue *rxq)
 	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
 
 	err = idpf_vc_cmd_execute(adapter, &args);
-	rte_free(vc_rxqs);
 	if (err != 0)
 		DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_CONFIG_RX_QUEUES");
 
@@ -1170,7 +1155,8 @@ int
 idpf_vc_txq_config(struct idpf_vport *vport, struct ci_tx_queue *txq)
 {
 	struct idpf_adapter *adapter = vport->adapter;
-	struct virtchnl2_config_tx_queues *vc_txqs = NULL;
+	RTE_DEFINE_FLEX(struct virtchnl2_config_tx_queues, vc_txqs, qinfo,
+			IDPF_TXQ_PER_GRP + IDPF_TX_COMPLQ_PER_GRP - 1);
 	struct virtchnl2_txq_info *txq_info;
 	struct idpf_cmd_info args;
 	uint16_t num_qs;
@@ -1183,12 +1169,6 @@ idpf_vc_txq_config(struct idpf_vport *vport, struct ci_tx_queue *txq)
 
 	size = sizeof(*vc_txqs) + (num_qs - 1) *
 		sizeof(struct virtchnl2_txq_info);
-	vc_txqs = rte_zmalloc("cfg_txqs", size, 0);
-	if (vc_txqs == NULL) {
-		DRV_LOG(ERR, "Failed to allocate virtchnl2_config_tx_queues");
-		err = -ENOMEM;
-		return err;
-	}
 	vc_txqs->vport_id = vport->vport_id;
 	vc_txqs->num_qinfo = num_qs;
 
@@ -1230,7 +1210,6 @@ idpf_vc_txq_config(struct idpf_vport *vport, struct ci_tx_queue *txq)
 	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
 
 	err = idpf_vc_cmd_execute(adapter, &args);
-	rte_free(vc_txqs);
 	if (err != 0)
 		DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_CONFIG_TX_QUEUES");
 

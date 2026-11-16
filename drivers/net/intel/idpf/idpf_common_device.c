@@ -157,22 +157,14 @@ idpf_init_mbx(struct idpf_hw *hw)
 static int
 idpf_get_pkt_type(struct idpf_adapter *adapter)
 {
-	struct virtchnl2_get_ptype_info *req_ptype_info;
-	struct virtchnl2_get_ptype_info *recv_ptype_info;
+	struct virtchnl2_get_ptype_info req_ptype_msg = {0};
+	struct virtchnl2_get_ptype_info *req_ptype_info = &req_ptype_msg;
+	RTE_DEFINE_FLEX_BYTES(struct virtchnl2_get_ptype_info, recv_ptype_info,
+			IDPF_DFLT_MBX_BUF_SIZE);
 	uint16_t recv_num_ptypes = 0;
 	uint16_t ptype_offset, i, j;
 	uint16_t start_ptype_id = 0;
 	int ret;
-
-	req_ptype_info = rte_zmalloc("req_ptype_info", IDPF_DFLT_MBX_BUF_SIZE, 0);
-	if (req_ptype_info == NULL)
-		return -ENOMEM;
-
-	recv_ptype_info = rte_zmalloc("recv_ptype_info", IDPF_DFLT_MBX_BUF_SIZE, 0);
-	if (recv_ptype_info == NULL) {
-		ret = -ENOMEM;
-		goto free_req_ptype_info;
-	}
 
 	while (start_ptype_id < IDPF_MAX_PKT_TYPE) {
 		memset(req_ptype_info, 0, sizeof(*req_ptype_info));
@@ -188,13 +180,13 @@ idpf_get_pkt_type(struct idpf_adapter *adapter)
 		ret = idpf_vc_ptype_info_query(adapter, req_ptype_info, recv_ptype_info);
 		if (ret != 0) {
 			DRV_LOG(ERR, "Fail to query packet type information");
-			goto free_recv_ptype_info;
+			goto out;
 		}
 
 		recv_num_ptypes += rte_le_to_cpu_16(recv_ptype_info->num_ptypes);
 		if (recv_num_ptypes > IDPF_MAX_PKT_TYPE) {
 			ret = -EINVAL;
-			goto free_recv_ptype_info;
+			goto out;
 		}
 
 		start_ptype_id = rte_le_to_cpu_16(req_ptype_info->start_ptype_id) +
@@ -213,7 +205,7 @@ idpf_get_pkt_type(struct idpf_adapter *adapter)
 			ptype_offset += IDPF_GET_PTYPE_SIZE(ptype);
 			if (ptype_offset > IDPF_DFLT_MBX_BUF_SIZE) {
 				ret = -EINVAL;
-				goto free_recv_ptype_info;
+				goto out;
 			}
 
 			for (j = 0; j < ptype->proto_id_count; j++) {
@@ -374,10 +366,7 @@ idpf_get_pkt_type(struct idpf_adapter *adapter)
 		}
 	}
 
-free_recv_ptype_info:
-	rte_free(recv_ptype_info);
-free_req_ptype_info:
-	rte_free(req_ptype_info);
+out:
 	clear_cmd(adapter);
 	return ret;
 }
