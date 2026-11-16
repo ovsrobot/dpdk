@@ -6413,7 +6413,7 @@ ixgbe_ntuple_filter_program(struct ixgbe_hw *hw, uint16_t index,
 		mask &= IXGBE_FTQF_DEST_PORT_MASK;
 	if (filter_info->proto_mask == 0)
 		mask &= IXGBE_FTQF_PROTOCOL_COMP_MASK;
-	ftqf |= mask << IXGBE_FTQF_5TUPLE_MASK_SHIFT;
+	ftqf |= (uint32_t)mask << IXGBE_FTQF_5TUPLE_MASK_SHIFT;
 	ftqf |= IXGBE_FTQF_POOL_MASK_EN;
 	ftqf |= IXGBE_FTQF_QUEUE_ENABLE;
 
