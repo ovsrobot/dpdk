@@ -893,8 +893,9 @@ mbuf_poolname_build(unsigned int sock_id, char *mp_name,
 		snprintf(mp_name, name_size,
 			 MBUF_POOL_NAME_PFX "_%u", sock_id);
 	else
+		/* Keep pool indexes distinct from mempool chunk suffixes. */
 		snprintf(mp_name, name_size,
-			 MBUF_POOL_NAME_PFX "_%hu_%hu", (uint16_t)sock_id, idx);
+			 MBUF_POOL_NAME_PFX "_%hu_s%hu", (uint16_t)sock_id, idx);
 }
 
 static inline struct rte_mempool *
