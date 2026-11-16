@@ -1134,7 +1134,8 @@ ice_find_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *macaddr)
 static int
 ice_add_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 {
-	struct ice_fltr_list_entry *m_list_itr = NULL;
+	struct ice_fltr_list_entry m_list_entry = {0};
+	struct ice_fltr_list_entry *m_list_itr = &m_list_entry;
 	struct ice_mac_filter *f;
 	struct LIST_HEAD_TYPE list_head;
 	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
@@ -1155,12 +1156,6 @@ ice_add_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 
 	INIT_LIST_HEAD(&list_head);
 
-	m_list_itr = (struct ice_fltr_list_entry *)
-		ice_malloc(hw, sizeof(*m_list_itr));
-	if (!m_list_itr) {
-		ret = -ENOMEM;
-		goto DONE;
-	}
 	ice_memcpy(m_list_itr->fltr_info.l_data.mac.mac_addr,
 		   mac_addr, ETH_ALEN, ICE_NONDMA_TO_NONDMA);
 	m_list_itr->fltr_info.src_id = ICE_SRC_ID_VSI;
@@ -1175,31 +1170,26 @@ ice_add_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 	ret = ice_add_mac(hw, &list_head);
 	if (ret != ICE_SUCCESS) {
 		PMD_DRV_LOG(ERR, "Failed to add MAC filter");
-		ret = -EINVAL;
-		goto DONE;
+		return -EINVAL;
 	}
 	/* Add the mac addr into mac list */
 	f = rte_zmalloc(NULL, sizeof(*f), 0);
 	if (!f) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
-		ret = -ENOMEM;
-		goto DONE;
+		return -ENOMEM;
 	}
 	rte_ether_addr_copy(mac_addr, &f->mac_info.mac_addr);
 	TAILQ_INSERT_TAIL(&vsi->mac_list, f, next);
 	vsi->mac_num++;
 
-	ret = 0;
-
-DONE:
-	ice_free(hw, m_list_itr);
-	return ret;
+	return 0;
 }
 
 static int
 ice_remove_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 {
-	struct ice_fltr_list_entry *m_list_itr = NULL;
+	struct ice_fltr_list_entry m_list_entry = {0};
+	struct ice_fltr_list_entry *m_list_itr = &m_list_entry;
 	struct ice_mac_filter *f;
 	struct LIST_HEAD_TYPE list_head;
 	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
@@ -1212,12 +1202,6 @@ ice_remove_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 
 	INIT_LIST_HEAD(&list_head);
 
-	m_list_itr = (struct ice_fltr_list_entry *)
-		ice_malloc(hw, sizeof(*m_list_itr));
-	if (!m_list_itr) {
-		ret = -ENOMEM;
-		goto DONE;
-	}
 	ice_memcpy(m_list_itr->fltr_info.l_data.mac.mac_addr,
 		   mac_addr, ETH_ALEN, ICE_NONDMA_TO_NONDMA);
 	m_list_itr->fltr_info.src_id = ICE_SRC_ID_VSI;
@@ -1232,8 +1216,7 @@ ice_remove_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 	ret = ice_remove_mac(hw, &list_head);
 	if (ret != ICE_SUCCESS) {
 		PMD_DRV_LOG(ERR, "Failed to remove MAC filter");
-		ret = -EINVAL;
-		goto DONE;
+		return -EINVAL;
 	}
 
 	/* Remove the mac addr from mac list */
@@ -1241,10 +1224,7 @@ ice_remove_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 	rte_free(f);
 	vsi->mac_num--;
 
-	ret = 0;
-DONE:
-	ice_free(hw, m_list_itr);
-	return ret;
+	return 0;
 }
 
 /* Find out specific VLAN filter */
@@ -1265,7 +1245,8 @@ ice_find_vlan_filter(struct ice_vsi *vsi, struct ice_vlan *vlan)
 static int
 ice_add_vlan_filter(struct ice_vsi *vsi, struct ice_vlan *vlan)
 {
-	struct ice_fltr_list_entry *v_list_itr = NULL;
+	struct ice_fltr_list_entry v_list_entry = {0};
+	struct ice_fltr_list_entry *v_list_itr = &v_list_entry;
 	struct ice_vlan_filter *f;
 	struct LIST_HEAD_TYPE list_head;
 	struct ice_hw *hw;
@@ -1288,12 +1269,6 @@ ice_add_vlan_filter(struct ice_vsi *vsi, struct ice_vlan *vlan)
 
 	INIT_LIST_HEAD(&list_head);
 
-	v_list_itr = (struct ice_fltr_list_entry *)
-		      ice_malloc(hw, sizeof(*v_list_itr));
-	if (!v_list_itr) {
-		ret = -ENOMEM;
-		goto DONE;
-	}
 	v_list_itr->fltr_info.l_data.vlan.vlan_id = vlan->vid;
 	v_list_itr->fltr_info.l_data.vlan.tpid = vlan->tpid;
 	v_list_itr->fltr_info.l_data.vlan.tpid_valid = true;
@@ -1309,33 +1284,28 @@ ice_add_vlan_filter(struct ice_vsi *vsi, struct ice_vlan *vlan)
 	ret = ice_add_vlan(hw, &list_head);
 	if (ret != ICE_SUCCESS) {
 		PMD_DRV_LOG(ERR, "Failed to add VLAN filter");
-		ret = -EINVAL;
-		goto DONE;
+		return -EINVAL;
 	}
 
 	/* Add vlan into vlan list */
 	f = rte_zmalloc(NULL, sizeof(*f), 0);
 	if (!f) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
-		ret = -ENOMEM;
-		goto DONE;
+		return -ENOMEM;
 	}
 	f->vlan_info.vlan.tpid = vlan->tpid;
 	f->vlan_info.vlan.vid = vlan->vid;
 	TAILQ_INSERT_TAIL(&vsi->vlan_list, f, next);
 	vsi->vlan_num++;
 
-	ret = 0;
-
-DONE:
-	ice_free(hw, v_list_itr);
-	return ret;
+	return 0;
 }
 
 static int
 ice_remove_vlan_filter(struct ice_vsi *vsi, struct ice_vlan *vlan)
 {
-	struct ice_fltr_list_entry *v_list_itr = NULL;
+	struct ice_fltr_list_entry v_list_entry = {0};
+	struct ice_fltr_list_entry *v_list_itr = &v_list_entry;
 	struct ice_vlan_filter *f;
 	struct LIST_HEAD_TYPE list_head;
 	struct ice_hw *hw;
@@ -1353,13 +1323,6 @@ ice_remove_vlan_filter(struct ice_vsi *vsi, struct ice_vlan *vlan)
 
 	INIT_LIST_HEAD(&list_head);
 
-	v_list_itr = (struct ice_fltr_list_entry *)
-		      ice_malloc(hw, sizeof(*v_list_itr));
-	if (!v_list_itr) {
-		ret = -ENOMEM;
-		goto DONE;
-	}
-
 	v_list_itr->fltr_info.l_data.vlan.vlan_id = vlan->vid;
 	v_list_itr->fltr_info.l_data.vlan.tpid = vlan->tpid;
 	v_list_itr->fltr_info.l_data.vlan.tpid_valid = true;
@@ -1375,8 +1338,7 @@ ice_remove_vlan_filter(struct ice_vsi *vsi, struct ice_vlan *vlan)
 	ret = ice_remove_vlan(hw, &list_head);
 	if (ret != ICE_SUCCESS) {
 		PMD_DRV_LOG(ERR, "Failed to remove VLAN filter");
-		ret = -EINVAL;
-		goto DONE;
+		return -EINVAL;
 	}
 
 	/* Remove the vlan id from vlan list */
@@ -1384,10 +1346,7 @@ ice_remove_vlan_filter(struct ice_vsi *vsi, struct ice_vlan *vlan)
 	rte_free(f);
 	vsi->vlan_num--;
 
-	ret = 0;
-DONE:
-	ice_free(hw, v_list_itr);
-	return ret;
+	return 0;
 }
 
 static int
@@ -2554,7 +2513,7 @@ ice_get_hw_res(struct ice_hw *hw, uint16_t res_type,
 		uint16_t num, uint16_t desc_id,
 		uint16_t *prof_buf, uint16_t *num_prof)
 {
-	struct ice_aqc_res_elem *resp_buf;
+	struct ice_aqc_res_elem resp_buf[ICE_MAX_RES_DESC_NUM] = {0};
 	int ret;
 	uint16_t buf_len;
 	bool res_shared = 1;
@@ -2563,10 +2522,10 @@ ice_get_hw_res(struct ice_hw *hw, uint16_t res_type,
 	struct ice_aqc_get_allocd_res_desc *cmd =
 			&aq_desc.params.get_res_desc;
 
+	if (num > RTE_DIM(resp_buf))
+		return -EINVAL;
+
 	buf_len = sizeof(*resp_buf) * num;
-	resp_buf = ice_malloc(hw, buf_len);
-	if (!resp_buf)
-		return -ENOMEM;
 
 	ice_fill_dflt_direct_cmd_desc(&aq_desc,
 			ice_aqc_opc_get_allocd_res_desc);
@@ -2580,13 +2539,14 @@ ice_get_hw_res(struct ice_hw *hw, uint16_t res_type,
 	if (!ret)
 		*num_prof = LE16_TO_CPU(cmd->ops.resp.num_desc);
 	else
-		goto exit;
+		return ret;
+
+	if (*num_prof > num)
+		return -EIO;
 
 	ice_memcpy(prof_buf, resp_buf, sizeof(*resp_buf) *
 			(*num_prof), ICE_NONDMA_TO_NONDMA);
 
-exit:
-	ice_free(hw, resp_buf);
 	return ret;
 }
 static int
@@ -5276,18 +5236,14 @@ ice_phy_conf_link(struct ice_hw *hw,
 	struct ice_aqc_set_phy_cfg_data cfg = { 0 };
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(hw->back);
 	struct ice_port_info *pi = hw->port_info;
-	struct ice_aqc_get_phy_caps_data *phy_caps;
+	struct ice_aqc_get_phy_caps_data phy_caps_data = {0};
+	struct ice_aqc_get_phy_caps_data *phy_caps = &phy_caps_data;
 	int err;
 	u64 phy_type_low = 0;
 	u64 phy_type_high = 0;
 
 	if (!pi)
 		return -EIO;
-
-	phy_caps = (struct ice_aqc_get_phy_caps_data *)
-		ice_malloc(hw, sizeof(*phy_caps));
-	if (!phy_caps)
-		return ICE_ERR_NO_MEMORY;
 
 
 	if (ice_fw_supports_report_dflt_cfg(pi->hw))
@@ -5297,7 +5253,7 @@ ice_phy_conf_link(struct ice_hw *hw,
 		err = ice_aq_get_phy_caps(pi, false, ICE_AQC_REPORT_TOPO_CAP_MEDIA,
 					  phy_caps, NULL);
 	if (err)
-		goto done;
+		return err;
 
 	ice_update_phy_type(&phy_type_low, &phy_type_high, link_speeds_bitmap);
 
@@ -5333,8 +5289,6 @@ ice_phy_conf_link(struct ice_hw *hw,
 
 	err = ice_aq_set_phy_cfg(hw, pi, &cfg, NULL);
 
-done:
-	ice_free(hw, phy_caps);
 	return err;
 }
 

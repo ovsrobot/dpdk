@@ -790,7 +790,7 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	struct ice_vsi *vsi;
 	struct ice_hw *hw;
 	struct ice_pf *pf;
-	struct ice_aqc_add_tx_qgrp *txq_elem;
+	RTE_DEFINE_FLEX(struct ice_aqc_add_tx_qgrp, txq_elem, txqs, 1);
 	struct ice_tlan_ctx tx_ctx;
 	int buf_len;
 	struct ice_adapter *ad = ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
@@ -816,9 +816,6 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 		return 0;
 
 	buf_len = ice_struct_size(txq_elem, txqs, 1);
-	txq_elem = ice_malloc(hw, buf_len);
-	if (!txq_elem)
-		return -ENOMEM;
 
 	vsi = txq->ice_vsi;
 	hw = ICE_VSI_TO_HW(vsi);
@@ -854,13 +851,11 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 		}
 		if (cgd_idx >= ICE_MAX_TRAFFIC_CLASS) {
 			PMD_DRV_LOG(ERR, "Bad queue mapping configuration");
-			ice_free(hw, txq_elem);
 			return -EINVAL;
 		}
 	} else if (pf->dcb_num_tcs > 1) {
 		/* TM only manages the TC0 scheduler subtree. */
 		PMD_DRV_LOG(ERR, "TM hierarchy is not supported together with multi-TC DCB");
-		ice_free(hw, txq_elem);
 		return -EINVAL;
 	}
 
@@ -874,7 +869,6 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 			txq_elem, buf_len, NULL);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Failed to add lan txq");
-		ice_free(hw, txq_elem);
 		return -EIO;
 	}
 	/* store the schedule node id */
@@ -884,7 +878,6 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	if (pf->tm_conf.committed)
 		if (ice_tm_setup_txq_node(pf, hw, tx_queue_id, txq->q_teid) != 0) {
 			PMD_DRV_LOG(ERR, "Failed to set up txq traffic management node");
-			ice_free(hw, txq_elem);
 			return -EIO;
 		}
 
@@ -893,15 +886,10 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	txq->use_ctx = ad->use_ctx;
 
 	if (txq->tsq != NULL && txq->tsq->ts_flag > 0) {
-		struct ice_aqc_set_txtime_qgrp *ts_elem;
+		RTE_DEFINE_FLEX(struct ice_aqc_set_txtime_qgrp, ts_elem, txtimeqs, 1);
 		struct ice_txtime_ctx txtime_ctx = { 0 };
 		u8 ts_buf_len = ice_struct_size(ts_elem, txtimeqs, 1);
 
-		ts_elem = ice_malloc(hw, ts_buf_len);
-		if (!ts_elem) {
-			ice_free(hw, txq_elem);
-			return -ENOMEM;
-		}
 		ice_setup_txtime_ctx(txq, &txtime_ctx, true);
 		ice_set_ctx(hw, (u8 *)&txtime_ctx,
 				ts_elem->txtimeqs[0].txtime_ctx,
@@ -913,10 +901,8 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 		ICE_PCI_REG_WRITE(txq->qtx_tail, 0);
 
 		err = ice_aq_set_txtimeq(hw, txq->reg_idx, 1, ts_elem, ts_buf_len, NULL);
-		ice_free(hw, ts_elem);
 		if (err) {
 			PMD_DRV_LOG(ERR, "Failed to set Tx Time queue context, error: %d", err);
-			ice_free(hw, txq_elem);
 			return err;
 		}
 	} else {
@@ -928,7 +914,6 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 
 	dev->data->tx_queue_state[tx_queue_id] = RTE_ETH_QUEUE_STATE_STARTED;
 
-	ice_free(hw, txq_elem);
 	return 0;
 }
 
@@ -1052,7 +1037,7 @@ ice_fdir_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	int err;
 	struct ice_vsi *vsi;
 	struct ice_hw *hw;
-	struct ice_aqc_add_tx_qgrp *txq_elem;
+	RTE_DEFINE_FLEX(struct ice_aqc_add_tx_qgrp, txq_elem, txqs, 1);
 	struct ice_tlan_ctx tx_ctx;
 	int buf_len;
 
@@ -1066,9 +1051,6 @@ ice_fdir_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	}
 
 	buf_len = ice_struct_size(txq_elem, txqs, 1);
-	txq_elem = ice_malloc(hw, buf_len);
-	if (!txq_elem)
-		return -ENOMEM;
 
 	vsi = txq->ice_vsi;
 	hw = ICE_VSI_TO_HW(vsi);
@@ -1100,13 +1082,11 @@ ice_fdir_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 			      txq_elem, buf_len, NULL);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Failed to add FDIR txq");
-		ice_free(hw, txq_elem);
 		return -EIO;
 	}
 	/* store the schedule node id */
 	txq->q_teid = txq_elem->txqs[0].q_teid;
 
-	ice_free(hw, txq_elem);
 	return 0;
 }
 

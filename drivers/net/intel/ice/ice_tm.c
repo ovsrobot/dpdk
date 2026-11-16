@@ -712,13 +712,9 @@ ice_tm_setup_txq_node(struct ice_pf *pf, struct ice_hw *hw, uint16_t qid, uint32
 
 	/* if the queue node has been put in the wrong place in hierarchy */
 	if (hw_node->parent != sw_node->parent->sched_node) {
-		struct ice_aqc_move_txqs_data *buf;
+		RTE_DEFINE_FLEX(struct ice_aqc_move_txqs_data, buf, txqs, 1);
 		uint8_t txqs_moved = 0;
 		uint16_t buf_size = ice_struct_size(buf, txqs, 1);
-
-		buf = calloc(1, buf_size);
-		if (buf == NULL)
-			return -ENOMEM;
 
 		struct ice_sched_node *parent = hw_node->parent;
 		struct ice_sched_node *new_parent = sw_node->parent->sched_node;
@@ -729,7 +725,6 @@ ice_tm_setup_txq_node(struct ice_pf *pf, struct ice_hw *hw, uint16_t qid, uint32
 
 		int ret = ice_aq_move_recfg_lan_txq(hw, 1, true, false, false, false, 50,
 						NULL, buf, buf_size, &txqs_moved, NULL);
-		free(buf);
 		if (ret || txqs_moved == 0) {
 			PMD_DRV_LOG(ERR, "move lan queue %u failed", qid);
 			return ICE_ERR_PARAM;

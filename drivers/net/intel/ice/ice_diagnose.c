@@ -453,12 +453,8 @@ ice_dump_switch(struct rte_eth_dev *dev, uint8_t **buff2, uint32_t *size)
 	for (i = 0; i < ICE_BLK_MAX_COUNT; i++) {
 		int res;
 		uint16_t buff_size;
-		uint8_t *buff;
+		uint8_t buff[ICE_PKG_BUF_SIZE];
 		uint32_t offset = 0;
-
-		buff = malloc(ICE_PKG_BUF_SIZE);
-		if (!buff)
-			return ICE_ERR_NO_MEMORY;
 
 		if (tbl_idx == 0) {
 			char tbl_idx_str[TBL_IDX_STR_SIZE];
@@ -475,15 +471,11 @@ ice_dump_switch(struct rte_eth_dev *dev, uint8_t **buff2, uint32_t *size)
 			ICE_PKG_BUF_SIZE,
 			&buff_size, &tbl_id, &tbl_idx, NULL, cd);
 
-		if (res) {
-			free(buff);
+		if (res)
 			return res;
-		}
 
 		offset = covert_byte_to_hex(&buffer, buff, buff_size);
 		buffer += offset;
-
-		free(buff);
 
 		if (tbl_idx == 0xffff) {
 			tbl_idx = 0;

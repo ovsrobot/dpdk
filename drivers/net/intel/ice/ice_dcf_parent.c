@@ -321,7 +321,7 @@ ice_dcf_query_port_ets(struct ice_hw *parent_hw, struct ice_dcf_hw *real_hw)
 static int
 ice_dcf_init_parent_hw(struct ice_hw *hw)
 {
-	struct ice_aqc_get_phy_caps_data *pcaps;
+	struct ice_aqc_get_phy_caps_data pcaps = {0};
 	int status;
 
 	status = ice_aq_get_fw_ver(hw, NULL);
@@ -345,17 +345,9 @@ ice_dcf_init_parent_hw(struct ice_hw *hw)
 	if (status)
 		goto err_unroll_alloc;
 
-	pcaps = (struct ice_aqc_get_phy_caps_data *)
-		ice_malloc(hw, sizeof(*pcaps));
-	if (!pcaps) {
-		status = ICE_ERR_NO_MEMORY;
-		goto err_unroll_alloc;
-	}
-
 	/* Initialize port_info struct with PHY capabilities */
 	status = ice_aq_get_phy_caps(hw->port_info, false,
-				     ICE_AQC_REPORT_TOPO_CAP_MEDIA, pcaps, NULL);
-	ice_free(hw, pcaps);
+				     ICE_AQC_REPORT_TOPO_CAP_MEDIA, &pcaps, NULL);
 	if (status)
 		goto err_unroll_alloc;
 

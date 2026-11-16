@@ -723,8 +723,8 @@ static int ice_dcf_hierarchy_commit(struct rte_eth_dev *dev,
 {
 	struct ice_dcf_adapter *adapter = dev->data->dev_private;
 	struct ice_dcf_hw *hw = &adapter->real_hw;
-	struct virtchnl_dcf_bw_cfg_list *vf_bw = NULL;
-	struct virtchnl_dcf_bw_cfg_list *tc_bw = NULL;
+	RTE_DEFINE_FLEX(struct virtchnl_dcf_bw_cfg_list, vf_bw, cfg, ICE_MAX_TRAFFIC_CLASS - 1);
+	RTE_DEFINE_FLEX(struct virtchnl_dcf_bw_cfg_list, tc_bw, cfg, ICE_MAX_TRAFFIC_CLASS - 1);
 	struct virtchnl_dcf_bw_cfg_list *bw_cfg;
 	struct ice_dcf_tm_node_list *vsi_list = &hw->tm_conf.vsi_list;
 	struct rte_tm_shaper_params *profile;
@@ -745,19 +745,15 @@ static int ice_dcf_hierarchy_commit(struct rte_eth_dev *dev,
 	if (ret_val)
 		goto fail_clear;
 
+	if (hw->tm_conf.nb_tc_node > ICE_MAX_TRAFFIC_CLASS) {
+		PMD_DRV_LOG(ERR, "Too many TC nodes: %u", hw->tm_conf.nb_tc_node);
+		ret_val = ICE_ERR_PARAM;
+		goto fail_clear;
+	}
+
 	size = sizeof(struct virtchnl_dcf_bw_cfg_list) +
 		sizeof(struct virtchnl_dcf_bw_cfg) *
 		(hw->tm_conf.nb_tc_node - 1);
-	vf_bw = calloc(1, size);
-	if (!vf_bw) {
-		ret_val = ICE_ERR_NO_MEMORY;
-		goto fail_clear;
-	}
-	tc_bw = calloc(1, size);
-	if (!tc_bw) {
-		ret_val = ICE_ERR_NO_MEMORY;
-		goto fail_clear;
-	}
 
 	/* port bandwidth (Kbps) */
 	port_bw = hw->link_speed * 1000;
@@ -850,14 +846,9 @@ static int ice_dcf_hierarchy_commit(struct rte_eth_dev *dev,
 	ice_dcf_replace_qos_bw_cfg(hw, ICE_DCF_VFID, bw_cfg);
 
 	hw->tm_conf.committed = true;
-	free(vf_bw);
-	free(tc_bw);
 	return ret_val;
 
 fail_clear:
-	free(vf_bw);
-	free(tc_bw);
-
 	/* clear all the traffic manager configuration */
 	if (clear_on_fail) {
 		ice_dcf_tm_conf_uninit(dev);

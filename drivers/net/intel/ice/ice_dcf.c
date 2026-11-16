@@ -1275,17 +1275,18 @@ ice_dcf_configure_queues(struct ice_dcf_hw *hw)
 int
 ice_dcf_config_irq_map(struct ice_dcf_hw *hw)
 {
-	struct virtchnl_irq_map_info *map_info;
+	RTE_DEFINE_FLEX(struct virtchnl_irq_map_info, map_info, vecmap, RTE_DIM(hw->rxq_map));
 	struct virtchnl_vector_map *vecmap;
 	struct dcf_virtchnl_cmd args;
 	int len, i, err;
 
+	if (hw->nb_msix > RTE_DIM(hw->rxq_map)) {
+		PMD_DRV_LOG(ERR, "Too many interrupt vectors: %u", hw->nb_msix);
+		return -EINVAL;
+	}
+
 	len = sizeof(struct virtchnl_irq_map_info) +
 	      sizeof(struct virtchnl_vector_map) * hw->nb_msix;
-
-	map_info = rte_zmalloc("map_info", len, 0);
-	if (!map_info)
-		return -ENOMEM;
 
 	map_info->num_vectors = hw->nb_msix;
 	for (i = 0; i < hw->nb_msix; i++) {
@@ -1306,7 +1307,6 @@ ice_dcf_config_irq_map(struct ice_dcf_hw *hw)
 	if (err)
 		PMD_DRV_LOG(ERR, "fail to execute command OP_CONFIG_IRQ_MAP");
 
-	rte_free(map_info);
 	return err;
 }
 
@@ -1402,7 +1402,7 @@ ice_dcf_add_del_all_mac_addr(struct ice_dcf_hw *hw,
 			     struct rte_ether_addr *addr,
 			     bool add, uint8_t type)
 {
-	struct virtchnl_ether_addr_list *list;
+	RTE_DEFINE_FLEX(struct virtchnl_ether_addr_list, list, list, 1);
 	struct dcf_virtchnl_cmd args;
 	int len, err = 0;
 
@@ -1416,12 +1416,6 @@ ice_dcf_add_del_all_mac_addr(struct ice_dcf_hw *hw,
 
 	len = sizeof(struct virtchnl_ether_addr_list);
 	len += sizeof(struct virtchnl_ether_addr);
-
-	list = rte_zmalloc(NULL, len, 0);
-	if (!list) {
-		PMD_DRV_LOG(ERR, "fail to allocate memory");
-		return -ENOMEM;
-	}
 
 	memcpy(list->list[0].addr, addr->addr_bytes,
 			sizeof(addr->addr_bytes));
@@ -1442,6 +1436,5 @@ ice_dcf_add_del_all_mac_addr(struct ice_dcf_hw *hw,
 		PMD_DRV_LOG(ERR, "fail to execute command %s",
 			    add ? "OP_ADD_ETHER_ADDRESS" :
 			    "OP_DEL_ETHER_ADDRESS");
-	rte_free(list);
 	return err;
 }
