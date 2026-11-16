@@ -463,6 +463,8 @@ void igb_pf_mbx_process(struct rte_eth_dev *eth_dev);
 
 int igb_pf_host_configure(struct rte_eth_dev *eth_dev);
 
+void igb_pf_restore_mta(struct rte_eth_dev *dev);
+
 void igb_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	struct rte_eth_rxq_info *qinfo);
 

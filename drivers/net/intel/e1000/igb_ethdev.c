@@ -4810,6 +4810,9 @@ eth_igb_set_mc_addr_list(struct rte_eth_dev *dev,
 
 	hw = E1000_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	e1000_update_mc_addr_list(hw, (u8 *)mc_addr_set, nb_mc_addr);
+	/* the base code rewrote the MTA from the PF list only: add the VF hashes back */
+	if (RTE_ETH_DEV_SRIOV(dev).active)
+		igb_pf_restore_mta(dev);
 	return 0;
 }
 

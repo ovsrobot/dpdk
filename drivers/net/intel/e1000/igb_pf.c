@@ -229,6 +229,34 @@ set_rx_mode(struct rte_eth_dev *dev)
 	E1000_WRITE_REG(hw, E1000_RCTL, fctrl);
 }
 
+/* MTA is shared by the PF and all VFs: rebuild it from the PF list and each VF list */
+void
+igb_pf_restore_mta(struct rte_eth_dev *dev)
+{
+	struct e1000_hw *hw = E1000_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct e1000_vf_info *vfinfo =
+		*(E1000_DEV_PRIVATE_TO_P_VFDATA(dev->data->dev_private));
+	uint32_t mta[MAX_MTA_REG];
+	uint32_t vector_bit;
+	uint32_t vector_reg;
+	uint16_t vf;
+	int i;
+
+	memcpy(mta, hw->mac.mta_shadow, sizeof(mta));
+
+	for (vf = 0; vf < dev_num_vf(dev); vf++) {
+		for (i = 0; i < vfinfo[vf].num_vf_mc_hashes; i++) {
+			vector_reg = (vfinfo[vf].vf_mc_hashes[i] >> 5) & 0x7F;
+			vector_bit = vfinfo[vf].vf_mc_hashes[i] & 0x1F;
+			mta[vector_reg] |= (1U << vector_bit);
+		}
+	}
+
+	for (i = hw->mac.mta_reg_count - 1; i >= 0; i--)
+		E1000_WRITE_REG_ARRAY(hw, E1000_MTA, i, mta[i]);
+	E1000_WRITE_FLUSH(hw);
+}
+
 static inline void
 igb_vf_reset_event(struct rte_eth_dev *dev, uint16_t vf)
 {
@@ -246,6 +274,7 @@ igb_vf_reset_event(struct rte_eth_dev *dev, uint16_t vf)
 
 	/* reset multicast table array for vf */
 	vfinfo[vf].num_vf_mc_hashes = 0;
+	igb_pf_restore_mta(dev);
 
 	/* reset rx mode */
 	set_rx_mode(dev);
@@ -319,16 +348,12 @@ igb_vf_set_mac_addr(struct rte_eth_dev *dev, uint32_t vf, uint32_t *msgbuf)
 }
 
 static int
-igb_vf_set_multicast(struct rte_eth_dev *dev, __rte_unused uint32_t vf, uint32_t *msgbuf)
+igb_vf_set_multicast(struct rte_eth_dev *dev, uint32_t vf, uint32_t *msgbuf)
 {
 	int i;
-	uint32_t vector_bit;
-	uint32_t vector_reg;
-	uint32_t mta_reg;
 	int entries = (msgbuf[0] & E1000_VT_MSGINFO_MASK) >>
 		E1000_VT_MSGINFO_SHIFT;
 	uint16_t *hash_list = (uint16_t *)&msgbuf[1];
-	struct e1000_hw *hw = E1000_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct e1000_vf_info *vfinfo =
 		*(E1000_DEV_PRIVATE_TO_P_VFDATA(dev->data->dev_private));
 
@@ -340,23 +365,18 @@ igb_vf_set_multicast(struct rte_eth_dev *dev, __rte_unused uint32_t vf, uint32_t
 	 * to this VF for later use to restore when the PF multi cast
 	 * list changes
 	 */
-	vfinfo->num_vf_mc_hashes = (uint16_t)entries;
+	vfinfo[vf].num_vf_mc_hashes = (uint16_t)entries;
 
 	/*
 	 * VFs are limited to using the MTA hash table for their multicast
 	 * addresses
 	 */
 	for (i = 0; i < entries; i++) {
-		vfinfo->vf_mc_hashes[i] = hash_list[i];
+		vfinfo[vf].vf_mc_hashes[i] = hash_list[i];
 	}
 
-	for (i = 0; i < vfinfo->num_vf_mc_hashes; i++) {
-		vector_reg = (vfinfo->vf_mc_hashes[i] >> 5) & 0x7F;
-		vector_bit = vfinfo->vf_mc_hashes[i] & 0x1F;
-		mta_reg = E1000_READ_REG_ARRAY(hw, E1000_MTA, vector_reg);
-		mta_reg |= (1 << vector_bit);
-		E1000_WRITE_REG_ARRAY(hw, E1000_MTA, vector_reg, mta_reg);
-	}
+	/* the message carries the full list: replace what this VF had */
+	igb_pf_restore_mta(dev);
 
 	return 0;
 }
