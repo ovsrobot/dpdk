@@ -833,8 +833,9 @@ static int iavf_hierarchy_commit(struct rte_eth_dev *dev,
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
-	struct virtchnl_queue_tc_mapping *q_tc_mapping = NULL;
-	struct virtchnl_queues_bw_cfg *q_bw = NULL;
+	RTE_DEFINE_FLEX(struct virtchnl_queue_tc_mapping, q_tc_mapping, tc,
+			IAVF_MAX_TRAFFIC_CLASS - 1);
+	RTE_DEFINE_FLEX(struct virtchnl_queues_bw_cfg, q_bw, cfg, IAVF_MAX_NUM_QUEUES_LV - 1);
 	struct iavf_tm_node_list *queue_list = &vf->tm_conf.queue_list;
 	struct iavf_tm_node *tm_node;
 	struct iavf_qtc_map *qtc_map = NULL;
@@ -869,21 +870,18 @@ static int iavf_hierarchy_commit(struct rte_eth_dev *dev,
 		goto fail_clear;
 	}
 
-	size = sizeof(*q_tc_mapping) + sizeof(q_tc_mapping->tc[0]) *
-		(vf->qos_cap->num_elem - 1);
-	q_tc_mapping = calloc(1, size);
-	if (!q_tc_mapping) {
-		ret_val = IAVF_ERR_NO_MEMORY;
+	if (vf->qos_cap->num_elem > IAVF_MAX_TRAFFIC_CLASS ||
+			vf->num_queue_pairs > IAVF_MAX_NUM_QUEUES_LV) {
+		PMD_DRV_LOG(ERR, "Too many TCs (%u) or queues (%u) for TM configuration",
+			vf->qos_cap->num_elem, vf->num_queue_pairs);
+		ret_val = IAVF_ERR_PARAM;
 		goto fail_clear;
 	}
 
+	size = sizeof(*q_tc_mapping) + sizeof(q_tc_mapping->tc[0]) *
+		(vf->qos_cap->num_elem - 1);
 	size_q = sizeof(*q_bw) + sizeof(q_bw->cfg[0]) *
 		(vf->num_queue_pairs - 1);
-	q_bw = calloc(1, size_q);
-	if (!q_bw) {
-		ret_val = IAVF_ERR_NO_MEMORY;
-		goto fail_clear;
-	}
 
 	q_tc_mapping->vsi_id = vf->vsi.vsi_id;
 	q_tc_mapping->num_tc = vf->qos_cap->num_elem;
@@ -950,8 +948,6 @@ static int iavf_hierarchy_commit(struct rte_eth_dev *dev,
 	free(old_qtc_map);
 	if (adapter->stopped == 1)
 		vf->tm_conf.committed = true;
-	free(q_bw);
-	free(q_tc_mapping);
 	return ret_val;
 
 fail_clear:
@@ -961,8 +957,6 @@ fail_clear:
 		iavf_tm_conf_init(dev);
 	}
 err:
-	free(q_bw);
-	free(q_tc_mapping);
 	free(qtc_map);
 	return ret_val;
 }

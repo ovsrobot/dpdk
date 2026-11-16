@@ -460,28 +460,14 @@ static uint32_t
 iavf_ipsec_crypto_security_association_add(struct iavf_adapter *adapter,
 	struct rte_security_session_conf *conf)
 {
-	struct inline_ipsec_msg *request = NULL, *response = NULL;
-	struct virtchnl_ipsec_sa_cfg *sa_cfg;
-	size_t request_len, response_len;
-
-	int rc;
-
-	request_len = sizeof(struct inline_ipsec_msg) +
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, request, ipsec_data.sa_cfg, 1);
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, response, ipsec_data.sa_cfg_resp, 1);
+	const size_t request_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_sa_cfg);
-
-	request = calloc(1, request_len);
-	if (request == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
-	response_len = sizeof(struct inline_ipsec_msg) +
+	const size_t response_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_sa_cfg_resp);
-	response = calloc(1, response_len);
-	if (response == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
+	struct virtchnl_ipsec_sa_cfg *sa_cfg;
+	int rc;
 
 	/* set msg header params */
 	request->ipsec_opcode = INLINE_IPSEC_OP_SA_CREATE;
@@ -546,19 +532,14 @@ iavf_ipsec_crypto_security_association_add(struct iavf_adapter *adapter,
 			(uint8_t *)request, request_len,
 			(uint8_t *)response, response_len);
 	if (rc)
-		goto update_cleanup;
+		return rc;
 
 	/* verify response id */
 	if (response->ipsec_opcode != request->ipsec_opcode ||
 		response->req_id != request->req_id)
-		rc = -EFAULT;
-	else
-		rc = response->ipsec_data.sa_cfg_resp->sa_handle;
-update_cleanup:
-	free(response);
-	free(request);
+		return -EFAULT;
 
-	return rc;
+	return response->ipsec_data.sa_cfg_resp->sa_handle;
 }
 
 static void
@@ -722,17 +703,13 @@ iavf_ipsec_crypto_inbound_security_policy_add(struct iavf_adapter *adapter,
 	bool is_udp,
 	uint16_t udp_port)
 {
-	struct inline_ipsec_msg *request = NULL, *response = NULL;
-	size_t request_len, response_len;
-	int rc = 0;
-
-	request_len = sizeof(struct inline_ipsec_msg) +
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, request, ipsec_data.sp_cfg, 1);
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, response, ipsec_data.sp_cfg_resp, 1);
+	const size_t request_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_sp_cfg);
-	request = calloc(1, request_len);
-	if (request == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
+	const size_t response_len = sizeof(struct inline_ipsec_msg) +
+			sizeof(struct virtchnl_ipsec_sp_cfg_resp);
+	int rc = 0;
 
 	/* set msg header params */
 	request->ipsec_opcode = INLINE_IPSEC_OP_SP_CREATE;
@@ -767,58 +744,32 @@ iavf_ipsec_crypto_inbound_security_policy_add(struct iavf_adapter *adapter,
 	request->ipsec_data.sp_cfg->is_udp = is_udp;
 	request->ipsec_data.sp_cfg->udp_port = htons(udp_port);
 
-	response_len = sizeof(struct inline_ipsec_msg) +
-			sizeof(struct virtchnl_ipsec_sp_cfg_resp);
-	response = calloc(1, response_len);
-	if (response == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
 	/* send virtual channel request to add SA to hardware database */
 	rc = iavf_ipsec_crypto_request(adapter,
 			(uint8_t *)request, request_len,
 			(uint8_t *)response, response_len);
 	if (rc)
-		goto update_cleanup;
+		return rc;
 
 	/* verify response */
 	if (response->ipsec_opcode != request->ipsec_opcode ||
 		response->req_id != request->req_id)
-		rc = -EFAULT;
-	else
-		rc = response->ipsec_data.sp_cfg_resp->rule_id;
+		return -EFAULT;
 
-update_cleanup:
-	free(request);
-	free(response);
-
-	return rc;
+	return response->ipsec_data.sp_cfg_resp->rule_id;
 }
 
 static uint32_t
 iavf_ipsec_crypto_sa_update_esn(struct iavf_adapter *adapter,
 	struct iavf_security_session *sess)
 {
-	struct inline_ipsec_msg *request = NULL, *response = NULL;
-	size_t request_len, response_len;
-	int rc = 0;
-
-	request_len = sizeof(struct inline_ipsec_msg) +
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, request, ipsec_data.sa_update, 1);
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, response, ipsec_data.ipsec_resp, 1);
+	const size_t request_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_sa_update);
-	request = calloc(1, request_len);
-	if (request == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
-	response_len = sizeof(struct inline_ipsec_msg) +
+	const size_t response_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_resp);
-	response = calloc(1, response_len);
-	if (response == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
+	int rc = 0;
 
 	/* set msg header params */
 	request->ipsec_opcode = INLINE_IPSEC_OP_SA_UPDATE;
@@ -834,20 +785,14 @@ iavf_ipsec_crypto_sa_update_esn(struct iavf_adapter *adapter,
 			(uint8_t *)request, request_len,
 			(uint8_t *)response, response_len);
 	if (rc)
-		goto update_cleanup;
+		return rc;
 
 	/* verify response */
 	if (response->ipsec_opcode != request->ipsec_opcode ||
 		response->req_id != request->req_id)
-		rc = -EFAULT;
-	else
-		rc = response->ipsec_data.ipsec_resp->resp;
+		return -EFAULT;
 
-update_cleanup:
-	free(request);
-	free(response);
-
-	return rc;
+	return response->ipsec_data.ipsec_resp->resp;
 }
 
 static int
@@ -897,25 +842,13 @@ int
 iavf_ipsec_crypto_security_policy_delete(struct iavf_adapter *adapter,
 	uint8_t is_v4, uint32_t flow_id)
 {
-	struct inline_ipsec_msg *request = NULL, *response = NULL;
-	size_t request_len, response_len;
-	int rc = 0;
-
-	request_len = sizeof(struct inline_ipsec_msg) +
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, request, ipsec_data.sp_destroy, 1);
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, response, ipsec_data.ipsec_resp, 1);
+	const size_t request_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_sp_destroy);
-	request = calloc(1, request_len);
-	if (request == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
-	response_len = sizeof(struct inline_ipsec_msg) +
+	const size_t response_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_resp);
-	response = calloc(1, response_len);
-	if (response == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
+	int rc = 0;
 
 	/* set msg header params */
 	request->ipsec_opcode = INLINE_IPSEC_OP_SP_DESTROY;
@@ -932,48 +865,27 @@ iavf_ipsec_crypto_security_policy_delete(struct iavf_adapter *adapter,
 			(uint8_t *)request, request_len,
 			(uint8_t *)response, response_len);
 	if (rc)
-		goto update_cleanup;
+		return rc;
 
 	/* verify response */
 	if (response->ipsec_opcode != request->ipsec_opcode ||
 		response->req_id != request->req_id)
-		rc = -EFAULT;
-	else
-		rc = response->ipsec_data.ipsec_status->status;
+		return -EFAULT;
 
-update_cleanup:
-	free(request);
-	free(response);
-
-	return rc;
+	return response->ipsec_data.ipsec_status->status;
 }
 
 static uint32_t
 iavf_ipsec_crypto_sa_del(struct iavf_adapter *adapter,
 	struct iavf_security_session *sess)
 {
-	struct inline_ipsec_msg *request = NULL, *response = NULL;
-	size_t request_len, response_len;
-
-	int rc = 0;
-
-	request_len = sizeof(struct inline_ipsec_msg) +
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, request, ipsec_data.sa_destroy, 1);
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, response, ipsec_data.ipsec_resp, 1);
+	const size_t request_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_sa_destroy);
-
-	request = calloc(1, request_len);
-	if (request == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
-	response_len = sizeof(struct inline_ipsec_msg) +
+	const size_t response_len = sizeof(struct inline_ipsec_msg) +
 			sizeof(struct virtchnl_ipsec_resp);
-
-	response = calloc(1, response_len);
-	if (response == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
+	int rc = 0;
 
 	/* set msg header params */
 	request->ipsec_opcode = INLINE_IPSEC_OP_SA_DESTROY;
@@ -995,12 +907,12 @@ iavf_ipsec_crypto_sa_del(struct iavf_adapter *adapter,
 			(uint8_t *)request, request_len,
 			(uint8_t *)response, response_len);
 	if (rc)
-		goto update_cleanup;
+		return rc;
 
 	/* verify response */
 	if (response->ipsec_opcode != request->ipsec_opcode ||
 		response->req_id != request->req_id)
-		rc = -EFAULT;
+		return -EFAULT;
 
 	/**
 	 * Delete status will be the same bitmask as sa_destroy request flag if
@@ -1008,13 +920,9 @@ iavf_ipsec_crypto_sa_del(struct iavf_adapter *adapter,
 	 */
 	if (request->ipsec_data.sa_destroy->flag !=
 			response->ipsec_data.ipsec_status->status)
-		rc = -EFAULT;
+		return -EFAULT;
 
-update_cleanup:
-	free(response);
-	free(request);
-
-	return rc;
+	return 0;
 }
 
 static int
@@ -1160,50 +1068,30 @@ iavf_ipsec_crypto_device_capabilities_get(struct iavf_adapter *adapter,
 		struct virtchnl_ipsec_cap *capability)
 {
 	/* Perform pf-vf comms */
-	struct inline_ipsec_msg *request = NULL, *response = NULL;
-	size_t request_len, response_len;
+	struct inline_ipsec_msg request = {0};
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, response, ipsec_data.ipsec_cap, 1);
+	const size_t response_len = sizeof(struct inline_ipsec_msg) +
+			sizeof(struct virtchnl_ipsec_cap);
 	int rc;
 
-	request_len = sizeof(struct inline_ipsec_msg);
-
-	request = calloc(1, request_len);
-	if (request == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
-	response_len = sizeof(struct inline_ipsec_msg) +
-			sizeof(struct virtchnl_ipsec_cap);
-	response = calloc(1, response_len);
-	if (response == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
 	/* set msg header params */
-	request->ipsec_opcode = INLINE_IPSEC_OP_GET_CAP;
-	request->req_id = (uint16_t)0xDEADBEEF;
+	request.ipsec_opcode = INLINE_IPSEC_OP_GET_CAP;
+	request.req_id = (uint16_t)0xDEADBEEF;
 
 	/* send virtual channel request to add SA to hardware database */
 	rc = iavf_ipsec_crypto_request(adapter,
-			(uint8_t *)request, request_len,
+			(uint8_t *)&request, sizeof(request),
 			(uint8_t *)response, response_len);
 	if (rc)
-		goto update_cleanup;
+		return rc;
 
 	/* verify response id */
-	if (response->ipsec_opcode != request->ipsec_opcode ||
-		response->req_id != request->req_id){
-		rc = -EFAULT;
-		goto update_cleanup;
-	}
+	if (response->ipsec_opcode != request.ipsec_opcode ||
+		response->req_id != request.req_id)
+		return -EFAULT;
+
 	memcpy(capability, response->ipsec_data.ipsec_cap, sizeof(*capability));
-
-update_cleanup:
-	free(response);
-	free(request);
-
-	return rc;
+	return 0;
 }
 
 enum rte_crypto_auth_algorithm auth_maptbl[] = {
@@ -1588,50 +1476,30 @@ iavf_ipsec_crypto_status_get(struct iavf_adapter *adapter,
 		struct virtchnl_ipsec_status *status)
 {
 	/* Perform pf-vf comms */
-	struct inline_ipsec_msg *request = NULL, *response = NULL;
-	size_t request_len, response_len;
+	struct inline_ipsec_msg request = {0};
+	RTE_DEFINE_FLEX(struct inline_ipsec_msg, response, ipsec_data.ipsec_status, 1);
+	const size_t response_len = sizeof(struct inline_ipsec_msg) +
+			sizeof(struct virtchnl_ipsec_status);
 	int rc;
 
-	request_len = sizeof(struct inline_ipsec_msg);
-
-	request = calloc(1, request_len);
-	if (request == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
-	response_len = sizeof(struct inline_ipsec_msg) +
-			sizeof(struct virtchnl_ipsec_status);
-	response = calloc(1, response_len);
-	if (response == NULL) {
-		rc = -ENOMEM;
-		goto update_cleanup;
-	}
-
 	/* set msg header params */
-	request->ipsec_opcode = INLINE_IPSEC_OP_GET_STATUS;
-	request->req_id = (uint16_t)0xDEADBEEF;
+	request.ipsec_opcode = INLINE_IPSEC_OP_GET_STATUS;
+	request.req_id = (uint16_t)0xDEADBEEF;
 
 	/* send virtual channel request to add SA to hardware database */
 	rc = iavf_ipsec_crypto_request(adapter,
-			(uint8_t *)request, request_len,
+			(uint8_t *)&request, sizeof(request),
 			(uint8_t *)response, response_len);
 	if (rc)
-		goto update_cleanup;
+		return rc;
 
 	/* verify response id */
-	if (response->ipsec_opcode != request->ipsec_opcode ||
-		response->req_id != request->req_id){
-		rc = -EFAULT;
-		goto update_cleanup;
-	}
+	if (response->ipsec_opcode != request.ipsec_opcode ||
+		response->req_id != request.req_id)
+		return -EFAULT;
+
 	memcpy(status, response->ipsec_data.ipsec_status, sizeof(*status));
-
-update_cleanup:
-	free(response);
-	free(request);
-
-	return rc;
+	return 0;
 }
 
 
