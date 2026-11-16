@@ -796,6 +796,59 @@ test_fls(void)
 	return 0;
 }
 
+struct flex_test_elem {
+	uint64_t a;
+	uint16_t b;
+};
+
+struct flex_test_hdr {
+	uint16_t num;
+	struct flex_test_elem elems[];
+};
+
+struct flex_test_hdr_one {
+	uint8_t num;
+	struct {
+		uint8_t len;
+		struct flex_test_elem elems[1];
+	} list;
+};
+
+static int
+test_define_flex(void)
+{
+	RTE_DEFINE_FLEX(struct flex_test_hdr, hdr, elems, 4);
+	RTE_DEFINE_FLEX(struct flex_test_hdr_one, hdr_one, list.elems, 3);
+	RTE_DEFINE_FLEX_BYTES(struct flex_test_hdr, hdr_bytes, 100);
+
+	RTE_TEST_ASSERT(sizeof(hdr_u) >= sizeof(*hdr) + 4 * sizeof(hdr->elems[0]),
+		"RTE_DEFINE_FLEX size, flexible array");
+	RTE_TEST_ASSERT(sizeof(hdr_one_u) >= sizeof(*hdr_one) + 3 * sizeof(hdr_one->list.elems[0]),
+		"RTE_DEFINE_FLEX size, nested one-element array");
+	RTE_TEST_ASSERT(sizeof(hdr_bytes_u) >= 100, "RTE_DEFINE_FLEX_BYTES size");
+
+	RTE_TEST_ASSERT((uintptr_t)hdr % alignof(struct flex_test_hdr) == 0,
+		"RTE_DEFINE_FLEX alignment");
+	RTE_TEST_ASSERT((uintptr_t)hdr_one % alignof(struct flex_test_hdr_one) == 0,
+		"RTE_DEFINE_FLEX alignment, nested array");
+	RTE_TEST_ASSERT((uintptr_t)hdr_bytes % alignof(struct flex_test_hdr) == 0,
+		"RTE_DEFINE_FLEX_BYTES alignment");
+
+	for (size_t i = 0; i < sizeof(hdr_u.raw); i++)
+		RTE_TEST_ASSERT(hdr_u.raw[i] == 0, "RTE_DEFINE_FLEX not zeroed");
+	for (size_t i = 0; i < sizeof(hdr_one_u.raw); i++)
+		RTE_TEST_ASSERT(hdr_one_u.raw[i] == 0, "RTE_DEFINE_FLEX not zeroed, nested array");
+	for (size_t i = 0; i < sizeof(hdr_bytes_u.raw); i++)
+		RTE_TEST_ASSERT(hdr_bytes_u.raw[i] == 0, "RTE_DEFINE_FLEX_BYTES not zeroed");
+
+	hdr->num = 4;
+	for (uint16_t i = 0; i < hdr->num; i++)
+		hdr->elems[i].b = i;
+	RTE_TEST_ASSERT_EQUAL(hdr->elems[3].b, 3, "RTE_DEFINE_FLEX element access");
+
+	return 0;
+}
+
 static struct unit_test_suite common_test_suite = {
 	.suite_name = "common autotest",
 	.setup = NULL,
@@ -805,6 +858,7 @@ static struct unit_test_suite common_test_suite = {
 		TEST_CASE(test_ptr_align_edge_cases),
 		TEST_CASE(test_align),
 		TEST_CASE(test_macros),
+		TEST_CASE(test_define_flex),
 		TEST_CASE(test_misc),
 		TEST_CASE(test_bsf),
 		TEST_CASE(test_log2),

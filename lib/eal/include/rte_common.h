@@ -1114,6 +1114,52 @@ __extension__ typedef uint64_t RTE_MARKER64[0];
  */
 #define RTE_SIZEOF_FIELD(type, field) (sizeof(((type *)0)->field))
 
+/**
+ * Define a zero-initialized, local buffer of a given size in bytes,
+ * accessed via a pointer to a structure type.
+ *
+ * This is intended for structures ending in a variable-length array,
+ * e.g. messages with a header followed by a list of elements,
+ * allowing them to be placed on the stack rather than dynamically allocated.
+ * The buffer is suitably aligned for the structure type.
+ *
+ * @param type
+ *   The type of the structure at the start of the buffer.
+ * @param name
+ *   The name of the pointer variable to define, of type "type * const".
+ * @param size
+ *   The size of the buffer in bytes, a compile-time constant
+ *   which must be no smaller than the size of the structure type.
+ */
+#define RTE_DEFINE_FLEX_BYTES(type, name, size) \
+	static_assert((size) >= sizeof(type), "buffer smaller than " RTE_STR(type)); \
+	union { \
+		uint8_t raw[size]; /* first member, so "{0}" zeroes the whole buffer */ \
+		type obj; \
+	} name ## _u = {0}; \
+	type * const name = &name ## _u.obj
+
+/**
+ * Define a zero-initialized, local buffer for a structure ending in an array,
+ * with space for a given number of array elements beyond the size of the structure.
+ *
+ * The buffer is sized as "sizeof(type) + count * sizeof(element)", so for structures
+ * whose array is declared with a single element, e.g. "elem[1]",
+ * "count" elements are available in addition to that one.
+ *
+ * @param type
+ *   The type of the structure.
+ * @param name
+ *   The name of the pointer variable to define, of type "type * const".
+ * @param member
+ *   The array member at the end of the structure.
+ * @param count
+ *   The number of extra array elements to allow for, a compile-time constant.
+ */
+#define RTE_DEFINE_FLEX(type, name, member, count) \
+	RTE_DEFINE_FLEX_BYTES(type, name, \
+		sizeof(type) + RTE_SIZEOF_FIELD(type, member[0]) * (count))
+
 #define _RTE_STR(x) #x
 /** Take a macro value and get a string version of it */
 #define RTE_STR(x) _RTE_STR(x)
