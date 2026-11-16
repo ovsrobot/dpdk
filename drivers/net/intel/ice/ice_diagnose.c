@@ -431,7 +431,7 @@ covert_byte_to_hex(uint8_t **outbuf, const uint8_t *inbuf, uint32_t inbuf_size)
 	uint32_t i;
 	uint8_t *buffer = *outbuf;
 	for (i = 0; i < inbuf_size; ++i)
-		sprintf((char *)(buffer + i * 2), "%02X", inbuf[i]);
+		snprintf((char *)(buffer + i * 2), 3, "%02X", inbuf[i]);
 
 	return inbuf_size * 2;
 }
