@@ -345,6 +345,7 @@ xsc_dev_uninit(struct xsc_dev *xdev)
 	PMD_INIT_FUNC_TRACE();
 	xsc_dev_pct_uninit(xdev);
 	xsc_dev_close(xdev, XSC_DEV_REPR_ID_INVALID);
+	rte_free(xdev->jumbo_buffer_pa);
 	rte_free(xdev);
 }
 
