@@ -13,23 +13,21 @@ int
 cpfl_send_ctlq_msg(struct idpf_hw *hw, struct idpf_ctlq_info *cq, u16 num_q_msg,
 		   struct idpf_ctlq_msg q_msg[])
 {
-	struct idpf_ctlq_msg **msg_ptr_list;
+	struct idpf_ctlq_msg *msg_ptr_list[CPFL_FLOW_BATCH_SIZE] = {0};
 	u16 clean_count = 0;
 	int num_cleaned = 0;
 	int retries = 0;
 	int ret = 0;
 
-	msg_ptr_list = calloc(num_q_msg, sizeof(struct idpf_ctlq_msg *));
-	if (!msg_ptr_list) {
-		PMD_INIT_LOG(ERR, "no memory for cleaning ctlq");
-		ret = -ENOMEM;
-		goto err;
+	if (num_q_msg > RTE_DIM(msg_ptr_list)) {
+		PMD_INIT_LOG(ERR, "too many messages for ctlq: %u", num_q_msg);
+		return -EINVAL;
 	}
 
 	ret = cpfl_vport_ctlq_send(hw, cq, num_q_msg, q_msg);
 	if (ret) {
 		PMD_INIT_LOG(ERR, "cpfl_vport_ctlq_send() failed with error: 0x%4x", ret);
-		goto send_err;
+		return ret;
 	}
 
 	while (retries <= CTLQ_SEND_RETRIES) {
@@ -38,7 +36,7 @@ cpfl_send_ctlq_msg(struct idpf_hw *hw, struct idpf_ctlq_info *cq, u16 num_q_msg,
 					       &msg_ptr_list[num_cleaned]);
 		if (ret) {
 			PMD_INIT_LOG(ERR, "clean ctlq failed: 0x%4x", ret);
-			goto send_err;
+			return ret;
 		}
 
 		num_cleaned += clean_count;
@@ -50,13 +48,9 @@ cpfl_send_ctlq_msg(struct idpf_hw *hw, struct idpf_ctlq_info *cq, u16 num_q_msg,
 
 	if (retries > CTLQ_SEND_RETRIES) {
 		PMD_INIT_LOG(ERR, "timed out while polling for completions");
-		ret = -1;
-		goto send_err;
+		return -1;
 	}
 
-send_err:
-	free(msg_ptr_list);
-err:
 	return ret;
 }
 

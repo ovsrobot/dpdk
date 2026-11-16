@@ -147,18 +147,16 @@ vcpf_add_queues(struct cpfl_adapter_ext *adapter)
 int
 vcpf_del_queues(struct cpfl_adapter_ext *adapter)
 {
-	struct virtchnl2_del_ena_dis_queues *del_cfgq;
+	RTE_DEFINE_FLEX(struct virtchnl2_del_ena_dis_queues, del_cfgq, chunks.chunks,
+			VCPF_CFGQ_NUM - 1);
 	u16 num_chunks;
 	struct idpf_cmd_info args;
-	int i, err, size;
+	int i, err;
 
 	num_chunks = adapter->cfgq_in.cfgq_add->chunks.num_chunks;
-	size = idpf_struct_size(del_cfgq, chunks.chunks, (num_chunks - 1));
-	del_cfgq = rte_zmalloc("del_cfgq", size, 0);
-	if (!del_cfgq) {
-		PMD_DRV_LOG(ERR, "Failed to allocate virtchnl2_del_ena_dis_queues");
-		err = -ENOMEM;
-		return err;
+	if (num_chunks > VCPF_CFGQ_NUM) {
+		PMD_DRV_LOG(ERR, "Too many config queue chunks: %u", num_chunks);
+		return -EINVAL;
 	}
 
 	del_cfgq->vport_id = rte_cpu_to_le_32(VCPF_CFGQ_VPORT_ID);
@@ -183,7 +181,6 @@ vcpf_del_queues(struct cpfl_adapter_ext *adapter)
 	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
 
 	err = idpf_vc_cmd_execute(&adapter->base, &args);
-	rte_free(del_cfgq);
 	if (err) {
 		PMD_DRV_LOG(ERR,
 			    "Failed to execute command VIRTCHNL2_OP_DEL_QUEUES");
@@ -210,7 +207,7 @@ int
 cpfl_config_ctlq_rx(struct cpfl_adapter_ext *adapter)
 {
 	struct cpfl_vport *vport = &adapter->ctrl_vport;
-	struct virtchnl2_config_rx_queues *vc_rxqs = NULL;
+	RTE_DEFINE_FLEX(struct virtchnl2_config_rx_queues, vc_rxqs, qinfo, CPFL_RX_CFGQ_NUM - 1);
 	struct virtchnl2_rxq_info *rxq_info;
 	struct idpf_cmd_info args;
 	uint16_t num_qs;
@@ -225,15 +222,13 @@ cpfl_config_ctlq_rx(struct cpfl_adapter_ext *adapter)
 	}
 
 	num_qs = adapter->num_rx_cfgq;
+	if (num_qs > CPFL_RX_CFGQ_NUM) {
+		PMD_DRV_LOG(ERR, "Too many Rx config queues: %u", num_qs);
+		return -EINVAL;
+	}
 
 	size = sizeof(*vc_rxqs) + (num_qs - 1) *
 		sizeof(struct virtchnl2_rxq_info);
-	vc_rxqs = rte_zmalloc("cfg_rxqs", size, 0);
-	if (!vc_rxqs) {
-		PMD_DRV_LOG(ERR, "Failed to allocate virtchnl2_config_rx_queues");
-		err = -ENOMEM;
-		return err;
-	}
 
 	if (idpf_is_vf_device(&adapter->base.hw))
 		vc_rxqs->vport_id = rte_cpu_to_le_32(VCPF_CFGQ_VPORT_ID);
@@ -264,7 +259,6 @@ cpfl_config_ctlq_rx(struct cpfl_adapter_ext *adapter)
 	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
 
 	err = idpf_vc_cmd_execute(&adapter->base, &args);
-	rte_free(vc_rxqs);
 	if (err)
 		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_CONFIG_RX_QUEUES");
 
@@ -275,7 +269,7 @@ int
 cpfl_config_ctlq_tx(struct cpfl_adapter_ext *adapter)
 {
 	struct cpfl_vport *vport = &adapter->ctrl_vport;
-	struct virtchnl2_config_tx_queues *vc_txqs = NULL;
+	RTE_DEFINE_FLEX(struct virtchnl2_config_tx_queues, vc_txqs, qinfo, CPFL_TX_CFGQ_NUM - 1);
 	struct virtchnl2_txq_info *txq_info;
 	struct idpf_cmd_info args;
 	uint16_t num_qs;
@@ -290,15 +284,13 @@ cpfl_config_ctlq_tx(struct cpfl_adapter_ext *adapter)
 	}
 
 	num_qs = adapter->num_tx_cfgq;
+	if (num_qs > CPFL_TX_CFGQ_NUM) {
+		PMD_DRV_LOG(ERR, "Too many Tx config queues: %u", num_qs);
+		return -EINVAL;
+	}
 
 	size = sizeof(*vc_txqs) + (num_qs - 1) *
 		sizeof(struct virtchnl2_txq_info);
-	vc_txqs = rte_zmalloc("cfg_txqs", size, 0);
-	if (!vc_txqs) {
-		PMD_DRV_LOG(ERR, "Failed to allocate virtchnl2_config_tx_queues");
-		err = -ENOMEM;
-		return err;
-	}
 
 	if (idpf_is_vf_device(&adapter->base.hw))
 		vc_txqs->vport_id = rte_cpu_to_le_32(VCPF_CFGQ_VPORT_ID);
@@ -325,7 +317,6 @@ cpfl_config_ctlq_tx(struct cpfl_adapter_ext *adapter)
 	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
 
 	err = idpf_vc_cmd_execute(&adapter->base, &args);
-	rte_free(vc_txqs);
 	if (err)
 		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_CONFIG_TX_QUEUES");
 

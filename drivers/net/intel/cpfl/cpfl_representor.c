@@ -558,13 +558,10 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 	uint32_t iter = 0;
 	const struct cpfl_repr_id *repr_id;
 	const struct cpfl_vport_id *vp_id;
-	struct cpchnl2_get_vport_list_response *vlist_resp;
+	RTE_DEFINE_FLEX_BYTES(struct cpchnl2_get_vport_list_response, vlist_resp,
+			IDPF_DFLT_MBX_BUF_SIZE);
 	struct cpchnl2_get_vport_info_response vinfo_resp;
 	int ret;
-
-	vlist_resp = rte_zmalloc(NULL, IDPF_DFLT_MBX_BUF_SIZE, 0);
-	if (vlist_resp == NULL)
-		return -ENOMEM;
 
 	rte_spinlock_lock(&adapter->repr_lock);
 
@@ -602,6 +599,13 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 		if (vlist_resp->nof_vports == 0) {
 			PMD_INIT_LOG(WARNING, "No matched vport for representor %s", name);
 			continue;
+		}
+		if (vlist_resp->nof_vports > (IDPF_DFLT_MBX_BUF_SIZE - sizeof(*vlist_resp)) /
+				sizeof(vlist_resp->vports[0])) {
+			PMD_INIT_LOG(ERR, "Invalid vport count %u for representor %s",
+				     vlist_resp->nof_vports, name);
+			ret = -EINVAL;
+			goto err;
 		}
 
 		/* get all vport info for the port representor */
@@ -657,6 +661,5 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 
 err:
 	rte_spinlock_unlock(&adapter->repr_lock);
-	rte_free(vlist_resp);
 	return ret;
 }
