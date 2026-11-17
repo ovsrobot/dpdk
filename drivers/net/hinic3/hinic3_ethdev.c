@@ -1505,6 +1505,9 @@ hinic3_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 	struct hinic3_nic_dev *nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
 	uint16_t msix_intr;
 
+	if (HINIC3_IS_SP230_NIC(nic_dev) && !dev->data->dev_conf.intr_conf.rxq)
+		return 0;
+
 	if (!rte_intr_dp_is_en(intr_handle) || !intr_handle->intr_vec)
 		return 0;
 
@@ -1767,11 +1770,8 @@ hinic3_init_rxq_msix_attr(void *hwdev, uint16_t msix_index)
 	info.resend_timer_cfg = HINIC3_TXRX_MSIX_RESEND_TIMER_CFG;
 	info.msix_index = msix_index;
 	err = hinic3_set_interrupt_cfg(hwdev, info);
-	if (err) {
-		PMD_DRV_LOG(ERR, "Set msix attr failed, msix_index %d",
-			    msix_index);
+	if (err)
 		return -EFAULT;
-	}
 
 	return 0;
 }
@@ -1800,6 +1800,10 @@ hinic3_deinit_rxq_intr(struct rte_eth_dev *dev)
  * - -ENOTSUP if MSI-X interrupts are not supported.
  * - Error code if enabling event file descriptors fails.
  * - -ENOMEM if allocating interrupt vectors fails.
+ *
+ * On SP230 with per-queue MSI-X vectors, when the application does not
+ * request Rx interrupts, the queue vector is named in each RQ context but
+ * never enabled, and no interrupt resources are allocated.
  */
 static int
 hinic3_init_rxq_intr(struct rte_eth_dev *dev)
@@ -1812,8 +1816,25 @@ hinic3_init_rxq_intr(struct rte_eth_dev *dev)
 
 	intr_handle = dev->intr_handle;
 	nic_dev = HINIC3_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
-	if (!dev->data->dev_conf.intr_conf.rxq)
+
+	if (!dev->data->dev_conf.intr_conf.rxq) {
+		/*
+		 * SP230 raises the Rx MSI-X vector even without Rx interrupts.
+		 * Name a valid vector in the RQ context; the vector is never
+		 * enabled, so no interrupt is reported.
+		 */
+		if (!HINIC3_IS_SP230_NIC(nic_dev) ||
+		    !rte_intr_cap_multiple(intr_handle))
+			return 0;
+
+		for (i = 0; i < dev->data->nb_rx_queues; i++) {
+			rxq = dev->data->rx_queues[i];
+			rxq->dp_intr_en = 1;
+			rxq->msix_entry_idx = (uint16_t)(i + HINIC3_RX_VEC_START);
+		}
+
 		return 0;
+	}
 
 	if (!rte_intr_cap_multiple(intr_handle)) {
 		PMD_DRV_LOG(ERR, "Rx queue interrupts require MSI-X interrupts (vfio-pci driver)");
@@ -1831,8 +1852,8 @@ hinic3_init_rxq_intr(struct rte_eth_dev *dev)
 	intr_handle->intr_vec =
 		rte_zmalloc("hinic_intr_vec", nb_rx_queues * sizeof(int), 0);
 	if (intr_handle->intr_vec == NULL) {
-		PMD_DRV_LOG(ERR, "Failed to allocate intr_vec");
 		rte_intr_efd_disable(intr_handle);
+		PMD_DRV_LOG(ERR, "Failed to allocate intr_vec");
 		return -ENOMEM;
 	}
 	intr_handle->vec_list_size = nb_rx_queues;
@@ -1847,6 +1868,9 @@ hinic3_init_rxq_intr(struct rte_eth_dev *dev)
 		err = hinic3_init_rxq_msix_attr(nic_dev->hwdev,
 						rxq->msix_entry_idx);
 		if (err) {
+			PMD_DRV_LOG(ERR,
+				    "Set msix attr failed, msix_index %d",
+				    rxq->msix_entry_idx);
 			hinic3_deinit_rxq_intr(dev);
 			return err;
 		}
