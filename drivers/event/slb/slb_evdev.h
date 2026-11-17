@@ -242,6 +242,8 @@ int slb_xstats_get(const struct rte_eventdev *dev,
 uint64_t slb_xstats_get_by_name(const struct rte_eventdev *dev,
 				const char *name, uint64_t *id);
 
+int test_slb_eventdev(void);
+
 static inline struct slb_evdev *
 slb_pmd_priv(const struct rte_eventdev *eventdev)
 {
@@ -250,6 +252,8 @@ slb_pmd_priv(const struct rte_eventdev *eventdev)
 
 extern int event_slb_logtype;
 #define RTE_LOGTYPE_EVENT_SLB event_slb_logtype
+#define SLB_LOG_LINE(level, ...) \
+	RTE_LOG_LINE(level, EVENT_SLB, __VA_ARGS__)
 #define SLB_LOG_DP_LINE(level, fmt, ...)				\
 	RTE_LOG_DP_LINE(level, EVENT_SLB, "%s() line %u: " fmt,		\
 		   __func__, __LINE__, ## __VA_ARGS__)

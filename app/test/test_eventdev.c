@@ -1527,12 +1527,19 @@ test_eventdev_selftest_cn20k(void)
 	return test_eventdev_selftest_impl("event_cn20k", "");
 }
 
+static int
+test_eventdev_selftest_slb(void)
+{
+	return test_eventdev_selftest_impl("event_slb", "");
+}
+
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
 REGISTER_FAST_TEST(eventdev_common_autotest, NOHUGE_OK, ASAN_OK, test_eventdev_common);
 
 #ifndef RTE_EXEC_ENV_WINDOWS
 REGISTER_FAST_TEST(eventdev_selftest_sw, NOHUGE_OK, ASAN_OK, test_eventdev_selftest_sw);
+REGISTER_FAST_TEST(eventdev_selftest_slb, NOHUGE_OK, ASAN_OK, test_eventdev_selftest_slb);
 REGISTER_DRIVER_TEST(eventdev_selftest_octeontx, test_eventdev_selftest_octeontx);
 REGISTER_DRIVER_TEST(eventdev_selftest_dpaa2, test_eventdev_selftest_dpaa2);
 REGISTER_DRIVER_TEST(eventdev_selftest_dlb2, test_eventdev_selftest_dlb2);

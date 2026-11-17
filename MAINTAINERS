@@ -1537,6 +1537,8 @@ F: doc/guides/eventdevs/dsw.rst
 Software Load Balancer (SLB) Eventdev PMD
 M: Pravin Pathak <pravin.pathak.dev@gmail.com>
 F: drivers/event/slb/
+F: doc/guides/eventdevs/slb.rst
+F: doc/guides/eventdevs/features/slb.ini
 
 Software OPDL Eventdev PMD
 M: Liang Ma <liangma@liangbit.com>
