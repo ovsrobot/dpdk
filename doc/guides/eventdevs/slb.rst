@@ -4,9 +4,10 @@
 Software Load Balancer (SLB) Eventdev Driver
 ============================================
 
-The Software Load Balancer (SLB) event device is a poll-mode eventdev driver
-which distributes events among multiple worker ports and cores without requiring
-dedicated scheduling service cores or hardware coprocessors.
+The Software Load Balancer (SLB) is a software event device and a poll-mode Eventdev driver.
+It uses a distributed scheduler, allowing it to scale well. SLB does not require dedicated
+cores for scheduling. It supports Atomic, Parallel, and Ordered queues with dynamic atomic
+flow load balancing. SLB also requires no internal core communication and is maintenance-free.
 
 Features
 --------
@@ -19,25 +20,17 @@ Queues
 * **Atomic**: Flow-pinned scheduling guaranteeing strict per-flow packet ordering.
   Includes dynamic load tracking and automatic flow migration to rebalance overloaded
   ports while preserving in-flight sequence integrity.
-* **Ordered**: Ticket-based sequence tracking and reorder buffer providing end-to-end
-  packet order restoration across parallel processing workers.
-* **Single-Link**: Dedicated direct queue mapping from a producer port to a single
-  consumer port using optimized single-consumer rings.
+* **Ordered**: Sequence number-based tracking and reordering.
+* **Single-Link**: Implemented using optimized multi-producer single-consumer rings.
 
 Ports & Scheduling Capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **Distributed Scheduling**: No dedicated service core required; scheduling work is
-  performed inline during enqueue and dequeue operations.
-* **Prefix Sum Burst Enqueue**: Interleaved multi-queue bursts are grouped and scattered
-  via prefix-sum offsets, dispatching single batched bursts to queue rings to eliminate
-  atomic Compare-And-Swap contention on multi-producer rings.
+* **Distributed Scheduling**: No dedicated service core required.
 * **Dynamic Flow Migration**: Atomic queues monitor port dequeue loads and migrate
-  eligible victim flows from overloaded ports to underloaded ports with cooling cycles.
+  Eligible flows from overloaded ports to underloaded ports with cooling cycles.
 * **Credit Pool Management**: Centralized event credit pool with per-port credit caching
   to enforce device-wide in-flight event limits (``max_num_events``).
-* **Runtime Port Linking**: Supports dynamic linking and unlinking of ports and queues
-  both when stopped and at runtime.
 * **Maintenance Free**: Operates without requiring periodic maintenance calls
   (``RTE_EVENT_DEV_CAP_MAINTENANCE_FREE``).
 
@@ -62,7 +55,7 @@ application code or from the EAL command line:
 Limitations
 -----------
 
-* **Flow Hash Table Size**: Atomic queues use an internal flow mapping table
-  dimensioned to 2048 concurrent active flows per queue (``SLB_ATOMIC_FLOWS``).
-* **Maximum Ports and Queues**: Configured for up to 64 ports (``SLB_MAX_PORTS``)
-  and 64 queues (``SLB_MAX_QUEUES``).
+* **Maximum Ports and Queues**: Supports up to 64 ports and 64 queues.
+* **Priorities and linking**: Supports two levels of service priority to link up to
+  eight queues per port at each priority. SLB currently does not support event priority.
+* **Queues Types**: Does not support all-type queues.
