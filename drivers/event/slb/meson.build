@@ -10,6 +10,11 @@ endif
 sources = files(
         'slb_evdev.c',
         'slb_event.c',
+        'slb_xstats.c',
 )
 
 deps += ['bus_vdev', 'ring']
+
+if cc.has_argument('-Wno-format-nonliteral')
+    cflags += '-Wno-format-nonliteral'
+endif

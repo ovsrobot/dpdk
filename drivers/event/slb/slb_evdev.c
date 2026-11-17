@@ -606,6 +606,8 @@ slb_dump(struct rte_eventdev *dev, FILE *f)
 {
 	struct slb_evdev *slb = slb_pmd_priv(dev);
 	int32_t pool_on_loan, pool_avail;
+	uint64_t total_mig_in = 0, total_mig_out = 0;
+	int i;
 
 	if (dev == NULL || f == NULL)
 		return;
@@ -617,20 +619,41 @@ slb_dump(struct rte_eventdev *dev, FILE *f)
 	fprintf(f, "\n[SLB EVENTDEV DEBUG STATS]\n");
 	fprintf(f, "  Device ID: %u, Driver: %s\n", dev->data->dev_id,
 		SLB_PMD_NAME);
-	fprintf(f, "  Credit Pool: %d on_loan / %d max_inflight (%d avail)\n",
+	fprintf(f, "  Credit Pool: %d on_loan / %d max_inflight (%d available)\n",
 		pool_on_loan, slb->max_inflight, pool_avail);
 
+	fprintf(f, "\n  PORT FLOW MIGRATION COUNTERS:\n");
+	for (i = 0; i < slb->num_ports; i++) {
+		struct slb_port *p = &slb->ports[i];
+
+		total_mig_in += p->migrations_in;
+		total_mig_out += p->migrations_out;
+		fprintf(f,
+			"    Port %2u: Migrated-In: %6" PRIu64
+			" | Migrated-Out: %6" PRIu64 " | Net: %+5" PRId64 "\n",
+			i, p->migrations_in, p->migrations_out,
+			(int64_t)p->migrations_in - (int64_t)p->migrations_out);
+	}
+	fprintf(f, "    Total Flow Migrations: IN=%" PRIu64 ", OUT=%" PRIu64 "\n",
+		total_mig_in, total_mig_out);
+
 	fprintf(f, "\n  PORT STATISTICS & QUEUE LINKAGES:\n");
-	for (int i = 0; i < slb->num_ports; i++) {
+	for (i = 0; i < slb->num_ports; i++) {
 		struct slb_port *p = &slb->ports[i];
 		uint64_t aq = rte_atomic_load_explicit(&p->active_queues,
 						       rte_memory_order_acquire);
-		fprintf(f, "    Port %2u (credits=%3d, active=0x%08" PRIx64 "): ",
-			i, p->inflight_credits, aq);
 		int linked_count = 0;
+
+		fprintf(f,
+			"    Port %2u (credits=%3d, active=0x%08" PRIx64
+			", loaded=%d, mig_in=%" PRIu64 ", mig_out=%" PRIu64 "): ",
+			i, p->inflight_credits, aq, p->is_loaded,
+			p->migrations_in, p->migrations_out);
+
 		if (p->is_single_linked) {
 			if (p->single_linked_q) {
 				int qid = p->single_linked_q - slb->queues;
+
 				fprintf(f, "Q%d (single-link)", qid);
 				linked_count++;
 			}
@@ -638,6 +661,7 @@ slb_dump(struct rte_eventdev *dev, FILE *f)
 			for (int pr = 0; pr < SLB_MAX_PRIORITIES; pr++) {
 				for (int s = 0; s < p->num_q[pr]; s++) {
 					int qid = p->q_entries[pr][s].queue_id;
+
 					if (linked_count > 0)
 						fprintf(f, ", ");
 					fprintf(f, "Q%d(p%d)", qid, pr);
@@ -648,16 +672,69 @@ slb_dump(struct rte_eventdev *dev, FILE *f)
 		if (linked_count == 0)
 			fprintf(f, "(no queues linked)");
 		fprintf(f, "\n");
+		fprintf(f,
+			"            stats: enq_calls=%" PRIu64
+			", new_enq=%" PRIu64 ", fwd_enq=%" PRIu64
+			", rel_enq=%" PRIu64 ", deq_calls=%" PRIu64
+			", deq=%" PRIu64 "\n",
+			p->enqueue_calls, p->new_enqueued,
+			p->forward_enqueued, p->release_enqueued,
+			p->dequeue_calls, p->dequeued);
 	}
 
 	fprintf(f, "\n  ALL QUEUES STATUS:\n");
-	for (int i = 0; i < slb->num_queues; i++) {
+	for (i = 0; i < slb->num_queues; i++) {
 		struct slb_queue *q = &slb->queues[i];
 		uint32_t count = rte_event_ring_count(q->q_ring);
 		uint32_t ring_size = rte_event_ring_get_capacity(q->q_ring);
-		fprintf(f, "    Queue %2u: %6u/%6u events, serving_ports=0x%016" PRIx64 ", sched=%u, single=%d\n",
+
+		fprintf(f,
+			"    Queue %2u: %6u/%6u events, serving_ports=0x%016" PRIx64
+			" (count=%u), sched_type=%u, single_link=%d\n",
 			i, count, ring_size, q->serving_ports_mask,
-			q->schedule_type, q->is_single_link);
+			q->num_serving_ports, q->schedule_type,
+			q->is_single_link);
+		if (q->schedule_type == RTE_SCHED_TYPE_ATOMIC) {
+			if (q->atomic_state) {
+				fprintf(f,
+					"      Atomic State: total_migrations=%" PRIu64
+					", hold_count=%u\n",
+					q->atomic_state->migrations_count,
+					q->atomic_state->hold_count);
+				if (q->atomic_state->migration.in_progress) {
+					fprintf(f,
+						"      MIGRATION IN PROGRESS: from port %u, flow_idx=%u\n",
+						q->atomic_state->migration.port_id,
+						q->atomic_state->migration.flow_idx);
+				}
+				for (int j = 0; j < slb->num_ports; j++) {
+					if (q->per_port_rings[j]) {
+						struct slb_atomic_port_stats *ps =
+							&q->atomic_state->port_stats[j];
+
+						fprintf(f,
+							"      Per-port ring %d: %u events"
+							" (load_counter=%u, flows=%u,"
+							" enq=%" PRIu64 ", ret=%" PRIu64 ")\n",
+							j,
+							rte_event_ring_count(q->per_port_rings[j]),
+							ps->load_counter,
+							ps->flow_count,
+							ps->q_enqueued,
+							ps->q_returned);
+					}
+				}
+			}
+		} else if (q->schedule_type == RTE_SCHED_TYPE_ORDERED) {
+			fprintf(f, "      Ordered reorder_drain_idx=%u\n",
+				q->reorder_drain_idx);
+		}
+		if (count > 0 && q->serving_ports_mask == 0)
+			fprintf(f,
+				"      ^^^ PROBLEM: Queue has %u events but serving_ports_mask=0!\n",
+				count);
+		if (count == 0 && q->serving_ports_mask == 0)
+			fprintf(f, "      (unused queue)\n");
 	}
 	fprintf(f, "[END DEBUG]\n\n");
 	fflush(f);
@@ -678,6 +755,9 @@ static struct eventdev_ops slb_evdev_ops = {
 	.dev_stop = slb_stop,
 	.dev_close = slb_close,
 	.dump = slb_dump,
+	.xstats_get = slb_xstats_get,
+	.xstats_get_names = slb_xstats_get_names,
+	.xstats_get_by_name = slb_xstats_get_by_name,
 };
 
 static int
