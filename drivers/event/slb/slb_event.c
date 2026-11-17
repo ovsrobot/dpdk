@@ -1,11 +1,15 @@
 /* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2018 Ericsson AB
  * Copyright(c) 2026 Pravin Pathak <pravin.pathak.dev@gmail.com>
  */
 
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include <limits.h>
 #include <rte_bitops.h>
 #include <rte_cycles.h>
+#include <rte_errno.h>
 #include <rte_ring_elem.h>
 #include <rte_stdatomic.h>
 
@@ -31,6 +35,9 @@ slb_port_acquire_credits(struct slb_evdev *slb, struct slb_port *port,
 
 	total_inflight = rte_atomic_load_explicit(&slb->credits_on_loan,
 						  rte_memory_order_relaxed);
+	if (unlikely(total_inflight > port->new_event_threshold))
+		return false;
+
 	available = slb->max_inflight - total_inflight;
 	required_credits = RTE_MAX(abs(remaining_credits), SLB_PORT_MIN_CREDITS);
 
@@ -61,7 +68,7 @@ slb_port_acquire_credits(struct slb_evdev *slb, struct slb_port *port,
 /* Port returning credits (Terminated events). Keep local cache.
  * If local cache exceeds the threshold, return excess credits to the pool
  */
-void
+static void
 slb_port_return_credits(struct slb_evdev *slb, struct slb_port *port,
 			int32_t credits)
 {
@@ -103,16 +110,25 @@ slb_port_queue_enqueue_burst_stats(struct slb_port *source_port,
 
 #define REORDER_BURST_SZ 64
 
-/* Drain contiguous ready events from ordered queue's reorder buffer */
-void
-slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue)
+/* Drain contiguous ready events from ordered queue's reorder buffer.
+ * Thread-safe: uses queue->reorder_lock internally.
+ */
+static void
+slb_reorder_drain(struct slb_evdev *slb, struct slb_port *port,
+		  struct slb_queue *queue)
 {
 	if (queue == NULL || queue->reorder_buffer == NULL)
 		return;
 
+	int32_t released_credits = 0;
+
+retry:
 	/* Only one thread can drain the reorder buffer at a time */
-	if (!rte_spinlock_trylock(&queue->reorder_lock))
+	if (!rte_spinlock_trylock(&queue->reorder_lock)) {
+		if (released_credits > 0)
+			slb_port_return_credits(slb, port, released_credits);
 		return;
+	}
 
 	uint32_t drain_idx = queue->reorder_drain_idx;
 	uint32_t mask = queue->q_ring->r.mask;
@@ -120,7 +136,7 @@ slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue)
 	uint8_t state;
 
 	/* Drain events from the current drain index till an empty slot.
-	 * Released event slots need no processing except marking them as empty.
+	 * Released event slots return their held credit once drained.
 	 */
 	while ((state = rte_atomic_load_explicit(&buf[drain_idx].state,
 						 rte_memory_order_acquire)) !=
@@ -128,8 +144,9 @@ slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue)
 		if (state == SLB_REORDER_RELEASED) {
 			rte_atomic_store_explicit(&buf[drain_idx].state,
 						  SLB_REORDER_EMPTY,
-						  rte_memory_order_relaxed);
+						  rte_memory_order_release);
 			drain_idx = (drain_idx + 1) & mask;
+			released_credits++;
 			continue;
 		}
 
@@ -142,7 +159,7 @@ slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue)
 			burst[burst_size++] = buf[drain_idx].event;
 			rte_atomic_store_explicit(&buf[drain_idx].state,
 						  SLB_REORDER_EMPTY,
-						  rte_memory_order_relaxed);
+						  rte_memory_order_release);
 			drain_idx = (drain_idx + 1) & mask;
 		} while (burst_size < REORDER_BURST_SZ &&
 			 rte_atomic_load_explicit(&buf[drain_idx].state,
@@ -151,12 +168,25 @@ slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue)
 			 buf[drain_idx].event.queue_id == target_qid);
 
 		/* Target queue is sized to max_inflight and can never be full */
-		rte_event_ring_enqueue_burst(slb->queues[target_qid].q_ring,
-					     burst, burst_size, NULL);
+		uint16_t enq = rte_event_ring_enqueue_burst(
+			slb->queues[target_qid].q_ring, burst, burst_size, NULL);
+		RTE_ASSERT(enq == burst_size);
 	}
 
 	queue->reorder_drain_idx = drain_idx;
 	rte_spinlock_unlock(&queue->reorder_lock);
+
+	/* Re-check after unlock in case another port marked drain_idx
+	 * READY/RELEASED and failed trylock before we unlocked.
+	 */
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
+	if (unlikely(rte_atomic_load_explicit(&buf[drain_idx].state,
+					      rte_memory_order_acquire) !=
+		     SLB_REORDER_EMPTY))
+		goto retry;
+
+	if (released_credits > 0)
+		slb_port_return_credits(slb, port, released_credits);
 }
 
 /* Hash 20-bit flow ID into atomic flow slot index (SLB_ATOMIC_FLOWS) */
@@ -212,7 +242,7 @@ slb_find_lightest_flow_on_port(struct slb_queue *queue, uint8_t port_id,
 					     rte_memory_order_relaxed) == (int32_t)port_id) {
 			/* Skip flows that have been migrated recently */
 			if (astate->flow_last_migrated[f] != 0 &&
-			    (now - astate->flow_last_migrated[f]) < cooldown_cycles)
+			    now < astate->flow_last_migrated[f] + cooldown_cycles)
 				continue;
 
 			if (counts[f] < min_events) {
@@ -256,7 +286,7 @@ slb_check_and_trigger_migration(struct slb_evdev *slb, struct slb_queue *queue,
 
 	/* Port is still in cooldown period */
 	if (slb->ports[full_port_id].last_migrated_time != 0 &&
-	    (now - slb->ports[full_port_id].last_migrated_time) < cooldown_cycles)
+	    now < slb->ports[full_port_id].last_migrated_time + cooldown_cycles)
 		return;
 
 	/* Find flow to migrate*/
@@ -291,7 +321,7 @@ slb_find_migration_target_port(struct slb_evdev *slb, struct slb_queue *queue,
 			continue;
 
 		if (cp->last_migrated_time == 0 ||
-		    (now - cp->last_migrated_time) >= cooldown_cycles) {
+		    now >= cp->last_migrated_time + cooldown_cycles) {
 			if ((int)astate->port_stats[cand_port].flow_count < min_flows) {
 				min_flows = (int)astate->port_stats[cand_port].flow_count;
 				target_port = cand_port;
@@ -315,7 +345,7 @@ slb_complete_flow_migration(struct slb_evdev *slb, struct slb_atomic_state *asta
 				  target_port, rte_memory_order_release);
 
 	/* Switch all events in hold buffer to the target port */
-	for (uint16_t h = 0; h < astate->hold_count; h++) {
+	for (uint32_t h = 0; h < astate->hold_count; h++) {
 		if (astate->hold_ports[h] == mig_port &&
 		    slb_flow_hash(astate->hold_buffer[h].flow_id) == f_idx) {
 			astate->hold_ports[h] = (uint8_t)target_port;
@@ -429,38 +459,38 @@ slb_atomic_refill(struct slb_port *port, struct slb_queue *queue)
 
 	/* 1. Process Hold Buffer events */
 	if (astate->hold_count > 0) {
-		uint16_t retained = 0;
-		uint16_t count = astate->hold_count;
+		uint32_t retained = 0;
+		uint32_t count = astate->hold_count;
+		uint32_t h_idx = 0;
 
-		i = 0;
-		while (i < count) {
-			uint8_t dest_port_id = astate->hold_ports[i];
-			uint16_t burst_len = 1;
+		while (h_idx < count) {
+			uint8_t dest_port_id = astate->hold_ports[h_idx];
+			uint32_t burst_len = 1;
 
 			/* Collect consecutive events for the same destination port */
-			while ((i + burst_len) < count &&
-			       astate->hold_ports[i + burst_len] == dest_port_id)
+			while ((h_idx + burst_len) < count &&
+			       astate->hold_ports[h_idx + burst_len] == dest_port_id)
 				burst_len++;
 
 			/* If destination port is full, retain the event in hold buffer*/
 			if (full_ports_mask & (1ULL << dest_port_id)) {
-				if (retained != i) {
+				if (retained != h_idx) {
 					memmove(&astate->hold_buffer[retained],
-						&astate->hold_buffer[i],
+						&astate->hold_buffer[h_idx],
 						burst_len * sizeof(struct rte_event));
 					memmove(&astate->hold_ports[retained],
-						&astate->hold_ports[i],
+						&astate->hold_ports[h_idx],
 						burst_len);
 				}
 				retained += burst_len;
-				i += burst_len;
+				h_idx += burst_len;
 				continue;
 			}
 
 			/* Enqueue events to the destination port */
 			uint16_t enqueued = rte_event_ring_enqueue_burst(
 				queue->per_port_rings[dest_port_id],
-				&astate->hold_buffer[i], burst_len, NULL);
+				&astate->hold_buffer[h_idx], burst_len, NULL);
 			astate->port_stats[dest_port_id].q_enqueued += enqueued;
 
 			/* If enqueue was successful then decrement the load counter */
@@ -470,8 +500,8 @@ slb_atomic_refill(struct slb_port *port, struct slb_queue *queue)
 
 			/* If enqueue was not successful, retain the event in hold buffer */
 			if (enqueued < burst_len) {
-				uint16_t rem = burst_len - enqueued;
-				uint16_t start_idx = i + enqueued;
+				uint32_t rem = burst_len - enqueued;
+				uint32_t start_idx = h_idx + enqueued;
 
 				full_ports_mask |= (1ULL << dest_port_id);
 				if (retained != start_idx) {
@@ -489,7 +519,7 @@ slb_atomic_refill(struct slb_port *port, struct slb_queue *queue)
 						slb, queue, astate, dest_port_id);
 			}
 
-			i += burst_len;
+			h_idx += burst_len;
 		}
 
 		astate->hold_count = retained;
@@ -497,7 +527,7 @@ slb_atomic_refill(struct slb_port *port, struct slb_queue *queue)
 		 * if hold buffer does not have enough free space.
 		 */
 		if (SLB_HOLD_BUFFER_SIZE - astate->hold_count <
-		    3 * RTE_DIM(rcv_events)) {
+		    SLB_HOLD_BUFFER_REFILL_HEADROOM * RTE_DIM(rcv_events)) {
 			rte_spinlock_unlock(&astate->refill_lock);
 			return;
 		}
@@ -589,11 +619,17 @@ slb_atomic_refill(struct slb_port *port, struct slb_queue *queue)
 
 			/* If destination port is full, retain events in hold buffer */
 			if (full_ports_mask & (1ULL << p)) {
-				rte_memcpy(&astate->hold_buffer[astate->hold_count],
-					   &sorted_events[p_start],
-					   p_count * sizeof(struct rte_event));
-				memset(&astate->hold_ports[astate->hold_count], p, p_count);
-				astate->hold_count += p_count;
+				uint32_t to_copy = RTE_MIN(
+					(uint32_t)p_count,
+					SLB_HOLD_BUFFER_SIZE - astate->hold_count);
+				if (likely(to_copy > 0)) {
+					rte_memcpy(&astate->hold_buffer[astate->hold_count],
+						   &sorted_events[p_start],
+						   to_copy * sizeof(struct rte_event));
+					memset(&astate->hold_ports[astate->hold_count],
+					       p, to_copy);
+					astate->hold_count += to_copy;
+				}
 				continue;
 			}
 
@@ -607,14 +643,20 @@ slb_atomic_refill(struct slb_port *port, struct slb_queue *queue)
 				if (unlikely(astate->port_stats[p].load_counter > 0))
 					astate->port_stats[p].load_counter--;
 			} else {
-				uint16_t rem = p_count - enqueued;
+				uint32_t rem = p_count - enqueued;
+				uint32_t to_copy = RTE_MIN(
+					rem,
+					SLB_HOLD_BUFFER_SIZE - astate->hold_count);
 				/* Mark the destination port as full and retain remaining events */
 				full_ports_mask |= (1ULL << p);
-				rte_memcpy(&astate->hold_buffer[astate->hold_count],
-					   &sorted_events[p_start + enqueued],
-					   rem * sizeof(struct rte_event));
-				memset(&astate->hold_ports[astate->hold_count], p, rem);
-				astate->hold_count += rem;
+				if (likely(to_copy > 0)) {
+					rte_memcpy(&astate->hold_buffer[astate->hold_count],
+						   &sorted_events[p_start + enqueued],
+						   to_copy * sizeof(struct rte_event));
+					memset(&astate->hold_ports[astate->hold_count],
+					       p, to_copy);
+					astate->hold_count += to_copy;
+				}
 				/* If not a single event was enqueued, check for migration */
 				if (enqueued == 0)
 					slb_check_and_trigger_migration(
@@ -626,6 +668,16 @@ slb_atomic_refill(struct slb_port *port, struct slb_queue *queue)
 	rte_spinlock_unlock(&astate->refill_lock);
 }
 
+/* Enqueue a burst of events from source_port.
+ *
+ * Design invariant: Every queue ring (q_ring) is created with RING_F_EXACT_SZ
+ * and capacity equal to slb->max_inflight. Because NEW events must acquire
+ * credits from slb->max_inflight upfront and FORWARD events are verified
+ * against source_port->pending_releases, the total number of in-flight events
+ * across the entire device can never exceed slb->max_inflight. Consequently,
+ * q_ring can never fill and rte_event_ring_enqueue_burst() onto q_ring is
+ * guaranteed to enqueue the full burst.
+ */
 static inline uint16_t
 slb_event_enqueue_burst_generic(struct slb_port *source_port,
 				const struct rte_event events[],
@@ -656,25 +708,22 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 		}
 	}
 
-	/* Check credit threshold if there are NEW events */
-	if (num_new > 0) {
-		if (unlikely(rte_atomic_load_explicit(&slb->credits_on_loan,
-						      rte_memory_order_relaxed) >
-			     source_port->new_event_threshold))
-			return 0;
-
-		if (unlikely(!slb_port_acquire_credits(slb, source_port,
-						       num_new)))
-			return 0;
+	/* Check for release underflow before acquiring credits */
+	cur_pending = source_port->pending_releases;
+	if (unlikely(num_forward + num_release > cur_pending)) {
+		rte_errno = EINVAL;
+		return 0;
 	}
 
-	/* Return credits for RELEASE events */
-	if (num_release > 0)
-		slb_port_return_credits(slb, source_port, num_release);
+	/* Acquire credits if there are NEW events */
+	if (num_new > 0) {
+		if (unlikely(!slb_port_acquire_credits(slb, source_port,
+						       num_new))) {
+			rte_errno = ENOSPC;
+			return 0;
+		}
+	}
 
-	/* Check for release underflow and balance pending releases */
-	cur_pending = source_port->pending_releases;
-	RTE_VERIFY(num_forward + num_release <= cur_pending);
 	source_port->pending_releases = cur_pending - (num_forward + num_release);
 
 	slb_port_enqueue_stats(source_port, num_new, num_forward, num_release);
@@ -695,8 +744,9 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 
 		/* Enqueue the entire burst if going to the same queue */
 		if (likely(burst_size == events_len)) {
-			rte_event_ring_enqueue_burst(slb->queues[q0].q_ring,
-						     events, events_len, NULL);
+			uint16_t enq = rte_event_ring_enqueue_burst(
+				slb->queues[q0].q_ring, events, events_len, NULL);
+			RTE_ASSERT(enq == events_len);
 			slb_port_queue_enqueue_burst_stats(source_port, q0,
 							   events_len);
 		} else { /* Sort events by destination queue */
@@ -748,11 +798,13 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 				uint8_t q = rte_ctz64(qmask);
 				uint16_t count = queue_counts[q];
 				uint16_t offset = queue_offsets[q];
+				uint16_t enq;
 
 				qmask &= (qmask - 1);
-				rte_event_ring_enqueue_burst(slb->queues[q].q_ring,
-							     &sorted_events[offset],
-							     count, NULL);
+				enq = rte_event_ring_enqueue_burst(
+					slb->queues[q].q_ring,
+					&sorted_events[offset], count, NULL);
+				RTE_ASSERT(enq == count);
 				slb_port_queue_enqueue_burst_stats(source_port, q,
 								   count);
 			}
@@ -765,6 +817,7 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 
 	/* General path for bursts with any mix of events */
 	uint64_t ordered_drain_mask = 0;
+	uint16_t ordered_releases = 0;
 	uint16_t freed_count = 0;
 	uint16_t head = source_port->history_head;
 	uint16_t n_enq = 0;
@@ -792,11 +845,14 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 				uint16_t slot = hist->seq_slot;
 
 				if (ev->op == RTE_EVENT_OP_RELEASE) {
-					/* Release the reorder buffer entry */
+					/* Release the reorder buffer entry; credit is
+					 * returned when slb_reorder_drain reclaims slot
+					 */
 					rte_atomic_store_explicit(
 						&orig_q->reorder_buffer[slot].state,
 						SLB_REORDER_RELEASED,
 						rte_memory_order_release);
+					ordered_releases++;
 				} else {
 					/* Put event in reorder buffer */
 					orig_q->reorder_buffer[slot].event = *ev;
@@ -874,9 +930,11 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 			   n_enq == events_len)) {
 			/* Entire batch is going to a single queue */
 			uint8_t q = rte_ctz64(batch_queues_mask);
+			uint16_t enq;
 
-			rte_event_ring_enqueue_burst(slb->queues[q].q_ring,
-						     events, events_len, NULL);
+			enq = rte_event_ring_enqueue_burst(
+				slb->queues[q].q_ring, events, events_len, NULL);
+			RTE_ASSERT(enq == events_len);
 			slb_port_queue_enqueue_burst_stats(source_port, q,
 							   events_len);
 		} else {
@@ -909,16 +967,25 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 				uint8_t q = rte_ctz64(qmask);
 				uint16_t count = queue_counts[q];
 				uint16_t offset = queue_offsets[q];
+				uint16_t enq;
 
 				qmask &= (qmask - 1);
-				rte_event_ring_enqueue_burst(slb->queues[q].q_ring,
-							     &sorted_events[offset],
-							     count, NULL);
+				enq = rte_event_ring_enqueue_burst(
+					slb->queues[q].q_ring,
+					&sorted_events[offset], count, NULL);
+				RTE_ASSERT(enq == count);
 				slb_port_queue_enqueue_burst_stats(source_port, q,
 								   count);
 			}
 		}
 	}
+
+	/* Return credits for non-ordered RELEASE events immediately; ordered
+	 * RELEASE credits are returned when slb_reorder_drain reclaims the slot.
+	 */
+	if (num_release > ordered_releases)
+		slb_port_return_credits(slb, source_port,
+					num_release - ordered_releases);
 
 	/* Update the history list head once after all frees*/
 	if (freed_count > 0) {
@@ -931,7 +998,7 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 		uint8_t qid = rte_ctz64(ordered_drain_mask);
 
 		ordered_drain_mask &= ~(1ULL << qid);
-		slb_reorder_drain(slb, &slb->queues[qid]);
+		slb_reorder_drain(slb, source_port, &slb->queues[qid]);
 	}
 
 	SLB_LOG_DP_PORT_LINE(DEBUG, source_port->id,
@@ -1134,14 +1201,16 @@ slb_port_process_implicit_release(struct slb_port *port, struct slb_evdev *slb,
 				  uint16_t pending)
 {
 	uint16_t head;
+	uint16_t ordered_releases = 0;
 	uint64_t ordered_drain_mask = 0;
 
-	slb_port_return_credits(slb, port, pending);
 	port->pending_releases = 0;
 
 	if (port->is_single_linked ||
-	    port->history_avail >= SLB_PORT_HISTORY_MAX_TOKENS)
+	    port->history_avail >= SLB_PORT_HISTORY_MAX_TOKENS) {
+		slb_port_return_credits(slb, port, pending);
 		return;
+	}
 
 	/* Process all history entries */
 	head = port->history_head;
@@ -1151,7 +1220,9 @@ slb_port_process_implicit_release(struct slb_port *port, struct slb_evdev *slb,
 		if (!hist->active)
 			continue;
 
-		/* Ordered releases will free the reorder buffer slot*/
+		/* Ordered releases will free the reorder buffer slot; credit is
+		 * returned when slb_reorder_drain reclaims the slot.
+		 */
 		if (hist->sched_type == RTE_SCHED_TYPE_ORDERED) {
 			struct slb_queue *oq = &slb->queues[hist->orig_queue_id];
 
@@ -1161,6 +1232,7 @@ slb_port_process_implicit_release(struct slb_port *port, struct slb_evdev *slb,
 					SLB_REORDER_RELEASED,
 					rte_memory_order_release);
 				ordered_drain_mask |= (1ULL << hist->orig_queue_id);
+				ordered_releases++;
 			}
 		} else if (hist->sched_type == RTE_SCHED_TYPE_ATOMIC) {
 			/* Atomic releases are counted as returned events */
@@ -1180,12 +1252,15 @@ slb_port_process_implicit_release(struct slb_port *port, struct slb_evdev *slb,
 	}
 	port->history_head = head;
 
+	if (pending > ordered_releases)
+		slb_port_return_credits(slb, port, pending - ordered_releases);
+
 	/* If there are ordered releases, call the reorder drain function */
 	while (ordered_drain_mask != 0) {
 		uint8_t qid = rte_ctz64(ordered_drain_mask);
 
 		ordered_drain_mask &= ~(1ULL << qid);
-		slb_reorder_drain(slb, &slb->queues[qid]);
+		slb_reorder_drain(slb, port, &slb->queues[qid]);
 	}
 }
 

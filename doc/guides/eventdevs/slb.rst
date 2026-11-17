@@ -56,6 +56,14 @@ Limitations
 -----------
 
 * **Maximum Ports and Queues**: Supports up to 64 ports and 64 queues.
-* **Priorities and linking**: Supports two levels of service priority to link up to
-  eight queues per port at each priority. SLB currently does not support event priority.
-* **Queues Types**: Does not support all-type queues.
+* **Priorities and linking**: Priority is configured per port-to-queue link via
+  ``rte_event_port_link()`` (supports two service priority levels, configured at compile time
+  via ``SLB_MAX_PRIORITIES``). SLB does not support per-queue priority
+  (``RTE_EVENT_DEV_CAP_QUEUE_QOS``), per-event priority (``RTE_EVENT_DEV_CAP_EVENT_QOS``),
+  or runtime port linking/unlinking after device start (``RTE_EVENT_DEV_CAP_RUNTIME_PORT_LINK``).
+* **Queues Types**: Does not support all-types queues (``RTE_EVENT_DEV_CAP_QUEUE_ALL_TYPES``).
+* **In-Flight Event Limit**: Each port maintains a local cache of up to ``SLB_PORT_MAX_CREDITS``
+  credits. To avoid credit-cache starvation when ``nb_events_limit`` is configured smaller than
+  ``nb_event_ports * SLB_PORT_MAX_CREDITS``, SLB raises the internal credit pool size to
+  ``max(nb_events_limit, nb_event_ports * SLB_PORT_MAX_CREDITS)`` (capped at ``SLB_MAX_EVENTS``),
+  so the device may hold more in-flight events than the configured ``nb_events_limit``.

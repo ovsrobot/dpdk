@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2018 Ericsson AB
  * Copyright(c) 2026 Pravin Pathak <pravin.pathak.dev@gmail.com>
  */
 
@@ -37,13 +38,7 @@
 /* Maximum number of queues that can be linked to a port per priority */
 #define SLB_PORT_MAX_Q_MAP_PER_PRIO (SLB_MAX_QUEUES)
 /* Number of priority levels supported by SLB. Currently fixed to 2 */
-#ifndef SLB_MAX_PRIORITIES
 #define SLB_MAX_PRIORITIES 2
-#endif
-
-#if (SLB_MAX_PRIORITIES != 2)
-#error "SLB_MAX_PRIORITIES must be set to 2 for now"
-#endif
 
 /* Total max mapping slots (per-prio * priorities) */
 #define SLB_PORT_MAX_Q_MAP (SLB_PORT_MAX_Q_MAP_PER_PRIO * SLB_MAX_PRIORITIES)
@@ -87,8 +82,9 @@ struct slb_reorder_entry {
 #define SLB_ATOMIC_FLOWS 2048
 #define SLB_ATOMIC_FLOWS_MASK (SLB_ATOMIC_FLOWS - 1)
 #define SLB_HOLD_BUFFER_SIZE (SLB_MAX_PORT_DEQUEUE_DEPTH * 64)
+#define SLB_HOLD_BUFFER_REFILL_HEADROOM 3
 #define SLB_MIGRATION_LOAD_THRESHOLD 16
-#define SLB_MIGRATION_COOLDOWN_MS 500
+#define SLB_MIGRATION_COOLDOWN_MS 500ULL
 
 /* Per-flow entry for atomic scheduling affinity */
 struct slb_flow {
@@ -120,7 +116,7 @@ struct slb_atomic_state {
 	struct slb_flow_map flow_map;
 	uint32_t next_port_rr;
 	rte_spinlock_t refill_lock;
-	uint16_t hold_count;
+	uint32_t hold_count;
 	struct slb_migration_state migration;
 	uint64_t migrations_count;
 	uint64_t flow_last_migrated[SLB_ATOMIC_FLOWS];
@@ -222,13 +218,6 @@ uint16_t slb_event_enqueue_forward_burst(void *port,
 
 uint16_t slb_event_dequeue_burst(void *port, struct rte_event *events,
 				 uint16_t num, uint64_t wait);
-
-void slb_port_return_credits(struct slb_evdev *slb, struct slb_port *port,
-			     int32_t credits);
-
-void slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue);
-
-void slb_dump(struct rte_eventdev *dev, FILE *f);
 
 int slb_xstats_get_names(const struct rte_eventdev *dev,
 			 enum rte_event_dev_xstats_mode mode,

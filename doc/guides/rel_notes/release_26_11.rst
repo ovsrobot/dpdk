@@ -331,6 +331,13 @@ New Features
   with AMD-specific hardware access, a primary/secondary topology
   and a packed scratchpad handshake.
 
+* **Added Software Load Balancer (SLB) eventdev PMD.**
+
+  Introduced a new poll-mode eventdev driver (``event_slb``) supporting
+  parallel, atomic, ordered, and single-link scheduling with dynamic
+  atomic flow migration and strict two-level port-queue service priorities.
+  Runtime port linking and unlinking after device start is not supported.
+
 * **Supported auto-detection of uncore power driver.**
 
   The uncore power library got automatic probing of multiple uncore drivers
