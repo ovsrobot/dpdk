@@ -149,8 +149,8 @@ xsc_dev_close(struct xsc_dev *xdev, int repr_id)
 		ret = xdev->dev_ops->dev_close(xdev);
 
 	/* Removal closes the device again, do not free it twice. */
-	rte_free(xdev->jumbo_buffer_pa);
-	xdev->jumbo_buffer_pa = NULL;
+	rte_free(xdev->jumbo_buf);
+	xdev->jumbo_buf = NULL;
 
 	return ret;
 }
