@@ -141,11 +141,18 @@ xsc_dev_tx_qp_create(struct xsc_dev *xdev, struct xsc_tx_qp_params *qp_params,
 int
 xsc_dev_close(struct xsc_dev *xdev, int repr_id)
 {
+	int ret = 0;
+
 	xsc_dev_clear_pct(xdev, repr_id);
 
 	if (repr_id == xdev->num_repr_ports - 1)
-		return xdev->dev_ops->dev_close(xdev);
-	return 0;
+		ret = xdev->dev_ops->dev_close(xdev);
+
+	/* Removal closes the device again, do not free it twice. */
+	rte_free(xdev->jumbo_buffer_pa);
+	xdev->jumbo_buffer_pa = NULL;
+
+	return ret;
 }
 
 int
