@@ -156,6 +156,216 @@ slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue)
 	rte_spinlock_unlock(&queue->reorder_lock);
 }
 
+/* Hash flow ID to atomic flow slot index */
+static inline uint32_t
+slb_flow_hash(uint32_t flow_id)
+{
+	return (flow_id * 2654435761U) & SLB_ATOMIC_FLOWS_MASK;
+}
+
+/* If port queue is empty for an atomic queue, pull events from main atomic queue to fill
+ * up port queues.
+ */
+static void
+slb_atomic_refill(struct slb_port *port __rte_unused, struct slb_queue *queue)
+{
+	struct rte_event master_events[SLB_MAX_PORT_DEQUEUE_DEPTH];
+	uint16_t n_deq;
+	uint16_t i;
+	uint64_t full_ports_mask = 0;
+	struct slb_atomic_state *astate = queue->atomic_state;
+	uint64_t serving_mask;
+	uint16_t num_serving_ports;
+
+	if (unlikely(astate == NULL))
+		return;
+
+	if (!rte_spinlock_trylock(&astate->refill_lock))
+		return;
+
+	/* 1. Process Hold Buffer first */
+	if (astate->hold_count > 0) {
+		uint16_t retained = 0;
+		uint16_t count = astate->hold_count;
+
+		i = 0;
+		while (i < count) {
+			uint8_t dest_port_id = astate->hold_ports[i];
+			uint16_t burst_len = 1;
+
+			while ((i + burst_len) < count &&
+			       astate->hold_ports[i + burst_len] == dest_port_id)
+				burst_len++;
+
+			if (full_ports_mask & (1ULL << dest_port_id)) {
+				if (retained != i) {
+					memmove(&astate->hold_buffer[retained],
+						&astate->hold_buffer[i],
+						burst_len * sizeof(struct rte_event));
+					memmove(&astate->hold_ports[retained],
+						&astate->hold_ports[i],
+						burst_len);
+				}
+				retained += burst_len;
+				i += burst_len;
+				continue;
+			}
+
+			uint16_t enqueued = rte_event_ring_enqueue_burst(
+				queue->per_port_rings[dest_port_id],
+				&astate->hold_buffer[i], burst_len, NULL);
+			astate->port_stats[dest_port_id].q_enqueued += enqueued;
+
+			if (enqueued < burst_len) {
+				uint16_t rem = burst_len - enqueued;
+				uint16_t start_idx = i + enqueued;
+
+				full_ports_mask |= (1ULL << dest_port_id);
+				if (retained != start_idx) {
+					memmove(&astate->hold_buffer[retained],
+						&astate->hold_buffer[start_idx],
+						rem * sizeof(struct rte_event));
+					memmove(&astate->hold_ports[retained],
+						&astate->hold_ports[start_idx],
+						rem);
+				}
+				retained += rem;
+			}
+
+			i += burst_len;
+		}
+
+		astate->hold_count = retained;
+		if (astate->hold_count > 0) {
+			rte_spinlock_unlock(&astate->refill_lock);
+			return;
+		}
+	}
+
+	/* 2. Dequeue events from main atomic queue in batches */
+	serving_mask = queue->serving_ports_mask;
+	num_serving_ports = queue->num_serving_ports;
+
+	if (num_serving_ports == 0) {
+		rte_spinlock_unlock(&astate->refill_lock);
+		return;
+	}
+
+	for (int iter = 0; iter < 2; iter++) {
+		n_deq = rte_event_ring_dequeue_burst(
+			queue->q_ring, master_events, RTE_DIM(master_events), NULL);
+
+		if (n_deq == 0)
+			break;
+
+		uint8_t dest_ports[SLB_MAX_PORT_DEQUEUE_DEPTH];
+		uint16_t port_counts[SLB_MAX_PORTS];
+		uint16_t insert_pos[SLB_MAX_PORTS];
+		uint16_t port_offsets[SLB_MAX_PORTS];
+		struct rte_event sorted_events[SLB_MAX_PORT_DEQUEUE_DEPTH];
+		uint64_t batch_ports_mask = 0;
+
+		for (i = 0; i < n_deq; i++) {
+			struct rte_event *ev = &master_events[i];
+			uint32_t flow_idx = slb_flow_hash(ev->flow_id);
+			int32_t dest_port_id =
+				rte_atomic_load_explicit(
+					&astate->flow_map.flows[flow_idx].port_id,
+					rte_memory_order_acquire);
+
+			if (unlikely(dest_port_id == -1)) {
+				uint32_t rr_counter = astate->next_port_rr++;
+				int port_offset = rr_counter % num_serving_ports;
+				uint64_t temp_mask = serving_mask;
+				uint8_t assigned_port = 0;
+
+				for (int j = 0; j <= port_offset; j++) {
+					assigned_port = rte_ctz64(temp_mask);
+					temp_mask &= (temp_mask - 1);
+				}
+
+				dest_port_id = assigned_port;
+				rte_atomic_store_explicit(
+					&astate->flow_map.flows[flow_idx].port_id,
+					dest_port_id, rte_memory_order_release);
+				astate->port_stats[dest_port_id].flow_count++;
+			}
+
+			dest_ports[i] = (uint8_t)dest_port_id;
+			uint64_t p_bit = (1ULL << dest_port_id);
+
+			if (!(batch_ports_mask & p_bit)) {
+				batch_ports_mask |= p_bit;
+				port_counts[dest_port_id] = 1;
+			} else {
+				port_counts[dest_port_id]++;
+			}
+		}
+
+		uint16_t current_offset = 0;
+		uint64_t pmask = batch_ports_mask;
+
+		while (pmask != 0) {
+			uint8_t p = rte_ctz64(pmask);
+
+			pmask &= (pmask - 1);
+			port_offsets[p] = current_offset;
+			insert_pos[p] = current_offset;
+			current_offset += port_counts[p];
+		}
+
+		for (i = 0; i < n_deq; i++) {
+			uint8_t p = dest_ports[i];
+
+			sorted_events[insert_pos[p]++] = master_events[i];
+		}
+
+		pmask = batch_ports_mask;
+		while (pmask != 0) {
+			uint8_t p = rte_ctz64(pmask);
+			uint16_t p_count = port_counts[p];
+			uint16_t p_start = port_offsets[p];
+
+			pmask &= (pmask - 1);
+
+			if (full_ports_mask & (1ULL << p)) {
+				uint16_t space = SLB_HOLD_BUFFER_SIZE - astate->hold_count;
+				uint16_t to_copy = RTE_MIN(p_count, space);
+
+				if (to_copy > 0) {
+					rte_memcpy(&astate->hold_buffer[astate->hold_count],
+						   &sorted_events[p_start],
+						   to_copy * sizeof(struct rte_event));
+					memset(&astate->hold_ports[astate->hold_count], p, to_copy);
+					astate->hold_count += to_copy;
+				}
+				continue;
+			}
+
+			uint16_t enqueued = rte_event_ring_enqueue_burst(
+				queue->per_port_rings[p], &sorted_events[p_start], p_count, NULL);
+			astate->port_stats[p].q_enqueued += enqueued;
+
+			if (enqueued < p_count) {
+				uint16_t rem = p_count - enqueued;
+				uint16_t space = SLB_HOLD_BUFFER_SIZE - astate->hold_count;
+				uint16_t to_copy = RTE_MIN(rem, space);
+
+				full_ports_mask |= (1ULL << p);
+				if (to_copy > 0) {
+					rte_memcpy(&astate->hold_buffer[astate->hold_count],
+						   &sorted_events[p_start + enqueued],
+						   to_copy * sizeof(struct rte_event));
+					memset(&astate->hold_ports[astate->hold_count], p, to_copy);
+					astate->hold_count += to_copy;
+				}
+			}
+		}
+	}
+
+	rte_spinlock_unlock(&astate->refill_lock);
+}
+
 static inline uint16_t
 slb_event_enqueue_burst_generic(struct slb_port *source_port,
 				const struct rte_event events[],
@@ -205,7 +415,7 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 
 	slb_port_enqueue_stats(source_port, num_new, num_forward, num_release);
 
-	/* Unified zero-copy fast path: when port has no in-flight ordered events
+	/* Unified zero-copy fast path: when port has no in-flight ordered/atomic events
 	 * and no release ops.
 	 */
 	if (likely(source_port->history_avail == SLB_PORT_HISTORY_MAX_TOKENS &&
@@ -288,7 +498,7 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 		return events_len;
 	}
 
-	/* General path for bursts with in-flight ordered events or releases */
+	/* General path for bursts with in-flight ordered/atomic events or releases */
 	uint64_t ordered_drain_mask = 0;
 	uint16_t freed_count = 0;
 	uint16_t head = source_port->history_head;
@@ -332,6 +542,14 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 			slb_port_queue_enqueue_stats(source_port, ev->queue_id);
 		} else if (ev->op == RTE_EVENT_OP_RELEASE) {
 			if (hist != NULL) {
+				if (hist->sched_type == RTE_SCHED_TYPE_ATOMIC) {
+					struct slb_queue *orig_q =
+						&slb->queues[hist->orig_queue_id];
+					if (orig_q->atomic_state) {
+						uint8_t ep = hist->enq_port_id;
+						orig_q->atomic_state->port_stats[ep].q_returned++;
+					}
+				}
 				hist->active = false;
 				hist->next_free = head;
 				head = h_idx;
@@ -340,6 +558,14 @@ slb_event_enqueue_burst_generic(struct slb_port *source_port,
 			slb_port_queue_enqueue_stats(source_port, ev->queue_id);
 		} else {
 			if (hist != NULL) {
+				if (hist->sched_type == RTE_SCHED_TYPE_ATOMIC) {
+					struct slb_queue *orig_q =
+						&slb->queues[hist->orig_queue_id];
+					if (orig_q->atomic_state) {
+						uint8_t ep = hist->enq_port_id;
+						orig_q->atomic_state->port_stats[ep].q_returned++;
+					}
+				}
 				hist->active = false;
 				hist->next_free = head;
 				head = h_idx;
@@ -484,6 +710,35 @@ slb_ordered_ring_dequeue_burst(struct rte_event_ring *r,
 	return n;
 }
 
+static inline void
+slb_port_record_dequeued_history(struct slb_port *port, struct rte_event events[],
+				 uint16_t dequeued, uint8_t queue_id,
+				 uint8_t sched_type, uint32_t start_slot,
+				 uint32_t ring_mask)
+{
+	uint16_t head = port->history_head;
+	bool is_ordered = (sched_type == RTE_SCHED_TYPE_ORDERED);
+
+	for (uint16_t j = 0; j < dequeued; j++) {
+		uint16_t h_idx = head;
+		struct slb_history_entry *h = &port->history[h_idx];
+
+		head = h->next_free;
+		h->orig_queue_id = queue_id;
+		h->sched_type = sched_type;
+		if (is_ordered) {
+			h->seq_slot = (start_slot + j) & ring_mask;
+		} else {
+			h->enq_port_id = (uint8_t)port->id;
+			h->flow_id = events[j].flow_id;
+		}
+		h->active = true;
+		events[j].impl_opaque = (uint8_t)h_idx;
+	}
+	port->history_head = head;
+	port->history_avail -= dequeued;
+}
+
 static inline uint16_t
 slb_port_dequeue(struct slb_port *port, struct rte_event events[],
 		 uint16_t num)
@@ -535,8 +790,9 @@ slb_port_dequeue(struct slb_port *port, struct rte_event events[],
 
 			uint8_t sched_type = qent->schedule_type;
 			bool is_ordered = (sched_type == RTE_SCHED_TYPE_ORDERED);
+			bool is_atomic = (sched_type == RTE_SCHED_TYPE_ATOMIC);
 
-			if (is_ordered) {
+			if (is_ordered || is_atomic) {
 				if (unlikely(port->history_avail == 0))
 					continue;
 
@@ -544,31 +800,27 @@ slb_port_dequeue(struct slb_port *port, struct rte_event events[],
 							       port->history_avail);
 				uint32_t start_slot = 0;
 
-				dequeued = slb_ordered_ring_dequeue_burst(
-					ring_to_dq, events, dequeue_num,
-					&start_slot);
-
-				if (dequeued > 0) {
-					uint16_t head = port->history_head;
-					uint32_t ring_mask = ring_to_dq->r.mask;
-
-					for (uint16_t j = 0; j < dequeued; j++) {
-						uint16_t h_idx = head;
-						struct slb_history_entry *h =
-							&port->history[h_idx];
-
-						head = h->next_free;
-						h->orig_queue_id = queue_id;
-						h->sched_type = sched_type;
-						h->seq_slot = (start_slot + j) &
-							      ring_mask;
-						h->active = true;
-						events[j].impl_opaque =
-							(uint8_t)h_idx;
+				if (is_ordered) {
+					dequeued = slb_ordered_ring_dequeue_burst(
+						ring_to_dq, events, dequeue_num,
+						&start_slot);
+				} else {
+					dequeued = rte_event_ring_dequeue_burst(
+						ring_to_dq, events, dequeue_num,
+						NULL);
+					if (dequeued == 0) {
+						slb_atomic_refill(port, qent->queue);
+						dequeued = rte_event_ring_dequeue_burst(
+							ring_to_dq, events, dequeue_num,
+							NULL);
 					}
-					port->history_head = head;
-					port->history_avail -= dequeued;
 				}
+
+				if (dequeued > 0)
+					slb_port_record_dequeued_history(
+						port, events, dequeued, queue_id,
+						sched_type, start_slot,
+						ring_to_dq->r.mask);
 			} else {
 				dequeued = rte_event_ring_dequeue_burst(
 					ring_to_dq, events, num, NULL);
@@ -613,6 +865,14 @@ slb_port_process_implicit_release(struct slb_port *port, struct slb_evdev *slb,
 					SLB_REORDER_RELEASED,
 					rte_memory_order_release);
 				ordered_drain_mask |= (1ULL << hist->orig_queue_id);
+			}
+		} else if (hist->sched_type == RTE_SCHED_TYPE_ATOMIC) {
+			struct slb_queue *oq = &slb->queues[hist->orig_queue_id];
+
+			if (oq->atomic_state) {
+				uint8_t ep = hist->enq_port_id;
+
+				oq->atomic_state->port_stats[ep].q_returned++;
 			}
 		}
 		hist->active = false;

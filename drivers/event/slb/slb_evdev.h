@@ -84,6 +84,39 @@ struct slb_reorder_entry {
 	RTE_ATOMIC(uint8_t) state;
 };
 
+#define SLB_ATOMIC_FLOWS 2048
+#define SLB_ATOMIC_FLOWS_MASK (SLB_ATOMIC_FLOWS - 1)
+#define SLB_HOLD_BUFFER_SIZE (SLB_MAX_PORT_DEQUEUE_DEPTH * 64)
+
+/* Per-flow entry for atomic scheduling affinity */
+struct slb_flow {
+	RTE_ATOMIC(int32_t) port_id; /* Port this flow is pinned to */
+};
+
+/* Flow-to-port affinity mapping table */
+struct slb_flow_map {
+	struct slb_flow flows[SLB_ATOMIC_FLOWS];
+};
+
+/* Per-port counters for an atomic queue */
+struct __rte_cache_aligned slb_atomic_port_stats {
+	uint32_t flow_count;   /* Number of active flows mapped to this port */
+	uint64_t q_enqueued;   /* Events scheduled into this port's atomic port-Q */
+	uint64_t q_returned;   /* Events returned (FORWARD/RELEASE) by this port */
+};
+
+/* Dynamically allocated state for atomic queues */
+struct slb_atomic_state {
+	struct slb_flow_map flow_map;
+	uint32_t next_port_rr;
+	rte_spinlock_t refill_lock;
+	uint16_t hold_count;
+	alignas(RTE_CACHE_LINE_SIZE)
+	struct slb_atomic_port_stats port_stats[SLB_MAX_PORTS];
+	uint8_t hold_ports[SLB_HOLD_BUFFER_SIZE];
+	struct rte_event hold_buffer[SLB_HOLD_BUFFER_SIZE];
+};
+
 struct __rte_cache_aligned slb_port {
 	/* --- Cacheline 0: Hot Rx & Tx scheduling control (64 bytes) --- */
 	uint16_t id;
@@ -134,6 +167,10 @@ struct slb_queue {
 	uint16_t num_serving_ports;
 	uint64_t serving_ports_mask;
 	alignas(RTE_CACHE_LINE_SIZE) struct rte_event_ring *q_ring;
+	/* Per-port rings for atomic queues */
+	struct rte_event_ring *per_port_rings[SLB_MAX_PORTS];
+	/* For atomic queues (dynamically allocated) */
+	struct slb_atomic_state *atomic_state;
 	/* For ordered queues (dynamically allocated) */
 	struct slb_reorder_entry *reorder_buffer;
 	uint32_t reorder_drain_idx;
