@@ -36,7 +36,9 @@ rte_version(void)
 	static char version[32];
 	if (version[0] != 0)
 		return version;
-	if (strlen(RTE_VER_SUFFIX) == 0)
+
+	/* extra paren to silence unreachable warnings */
+	if ((strlen(RTE_VER_SUFFIX) == 0))
 		snprintf(version, sizeof(version), "%s %d.%02d.%d",
 				RTE_VER_PREFIX,
 				RTE_VER_YEAR,
