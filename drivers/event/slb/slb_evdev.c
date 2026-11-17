@@ -74,8 +74,13 @@ slb_port_setup(struct rte_eventdev *dev, uint8_t port_id,
 		.total_dequeues = 0,
 		.empty_dequeues = 0,
 		.pending_releases = 0,
+		.is_loaded = false,
 		.single_linked_q = NULL,
 		.single_linked_ring = NULL,
+		.flow_migrations = 0,
+		.migrations_in = 0,
+		.migrations_out = 0,
+		.last_migrated_time = 0,
 	};
 
 	port->remap_input_q = false;
@@ -208,8 +213,12 @@ slb_queue_setup(struct rte_eventdev *dev, uint8_t queue_id,
 		queue->atomic_state->next_port_rr = 0;
 		rte_spinlock_init(&queue->atomic_state->refill_lock);
 		queue->atomic_state->hold_count = 0;
+		queue->atomic_state->migration.in_progress = false;
+		queue->atomic_state->migrations_count = 0;
 		memset(queue->atomic_state->port_stats, 0,
 		       sizeof(queue->atomic_state->port_stats));
+		memset(queue->atomic_state->flow_last_migrated, 0,
+		       sizeof(queue->atomic_state->flow_last_migrated));
 	} else {
 		queue->atomic_state = NULL;
 	}
@@ -547,12 +556,16 @@ slb_stop(struct rte_eventdev *dev)
 		struct slb_queue *q = &slb->queues[qid];
 
 		if (q->schedule_type == RTE_SCHED_TYPE_ATOMIC && q->atomic_state != NULL) {
-			for (int f = 0; f < SLB_ATOMIC_FLOWS; f++)
+			for (int f = 0; f < SLB_ATOMIC_FLOWS; f++) {
 				rte_atomic_store_explicit(
 					&q->atomic_state->flow_map.flows[f].port_id,
 					-1, rte_memory_order_relaxed);
+				q->atomic_state->flow_last_migrated[f] = 0;
+			}
+			q->atomic_state->migration.in_progress = false;
 
 			for (uint16_t pid = 0; pid < slb->num_ports; pid++) {
+				q->atomic_state->port_stats[pid].load_counter = 0;
 				if (q->per_port_rings[pid] != NULL)
 					slb_drain_ring(dev_id,
 						       q->per_port_rings[pid],
@@ -568,6 +581,7 @@ slb_stop(struct rte_eventdev *dev)
 		struct slb_port *port = &slb->ports[i];
 		port->inflight_credits = 0;
 		port->credits_drained = false;
+		port->is_loaded = false;
 		for (int p = 0; p < SLB_MAX_PRIORITIES; p++)
 			port->next_q[p] = 0;
 	}

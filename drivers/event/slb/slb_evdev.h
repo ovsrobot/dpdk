@@ -87,6 +87,8 @@ struct slb_reorder_entry {
 #define SLB_ATOMIC_FLOWS 2048
 #define SLB_ATOMIC_FLOWS_MASK (SLB_ATOMIC_FLOWS - 1)
 #define SLB_HOLD_BUFFER_SIZE (SLB_MAX_PORT_DEQUEUE_DEPTH * 64)
+#define SLB_MIGRATION_LOAD_THRESHOLD 16
+#define SLB_MIGRATION_COOLDOWN_MS 500
 
 /* Per-flow entry for atomic scheduling affinity */
 struct slb_flow {
@@ -100,9 +102,17 @@ struct slb_flow_map {
 
 /* Per-port counters for an atomic queue */
 struct __rte_cache_aligned slb_atomic_port_stats {
+	uint32_t load_counter; /* Incremented when full, decremented when space available */
 	uint32_t flow_count;   /* Number of active flows mapped to this port */
 	uint64_t q_enqueued;   /* Events scheduled into this port's atomic port-Q */
 	uint64_t q_returned;   /* Events returned (FORWARD/RELEASE) by this port */
+};
+
+/* Active migration state for an atomic queue */
+struct slb_migration_state {
+	bool in_progress;
+	uint8_t port_id;       /* Source port being drained */
+	uint32_t flow_idx;     /* Flow hash index being migrated */
 };
 
 /* Dynamically allocated state for atomic queues */
@@ -111,6 +121,9 @@ struct slb_atomic_state {
 	uint32_t next_port_rr;
 	rte_spinlock_t refill_lock;
 	uint16_t hold_count;
+	struct slb_migration_state migration;
+	uint64_t migrations_count;
+	uint64_t flow_last_migrated[SLB_ATOMIC_FLOWS];
 	alignas(RTE_CACHE_LINE_SIZE)
 	struct slb_atomic_port_stats port_stats[SLB_MAX_PORTS];
 	uint8_t hold_ports[SLB_HOLD_BUFFER_SIZE];
@@ -132,7 +145,8 @@ struct __rte_cache_aligned slb_port {
 	bool implicit_release;
 	bool credits_drained;
 	bool remap_input_q;
-	uint8_t pad_port[4];
+	bool is_loaded; /* Port marked loaded for atomic flow migration */
+	uint8_t pad_port[3];
 	struct rte_event_ring *single_linked_ring;
 	struct slb_evdev *slb;
 
@@ -149,6 +163,10 @@ struct __rte_cache_aligned slb_port {
 	uint16_t dequeue_depth;
 	uint16_t enqueue_depth;
 	struct slb_queue *single_linked_q;
+	uint64_t flow_migrations;
+	uint64_t migrations_in;
+	uint64_t migrations_out;
+	uint64_t last_migrated_time;
 	uint64_t enqueue_calls;
 	uint64_t new_enqueued;
 	uint64_t forward_enqueued;
