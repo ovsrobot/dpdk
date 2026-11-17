@@ -9,6 +9,7 @@
 #include <rte_bitset.h>
 #include <rte_event_ring.h>
 #include <rte_eventdev.h>
+#include <rte_spinlock.h>
 #include <rte_stdatomic.h>
 #include <eventdev_pmd.h>
 
@@ -58,9 +59,37 @@ struct slb_port_q_entry {
 	uint8_t pad[6];
 };
 
+#define SLB_PORT_HISTORY_SIZE 256
+#define SLB_PORT_HISTORY_MAX_TOKENS (SLB_PORT_HISTORY_SIZE - 1)
+#define SLB_PORT_HISTORY_FREE_END 0xFFFF
+
+struct slb_history_entry {
+	uint32_t flow_id;
+	uint16_t seq_slot;
+	uint16_t next_free;
+	uint8_t orig_queue_id;
+	uint8_t enq_port_id;
+	uint8_t sched_type;
+	bool active;
+};
+
+enum slb_reorder_state {
+	SLB_REORDER_EMPTY = 0,
+	SLB_REORDER_READY = 1,
+	SLB_REORDER_RELEASED = 2
+};
+
+struct slb_reorder_entry {
+	struct rte_event event;
+	RTE_ATOMIC(uint8_t) state;
+};
+
 struct __rte_cache_aligned slb_port {
 	/* --- Cacheline 0: Hot Rx & Tx scheduling control (64 bytes) --- */
 	uint16_t id;
+	uint16_t history_head;
+	uint16_t history_avail;
+	uint16_t pending_releases;
 	int32_t inflight_credits;
 	int32_t new_event_threshold;
 	RTE_ATOMIC(uint64_t) active_queues;
@@ -77,6 +106,10 @@ struct __rte_cache_aligned slb_port {
 	/* --- Cachelines 1..6: Pre-resolved queue mappings for dequeue --- */
 	alignas(RTE_CACHE_LINE_SIZE)
 	struct slb_port_q_entry q_entries[SLB_MAX_PRIORITIES][SLB_PORT_MAX_Q_MAP_PER_PRIO];
+
+	/* --- Cachelines 7+: Per-port history buffer --- */
+	alignas(RTE_CACHE_LINE_SIZE)
+	struct slb_history_entry history[SLB_PORT_HISTORY_SIZE];
 
 	/* --- Cold Section: Statistics counters and config --- */
 	alignas(RTE_CACHE_LINE_SIZE)
@@ -101,6 +134,10 @@ struct slb_queue {
 	uint16_t num_serving_ports;
 	uint64_t serving_ports_mask;
 	alignas(RTE_CACHE_LINE_SIZE) struct rte_event_ring *q_ring;
+	/* For ordered queues (dynamically allocated) */
+	struct slb_reorder_entry *reorder_buffer;
+	uint32_t reorder_drain_idx;
+	rte_spinlock_t reorder_lock;
 };
 
 /* Limited by the size of 'serving_ports_mask' and 'active_queues' bitmasks */
@@ -134,6 +171,8 @@ uint16_t slb_event_dequeue_burst(void *port, struct rte_event *events,
 
 void slb_port_return_credits(struct slb_evdev *slb, struct slb_port *port,
 			     int32_t credits);
+
+void slb_reorder_drain(struct slb_evdev *slb, struct slb_queue *queue);
 
 void slb_dump(struct rte_eventdev *dev, FILE *f);
 
