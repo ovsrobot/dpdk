@@ -576,12 +576,13 @@ ntb_enqueue_bufs(struct rte_rawdev *dev,
 	struct ntb_tx_entry *sw_ring = txq->sw_ring;
 	struct rte_mbuf *txm;
 	struct ntb_used tx_used[NTB_MAX_DESC_SIZE];
+	void *seg_addr[NTB_MAX_DESC_SIZE];
+	uint16_t seg_len[NTB_MAX_DESC_SIZE];
 	volatile struct ntb_desc *tx_item;
 	uint16_t tx_last, nb_segs, off, last_used, avail_cnt;
 	uint16_t nb_mbufs = 0;
 	uint16_t nb_tx = 0;
 	uint64_t bytes = 0;
-	void *buf_addr;
 	int i;
 
 	if (unlikely(dev->started == 0 || !ntb_peer_dev_is_up(hw))) {
@@ -600,35 +601,43 @@ ntb_enqueue_bufs(struct rte_rawdev *dev,
 		if (txm == NULL || txq->nb_tx_free < txm->nb_segs)
 			break;
 
-		tx_last = (txq->last_used + txm->nb_segs - 1) &
-			  (txq->nb_tx_desc - 1);
 		nb_segs = txm->nb_segs;
+		/* Check all descriptors first so a packet is never partially enqueued. */
 		for (i = 0; i < nb_segs; i++) {
-			/* Not enough ring space for tx. */
-			if (txq->last_used == avail_cnt)
-				goto end_of_tx;
-			sw_ring[txq->last_used].mbuf = txm;
-			tx_item = txq->tx_desc_ring + txq->last_used;
+			const uint16_t idx = (txq->last_used + i) & (txq->nb_tx_desc - 1);
 
-			if (!tx_item->len) {
+			/* Not enough ring space for tx. */
+			if (idx == avail_cnt)
+				goto end_of_tx;
+			tx_item = txq->tx_desc_ring + idx;
+
+			seg_len[i] = tx_item->len;
+			if (seg_len[i] == 0) {
 				(hw->ntb_xstats[NTB_TX_ERRS_ID + off])++;
 				goto end_of_tx;
 			}
-			if (txm->data_len > tx_item->len) {
-				NTB_LOG(ERR, "Data length exceeds buf length."
-					" Only %u data would be transmitted.",
-					tx_item->len);
-				txm->data_len = tx_item->len;
-			}
 
 			/* translate remote virtual addr to bar virtual addr */
-			buf_addr = (*hw->ntb_ops->ioremap)(dev, tx_item->addr);
-			if (buf_addr == NULL) {
+			seg_addr[i] = (*hw->ntb_ops->ioremap)(dev, tx_item->addr);
+			if (seg_addr[i] == NULL) {
 				(hw->ntb_xstats[NTB_TX_ERRS_ID + off])++;
 				NTB_LOG(ERR, "Null remap addr.");
 				goto end_of_tx;
 			}
-			rte_memcpy(buf_addr, rte_pktmbuf_mtod(txm, void *),
+		}
+
+		tx_last = (txq->last_used + nb_segs - 1) & (txq->nb_tx_desc - 1);
+		for (i = 0; i < nb_segs; i++) {
+			sw_ring[txq->last_used].mbuf = txm;
+
+			if (txm->data_len > seg_len[i]) {
+				NTB_LOG(ERR, "Data length exceeds buf length."
+					" Only %u data would be transmitted.",
+					seg_len[i]);
+				txm->data_len = seg_len[i];
+			}
+
+			rte_memcpy(seg_addr[i], rte_pktmbuf_mtod(txm, void *),
 				   txm->data_len);
 
 			tx_used[nb_mbufs].len = txm->data_len;
