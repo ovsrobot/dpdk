@@ -126,9 +126,9 @@ struct __rte_cache_aligned mlx5_txq_data {
 	uint16_t wqe_comp; /* WQE index since last completion request. */
 	uint16_t wqe_thres; /* WQE threshold to request completion in CQ. */
 	/* WQ related fields. */
-	uint16_t cq_ci; /* Consumer index for completion queue. */
-	uint16_t cq_pi; /* Production index for completion queue. */
 	uint16_t cqe_s; /* Number of CQ elements. */
+	uint32_t cq_ci; /* Consumer index for completion queue (doorbell takes low 24 bits). */
+	uint32_t cq_pi; /* Production index for completion queue. */
 	uint16_t cqe_m; /* Mask for CQ indices. */
 	/* CQ related fields. */
 	uint16_t elts_n:4; /* elts[] length (in log2). */

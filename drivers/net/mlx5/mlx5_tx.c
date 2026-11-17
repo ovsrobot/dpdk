@@ -251,7 +251,7 @@ mlx5_tx_handle_completion(struct mlx5_txq_data *__rte_restrict txq)
 	if (likely(ring_doorbell)) {
 		/* Ring doorbell to notify hardware. */
 		rte_compiler_barrier();
-		*txq->cq_db = rte_cpu_to_be_32(txq->cq_ci);
+		*txq->cq_db = rte_cpu_to_be_32(txq->cq_ci & MLX5_CI_MASK);
 		mlx5_tx_comp_flush(txq, last_cqe);
 	}
 }
