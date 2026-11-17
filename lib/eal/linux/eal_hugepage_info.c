@@ -480,6 +480,20 @@ hugepage_info_init(void)
 		hpi->hugepage_sz =
 			rte_str_to_size(&dirent->d_name[dirent_start_len]);
 
+#ifdef MAP_HUGE_SHIFT
+		/* if we have kernel support for reserving hugepages
+		 * through mmap, and we're in in-memory mode, treat this
+		 * page size as valid. we cannot be in legacy mode at
+		 * this point because we've checked this earlier in the
+		 * init process.
+		 */
+		if (internal_conf->in_memory) {
+			calc_num_pages(hpi, dirent, 0);
+			num_sizes++;
+			continue;
+		}
+#endif
+
 		/* first, check if we have a mountpoint */
 		if (get_hugepage_dir(hpi->hugepage_sz,
 			hpi->hugedir, sizeof(hpi->hugedir)) < 0) {
@@ -493,22 +507,6 @@ hugepage_info_init(void)
 					"%" PRIu64 " reserved, but no mounted "
 					"hugetlbfs found for that size",
 					num_pages, hpi->hugepage_sz);
-			/* if we have kernel support for reserving hugepages
-			 * through mmap, and we're in in-memory mode, treat this
-			 * page size as valid. we cannot be in legacy mode at
-			 * this point because we've checked this earlier in the
-			 * init process.
-			 */
-#ifdef MAP_HUGE_SHIFT
-			if (internal_conf->in_memory) {
-				EAL_LOG(DEBUG, "In-memory mode enabled, "
-					"hugepages of size %" PRIu64 " bytes "
-					"will be allocated anonymously",
-					hpi->hugepage_sz);
-				calc_num_pages(hpi, dirent, 0);
-				num_sizes++;
-			}
-#endif
 			continue;
 		}
 
