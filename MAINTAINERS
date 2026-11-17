@@ -1534,6 +1534,10 @@ M: Mattias Rönnblom <mattias.ronnblom@ericsson.com>
 F: drivers/event/dsw/
 F: doc/guides/eventdevs/dsw.rst
 
+Software Load Balancer (SLB) Eventdev PMD
+M: Pravin Pathak <pravin.pathak.dev@gmail.com>
+F: drivers/event/slb/
+
 Software OPDL Eventdev PMD
 M: Liang Ma <liangma@liangbit.com>
 M: Peter Mccarthy <peter.mccarthy@intel.com>
