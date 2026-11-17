@@ -16,7 +16,7 @@
 #include <rte_memory.h>
 #include <rte_common.h>
 #include <rte_malloc.h>
-#include <rte_bus_vmbus.h>
+#include <vmbus_api.h>
 #include <rte_string_fns.h>
 
 #include "private.h"
@@ -36,29 +36,6 @@ void vmbus_uio_irq_control(const struct rte_vmbus_device *dev, int32_t onoff)
 			  rte_intr_fd_get(dev->intr_handle),
 			  strerror(errno));
 	}
-}
-
-int vmbus_uio_irq_read(struct rte_vmbus_device *dev)
-{
-	int32_t count;
-	int cc;
-
-	if (rte_intr_fd_get(dev->intr_handle) < 0)
-		return -1;
-
-	cc = read(rte_intr_fd_get(dev->intr_handle), &count,
-		  sizeof(count));
-	if (cc < (int)sizeof(count)) {
-		if (cc < 0) {
-			VMBUS_LOG(ERR, "IRQ read failed %s",
-				  strerror(errno));
-			return -errno;
-		}
-		VMBUS_LOG(ERR, "can't read IRQ count");
-		return -EINVAL;
-	}
-
-	return count;
 }
 
 void

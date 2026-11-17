@@ -18,7 +18,7 @@
 #include <rte_stdatomic.h>
 #include <rte_memory.h>
 #include <rte_pause.h>
-#include <rte_bus_vmbus.h>
+#include <vmbus_api.h>
 
 #include "private.h"
 

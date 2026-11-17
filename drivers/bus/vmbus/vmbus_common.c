@@ -19,7 +19,7 @@
 #include <rte_malloc.h>
 #include <rte_errno.h>
 #include <rte_memory.h>
-#include <rte_bus_vmbus.h>
+#include <vmbus_api.h>
 
 #include "private.h"
 
@@ -124,18 +124,6 @@ free_intr:
 	return ret;
 }
 
-/*
- * Scan the vmbus, and call the devinit() function for
- * all registered drivers that have a matching entry in its id_table
- * for discovered devices.
- */
-RTE_EXPORT_SYMBOL(rte_vmbus_probe)
-int
-rte_vmbus_probe(void)
-{
-	return rte_bus_generic_probe(&rte_vmbus_bus);
-}
-
 static int
 vmbus_unplug_device(struct rte_device *rte_dev)
 {
@@ -208,7 +196,7 @@ rte_vmbus_unregister(struct rte_vmbus_driver *driver)
 
 /* VMBUS doesn't support hotplug */
 struct rte_bus rte_vmbus_bus = {
-	.scan = rte_vmbus_scan,
+	.scan = vmbus_scan,
 	.probe = rte_bus_generic_probe,
 	.free_device = vmbus_free_device,
 	.cleanup = rte_bus_generic_cleanup,

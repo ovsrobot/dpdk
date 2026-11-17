@@ -14,7 +14,7 @@
 #include <rte_log.h>
 #include <rte_stdatomic.h>
 #include <rte_eal_paging.h>
-#include <rte_vmbus_reg.h>
+#include <vmbus_reg.h>
 
 extern struct rte_bus rte_vmbus_bus;
 
@@ -83,12 +83,12 @@ struct vmbus_channel {
 
 #define VMBUS_MAX_CHANNELS	64
 
+int vmbus_scan(void);
 int vmbus_chan_create(const struct rte_vmbus_device *device,
 		      uint16_t relid, uint16_t subid, uint8_t monitor_id,
 		      struct vmbus_channel **new_chan);
 
 void vmbus_uio_irq_control(const struct rte_vmbus_device *dev, int32_t onoff);
-int vmbus_uio_irq_read(struct rte_vmbus_device *dev);
 
 int vmbus_uio_map_resource(struct rte_vmbus_device *dev);
 void vmbus_uio_unmap_resource(struct rte_vmbus_device *dev);

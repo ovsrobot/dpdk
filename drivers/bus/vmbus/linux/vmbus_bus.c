@@ -17,7 +17,7 @@
 #include <rte_devargs.h>
 #include <rte_memory.h>
 #include <rte_malloc.h>
-#include <rte_bus_vmbus.h>
+#include <vmbus_api.h>
 #include <rte_kvargs.h>
 
 #include <eal_export.h>
@@ -164,7 +164,7 @@ static const char *map_names[VMBUS_MAX_RESOURCE] = {
 
 
 /* map the resources of a vmbus device in virtual memory */
-RTE_EXPORT_SYMBOL(rte_vmbus_map_device)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_map_device)
 int
 rte_vmbus_map_device(struct rte_vmbus_device *dev)
 {
@@ -223,7 +223,7 @@ rte_vmbus_map_device(struct rte_vmbus_device *dev)
 	return vmbus_uio_map_resource(dev);
 }
 
-RTE_EXPORT_SYMBOL(rte_vmbus_unmap_device)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vmbus_unmap_device)
 void
 rte_vmbus_unmap_device(struct rte_vmbus_device *dev)
 {
@@ -375,9 +375,8 @@ error:
 /*
  * Scan the content of the vmbus, and the devices in the devices list
  */
-RTE_EXPORT_SYMBOL(rte_vmbus_scan)
 int
-rte_vmbus_scan(void)
+vmbus_scan(void)
 {
 	struct dirent *e;
 	DIR *dir;
@@ -405,22 +404,4 @@ rte_vmbus_scan(void)
 error:
 	closedir(dir);
 	return -1;
-}
-
-RTE_EXPORT_SYMBOL(rte_vmbus_irq_mask)
-void rte_vmbus_irq_mask(struct rte_vmbus_device *device)
-{
-	vmbus_uio_irq_control(device, 1);
-}
-
-RTE_EXPORT_SYMBOL(rte_vmbus_irq_unmask)
-void rte_vmbus_irq_unmask(struct rte_vmbus_device *device)
-{
-	vmbus_uio_irq_control(device, 0);
-}
-
-RTE_EXPORT_SYMBOL(rte_vmbus_irq_read)
-int rte_vmbus_irq_read(struct rte_vmbus_device *device)
-{
-	return vmbus_uio_irq_read(device);
 }

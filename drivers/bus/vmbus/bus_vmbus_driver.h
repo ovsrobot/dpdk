@@ -6,7 +6,7 @@
 #ifndef BUS_VMBUS_DRIVER_H
 #define BUS_VMBUS_DRIVER_H
 
-#include <rte_bus_vmbus.h>
+#include <vmbus_api.h>
 #include <rte_compat.h>
 #include <dev_driver.h>
 
