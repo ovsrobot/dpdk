@@ -491,6 +491,7 @@ class TestPmdParams(EalParams):
                               for the first time.
         no_lsc_interrupt: Disable LSC interrupts for all ports, even those supporting it.
         no_rmv_interrupt: Disable RMV interrupts for all ports, even those supporting it.
+        rxq_interrupt: Enable Rx queue interrupts for all ports. Idle forwarding lcores sleep.
         bitrate_stats: Set the logical core N to perform bitrate calculation.
         latencystats: Set the logical core N to perform latency and jitter calculations.
         print_events: Enable printing the occurrence of the designated events.
@@ -596,6 +597,7 @@ class TestPmdParams(EalParams):
     disable_device_start: Switch = None
     no_lsc_interrupt: Switch = None
     no_rmv_interrupt: Switch = None
+    rxq_interrupt: Switch = None
     bitrate_stats: int | None = None
     latencystats: int | None = None
     print_events: list[Event] | None = field(

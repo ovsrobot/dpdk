@@ -190,6 +190,7 @@ class TestPmdParamsDict(EalParamsDict, total=False):
     disable_device_start: Switch
     no_lsc_interrupt: Switch
     no_rmv_interrupt: Switch
+    rxq_interrupt: Switch
     bitrate_stats: int | None
     latencystats: int | None
     print_events: list[Event] | None
