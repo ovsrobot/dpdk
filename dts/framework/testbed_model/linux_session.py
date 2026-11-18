@@ -438,7 +438,14 @@ class LinuxSession(PosixSession, LinuxSessionBase):
     @cached_property
     def _lshw_net_info(self) -> list[LshwOutput]:
         output = self.send_command("lshw -quiet -json -C network", verify=True)
-        return json.loads(output.stdout)
+        ports = json.loads(output.stdout)
+        # The network interface of a virtio device is an entry of its own, on the virtio bus,
+        # right after the entry of the PCI device. Copy from it what the PCI entry lacks.
+        for device, interface in zip(ports, ports[1:]):
+            if "logicalname" not in device and interface.get("businfo", "").startswith("virtio@"):
+                configuration = interface.get("configuration", {}) | device.get("configuration", {})
+                device.update(interface | device | {"configuration": configuration})
+        return ports
 
     def refresh_lshw(self) -> None:
         """Force refresh of cached lshw network info."""
