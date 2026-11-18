@@ -43,6 +43,8 @@
 #include <rte_mbuf.h>
 #include <rte_mbuf_pool_ops.h>
 #include <rte_interrupts.h>
+#include <rte_epoll.h>
+#include <rte_spinlock.h>
 #include <rte_ether.h>
 #include <rte_ethdev.h>
 #include <rte_dev.h>
@@ -445,6 +447,11 @@ uint8_t lsc_interrupt = 1; /* enabled by default */
  * Enable device removal notification.
  */
 uint8_t rmv_interrupt = 1; /* enabled by default */
+
+/*
+ * Enable Rx queue interrupts. A forwarding lcore then sleeps when it is idle.
+ */
+uint8_t rxq_interrupt;
 
 uint8_t hot_plug = 0; /**< hotplug disabled by default. */
 
@@ -2213,6 +2220,14 @@ fwd_stats_display(void)
 	       total_xmit, total_tx_dropped, total_xmit + total_tx_dropped);
 	if (total_rx_nombuf > 0)
 		printf("  RX-nombufs: %-14"PRIu64"\n", total_rx_nombuf);
+	if (rxq_interrupt) {
+		uint64_t rx_wakeups = 0;
+		lcoreid_t lc_id;
+
+		for (lc_id = 0; lc_id < cur_fwd_config.nb_fwd_lcores; lc_id++)
+			rx_wakeups += fwd_lcores[lc_id]->rx_wakeups;
+		printf("  RX-wakeups: %-14"PRIu64"\n", rx_wakeups);
+	}
 	printf("  %s++++++++++++++++++++++++++++++++++++++++++++++"
 	       "%s\n",
 	       acc_stats_border, acc_stats_border);
@@ -2240,6 +2255,7 @@ void
 fwd_stats_reset(void)
 {
 	streamid_t sm_id;
+	lcoreid_t lc_id;
 	portid_t pt_id;
 	int ret;
 	int i;
@@ -2267,6 +2283,8 @@ fwd_stats_reset(void)
 		memset(&fs->tx_burst_stats, 0, sizeof(fs->tx_burst_stats));
 		fs->busy_cycles = 0;
 	}
+	for (lc_id = 0; lc_id < cur_fwd_config.nb_fwd_lcores; lc_id++)
+		fwd_lcores[lc_id]->rx_wakeups = 0;
 }
 
 static void
@@ -2323,6 +2341,41 @@ flush_fwd_rx_queues(void)
 	}
 }
 
+/*
+ * As in l3fwd-power, an lcore whose Rx queues are all empty enables their
+ * interrupts, sleeps until one is raised, 10 ms at most, and disables them.
+ */
+static rte_spinlock_t rxq_interrupt_locks[RTE_MAX_ETHPORTS];
+
+static void
+rxq_interrupt_turn(struct fwd_lcore *fc, bool on)
+{
+	struct fwd_stream **fsm = &fwd_streams[fc->stream_idx];
+	streamid_t sm_id;
+
+	for (sm_id = 0; sm_id < fc->stream_nb; sm_id++) {
+		struct fwd_stream *fs = fsm[sm_id];
+
+		rte_spinlock_lock(&rxq_interrupt_locks[fs->rx_port]);
+		if (on)
+			rte_eth_dev_rx_intr_enable(fs->rx_port, fs->rx_queue);
+		else
+			rte_eth_dev_rx_intr_disable(fs->rx_port, fs->rx_queue);
+		rte_spinlock_unlock(&rxq_interrupt_locks[fs->rx_port]);
+	}
+}
+
+static void
+rxq_interrupt_sleep(struct fwd_lcore *fc)
+{
+	struct rte_epoll_event event;
+
+	rxq_interrupt_turn(fc, true);
+	if (rte_epoll_wait(RTE_EPOLL_PER_THREAD, &event, 1, 10) > 0)
+		fc->rx_wakeups++;
+	rxq_interrupt_turn(fc, false);
+}
+
 static void
 run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 {
@@ -2330,6 +2383,7 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 	uint64_t prev_tsc;
 	streamid_t nb_fs;
 	streamid_t sm_id;
+	bool idle;
 #ifdef RTE_LIB_BITRATESTATS
 	uint64_t tics_per_1sec;
 	uint64_t tics_datum;
@@ -2344,6 +2398,7 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 	nb_fs = fc->stream_nb;
 	prev_tsc = rte_rdtsc();
 	do {
+		idle = true;
 		for (sm_id = 0; sm_id < nb_fs; sm_id++) {
 			struct fwd_stream *fs = fsm[sm_id];
 			uint64_t start_fs_tsc = 0;
@@ -2354,9 +2409,13 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 			if (record_core_cycles)
 				start_fs_tsc = rte_rdtsc();
 			busy = (*pkt_fwd)(fs);
+			if (busy)
+				idle = false;
 			if (record_core_cycles && busy)
 				fs->busy_cycles += rte_rdtsc() - start_fs_tsc;
 		}
+		if (rxq_interrupt && idle && !fc->stopped)
+			rxq_interrupt_sleep(fc);
 #ifdef RTE_LIB_BITRATESTATS
 		if (bitrate_enabled != 0 &&
 				bitrate_lcore_id == rte_lcore_id()) {
@@ -2409,11 +2468,35 @@ lcore_usage_callback(unsigned int lcore_id, struct rte_lcore_usage *usage)
 	return 0;
 }
 
+/* Add the Rx queue interrupts of an lcore to its thread's epoll instance, or delete them. */
+static void
+rxq_interrupt_register(struct fwd_lcore *fc, int op)
+{
+	struct fwd_stream **fsm = &fwd_streams[fc->stream_idx];
+	streamid_t sm_id;
+	int ret;
+
+	for (sm_id = 0; sm_id < fc->stream_nb; sm_id++) {
+		struct fwd_stream *fs = fsm[sm_id];
+
+		ret = rte_eth_dev_rx_intr_ctl_q(fs->rx_port, fs->rx_queue,
+						RTE_EPOLL_PER_THREAD, op, NULL);
+		if (ret != 0 && op == RTE_INTR_EVENT_ADD)
+			TESTPMD_LOG(ERR, "Port %u Rx queue %u: cannot register the interrupt: %s\n",
+				    fs->rx_port, fs->rx_queue, rte_strerror(-ret));
+	}
+}
+
 static int
 start_pkt_forward_on_core(void *fwd_arg)
 {
-	run_pkt_fwd_on_lcore((struct fwd_lcore *) fwd_arg,
-			     cur_fwd_config.fwd_eng->packet_fwd);
+	struct fwd_lcore *fc = fwd_arg;
+
+	if (rxq_interrupt)
+		rxq_interrupt_register(fc, RTE_INTR_EVENT_ADD);
+	run_pkt_fwd_on_lcore(fc, cur_fwd_config.fwd_eng->packet_fwd);
+	if (rxq_interrupt)
+		rxq_interrupt_register(fc, RTE_INTR_EVENT_DEL);
 	return 0;
 }
 
@@ -4203,6 +4286,8 @@ init_port_config(void)
 			port->dev_conf.intr_conf.lsc = 1;
 		if (rmv_interrupt && (*port->dev_info.dev_flags & RTE_ETH_DEV_INTR_RMV))
 			port->dev_conf.intr_conf.rmv = 1;
+		if (rxq_interrupt)
+			port->dev_conf.intr_conf.rxq = 1;
 	}
 }
 

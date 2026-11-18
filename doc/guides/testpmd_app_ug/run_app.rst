@@ -462,6 +462,13 @@ The command line options are:
 
     Disable RMV interrupts for all ports, even those supporting it.
 
+*   ``--rxq-interrupt``
+
+    Enable Rx queue interrupts for all ports.
+    A forwarding lcore whose Rx queues are all empty sleeps until a packet arrives, 10 ms at most.
+    The forward statistics count the sleeps that an interrupt ended (``RX-wakeups``).
+    An error is logged for an Rx queue whose interrupt cannot be registered.
+
 *   ``--bitrate-stats=N``
 
     Set the logical core N to perform bitrate calculation.
