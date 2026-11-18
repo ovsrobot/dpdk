@@ -455,6 +455,9 @@ vhost_kernel_setup(struct virtio_user_dev *dev)
 		data->tapfds[i] = vhost_tap_open(dev->ifname, r_flags, true);
 		if (data->tapfds[i] < 0)
 			goto err_tapfds;
+		/* The queue stays detached until its queue pair is enabled. */
+		if (vhost_tap_set_queue(data->tapfds[i], false) < 0)
+			goto err_tapfds;
 	}
 
 	dev->backend_data = data;
@@ -541,11 +544,20 @@ vhost_kernel_enable_queue_pair(struct virtio_user_dev *dev,
 	vhostfd = data->vhostfds[pair_idx];
 	tapfd = data->tapfds[pair_idx];
 
+	/*
+	 * A queue pair's TAP queue is attached only while the pair is enabled,
+	 * so the kernel sends packets only to queues in use. The first queue
+	 * stays attached, because the interface needs one. TUNSETQUEUE fails
+	 * on a queue already in the requested state, which the check above
+	 * prevents.
+	 */
 	if (!enable) {
 		if (vhost_kernel_set_backend(vhostfd, -1) < 0) {
 			PMD_DRV_LOG(ERR, "fail to set backend for vhost kernel");
 			return -1;
 		}
+		if (pair_idx > 0 && vhost_tap_set_queue(tapfd, false) < 0)
+			return -1;
 		dev->qp_enabled[pair_idx] = false;
 		return 0;
 	}
@@ -561,18 +573,26 @@ vhost_kernel_enable_queue_pair(struct virtio_user_dev *dev,
 	    vhost_tap_set_mac(data->tapfds[pair_idx], dev->mac_addr) < 0)
 		return -1;
 
+	if (pair_idx > 0 && vhost_tap_set_queue(tapfd, true) < 0)
+		return -1;
+
 	if (vhost_kernel_tap_setup(tapfd, hdr_size, dev->features) < 0) {
 		PMD_DRV_LOG(ERR, "fail to setup tap for vhost kernel");
-		return -1;
+		goto err_detach;
 	}
 
 	if (vhost_kernel_set_backend(vhostfd, tapfd) < 0) {
 		PMD_DRV_LOG(ERR, "fail to set backend for vhost kernel");
-		return -1;
+		goto err_detach;
 	}
 
 	dev->qp_enabled[pair_idx] = true;
 	return 0;
+
+err_detach:
+	if (pair_idx > 0)
+		vhost_tap_set_queue(tapfd, false);
+	return -1;
 }
 
 static int

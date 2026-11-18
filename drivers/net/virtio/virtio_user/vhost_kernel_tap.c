@@ -126,6 +126,20 @@ vhost_tap_set_mac(int tapfd, uint8_t *mac)
 	return 0;
 }
 
+int
+vhost_tap_set_queue(int tapfd, bool attach)
+{
+	struct ifreq ifr;
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_flags = attach ? IFF_ATTACH_QUEUE : IFF_DETACH_QUEUE;
+	if (ioctl(tapfd, TUNSETQUEUE, (void *)&ifr) == -1) {
+		PMD_DRV_LOG(ERR, "TUNSETQUEUE failed: %s", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 static int
 vhost_kernel_tap_set_offload(int fd, uint64_t features)
 {
