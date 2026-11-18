@@ -1106,6 +1106,7 @@ T: git://dpdk.org/next/dpdk-next-virtio
 F: drivers/net/virtio/
 F: doc/guides/nics/virtio.rst
 F: doc/guides/nics/features/virtio*.ini
+F: app/test/test_pmd_virtio_user.c
 
 Wind River AVP
 M: Steven Webster <steven.webster@windriver.com>
