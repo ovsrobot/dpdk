@@ -1455,10 +1455,20 @@ virtio_configure_intr(struct rte_eth_dev *dev)
 		return -ENOTSUP;
 	}
 
-	ret = rte_intr_efd_enable(dev->intr_handle, dev->data->nb_rx_queues);
-	if (ret < 0) {
-		PMD_INIT_LOG(ERR, "Fail to create eventfd");
-		return ret;
+	/* On reinitialization, release the eventfds if the number of Rx queues changed. */
+	if (rte_intr_type_get(dev->intr_handle) == RTE_INTR_HANDLE_VFIO_MSIX &&
+	    rte_intr_dp_is_en(dev->intr_handle) &&
+	    rte_intr_nb_efd_get(dev->intr_handle) != dev->data->nb_rx_queues) {
+		virtio_intr_disable(dev);
+		rte_intr_efd_disable(dev->intr_handle);
+	}
+
+	if (!rte_intr_dp_is_en(dev->intr_handle)) {
+		ret = rte_intr_efd_enable(dev->intr_handle, dev->data->nb_rx_queues);
+		if (ret < 0) {
+			PMD_INIT_LOG(ERR, "Fail to create eventfd");
+			return ret;
+		}
 	}
 
 	ret = rte_intr_vec_list_alloc(dev->intr_handle, "intr_vec",
