@@ -455,6 +455,9 @@ vhost_kernel_setup(struct virtio_user_dev *dev)
 		data->tapfds[i] = vhost_tap_open(dev->ifname, r_flags, true);
 		if (data->tapfds[i] < 0)
 			goto err_tapfds;
+		/* The queue stays detached until its queue pair is enabled. */
+		if (vhost_tap_set_queue(data->tapfds[i], false) < 0)
+			goto err_tapfds;
 	}
 
 	dev->backend_data = data;
@@ -546,6 +549,12 @@ vhost_kernel_enable_queue_pair(struct virtio_user_dev *dev,
 			PMD_DRV_LOG(ERR, "fail to set backend for vhost kernel");
 			return -1;
 		}
+		/*
+		 * Detach the queue, so that the kernel sends its packets to the
+		 * other queues. The interface keeps its first queue.
+		 */
+		if (pair_idx > 0 && vhost_tap_set_queue(tapfd, false) < 0)
+			return -1;
 		dev->qp_enabled[pair_idx] = false;
 		return 0;
 	}
@@ -559,6 +568,9 @@ vhost_kernel_enable_queue_pair(struct virtio_user_dev *dev,
 	/* Set mac on tap only once when starting */
 	if (!dev->started && pair_idx == 0 &&
 	    vhost_tap_set_mac(data->tapfds[pair_idx], dev->mac_addr) < 0)
+		return -1;
+
+	if (pair_idx > 0 && vhost_tap_set_queue(tapfd, true) < 0)
 		return -1;
 
 	if (vhost_kernel_tap_setup(tapfd, hdr_size, dev->features) < 0) {
