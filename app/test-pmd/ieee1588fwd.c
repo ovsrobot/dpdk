@@ -34,10 +34,10 @@ struct ptpv2_msg {
 /*
  * Forwarding of IEEE1588 Precise Time Protocol (PTP) packets.
  *
- * In this mode, packets are received one by one and are expected to be
- * PTP V2 L2 Ethernet frames (with the specific Ethernet type "0x88F7")
- * containing PTP "sync" messages (version 2 at offset 1, and message ID
- * 0 at offset 0).
+ * In this mode, packets are received in bursts and processed one by one.
+ * They are expected to be PTP V2 L2 Ethernet frames (with the specific
+ * Ethernet type "0x88F7") containing PTP "sync" messages (version 2 at
+ * offset 1, and message ID 0 at offset 0).
  *
  * Check that each received packet is a IEEE1588 PTP V2 packet of type
  * PTP_SYNC_MESSAGE, and that it has been identified and timestamped
@@ -90,20 +90,13 @@ port_ieee1588_tx_timestamp_check(portid_t pi)
 }
 
 static bool
-ieee1588_packet_fwd(struct fwd_stream *fs)
+ieee1588_process_packet(struct fwd_stream *fs, struct rte_mbuf *mb)
 {
-	struct rte_mbuf  *mb;
 	struct rte_ether_hdr *eth_hdr;
 	struct rte_ether_addr addr;
 	struct ptpv2_msg *ptp_hdr;
 	uint16_t eth_type;
 	uint32_t timesync_index;
-
-	/*
-	 * Receive 1 packet at a time.
-	 */
-	if (common_fwd_stream_receive(fs, &mb, 1) == 0)
-		return false;
 
 	/*
 	 * Check that the received packet is a PTP packet that was detected
@@ -192,6 +185,20 @@ ieee1588_packet_fwd(struct fwd_stream *fs)
 	 */
 	port_ieee1588_tx_timestamp_check(fs->tx_port);
 	return true;
+}
+
+static bool
+ieee1588_packet_fwd(struct fwd_stream *fs)
+{
+	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
+	bool fwd = false;
+
+	const uint16_t nb_rx = common_fwd_stream_receive(fs, pkts_burst, nb_pkt_per_burst);
+	for (uint16_t i = 0; i < nb_rx; i++)
+		if (ieee1588_process_packet(fs, pkts_burst[i]))
+			fwd = true;
+
+	return fwd;
 }
 
 static int
