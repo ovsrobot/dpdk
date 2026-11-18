@@ -934,12 +934,14 @@ virtio_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr,
 	for (i = 0; i < VIRTIO_MAX_MAC_ADDRS; i++) {
 		const struct rte_ether_addr *addr
 			= (i == index) ? mac_addr : addrs + i;
-		struct virtio_net_ctrl_mac *tbl
-			= rte_is_multicast_ether_addr(addr) ? mc : uc;
 
-		if (rte_is_zero_ether_addr(addr))
-			break;
-		memcpy(&tbl->macs[tbl->entries++], addr, RTE_ETHER_ADDR_LEN);
+		if (!rte_is_zero_ether_addr(addr)) {
+			struct virtio_net_ctrl_mac *tbl =
+				rte_is_multicast_ether_addr(addr) ? mc : uc;
+
+			memcpy(&tbl->macs[tbl->entries++], addr,
+				RTE_ETHER_ADDR_LEN);
+		}
 	}
 
 	return virtio_mac_table_set(hw, uc, mc);
