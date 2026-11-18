@@ -434,15 +434,11 @@ parse_cfg_file(const char *cfg_filename)
 	uint32_t line_num = 0;
 	struct parse_status status = {0};
 
-	if (f == NULL) {
+	if (f == NULL)
 		rte_panic("Error: invalid file descriptor %s\n", cfg_filename);
-		goto error_exit;
-	}
 
-	if (cl == NULL) {
+	if (cl == NULL)
 		rte_panic("Error: cannot create cmdline instance\n");
-		goto error_exit;
-	}
 
 	cfg_sp_add_rule.data = &status;
 	cfg_sa_add_rule.data = &status;
@@ -460,12 +456,10 @@ parse_cfg_file(const char *cfg_filename)
 
 		line_num++;
 
-		if (strlen(oneline) > 1022) {
+		if (strlen(oneline) > 1022)
 			rte_panic("%s:%u: error: "
 				"the line contains more characters the parser can handle\n",
 				cfg_filename, line_num);
-			goto error_exit;
-		}
 
 		/* process comment char '#' */
 		if (oneline[0] == '#')
@@ -478,47 +472,37 @@ parse_cfg_file(const char *cfg_filename)
 		/* process line concatenator '\' */
 		pos = strchr(oneline, 92);
 		if (pos != NULL) {
-			if (pos != oneline+strlen(oneline) - 2) {
+			if (pos != oneline+strlen(oneline) - 2)
 				rte_panic("%s:%u: error: "
 					"no character should exist after '\\'\n",
 					cfg_filename, line_num);
-				goto error_exit;
-			}
 
 			*pos = '\0';
 
-			if (strlen(oneline) + strlen(str) > 1022) {
+			if (strlen(oneline) + strlen(str) > 1022)
 				rte_panic("%s:%u: error: "
 					"the concatenated line contains more characters the parser can handle\n",
 					cfg_filename, line_num);
-				goto error_exit;
-			}
 
 			strcpy(str + strlen(str), oneline);
 			continue;
 		}
 
 		/* copy the line to str and process */
-		if (strlen(oneline) + strlen(str) > 1022) {
+		if (strlen(oneline) + strlen(str) > 1022)
 			rte_panic("%s:%u: error: "
 				"the line contains more characters the parser can handle\n",
 				cfg_filename, line_num);
-			goto error_exit;
-		}
 		strcpy(str + strlen(str), oneline);
 
 		str[strlen(str)] = '\n';
-		if (cmdline_parse(cl, str) < 0) {
+		if (cmdline_parse(cl, str) < 0)
 			rte_panic("%s:%u: error: parsing \"%s\" failed\n",
 				cfg_filename, line_num, str);
-			goto error_exit;
-		}
 
-		if (status.status < 0) {
+		if (status.status < 0)
 			rte_panic("%s:%u: error: %s", cfg_filename,
 				line_num, status.parse_msg);
-			goto error_exit;
-		}
 
 		memset(str, 0, 1024);
 	} while (1);
@@ -531,12 +515,4 @@ parse_cfg_file(const char *cfg_filename)
 	sp6_sort_arr();
 
 	return 0;
-
-error_exit:
-	if (cl)
-		cmdline_stdin_exit(cl);
-	if (f)
-		fclose(f);
-
-	return -1;
 }
