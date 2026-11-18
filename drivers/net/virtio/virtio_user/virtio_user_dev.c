@@ -995,16 +995,15 @@ virtio_user_handle_ctrl_msg_split(struct virtio_user_dev *dev, struct vring *vri
 	hdr = virtio_user_iova2virt(dev, vring->desc[idx_hdr].addr);
 	if (hdr->class == VIRTIO_NET_CTRL_MQ &&
 	    hdr->cmd == VIRTIO_NET_CTRL_MQ_VQ_PAIRS_SET) {
-		uint16_t queues, *addr;
+		unaligned_uint16_t *queues;
 
-		addr = virtio_user_iova2virt(dev, vring->desc[idx_data].addr);
-		queues = *addr;
-		status = virtio_user_handle_mq(dev, queues);
+		queues = virtio_user_iova2virt(dev, vring->desc[idx_data].addr);
+		status = virtio_user_handle_mq(dev, *queues);
 	} else if (hdr->class == VIRTIO_NET_CTRL_MQ && hdr->cmd == VIRTIO_NET_CTRL_MQ_RSS_CONFIG) {
-		struct virtio_net_ctrl_rss *rss;
+		struct virtio_net_ctrl_rss rss;
 
-		rss = virtio_user_iova2virt(dev, vring->desc[idx_data].addr);
-		status = virtio_user_handle_mq(dev, rss->max_tx_vq);
+		memcpy(&rss, virtio_user_iova2virt(dev, vring->desc[idx_data].addr), sizeof(rss));
+		status = virtio_user_handle_mq(dev, rss.max_tx_vq);
 	} else if (hdr->class == VIRTIO_NET_CTRL_RX  ||
 		   hdr->class == VIRTIO_NET_CTRL_MAC ||
 		   hdr->class == VIRTIO_NET_CTRL_VLAN) {
@@ -1061,16 +1060,15 @@ virtio_user_handle_ctrl_msg_packed(struct virtio_user_dev *dev,
 	hdr = virtio_user_iova2virt(dev, vring->desc[idx_hdr].addr);
 	if (hdr->class == VIRTIO_NET_CTRL_MQ &&
 	    hdr->cmd == VIRTIO_NET_CTRL_MQ_VQ_PAIRS_SET) {
-		uint16_t queues, *addr;
+		unaligned_uint16_t *queues;
 
-		addr = virtio_user_iova2virt(dev, vring->desc[idx_data].addr);
-		queues = *addr;
-		status = virtio_user_handle_mq(dev, queues);
+		queues = virtio_user_iova2virt(dev, vring->desc[idx_data].addr);
+		status = virtio_user_handle_mq(dev, *queues);
 	} else if (hdr->class == VIRTIO_NET_CTRL_MQ && hdr->cmd == VIRTIO_NET_CTRL_MQ_RSS_CONFIG) {
-		struct virtio_net_ctrl_rss *rss;
+		struct virtio_net_ctrl_rss rss;
 
-		rss = virtio_user_iova2virt(dev, vring->desc[idx_data].addr);
-		status = virtio_user_handle_mq(dev, rss->max_tx_vq);
+		memcpy(&rss, virtio_user_iova2virt(dev, vring->desc[idx_data].addr), sizeof(rss));
+		status = virtio_user_handle_mq(dev, rss.max_tx_vq);
 	} else if (hdr->class == VIRTIO_NET_CTRL_RX  ||
 		   hdr->class == VIRTIO_NET_CTRL_MAC ||
 		   hdr->class == VIRTIO_NET_CTRL_VLAN) {
