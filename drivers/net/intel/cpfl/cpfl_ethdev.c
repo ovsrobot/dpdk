@@ -1945,7 +1945,11 @@ cpfl_handle_virtchnl_msg(struct cpfl_adapter_ext *adapter)
 	while (pending) {
 		ret = idpf_vc_ctlq_recv(hw->arq, &pending, &ctlq_msg);
 		if (ret) {
-			PMD_DRV_LOG(INFO, "Failed to read msg from virtual channel, ret: %d", ret);
+			/* -ENOMSG only means the receive queue is empty */
+			if (ret != -ENOMSG)
+				PMD_DRV_LOG(INFO,
+					    "Failed to read msg from virtual channel, ret: %d",
+					    ret);
 			return;
 		}
 
