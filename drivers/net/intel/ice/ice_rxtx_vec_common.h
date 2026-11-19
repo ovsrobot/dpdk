@@ -5,8 +5,69 @@
 #ifndef _ICE_RXTX_VEC_COMMON_H_
 #define _ICE_RXTX_VEC_COMMON_H_
 
+#include <rte_cycles.h>
+#include <rte_mbuf_dyn.h>
+
 #include "../common/rx.h"
 #include "ice_rxtx.h"
+
+#ifndef RTE_NET_INTEL_USE_16BYTE_DESC
+/*
+ * Extend the 32b Rx timestamps stashed in the mbuf dynfield by the vector
+ * loop to 64b, set the timestamp flag and mark PTP packets. Only EOP
+ * descriptors carry the timestamp; it is stored on the packet's first segment.
+ */
+static inline void
+ice_rx_vec_ts_finalize(struct ci_rx_queue *rxq, struct rte_mbuf **rx_pkts,
+		       uint16_t nb_bufs, const uint8_t *split_flags)
+{
+	struct ice_vsi *vsi = rxq->ice_vsi;
+	struct ice_adapter *ad = vsi->adapter;
+	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
+	const uint64_t ms_hz = rte_get_timer_hz() / 1000;
+	bool is_tsinit = rte_get_timer_cycles() / ms_hz - rxq->hw_time_update > 4;
+	/* first segment of a packet that started in a previous burst */
+	struct rte_mbuf *head = split_flags != NULL ? rxq->pkt_first_seg : NULL;
+	uint16_t k;
+
+	for (k = 0; k < nb_bufs; k++) {
+		struct rte_mbuf *mb = rx_pkts[k];
+		uint32_t ts_high;
+		uint64_t ts_ns;
+
+		if (head == NULL)
+			head = mb;
+		if (split_flags != NULL && split_flags[k] != 0)
+			continue;
+
+		ts_high = *RTE_MBUF_DYNFIELD(mb, rxq->ts_offset, uint32_t *);
+		if (unlikely(is_tsinit)) {
+			ts_ns = ice_tstamp_convert_32b_64b(hw, ad, 1, ts_high);
+			rxq->hw_time_low = (uint32_t)ts_ns;
+			rxq->hw_time_high = (uint32_t)(ts_ns >> 32);
+			is_tsinit = false;
+		} else {
+			if (ts_high < rxq->hw_time_low)
+				rxq->hw_time_high += 1;
+			ts_ns = (uint64_t)rxq->hw_time_high << 32 | ts_high;
+			rxq->hw_time_low = ts_high;
+		}
+		*RTE_MBUF_DYNFIELD(head, rxq->ts_offset, rte_mbuf_timestamp_t *) = ts_ns;
+		/* reassembly copies ol_flags from the EOP segment to the head */
+		mb->ol_flags |= rxq->ts_flag;
+
+		if (ad->ptp_ena && (mb->packet_type & RTE_PTYPE_L2_MASK) ==
+				RTE_PTYPE_L2_ETHER_TIMESYNC) {
+			rxq->time_high = ts_high;
+			head->timesync = rxq->queue_id;
+			mb->timesync = rxq->queue_id;
+			mb->ol_flags |= RTE_MBUF_F_RX_IEEE1588_PTP;
+		}
+		head = NULL;
+	}
+	rxq->hw_time_update = rte_get_timer_cycles() / ms_hz;
+}
+#endif
 
 static inline int
 ice_tx_desc_done(struct ci_tx_queue *txq, uint16_t idx)

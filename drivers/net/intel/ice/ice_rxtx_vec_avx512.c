@@ -47,6 +47,9 @@ _ice_recv_raw_pkts_vec_avx512(struct ci_rx_queue *rxq,
 			0, rxq->mbuf_initializer);
 	struct ci_rx_entry *sw_ring = &rxq->sw_ring[rxq->rx_tail];
 	volatile union ci_rx_flex_desc *rxdp = rxq->rx_flex_ring + rxq->rx_tail;
+#ifndef RTE_NET_INTEL_USE_16BYTE_DESC
+	const uint8_t *split_flags = split_packet;
+#endif
 
 	rte_prefetch0(rxdp);
 
@@ -581,9 +584,6 @@ _ice_recv_raw_pkts_vec_avx512(struct ci_rx_queue *rxq,
 					*RTE_MBUF_DYNFIELD(rx_pkts[i + 7],
 						rxq->ts_offset, uint32_t *) =
 						_mm256_extract_epi32(raw_desc_bh6_7, 7);
-
-					mbuf_flags = _mm256_or_si256(mbuf_flags,
-						_mm256_set1_epi32((int)rxq->ts_flag));
 				} /* if() on Rx timestamp parsing */
 			} /* if() on RSS hash or Rx timestamp parsing */
 #endif
@@ -724,51 +724,6 @@ _ice_recv_raw_pkts_vec_avx512(struct ci_rx_queue *rxq,
 			break;
 	}
 
-#ifndef RTE_NET_INTEL_USE_16BYTE_DESC
-	/**
-	 * Convert the stashed 32b Rx timestamps to 64b for the packets that
-	 * were actually received, tracking the register rollover. This mirrors
-	 * the scalar Rx path and is only done over valid (received) packets, so
-	 * timestamps of non-DD descriptors never corrupt the rollover state.
-	 */
-	if (do_offload && received > 0 &&
-			(rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP)) {
-		struct ice_vsi *vsi = rxq->ice_vsi;
-		struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
-		struct ice_adapter *ad = vsi->adapter;
-		uint64_t ts_ns;
-		bool is_tsinit = false;
-		uint64_t sw_cur_time =
-			rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
-
-		if (unlikely(sw_cur_time - rxq->hw_time_update > 4))
-			is_tsinit = true;
-
-		for (uint16_t k = 0; k < received; k++) {
-			uint32_t ts_high = *RTE_MBUF_DYNFIELD(rx_pkts[k],
-					rxq->ts_offset, uint32_t *);
-
-			rxq->time_high = ts_high;
-			if (unlikely(is_tsinit)) {
-				ts_ns = ice_tstamp_convert_32b_64b(hw, ad, 1,
-								   ts_high);
-				rxq->hw_time_low = (uint32_t)ts_ns;
-				rxq->hw_time_high = (uint32_t)(ts_ns >> 32);
-				is_tsinit = false;
-			} else {
-				if (ts_high < rxq->hw_time_low)
-					rxq->hw_time_high += 1;
-				ts_ns = (uint64_t)rxq->hw_time_high << 32 | ts_high;
-				rxq->hw_time_low = ts_high;
-			}
-			*RTE_MBUF_DYNFIELD(rx_pkts[k], rxq->ts_offset,
-					   rte_mbuf_timestamp_t *) = ts_ns;
-		}
-		rxq->hw_time_update = rte_get_timer_cycles() /
-				      (rte_get_timer_hz() / 1000);
-	}
-#endif
-
 	/* update tail pointers */
 	rxq->rx_tail += received;
 	rxq->rx_tail &= (rxq->nb_rx_desc - 1);
@@ -777,6 +732,12 @@ _ice_recv_raw_pkts_vec_avx512(struct ci_rx_queue *rxq,
 		received--;
 	}
 	rxq->rxrearm_nb += received;
+
+#ifndef RTE_NET_INTEL_USE_16BYTE_DESC
+	if (do_offload && received > 0 &&
+			(rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP))
+		ice_rx_vec_ts_finalize(rxq, rx_pkts, received, split_flags);
+#endif
 	return received;
 }
 
