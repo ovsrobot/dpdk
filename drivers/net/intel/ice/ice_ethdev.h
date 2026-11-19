@@ -53,6 +53,7 @@
 #define ICE_PKG_FILE_SEARCH_PATH_DEFAULT "/lib/firmware/intel/ice/ddp/"
 #define ICE_PKG_FILE_SEARCH_PATH_UPDATES "/lib/firmware/updates/intel/ice/ddp/"
 #define ICE_PKG_FILE_CUSTOMIZED_PATH "/sys/module/firmware_class/parameters/path"
+#define ICE_PKG_KMOD_NAME "ice_ddp"
 #define ICE_MAX_PKG_FILENAME_SIZE   256
 
 #define MAX_ACL_NORMAL_ENTRIES    256
@@ -752,6 +753,8 @@ struct ice_vsi_vlan_pvid_info {
 bool is_ice_supported(struct rte_eth_dev *dev);
 int
 ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn);
+int
+ice_ddp_read_kmod(void **buf, size_t *bufsz);
 struct ice_vsi *
 ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type);
 int

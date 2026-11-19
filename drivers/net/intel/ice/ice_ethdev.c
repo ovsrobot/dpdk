@@ -2132,10 +2132,16 @@ no_dsn:
 		goto load_fw;
 
 	strlcpy(pkg_file, ICE_PKG_FILE_DEFAULT, ICE_MAX_PKG_FILENAME_SIZE);
-	if (ice_firmware_read(pkg_file, &buf, &bufsz) < 0) {
-		PMD_INIT_LOG(ERR, "Failed to load default DDP package " ICE_PKG_FILE_DEFAULT);
-		return -1;
-	}
+	if (ice_firmware_read(pkg_file, &buf, &bufsz) == 0)
+		goto load_fw;
+
+	/* use the same package as the kernel driver, on OSes providing it as a module */
+	strlcpy(pkg_file, ICE_PKG_KMOD_NAME " kernel module", ICE_MAX_PKG_FILENAME_SIZE);
+	if (ice_ddp_read_kmod(&buf, &bufsz) == 0)
+		goto load_fw;
+
+	PMD_INIT_LOG(ERR, "Failed to load default DDP package " ICE_PKG_FILE_DEFAULT);
+	return -1;
 
 load_fw:
 	PMD_INIT_LOG(DEBUG, "DDP package name: %s", pkg_file);

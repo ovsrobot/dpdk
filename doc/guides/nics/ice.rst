@@ -103,6 +103,10 @@ During initialization, the driver searches in the following paths in order:
 ``CUSTOMIZED_PATH``, ``/lib/firmware/updates/intel/ice/ddp`` and ``/lib/firmware/intel/ice/ddp``.
 The device-specific DDP package has a higher loading priority than default DDP package, ``ice.pkg``.
 
+On FreeBSD, if no package file is found in the above paths,
+the driver uses the package embedded in the ``ice_ddp.ko`` kernel module,
+which is the package used by the FreeBSD kernel ice driver.
+
 .. note::
 
    Windows support: DDP packages are not supported on Windows.

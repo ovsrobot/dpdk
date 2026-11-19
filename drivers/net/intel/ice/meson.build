@@ -8,6 +8,7 @@ sources = files(
         'ice_dcf_ethdev.c',
         'ice_dcf_parent.c',
         'ice_dcf_sched.c',
+        'ice_ddp_kmod.c',
         'ice_diagnose.c',
         'ice_ethdev.c',
         'ice_fdir_filter.c',
