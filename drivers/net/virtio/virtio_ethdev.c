@@ -1444,6 +1444,14 @@ virtio_queues_unbind_intr(struct rte_eth_dev *dev)
 					     VIRTIO_MSI_NO_VECTOR);
 }
 
+static bool
+virtio_vfio_intr_enabled(const struct rte_eth_dev *dev)
+{
+	return dev->intr_handle != NULL &&
+			rte_intr_type_get(dev->intr_handle) == RTE_INTR_HANDLE_VFIO_MSIX &&
+			rte_intr_nb_efd_get(dev->intr_handle) > 0;
+}
+
 static int
 virtio_configure_intr(struct rte_eth_dev *dev)
 {
@@ -1865,9 +1873,7 @@ virtio_init_device(struct rte_eth_dev *eth_dev, uint64_t req_features)
 	int ret;
 
 	/* Release Rx interrupt resources left by a previous initialization. */
-	if (eth_dev->intr_handle != NULL &&
-			rte_intr_type_get(eth_dev->intr_handle) == RTE_INTR_HANDLE_VFIO_MSIX &&
-			rte_intr_nb_efd_get(eth_dev->intr_handle) > 0) {
+	if (virtio_vfio_intr_enabled(eth_dev)) {
 		virtio_intr_disable(eth_dev);
 		rte_intr_efd_disable(eth_dev->intr_handle);
 		rte_intr_vec_list_free(eth_dev->intr_handle);
@@ -2252,12 +2258,6 @@ virtio_dev_configure(struct rte_eth_dev *dev)
 	PMD_INIT_LOG(DEBUG, "configure");
 	req_features = VIRTIO_PMD_DEFAULT_GUEST_FEATURES;
 
-	if (dev->data->dev_conf.intr_conf.rxq) {
-		ret = virtio_init_device(dev, hw->req_guest_features);
-		if (ret < 0)
-			return ret;
-	}
-
 	if (rxmode->mq_mode == RTE_ETH_MQ_RX_RSS)
 		req_features |= (1ULL << VIRTIO_NET_F_RSS);
 
@@ -2288,16 +2288,9 @@ virtio_dev_configure(struct rte_eth_dev *dev)
 			(1ULL << VIRTIO_NET_F_HOST_TSO4) |
 			(1ULL << VIRTIO_NET_F_HOST_TSO6);
 
-	/* if request features changed, reinit the device */
-	if (req_features != hw->req_guest_features) {
+	if (dev->data->dev_conf.intr_conf.rxq || virtio_vfio_intr_enabled(dev) ||
+			req_features != hw->req_guest_features || hw->vqs == NULL) {
 		ret = virtio_init_device(dev, req_features);
-		if (ret < 0)
-			return ret;
-	}
-
-	/* if queues are not allocated, reinit the device */
-	if (hw->vqs == NULL) {
-		ret = virtio_init_device(dev, hw->req_guest_features);
 		if (ret < 0)
 			return ret;
 	}
