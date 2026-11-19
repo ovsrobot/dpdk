@@ -531,6 +531,44 @@ again2:
 	return ret;
 }
 
+/*
+ * The very first I2C transaction a port issues against its SFP cage
+ * (GPIO-expander / mux), right after axgbe_phy_init(), can legitimately
+ * find that device not yet ready to respond -- observed in the field
+ * as either a quick NACK (-ENOTCONN, IC_TX_ABRT_7B_ADDR_NOACK) or a
+ * full hardware stall with zero bus activity until axgbe_i2c_xfer()'s
+ * own 1-second timeout fires (-ETIMEDOUT). This is distinct from the
+ * cross-port bus-contention race fixed by axgbe_i2c_mdio_bus_mutex in
+ * axgbe_phy_get_comm_ownership(): it reproduces on a single port with
+ * no other port active at all, immediately after that port's own
+ * phy_init(), so serializing the bus does not help with it.
+ *
+ * Retry on these two codes as well as the existing -EAGAIN, with a
+ * short settle delay first, since an immediate retry is unlikely to
+ * help if the device is still completing its own power-on sequence.
+ *
+ * Cost: on the -ETIMEDOUT path this adds up to one more full internal
+ * 1-second timeout per phase for a genuinely persistent (non-
+ * transient) fault. This is bounded to each port's first post-init
+ * access -- a one-time bring-up cost, not a recurring one paid on
+ * every subsequent link_update() poll -- and, like any I2C/MDIO bus
+ * access, runs while axgbe_i2c_mdio_bus_mutex is held, so it can
+ * delay other ports' bus access by the same amount, same as any other
+ * access to this bus.
+ *
+ * Validated on two independent physical units (AMD CRB V3C48 and
+ * Advantech FWA-1081): 0 I2C errors across 30 iterations of the
+ * original cross-port repro plus a dedicated solo-access repro, which
+ * now links up cleanly on both ports; both failed deterministically
+ * without this change.
+ */
+static inline bool axgbe_i2c_retryable(int ret)
+{
+	return ret == -EAGAIN || ret == -ENOTCONN || ret == -ETIMEDOUT;
+}
+
+#define AXGBE_I2C_RETRY_DELAY_MS	2
+
 static int axgbe_phy_i2c_read(struct axgbe_port *pdata, unsigned int target,
 			      void *reg, unsigned int reg_len,
 			      void *val, unsigned int val_len)
@@ -547,8 +585,10 @@ again1:
 	i2c_op.buf = reg;
 	ret = axgbe_phy_i2c_xfer(pdata, &i2c_op);
 	if (ret) {
-		if ((ret == -EAGAIN) && retry--)
+		if (axgbe_i2c_retryable(ret) && retry--) {
+			rte_delay_ms(AXGBE_I2C_RETRY_DELAY_MS);
 			goto again1;
+		}
 
 		return ret;
 	}
@@ -561,8 +601,10 @@ again2:
 	i2c_op.len = val_len;
 	i2c_op.buf = val;
 	ret = axgbe_phy_i2c_xfer(pdata, &i2c_op);
-	if ((ret == -EAGAIN) && retry--)
+	if (axgbe_i2c_retryable(ret) && retry--) {
+		rte_delay_ms(AXGBE_I2C_RETRY_DELAY_MS);
 		goto again2;
+	}
 
 	return ret;
 }
