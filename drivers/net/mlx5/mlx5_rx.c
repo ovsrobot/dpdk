@@ -94,13 +94,17 @@ rx_queue_count(struct mlx5_rxq_data *rxq)
 		cq_ci = rxq->cq_ci;
 	}
 	cqe = &(*rxq->cqes)[cq_ci & cqe_cnt];
-	while (check_cqe(cqe, cqe_n, cq_ci) != MLX5_CQE_STATUS_HW_OWN) {
+	while ((rxq->cqe_comp_layout ?
+		check_cqe_iteration(cqe, rxq->cqe_n, cq_ci) :
+		check_cqe(cqe, cqe_n, cq_ci)) != MLX5_CQE_STATUS_HW_OWN) {
 		int8_t op_own;
 		unsigned int n;
 
 		op_own = cqe->op_own;
 		if (MLX5_CQE_FORMAT(op_own) == MLX5_COMPRESSED)
-			n = rte_be_to_cpu_32(cqe->byte_cnt);
+			n = rxq->cqe_comp_layout ?
+			    MLX5_CQE_NUM_MINIS(op_own) + 1U :
+			    rte_be_to_cpu_32(cqe->byte_cnt);
 		else
 			n = 1;
 		cq_ci += n;
