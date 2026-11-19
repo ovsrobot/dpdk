@@ -334,6 +334,21 @@ cpfl_get_port_id(struct cpfl_itf *itf)
 	return CPFL_INVALID_HW_ID;
 }
 
+/* MMG control plane swaps the PF and VF function type values */
+static inline uint8_t
+cpfl_func_type_pf(const struct cpfl_adapter_ext *adapter)
+{
+	return adapter->base.hw.device_id == CPFL_DEV_ID_MMG ?
+		CPCHNL2_FTYPE_LAN_VF : CPCHNL2_FTYPE_LAN_PF;
+}
+
+static inline uint8_t
+cpfl_func_type_vf(const struct cpfl_adapter_ext *adapter)
+{
+	return adapter->base.hw.device_id == CPFL_DEV_ID_MMG ?
+		CPCHNL2_FTYPE_LAN_PF : CPCHNL2_FTYPE_LAN_VF;
+}
+
 static inline uint16_t
 cpfl_get_vsi_id(struct cpfl_itf *itf)
 {
@@ -354,7 +369,7 @@ cpfl_get_vsi_id(struct cpfl_itf *itf)
 		if (!idpf_is_vf_device(&itf->adapter->base.hw)) {
 			vport_id = ((struct cpfl_vport *)itf)->base.vport_id;
 
-			vport_identity.func_type = CPCHNL2_FTYPE_LAN_PF;
+			vport_identity.func_type = cpfl_func_type_pf(itf->adapter);
 			/* host: CPFL_HOST0_CPF_ID, acc: CPFL_ACC_CPF_ID */
 			vport_identity.pf_id = (itf->adapter->host_id == CPFL_HOST_ID_ACC) ?
 							CPFL_ACC_CPF_ID : CPFL_HOST0_CPF_ID;

@@ -349,12 +349,12 @@ cpfl_repr_link_update(struct rte_eth_dev *ethdev,
 	if (wait_to_complete) {
 		if (repr->repr_id.type == RTE_ETH_REPRESENTOR_PF) {
 			/* PF */
-			vi.func_type = CPCHNL2_FTYPE_LAN_PF;
+			vi.func_type = cpfl_func_type_pf(adapter);
 			vi.pf_id = cpfl_func_id_get(repr->repr_id.host_id, repr->repr_id.pf_id);
 			vi.vf_id = 0;
 		} else {
 			/* VF */
-			vi.func_type = CPCHNL2_FTYPE_LAN_VF;
+			vi.func_type = cpfl_func_type_vf(adapter);
 			vi.pf_id = CPFL_HOST0_APF;
 			vi.vf_id = repr->repr_id.vf_id;
 		}
@@ -450,20 +450,21 @@ cpfl_repr_init(struct rte_eth_dev *eth_dev, void *init_param)
 }
 
 static bool
-cpfl_match_repr_with_vport(const struct cpfl_repr_id *repr_id,
+cpfl_match_repr_with_vport(const struct cpfl_adapter_ext *adapter,
+			   const struct cpfl_repr_id *repr_id,
 			   struct cpchnl2_vport_info *info)
 {
 	int func_id;
 
 	if (repr_id->type == RTE_ETH_REPRESENTOR_PF &&
-	    info->func_type == CPCHNL2_FTYPE_LAN_PF) {
+	    info->func_type == cpfl_func_type_pf(adapter)) {
 		func_id = cpfl_func_id_get(repr_id->host_id, repr_id->pf_id);
 		if (func_id < 0 || func_id != info->pf_id)
 			return false;
 		else
 			return true;
 	} else if (repr_id->type == RTE_ETH_REPRESENTOR_VF &&
-		   info->func_type == CPCHNL2_FTYPE_LAN_VF) {
+		   info->func_type == cpfl_func_type_vf(adapter)) {
 		if (repr_id->vf_id == info->vf_id)
 			return true;
 	}
@@ -481,12 +482,12 @@ cpfl_repr_vport_list_query(struct cpfl_adapter_ext *adapter,
 
 	if (repr_id->type == RTE_ETH_REPRESENTOR_PF) {
 		/* PF */
-		vi.func_type = CPCHNL2_FTYPE_LAN_PF;
+		vi.func_type = cpfl_func_type_pf(adapter);
 		vi.pf_id = cpfl_func_id_get(repr_id->host_id, repr_id->pf_id);
 		vi.vf_id = 0;
 	} else {
 		/* VF */
-		vi.func_type = CPCHNL2_FTYPE_LAN_VF;
+		vi.func_type = cpfl_func_type_vf(adapter);
 		vi.pf_id = CPFL_HOST0_APF;
 		vi.vf_id = repr_id->vf_id;
 	}
@@ -507,12 +508,12 @@ cpfl_repr_vport_info_query(struct cpfl_adapter_ext *adapter,
 
 	if (repr_id->type == RTE_ETH_REPRESENTOR_PF) {
 		/* PF */
-		vi.func_type = CPCHNL2_FTYPE_LAN_PF;
+		vi.func_type = cpfl_func_type_pf(adapter);
 		vi.pf_id = cpfl_func_id_get(repr_id->host_id, repr_id->pf_id);
 		vi.vf_id = 0;
 	} else {
 		/* VF */
-		vi.func_type = CPCHNL2_FTYPE_LAN_VF;
+		vi.func_type = cpfl_func_type_vf(adapter);
 		vi.pf_id = CPFL_HOST0_APF;
 		vi.vf_id = repr_id->vf_id;
 	}
@@ -533,11 +534,12 @@ cpfl_repr_vport_map_update(struct cpfl_adapter_ext *adapter,
 	vi.vport_id = vport_id;
 	if (repr_id->type == RTE_ETH_REPRESENTOR_PF) {
 		/* PF */
-		vi.func_type = CPCHNL2_FTYPE_LAN_VF;
+		vi.func_type = cpfl_func_type_pf(adapter);
 		vi.pf_id = cpfl_func_id_get(repr_id->host_id, repr_id->pf_id);
+		vi.vf_id = 0;
 	} else {
 		/* VF */
-		vi.func_type = CPCHNL2_FTYPE_LAN_VF;
+		vi.func_type = cpfl_func_type_vf(adapter);
 		vi.pf_id = CPFL_HOST0_APF;
 		vi.vf_id = repr_id->vf_id;
 	}
@@ -632,7 +634,7 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 					(const void **)&vp_id, (void **)&vi, &iter_iter) >= 0) {
 			struct cpfl_repr_param param;
 
-			if (!cpfl_match_repr_with_vport(repr_id, &vi->vport.info))
+			if (!cpfl_match_repr_with_vport(adapter, repr_id, &vi->vport.info))
 				continue;
 
 			param.adapter = adapter;
