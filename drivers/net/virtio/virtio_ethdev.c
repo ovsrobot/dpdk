@@ -1864,6 +1864,15 @@ virtio_init_device(struct rte_eth_dev *eth_dev, uint64_t req_features)
 	struct virtio_net_config local_config;
 	int ret;
 
+	/* Release Rx interrupt resources left by a previous initialization. */
+	if (eth_dev->intr_handle != NULL &&
+			rte_intr_type_get(eth_dev->intr_handle) == RTE_INTR_HANDLE_VFIO_MSIX &&
+			rte_intr_nb_efd_get(eth_dev->intr_handle) > 0) {
+		virtio_intr_disable(eth_dev);
+		rte_intr_efd_disable(eth_dev->intr_handle);
+		rte_intr_vec_list_free(eth_dev->intr_handle);
+	}
+
 	/* Reset the device although not necessary at startup */
 	virtio_reset(hw);
 
