@@ -154,8 +154,11 @@ The main work of the application is done within the loop:
     :end-before: >8 End of read packets from RX queues.
     :dedent: 2
 
-Packets are received one by one on the RX ports and, if required, PTP response
+Packets are received in bursts on the RX ports and, if required, PTP response
 packets are transmitted on the TX ports.
+When the Rx timestamp offload is available, the SYNC receive time is taken
+from the per-packet mbuf timestamp field, so that it stays correct when several
+PTP frames are received in the same burst.
 
 If the offload flags in the mbuf indicate that the packet is a PTP packet then
 the packet is parsed to determine which type:
@@ -164,7 +167,7 @@ the packet is parsed to determine which type:
     :language: c
     :start-after: Packet is parsed to determine which type. 8<
     :end-before: >8 End of packet is parsed to determine which type.
-    :dedent: 3
+    :dedent: 4
 
 
 All packets are freed explicitly using ``rte_pktmbuf_free()``.

@@ -16,8 +16,10 @@
 #include <rte_cycles.h>
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
+#include <rte_mbuf_dyn.h>
 #include <rte_ip.h>
 #include <rte_ptp.h>
+#include <rte_time.h>
 #include <limits.h>
 #include <sys/time.h>
 #include <getopt.h>
@@ -30,6 +32,7 @@ static volatile bool force_quit;
 
 #define NUM_MBUFS            8191
 #define MBUF_CACHE_SIZE       250
+#define BURST_SIZE             32
 
 #define NSEC_PER_SEC        1000000000L
 #define KERNEL_TIME_ADJUST_LIMIT  20000
@@ -38,6 +41,10 @@ struct rte_mempool *mbuf_pool;
 uint32_t ptp_enabled_port_mask;
 uint8_t ptp_enabled_port_nb;
 static uint8_t ptp_enabled_ports[RTE_MAX_ETHPORTS];
+
+/* Rx timestamp mbuf dynamic field, valid when timestamp offload is enabled. */
+static int rx_tstamp_offset = -1;
+static uint64_t rx_tstamp_flag;
 
 static const struct rte_ether_addr ether_multicast = {
 	.addr_bytes = {0x01, 0x1b, 0x19, 0x0, 0x0, 0x0}
@@ -155,8 +162,16 @@ port_init(uint16_t port, struct rte_mempool *mp)
 		return retval;
 	}
 
-	if (dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
+	if (dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
 		port_conf.rxmode.offloads |= RTE_ETH_RX_OFFLOAD_TIMESTAMP;
+		retval = rte_mbuf_dyn_rx_timestamp_register(&rx_tstamp_offset,
+				&rx_tstamp_flag);
+		if (retval != 0) {
+			printf("Cannot register Rx timestamp field: %s\n",
+				rte_strerror(rte_errno));
+			return retval;
+		}
+	}
 
 	if (dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE)
 		port_conf.txmode.offloads |=
@@ -330,9 +345,20 @@ parse_sync(struct ptpv2_time_receiver_ordinary *ptp, uint16_t rx_tstamp_idx)
 			ptp_hdr->source_port_id.clock_id,
 			8) == 0) {
 
-		if (ptp->ptpset == 1)
+		if (ptp->ptpset == 1) {
+			/* Always read: some NICs latch until the register is read. */
 			rte_eth_timesync_read_rx_timestamp(ptp->portid,
 					&ptp->tstamp2, rx_tstamp_idx);
+			/*
+			 * The per-packet timestamp stays correct when several PTP
+			 * frames arrive in one burst; the per-queue latch does not.
+			 */
+			if (rx_tstamp_offset >= 0 &&
+					(ptp->m->ol_flags & rx_tstamp_flag) != 0)
+				ptp->tstamp2 = rte_ns_to_timespec(
+					*RTE_MBUF_DYNFIELD(ptp->m, rx_tstamp_offset,
+						rte_mbuf_timestamp_t *));
+		}
 	}
 
 }
@@ -570,8 +596,8 @@ static void
 lcore_main(void)
 {
 	uint16_t portid;
-	unsigned nb_rx;
-	struct rte_mbuf *m;
+	uint16_t nb_rx, i;
+	struct rte_mbuf *bufs[BURST_SIZE];
 
 	printf("\nCore %u Waiting for SYNC packets. [Ctrl+C to quit]\n",
 			rte_lcore_id());
@@ -583,17 +609,17 @@ lcore_main(void)
 		for (portid = 0; portid < ptp_enabled_port_nb; portid++) {
 
 			portid = ptp_enabled_ports[portid];
-			nb_rx = rte_eth_rx_burst(portid, 0, &m, 1);
+			/* Vector Rx paths may return nothing for small bursts. */
+			nb_rx = rte_eth_rx_burst(portid, 0, bufs, BURST_SIZE);
 
-			if (likely(nb_rx == 0))
-				continue;
+			for (i = 0; i < nb_rx; i++) {
+				/* Packet is parsed to determine which type. 8< */
+				if (bufs[i]->ol_flags & RTE_MBUF_F_RX_IEEE1588_PTP)
+					parse_ptp_frames(portid, bufs[i]);
+				/* >8 End of packet is parsed to determine which type. */
 
-			/* Packet is parsed to determine which type. 8< */
-			if (m->ol_flags & RTE_MBUF_F_RX_IEEE1588_PTP)
-				parse_ptp_frames(portid, m);
-			/* >8 End of packet is parsed to determine which type. */
-
-			rte_pktmbuf_free(m);
+				rte_pktmbuf_free(bufs[i]);
+			}
 		}
 		/* >8 End of read packets from RX queues. */
 	}
