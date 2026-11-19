@@ -354,7 +354,10 @@ cpfl_get_vsi_id(struct cpfl_itf *itf)
 		if (!idpf_is_vf_device(&itf->adapter->base.hw)) {
 			vport_id = ((struct cpfl_vport *)itf)->base.vport_id;
 
-			vport_identity.func_type = CPCHNL2_FTYPE_LAN_PF;
+			if (itf->adapter->base.hw.device_id == CPFL_DEV_ID_MEV)
+				vport_identity.func_type = CPCHNL2_FTYPE_LAN_PF;
+			else
+				vport_identity.func_type = VCPF_CPCHNL2_FTYPE_LAN_PF;
 			/* host: CPFL_HOST0_CPF_ID, acc: CPFL_ACC_CPF_ID */
 			vport_identity.pf_id = (itf->adapter->host_id == CPFL_HOST_ID_ACC) ?
 							CPFL_ACC_CPF_ID : CPFL_HOST0_CPF_ID;
