@@ -223,6 +223,7 @@ struct axgbe_phy_data {
 	unsigned int sfp_tx_fault;
 	unsigned int sfp_mod_absent;
 	unsigned int sfp_changed;
+	unsigned int sfp_i2c_settled;
 	unsigned int sfp_phy_avail;
 	unsigned int sfp_cable_len;
 	enum axgbe_sfp_base sfp_base;
@@ -531,10 +532,29 @@ again2:
 	return ret;
 }
 
+/*
+ * The SFP cage mux/GPIO expander may not respond to the first access
+ * after phy_init(), either NACKing (-ENOTCONN) or stalling until the
+ * transfer times out (-ETIMEDOUT). Retry those as well as
+ * arbitration loss (-EAGAIN) after a short delay, but only until the
+ * first successful transfer; after that it's a real fault, not a
+ * settling device.
+ */
+static inline bool axgbe_i2c_retryable(int ret, bool settled)
+{
+	if (ret == -EAGAIN)
+		return true;
+
+	return !settled && (ret == -ENOTCONN || ret == -ETIMEDOUT);
+}
+
+#define AXGBE_I2C_RETRY_DELAY_US	2000
+
 static int axgbe_phy_i2c_read(struct axgbe_port *pdata, unsigned int target,
 			      void *reg, unsigned int reg_len,
 			      void *val, unsigned int val_len)
 {
+	struct axgbe_phy_data *phy_data = pdata->phy_data;
 	struct axgbe_i2c_op i2c_op;
 	int retry, ret;
 
@@ -547,8 +567,10 @@ again1:
 	i2c_op.buf = reg;
 	ret = axgbe_phy_i2c_xfer(pdata, &i2c_op);
 	if (ret) {
-		if ((ret == -EAGAIN) && retry--)
+		if (axgbe_i2c_retryable(ret, phy_data->sfp_i2c_settled) && retry--) {
+			rte_delay_us_sleep(AXGBE_I2C_RETRY_DELAY_US);
 			goto again1;
+		}
 
 		return ret;
 	}
@@ -561,10 +583,18 @@ again2:
 	i2c_op.len = val_len;
 	i2c_op.buf = val;
 	ret = axgbe_phy_i2c_xfer(pdata, &i2c_op);
-	if ((ret == -EAGAIN) && retry--)
-		goto again2;
+	if (ret) {
+		if (axgbe_i2c_retryable(ret, phy_data->sfp_i2c_settled) && retry--) {
+			rte_delay_us_sleep(AXGBE_I2C_RETRY_DELAY_US);
+			goto again2;
+		}
 
-	return ret;
+		return ret;
+	}
+
+	phy_data->sfp_i2c_settled = 1;
+
+	return 0;
 }
 
 static int axgbe_phy_sfp_put_mux(struct axgbe_port *pdata)
