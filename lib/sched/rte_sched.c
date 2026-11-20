@@ -436,10 +436,17 @@ subport_profile_check(struct rte_sched_subport_profile_params *params,
 	return 0;
 }
 
+static uint64_t
+rte_sched_port_cycles_per_byte(uint64_t rate)
+{
+	return (rte_get_tsc_hz() << RTE_SCHED_TIME_SHIFT) / rate;
+}
+
 static int
 rte_sched_port_check_params(struct rte_sched_port_params *params)
 {
 	uint32_t i;
+	uint64_t cycles_per_byte;
 
 	if (params == NULL) {
 		SCHED_LOG(ERR,
@@ -456,6 +463,15 @@ rte_sched_port_check_params(struct rte_sched_port_params *params)
 
 	/* rate */
 	if (params->rate == 0) {
+		SCHED_LOG(ERR,
+			"%s: Incorrect value for rate", __func__);
+		return -EINVAL;
+	}
+
+	cycles_per_byte = rte_sched_port_cycles_per_byte(params->rate);
+	/* rate: the byte clock value must be non-zero and fit in 32 bits */
+	if (cycles_per_byte == 0 ||
+	    cycles_per_byte > UINT32_MAX) {
 		SCHED_LOG(ERR,
 			"%s: Incorrect value for rate", __func__);
 		return -EINVAL;
@@ -1006,8 +1022,7 @@ rte_sched_port_config(struct rte_sched_port_params *params)
 	/* Subport profile table */
 	rte_sched_port_config_subport_profile_table(port, params, port->rate);
 
-	cycles_per_byte = (rte_get_tsc_hz() << RTE_SCHED_TIME_SHIFT)
-		/ params->rate;
+	cycles_per_byte = rte_sched_port_cycles_per_byte(params->rate);
 	port->inv_cycles_per_byte = rte_reciprocal_value(cycles_per_byte);
 	port->cycles_per_byte = cycles_per_byte;
 
