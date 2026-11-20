@@ -210,6 +210,22 @@ test_sched(void)
 
 	rte_sched_port_free(port);
 
+	/* Rate above the byte clock limit is rejected */
+	port_param.rate = UINT64_MAX;
+	port = rte_sched_port_config(&port_param);
+	TEST_ASSERT_NULL(port, "Port config accepted rate too high\n");
+
+	/* Rate below the byte clock limit is rejected */
+	port_param.rate = rte_get_tsc_hz() >> 24;
+	port = rte_sched_port_config(&port_param);
+	TEST_ASSERT_NULL(port, "Port config accepted rate too low\n");
+
+	/* Boundary rate is accepted */
+	port_param.rate = rte_get_tsc_hz() << 8;
+	port = rte_sched_port_config(&port_param);
+	TEST_ASSERT_NOT_NULL(port, "Port config rejected limit rate\n");
+	rte_sched_port_free(port);
+
 	return 0;
 }
 
