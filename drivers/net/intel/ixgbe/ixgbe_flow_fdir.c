@@ -1113,8 +1113,6 @@ ixgbe_fdir_pattern_parse(struct ci_flow_engine_ctx *ctx,
 
 		if (signature_match(item))
 			fdir_ctx->rule.mode = RTE_FDIR_MODE_SIGNATURE;
-
-		break;
 	}
 
 	return 0;
