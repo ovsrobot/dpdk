@@ -553,9 +553,21 @@ rxq_burst_mprq_v(struct mlx5_rxq_data *rxq, struct rte_mbuf **pkts,
 			next = &(*rxq->cqes)[rxq->cq_ci & q_mask];
 			ret = check_cqe_iteration(next,	rxq->cqe_n, rxq->cq_ci);
 			if (MLX5_CQE_FORMAT(next->op_own) == MLX5_COMPRESSED ||
-			    ret != MLX5_CQE_STATUS_SW_OWN)
+			    ret != MLX5_CQE_STATUS_SW_OWN) {
 				rte_memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
 					   sizeof(struct rte_mbuf));
+				/*
+				 * The title mbuf went through
+				 * rxq_copy_mprq_mbuf_v() above and may be
+				 * attached to its stride or chained. The
+				 * decompressed packets take rearm data and
+				 * flags from this copy, and the ones the PMD
+				 * then copies into their own buffer must not
+				 * be marked external or multi-segment.
+				 */
+				rxq->title_pkt.ol_flags &= ~RTE_MBUF_F_EXTERNAL;
+				rxq->title_pkt.nb_segs = 1;
+			}
 		}
 	}
 decompress:
