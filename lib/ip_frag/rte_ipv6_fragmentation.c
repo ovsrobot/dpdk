@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #include <eal_export.h>
+#include <rte_random.h>
 
 #include "ip_frag_common.h"
 
@@ -19,7 +20,7 @@
 static inline void
 __fill_ipv6hdr_frag(struct rte_ipv6_hdr *dst,
 		const struct rte_ipv6_hdr *src, uint16_t len, uint16_t fofs,
-		uint32_t mf)
+		uint32_t mf, rte_be32_t id)
 {
 	struct rte_ipv6_fragment_ext *fh;
 
@@ -31,7 +32,7 @@ __fill_ipv6hdr_frag(struct rte_ipv6_hdr *dst,
 	fh->next_header = src->proto;
 	fh->reserved = 0;
 	fh->frag_data = rte_cpu_to_be_16(RTE_IPV6_SET_FRAG_DATA(fofs, mf));
-	fh->id = 0;
+	fh->id = id;
 }
 
 static inline void
@@ -78,6 +79,7 @@ rte_ipv6_fragment_packet(struct rte_mbuf *pkt_in,
 	uint32_t more_in_segs;
 	uint16_t fragment_offset, frag_size;
 	uint64_t frag_bytes_remaining;
+	rte_be32_t frag_id;
 
 	/*
 	 * Formal parameter checking.
@@ -116,6 +118,12 @@ rte_ipv6_fragment_packet(struct rte_mbuf *pkt_in,
 	in_seg_data_pos = sizeof(struct rte_ipv6_hdr);
 	out_pkt_pos = 0;
 	fragment_offset = 0;
+
+	/*
+	 * An unfragmented packet carries no Identification, so generate one.
+	 * RFC 8200 wants it distinct per packet, RFC 7739 unpredictable.
+	 */
+	frag_id = (rte_be32_t)rte_rand();
 
 	more_in_segs = 1;
 	while (likely(more_in_segs)) {
@@ -188,7 +196,7 @@ rte_ipv6_fragment_packet(struct rte_mbuf *pkt_in,
 
 		__fill_ipv6hdr_frag(out_hdr, in_hdr,
 		    (uint16_t) out_pkt->pkt_len - sizeof(struct rte_ipv6_hdr),
-		    fragment_offset, more_in_segs);
+		    fragment_offset, more_in_segs, frag_id);
 
 		fragment_offset = (uint16_t)(fragment_offset +
 		    out_pkt->pkt_len - sizeof(struct rte_ipv6_hdr)
