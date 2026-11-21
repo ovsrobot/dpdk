@@ -483,6 +483,57 @@ test_ip_frag(void)
 	return result;
 }
 
+/*
+ * All fragments of one IPv6 packet carry the same Identification, and two
+ * packets get different ones (RFC 8200 section 4.5).
+ */
+static int
+test_ipv6_frag_id(void)
+{
+	rte_be32_t ids[2];
+	size_t i;
+
+	for (i = 0; i < RTE_DIM(ids); i++) {
+		struct rte_mbuf *pkts_out[BURST];
+		struct rte_mbuf *b = rte_pktmbuf_alloc(pkt_pool);
+		int32_t len, j;
+
+		RTE_TEST_ASSERT_NOT_EQUAL(b, NULL, "Failed to allocate pkt.");
+
+		v6_allocate_packet_of(b, 0x41414141, 1400, 64, IPPROTO_ICMP,
+				      rte_rand_max(UINT16_MAX));
+
+		len = rte_ipv6_fragment_packet(b, pkts_out, BURST, 1280,
+					       direct_pool, indirect_pool);
+		rte_pktmbuf_free(b);
+		RTE_TEST_ASSERT_EQUAL(len, 2, "Failed to fragment packet %zd.",
+				      i);
+
+		ids[i] = 0;
+		for (j = 0; j < len; j++) {
+			struct rte_ipv6_fragment_ext *fh =
+				rte_pktmbuf_mtod_offset(pkts_out[j],
+					struct rte_ipv6_fragment_ext *,
+					sizeof(struct rte_ipv6_hdr));
+
+			if (j == 0)
+				ids[i] = fh->id;
+			else if (fh->id != ids[i]) {
+				test_free_fragments(pkts_out, len);
+				RTE_TEST_ASSERT(0,
+					"Fragments of packet %zd differ in id.",
+					i);
+			}
+		}
+		test_free_fragments(pkts_out, len);
+	}
+
+	RTE_TEST_ASSERT_NOT_EQUAL(ids[0], ids[1],
+				  "Two packets share a fragment id.");
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite ipfrag_testsuite  = {
 	.suite_name = "IP Frag Unit Test Suite",
 	.setup = testsuite_setup,
@@ -490,7 +541,8 @@ static struct unit_test_suite ipfrag_testsuite  = {
 	.unit_test_cases = {
 		TEST_CASE_ST(ut_setup, ut_teardown,
 			     test_ip_frag),
-
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			     test_ipv6_frag_id),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
