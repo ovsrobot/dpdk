@@ -2,6 +2,8 @@
  * Copyright(c) 2018-2023 Intel Corporation.
  */
 
+#include <string.h>
+
 #include <rte_bus.h>
 #include <rte_ethdev.h>
 #include "commands.h"
@@ -35,13 +37,15 @@ cmd_list_parsed(__rte_unused void *parsed_result,
 	cmdline_printf(cl, "list all etherdev\n");
 
 	RTE_ETH_FOREACH_DEV(port_id) {
-		char dev_name[RTE_DEV_NAME_MAX_LEN] = "";
+		char dev_name[RTE_DEV_NAME_MAX_LEN];
+		int ret;
 
-		rte_eth_dev_get_name_by_port(port_id, dev_name, sizeof(dev_name));
-		if (strlen(dev_name) > 0)
-			cmdline_printf(cl, "%d\t%s\n", port_id, dev_name);
+		ret = rte_eth_dev_get_name_by_port(port_id, dev_name, sizeof(dev_name));
+		if (ret == 0)
+			cmdline_printf(cl, "%u\t%s\n", port_id, dev_name);
 		else
-			printf("empty dev_name is not expected!\n");
+			cmdline_printf(cl, "No name for port %u: %s\n",
+				       port_id, strerror(-ret));
 	}
 }
 
