@@ -1455,6 +1455,10 @@ virtio_configure_intr(struct rte_eth_dev *dev)
 		return -ENOTSUP;
 	}
 
+	/* Release efds from a previous init. VDEV owns its own */
+	if (rte_intr_type_get(dev->intr_handle) != RTE_INTR_HANDLE_VDEV)
+		rte_intr_efd_disable(dev->intr_handle);
+
 	ret = rte_intr_efd_enable(dev->intr_handle, dev->data->nb_rx_queues);
 	if (ret < 0) {
 		PMD_INIT_LOG(ERR, "Fail to create eventfd");
