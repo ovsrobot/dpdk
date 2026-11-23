@@ -6,6 +6,8 @@
 #ifndef _RTE_CYCLES_ARM64_H_
 #define _RTE_CYCLES_ARM64_H_
 
+#include <stdbool.h>
+
 #include "generic/rte_cycles.h"
 
 #ifdef __cplusplus
@@ -32,9 +34,30 @@ __rte_arm64_cntvct(void)
 	return tsc;
 }
 
+#ifdef RTE_ARM_FEATURE_ECV
+#define __rte_arm64_ecv_enabled() 1
+#else
+/** Set at EAL init if the CPU supports FEAT_ECV, false before that. */
+extern bool rte_arm64_ecv;
+#define __rte_arm64_ecv_enabled() rte_arm64_ecv
+#endif
+
+/** Read generic counter with ordering */
 static __rte_always_inline uint64_t
 __rte_arm64_cntvct_precise(void)
 {
+	uint64_t tsc;
+
+	if (__rte_arm64_ecv_enabled()) {
+		/* CNTVCTSS_EL0 (FEAT_ECV) is self-synchronized, no ISB needed. */
+#ifdef RTE_ARM_ASM_CNTVCTSS
+		asm volatile("mrs %0, cntvctss_el0" : "=r" (tsc) : : "memory");
+#else
+		/* Raw encoding of CNTVCTSS_EL0 for assemblers without ECV. */
+		asm volatile("mrs %0, s3_3_c14_c0_6" : "=r" (tsc) : : "memory");
+#endif
+		return tsc;
+	}
 	asm volatile("isb" : : : "memory");
 	return __rte_arm64_cntvct();
 }
@@ -94,8 +117,12 @@ rte_rdtsc(void)
 static __rte_always_inline uint64_t
 rte_rdtsc_precise(void)
 {
+#ifndef RTE_ARM_EAL_RDTSC_USE_PMU
+	return __rte_arm64_cntvct_precise();
+#else
 	asm volatile("isb" : : : "memory");
 	return rte_rdtsc();
+#endif
 }
 
 static __rte_always_inline uint64_t

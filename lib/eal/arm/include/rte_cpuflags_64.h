@@ -83,6 +83,9 @@ enum rte_cpu_flag_t {
 
 	/* WFET and WFIT instructions */
 	RTE_CPUFLAG_WFXT,
+
+	/* Enhanced Counter Virtualization (self-synchronized counter reads) */
+	RTE_CPUFLAG_ECV,
 };
 
 #include "generic/rte_cpuflags.h"

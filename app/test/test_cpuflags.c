@@ -159,6 +159,9 @@ test_cpuflags(void)
 
 	printf("Check for WFXT:\t");
 	CHECK_FOR_FLAG(RTE_CPUFLAG_WFXT);
+
+	printf("Check for ECV:\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_ECV);
 #endif
 
 #if defined(RTE_ARCH_X86_64) || defined(RTE_ARCH_I686)

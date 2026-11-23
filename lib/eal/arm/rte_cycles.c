@@ -2,12 +2,25 @@
  * Copyright(c) 2015 Cavium, Inc
  */
 
+#include <stdbool.h>
+
+#include <rte_cpuflags.h>
+#include <eal_export.h>
+
 #include "eal_private.h"
 #include "rte_cycles.h"
+
+#ifndef RTE_ARM_FEATURE_ECV
+RTE_EXPORT_SYMBOL(rte_arm64_ecv)
+bool rte_arm64_ecv;
+#endif
 
 uint64_t
 get_tsc_freq_arch(void)
 {
+#if defined RTE_ARCH_ARM64 && !defined RTE_ARM_FEATURE_ECV
+	rte_arm64_ecv = rte_cpu_get_flag_enabled(RTE_CPUFLAG_ECV) > 0;
+#endif
 #if defined RTE_ARCH_ARM64 && !defined RTE_ARM_EAL_RDTSC_USE_PMU
 	return __rte_arm64_cntfrq();
 #elif defined RTE_ARCH_ARM64 && defined RTE_ARM_EAL_RDTSC_USE_PMU

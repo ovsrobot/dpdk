@@ -492,7 +492,8 @@ soc_cn20k = {
     'implementer' : '0x41',
     'flags': [
         ['RTE_MAX_LCORE', 42],
-        ['RTE_MAX_NUMA_NODES', 1]
+        ['RTE_MAX_NUMA_NODES', 1],
+        ['RTE_ARM_FEATURE_ECV', true]
     ],
     'part_number': '0xd8e',
     'numa': false
@@ -1049,4 +1050,11 @@ endif
 if cc.get_define('__ARM_FEATURE_CRYPTO', args: machine_args) != ''
     compile_time_cpuflags += ['RTE_CPUFLAG_AES', 'RTE_CPUFLAG_PMULL',
     'RTE_CPUFLAG_SHA1', 'RTE_CPUFLAG_SHA2']
+endif
+
+# Use the CNTVCTSS_EL0 name in inline asm only if the assembler knows it with
+# the selected machine args; the raw register encoding is used otherwise.
+if cc.compiles('''void f(void) { unsigned long v; __asm__ volatile("mrs %0, cntvctss_el0" : "=r"(v)); }''',
+        args: machine_args, name: 'assembler supports cntvctss_el0')
+    dpdk_conf.set('RTE_ARM_ASM_CNTVCTSS', 1)
 endif
