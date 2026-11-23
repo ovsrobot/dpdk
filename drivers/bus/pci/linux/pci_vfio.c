@@ -738,6 +738,7 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 	struct mapped_pci_resource *vfio_res = NULL;
 	struct mapped_pci_res_list *vfio_res_list =
 		RTE_TAILQ_CAST(dev_vfio_tailq.head, mapped_pci_res_list);
+	uint8_t bar_mask = pci_get_bar_mask(dev);
 
 	struct pci_map *maps;
 
@@ -813,6 +814,9 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 		void *bar_addr;
 		struct vfio_info_cap_header *hdr;
 		struct vfio_region_info_cap_sparse_mmap *sparse;
+
+		if ((bar_mask & (1 << i)) == 0)
+			continue;
 
 		ret = pci_vfio_get_region_info(vfio_dev_fd, &reg, i);
 		if (ret < 0) {
@@ -1018,6 +1022,9 @@ err_vfio_dev_fd:
 int
 pci_vfio_map_resource(struct rte_pci_device *dev)
 {
+	if (RTE_PCI_DEVICE_INTERNAL(dev)->bar_mask_err != 0)
+		return -EINVAL;
+
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
 		return pci_vfio_map_resource_primary(dev);
 	else

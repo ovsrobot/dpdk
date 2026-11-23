@@ -3,6 +3,7 @@
  * Copyright 2013-2014 6WIND S.A.
  */
 
+#include <errno.h>
 #include <string.h>
 #include <inttypes.h>
 #include <stdint.h>
@@ -25,6 +26,7 @@
 #include <rte_string_fns.h>
 #include <rte_common.h>
 #include <rte_devargs.h>
+#include <rte_kvargs.h>
 #include <rte_tailq.h>
 
 #include "private.h"
@@ -78,15 +80,59 @@ pci_asprintf(char **buffer, const char *format, ...)
 }
 #endif /* RTE_EXEC_ENV_WINDOWS */
 
+/* Parse bar_mask from bus_str. Absent => 0 (map all). Invalid => -EINVAL. */
+static int
+pci_parse_bar_mask(const struct rte_devargs *devargs, uint8_t *mask)
+{
+	struct rte_kvargs *kvargs;
+	const char *bar_mask_str;
+	unsigned long val;
+	char *endptr;
+
+	*mask = 0;
+	if (devargs == NULL || devargs->bus_str == NULL)
+		return 0;
+
+	kvargs = rte_kvargs_parse(devargs->bus_str, NULL);
+	if (kvargs == NULL) {
+		PCI_LOG(ERR, "cannot parse bus arguments: %s",
+			devargs->bus_str);
+		return -EINVAL;
+	}
+
+	bar_mask_str = rte_kvargs_get(kvargs, PCI_BAR_MASK_ARG);
+	if (bar_mask_str == NULL) {
+		rte_kvargs_free(kvargs);
+		return 0;
+	}
+
+	errno = 0;
+	val = strtoul(bar_mask_str, &endptr, 0);
+	if (errno != 0 || endptr == bar_mask_str || *endptr != '\0' ||
+			val == 0 || val > PCI_BAR_MASK_ALL) {
+		PCI_LOG(ERR, "Invalid bar_mask value '%s'", bar_mask_str);
+		rte_kvargs_free(kvargs);
+		return -EINVAL;
+	}
+
+	*mask = (uint8_t)val;
+	rte_kvargs_free(kvargs);
+	return 0;
+}
+
 void
 pci_common_set(struct rte_pci_device *dev)
 {
+	struct rte_pci_device_internal *pdev = RTE_PCI_DEVICE_INTERNAL(dev);
+
 	/* Each device has its internal, canonical name set. */
 	rte_pci_device_name(&dev->addr,
 			dev->name, sizeof(dev->name));
 	dev->device.name = dev->name;
 
 	dev->device.devargs = rte_bus_find_devargs(&rte_pci_bus, dev->name);
+	pdev->bar_mask_err = pci_parse_bar_mask(dev->device.devargs,
+			&pdev->bar_mask);
 
 	if (dev->bus_info != NULL ||
 			asprintf(&dev->bus_info, "vendor_id=%"PRIx16", device_id=%"PRIx16,

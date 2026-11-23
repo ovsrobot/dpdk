@@ -27,7 +27,7 @@ EAL_REGISTER_TAILQ(rte_uio_tailq)
 static int
 pci_uio_map_secondary(struct rte_pci_device *dev)
 {
-	int fd, i = 0, j, res_idx;
+	int fd, i, j;
 	struct mapped_pci_resource *uio_res;
 	struct mapped_pci_res_list *uio_res_list =
 			RTE_TAILQ_CAST(rte_uio_tailq.head, mapped_pci_res_list);
@@ -38,14 +38,10 @@ pci_uio_map_secondary(struct rte_pci_device *dev)
 		if (rte_pci_addr_cmp(&uio_res->pci_addr, &dev->addr))
 			continue;
 
-		/* Map all BARs */
-		for (res_idx = 0; res_idx != PCI_MAX_RESOURCE; res_idx++) {
-			/* skip empty BAR */
-			if (dev->mem_resource[res_idx].phys_addr == 0)
+		/* Replay primary mappings (indexed by BAR) */
+		for (i = 0; i != PCI_MAX_RESOURCE; i++) {
+			if (uio_res->maps[i].size == 0)
 				continue;
-
-			if (i >= uio_res->nb_maps)
-				return -1;
 
 			/*
 			 * open devname, to mmap it
@@ -80,9 +76,7 @@ pci_uio_map_secondary(struct rte_pci_device *dev)
 				}
 				return -1;
 			}
-			dev->mem_resource[res_idx].addr = mapaddr;
-
-			i++;
+			dev->mem_resource[i].addr = mapaddr;
 		}
 		return 0;
 	}
@@ -95,11 +89,15 @@ pci_uio_map_secondary(struct rte_pci_device *dev)
 int
 pci_uio_map_resource(struct rte_pci_device *dev)
 {
-	int i, map_idx = 0, ret;
+	int i, ret;
 	uint64_t phaddr;
 	struct mapped_pci_resource *uio_res = NULL;
 	struct mapped_pci_res_list *uio_res_list =
 		RTE_TAILQ_CAST(rte_uio_tailq.head, mapped_pci_res_list);
+	uint8_t bar_mask = pci_get_bar_mask(dev);
+
+	if (RTE_PCI_DEVICE_INTERNAL(dev)->bar_mask_err != 0)
+		return -EINVAL;
 
 	/* allocate uio resource */
 	ret = pci_uio_alloc_resource(dev, &uio_res);
@@ -110,31 +108,34 @@ pci_uio_map_resource(struct rte_pci_device *dev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return pci_uio_map_secondary(dev);
 
-	/* Map all BARs */
+	/* Index maps[] by BAR number */
 	for (i = 0; i != PCI_MAX_RESOURCE; i++) {
+		if ((bar_mask & (1 << i)) == 0)
+			continue;
+
 		/* skip empty BAR */
 		phaddr = dev->mem_resource[i].phys_addr;
 		if (phaddr == 0)
 			continue;
 
 		ret = pci_uio_map_resource_by_index(dev, i,
-				uio_res, map_idx);
+				uio_res, i);
 		if (ret)
 			goto error;
-
-		map_idx++;
 	}
 
-	uio_res->nb_maps = map_idx;
+	uio_res->nb_maps = PCI_MAX_RESOURCE;
 
 	TAILQ_INSERT_TAIL(uio_res_list, uio_res, next);
 
 	return 0;
 error:
-	for (i = 0; i < map_idx; i++) {
-		pci_unmap_resource(uio_res->maps[i].addr,
-				(size_t)uio_res->maps[i].size);
-		rte_free(uio_res->maps[i].path);
+	for (i = 0; i < PCI_MAX_RESOURCE; i++) {
+		if (uio_res->maps[i].addr != NULL) {
+			pci_unmap_resource(uio_res->maps[i].addr,
+					(size_t)uio_res->maps[i].size);
+			rte_free(uio_res->maps[i].path);
+		}
 	}
 	pci_uio_free_resource(dev, uio_res);
 	return -1;
@@ -149,6 +150,8 @@ pci_uio_unmap(struct mapped_pci_resource *uio_res)
 		return;
 
 	for (i = 0; i != uio_res->nb_maps; i++) {
+		if (uio_res->maps[i].addr == NULL)
+			continue;
 		pci_unmap_resource(uio_res->maps[i].addr,
 				(size_t)uio_res->maps[i].size);
 		if (rte_eal_process_type() == RTE_PROC_PRIMARY)
@@ -166,10 +169,11 @@ pci_uio_remap_resource(struct rte_pci_device *dev)
 	if (dev == NULL)
 		return -1;
 
-	/* Remap all BARs */
+	/* Remap mapped BARs only */
 	for (i = 0; i != PCI_MAX_RESOURCE; i++) {
-		/* skip empty BAR */
-		if (dev->mem_resource[i].phys_addr == 0)
+		/* skip empty or unmapped BAR */
+		if (dev->mem_resource[i].phys_addr == 0 ||
+				dev->mem_resource[i].addr == NULL)
 			continue;
 		map_address = mmap(dev->mem_resource[i].addr,
 				(size_t)dev->mem_resource[i].len,

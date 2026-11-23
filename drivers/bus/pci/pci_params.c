@@ -17,11 +17,13 @@
 
 enum pci_params {
 	RTE_PCI_PARAM_ADDR,
+	RTE_PCI_PARAM_BAR_MASK,
 	RTE_PCI_PARAM_MAX,
 };
 
 static const char * const pci_params_keys[] = {
 	[RTE_PCI_PARAM_ADDR] = "addr",
+	[RTE_PCI_PARAM_BAR_MASK] = PCI_BAR_MASK_ARG,
 	[RTE_PCI_PARAM_MAX] = NULL,
 };
 

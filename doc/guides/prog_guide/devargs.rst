@@ -82,6 +82,19 @@ The above example will pass ``representor=[0-3]`` devarg
 only to device corresponding to PCI address ``0000:02:00.0``,
 and only if it is managed by ``ice`` driver.
 
+PCI bus arguments include:
+
+* ``addr``: PCI address of the device (BDF).
+* ``bar_mask``: bitmask of BARs to map (bits 0-5 for BAR0-BAR5).
+  If omitted, all valid BARs are mapped.
+  A zero mask, a value outside BAR0-BAR5, or a malformed value is rejected.
+
+.. code-block:: none
+
+   bus=pci,addr=0000:01:00.0,bar_mask=0x05
+
+The above example maps BAR0 and BAR2 only for the given PCI device.
+
 
 Simplified syntax
 ~~~~~~~~~~~~~~~~~

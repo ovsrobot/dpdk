@@ -58,6 +58,12 @@ New Features
   the kernel driver is the generic ``vfio-platform``,
   which carries no device identity in its name.
 
+* **Added selective PCI BAR mapping.**
+
+  Added the PCI bus argument ``bar_mask`` to select which BARs to map.
+  If omitted, all valid BARs are mapped.
+  Example: ``-a bus=pci,addr=0000:01:00.0,bar_mask=0x05``.
+
 * **Added 1.6T link speed to ethdev.**
 
   Added the 1.6 Tb/s Ethernet link speed,

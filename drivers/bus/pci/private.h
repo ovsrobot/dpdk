@@ -43,7 +43,23 @@ struct rte_pci_device_internal {
 	struct rte_pci_device device;
 	/* PCI regions provided by e.g. VFIO. */
 	struct rte_pci_region region[RTE_MAX_PCI_REGIONS];
+	int bar_mask_err;	/* nonzero if bar_mask was present but invalid */
+	uint8_t bar_mask;	/* 0 = map all BARs */
 };
+
+#define PCI_BAR_MASK_ARG "bar_mask"
+#define PCI_BAR_MASK_ALL ((1U << PCI_MAX_RESOURCE) - 1)
+
+static inline uint8_t
+pci_get_bar_mask(struct rte_pci_device *dev)
+{
+	struct rte_pci_device_internal *pdev = RTE_PCI_DEVICE_INTERNAL(dev);
+	uint8_t mask = pdev->bar_mask;
+
+	if (mask == 0)
+		mask = PCI_BAR_MASK_ALL;
+	return mask;
+}
 
 /**
  * Scan the content of the PCI bus, and the devices in the devices
