@@ -15,7 +15,6 @@
 #include <rte_os_shim.h>
 
 #include <rte_debug.h>
-#include <rte_alarm.h>
 #include <rte_atomic.h>
 #include <rte_eal.h>
 #include <rte_ether.h>
@@ -456,8 +455,7 @@ iavf_get_cmd_resp_count(enum virtchnl_ops op)
 {
 	switch (op) {
 	case VIRTCHNL_OP_RESET_VF:
-	case VIRTCHNL_OP_REQUEST_QUEUES:
-		/* These commands trigger reset and are not waited for */
+		/* This command triggers reset and is not waited for */
 		return 0;
 	case VIRTCHNL_OP_INLINE_IPSEC_CRYPTO:
 		/* IPsec crypto commands generate two responses */
@@ -500,6 +498,11 @@ iavf_wait_for_msg(struct iavf_adapter *adapter, struct iavf_cmd_info *args,
 			/* check if interrupt thread has erased pending cmd */
 			if (vf->pend_cmd == VIRTCHNL_OP_UNKNOWN)
 				break;
+		}
+		/* the PF will discard the command and not answer if in reset */
+		if (rte_atomic_load_explicit(&vf->vf_reset, rte_memory_order_acquire)) {
+			PMD_DRV_LOG(INFO, "VF reset while waiting for cmd %d", args->ops);
+			return -ECANCELED;
 		}
 		iavf_msec_delay(ASQ_DELAY_MS);
 	} while (i++ < MAX_TRY_TIMES);
@@ -2389,7 +2392,6 @@ iavf_request_queues(struct rte_eth_dev *dev, uint16_t num)
 	struct iavf_cmd_info args;
 	uint16_t num_queue_pairs;
 	int err;
-	int i = 0;
 
 	if (!(vf->vf_res->vf_cap_flags &
 		VIRTCHNL_VF_OFFLOAD_REQ_QUEUES)) {
@@ -2409,44 +2411,33 @@ iavf_request_queues(struct rte_eth_dev *dev, uint16_t num)
 	args.out_buffer = msg_buf;
 	args.out_size = IAVF_AQ_BUF_SZ;
 
-	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_WB_ON_ITR) {
-		iavf_phc_sync_alarm_stop(dev);
-		err = iavf_execute_vf_cmd_safe(adapter, &args);
-		iavf_phc_sync_alarm_start(dev);
-	} else {
-		iavf_phc_sync_alarm_stop(dev);
-		rte_eal_alarm_cancel(iavf_dev_alarm_handler, dev);
-		err = iavf_execute_vf_cmd_safe(adapter, &args);
-		rte_eal_alarm_set(IAVF_ALARM_INTERVAL,
-				  iavf_dev_alarm_handler, dev);
-		iavf_phc_sync_alarm_start(dev);
-	}
-
-	if (err) {
-		PMD_DRV_LOG(ERR, "fail to execute command OP_REQUEST_QUEUES");
-		return err;
-	}
-
-	/* wait for interrupt notification vf is resetting */
-	while (i++ < MAX_TRY_TIMES) {
-		if (rte_atomic_load_explicit(&vf->vf_reset, rte_memory_order_acquire))
-			break;
-		iavf_msec_delay(ASQ_DELAY_MS);
-	}
+	iavf_phc_sync_alarm_stop(dev);
+	err = iavf_execute_vf_cmd_safe(adapter, &args);
+	iavf_phc_sync_alarm_start(dev);
 
 	/* request queues succeeded, vf is resetting */
-	if (rte_atomic_load_explicit(&vf->vf_reset, rte_memory_order_acquire)) {
+	if (err == -ECANCELED ||
+	    (err == 0 && rte_atomic_load_explicit(&vf->vf_reset, rte_memory_order_acquire))) {
 		PMD_DRV_LOG(INFO, "vf is resetting");
 		return 0;
 	}
 
-	/* request additional queues failed, return available number */
+	/* request additional queues failed */
+	if (err != 0) {
+		if (err == -EINVAL || err == -ENOTSUP)
+			PMD_DRV_LOG(ERR, "PF refused request for %u queues", num);
+		else
+			PMD_DRV_LOG(ERR, "fail to execute command OP_REQUEST_QUEUES");
+		return err;
+	}
+
+	/* PF replied with success but did not reset; it offers fewer queues than requested */
 	num_queue_pairs =
 	  ((struct virtchnl_vf_res_request *)args.out_buffer)->num_queue_pairs;
 	PMD_DRV_LOG(ERR, "request queues failed, only %u queues "
 		"available", num_queue_pairs);
 
-	return -1;
+	return -ENOSPC;
 }
 
 int
