@@ -2496,6 +2496,8 @@ static void axgbe_phy_stop(struct axgbe_port *pdata)
 	pdata->i2c_if.i2c_stop(pdata);
 }
 
+#define AXGBE_SFP_I2C_SETTLE_DELAY_US	2000
+
 static int axgbe_phy_start(struct axgbe_port *pdata)
 {
 	struct axgbe_phy_data *phy_data = pdata->phy_data;
@@ -2512,9 +2514,16 @@ static int axgbe_phy_start(struct axgbe_port *pdata)
 	/* Reset CDR support */
 	axgbe_phy_cdr_track(pdata);
 
-	/* After starting the I2C controller, we can check for an SFP */
+	/*
+	 * After starting the I2C controller, we can check for an SFP. The
+	 * cage's GPIO expander/mux may not yet be ready to respond to the
+	 * very first access, so give it a short settle delay before the
+	 * first probe instead of failing and leaving recovery to a later
+	 * poll.
+	 */
 	switch (phy_data->port_mode) {
 	case AXGBE_PORT_MODE_SFP:
+		rte_delay_us_sleep(AXGBE_SFP_I2C_SETTLE_DELAY_US);
 		axgbe_phy_sfp_detect(pdata);
 		break;
 	default:
