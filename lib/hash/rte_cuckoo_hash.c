@@ -1298,7 +1298,7 @@ static inline uint32_t
 alloc_slot(const struct rte_hash *h, struct lcore_cache *cached_free_slots)
 {
 	unsigned int n_slots;
-	uint32_t slot_id;
+	uint32_t slot_id = EMPTY_SLOT;
 
 	if (h->use_local_cache) {
 		/* Try to get a free slot from the local cache */
