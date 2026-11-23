@@ -1767,21 +1767,32 @@ aesni_mb_digest_appended_in_src(struct rte_crypto_op *op, IMB_JOB *job,
 	if (job->cipher_mode == IMB_CIPHER_NULL)
 		return NULL;
 
-	if (job->cipher_mode == IMB_CIPHER_ZUC_EEA3 ||
-		job->cipher_mode == IMB_CIPHER_SNOW3G_UEA2 ||
-		job->cipher_mode == IMB_CIPHER_KASUMI_UEA1) {
+	if (job->cipher_mode == IMB_CIPHER_ZUC_EEA3
+		|| job->cipher_mode == IMB_CIPHER_SNOW3G_UEA2
+		|| job->cipher_mode == IMB_CIPHER_KASUMI_UEA1
+#if IMB_VERSION(3, 0, 0) <= IMB_VERSION_NUM
+		|| job->cipher_mode == IMB_CIPHER_SNOW5G_NEA4
+		|| job->cipher_mode == IMB_CIPHER_AES_NEA5
+		|| job->cipher_mode == IMB_CIPHER_ZUC_NEA6
+#endif
+		) {
 		cipher_size = (op->sym->cipher.data.offset >> 3) +
 			(op->sym->cipher.data.length >> 3);
 	} else {
 		cipher_size = (op->sym->cipher.data.offset) +
 			(op->sym->cipher.data.length);
 	}
-	if (job->hash_alg == IMB_AUTH_ZUC_EIA3 ||
-		job->hash_alg == IMB_AUTH_SNOW3G_UIA2 ||
-#if IMB_VERSION(3, 0, 0) > IMB_VERSION_NUM
-		job->hash_alg == IMB_AUTH_ZUC256_EIA3 ||
+	if (job->hash_alg == IMB_AUTH_ZUC_EIA3
+		|| job->hash_alg == IMB_AUTH_SNOW3G_UIA2
+		|| job->hash_alg == IMB_AUTH_KASUMI_UIA1
+#if IMB_VERSION(3, 0, 0) <= IMB_VERSION_NUM
+		|| job->hash_alg == IMB_AUTH_SNOW5G_NIA4
+		|| job->hash_alg == IMB_AUTH_AES_NIA5
+		|| job->hash_alg == IMB_AUTH_ZUC_NIA6
+#else
+		|| job->hash_alg == IMB_AUTH_ZUC256_EIA3
 #endif
-		job->hash_alg == IMB_AUTH_KASUMI_UIA1) {
+	    ) {
 		auth_size = (op->sym->auth.data.offset >> 3) +
 			(op->sym->auth.data.length >> 3);
 	} else {
@@ -2448,21 +2459,32 @@ post_process_mb_job(struct ipsec_mb_qp *qp, IMB_JOB *job)
 				aesni_mb_digest_appended_in_src(op, job, oop) != NULL) {
 					unsigned int auth_size, cipher_size;
 					int unencrypted_bytes = 0;
-					if (job->cipher_mode == IMB_CIPHER_SNOW3G_UEA2 ||
-						job->cipher_mode == IMB_CIPHER_KASUMI_UEA1 ||
-						job->cipher_mode == IMB_CIPHER_ZUC_EEA3) {
+					if (job->cipher_mode == IMB_CIPHER_SNOW3G_UEA2
+						|| job->cipher_mode == IMB_CIPHER_KASUMI_UEA1
+						|| job->cipher_mode == IMB_CIPHER_ZUC_EEA3
+#if IMB_VERSION(3, 0, 0) <= IMB_VERSION_NUM
+						|| job->cipher_mode == IMB_CIPHER_SNOW5G_NEA4
+						|| job->cipher_mode == IMB_CIPHER_AES_NEA5
+						|| job->cipher_mode == IMB_CIPHER_ZUC_NEA6
+#endif
+					    ) {
 						cipher_size = (op->sym->cipher.data.offset >> 3) +
 							(op->sym->cipher.data.length >> 3);
 					} else {
 						cipher_size = (op->sym->cipher.data.offset) +
 							(op->sym->cipher.data.length);
 					}
-					if (job->hash_alg == IMB_AUTH_ZUC_EIA3 ||
-						job->hash_alg == IMB_AUTH_SNOW3G_UIA2 ||
-#if IMB_VERSION(3, 0, 0) > IMB_VERSION_NUM
-						job->hash_alg == IMB_AUTH_ZUC256_EIA3 ||
+					if (job->hash_alg == IMB_AUTH_ZUC_EIA3
+						|| job->hash_alg == IMB_AUTH_SNOW3G_UIA2
+						|| job->hash_alg == IMB_AUTH_KASUMI_UIA1
+#if IMB_VERSION(3, 0, 0) <= IMB_VERSION_NUM
+						|| job->hash_alg == IMB_AUTH_SNOW5G_NIA4
+						|| job->hash_alg == IMB_AUTH_AES_NIA5
+						|| job->hash_alg == IMB_AUTH_ZUC_NIA6
+#else
+						|| job->hash_alg == IMB_AUTH_ZUC256_EIA3
 #endif
-						job->hash_alg == IMB_AUTH_KASUMI_UIA1) {
+					    ) {
 						auth_size = (op->sym->auth.data.offset >> 3) +
 							(op->sym->auth.data.length >> 3);
 					} else {
