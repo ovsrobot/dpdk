@@ -14594,7 +14594,12 @@ prefix_flow:
 	if (prfx_flow) {
 		prfx_flow->nt2hws->rix_mreg_copy = flow->nt2hws->rix_mreg_copy;
 		flow->nt2hws->chaned_flow = 1;
-		SLIST_INSERT_AFTER(prfx_flow, flow, nt2hws->next);
+		/*
+		 * Prefix flow is a single, newly created flow. Preserve any RSS
+		 * expansion flows already linked after the suffix.
+		 */
+		MLX5_ASSERT(SLIST_NEXT(prfx_flow, nt2hws->next) == NULL);
+		SLIST_NEXT(prfx_flow, nt2hws->next) = flow;
 		mlx5_flow_nta_split_resource_free(dev, &resource);
 		mlx5_free(copied_items);
 		return (uintptr_t)prfx_flow;
