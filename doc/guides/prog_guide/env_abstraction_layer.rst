@@ -64,6 +64,13 @@ It consists of calls to the pthread library (more specifically, pthread_self(), 
     The creation and initialization functions for these objects are not multi-thread safe.
     However, once initialized, the objects themselves can safely be used in multiple threads simultaneously.
 
+.. warning::
+
+    A child created by ``fork()`` after ``rte_eal_init()`` must not use the DPDK.
+    Calling ``exec()`` in the child, or making no DPDK calls at all, is safe.
+    For multiple processes sharing DPDK resources,
+    use the model described in :doc:`multi_proc_support`.
+
 Shutdown and Cleanup
 ~~~~~~~~~~~~~~~~~~~~
 
