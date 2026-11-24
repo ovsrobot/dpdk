@@ -562,7 +562,7 @@ dump_lookup(int af)
 			fprintf(f, NIPQUAD_FMT"\n", NIPQUAD(tbl4[i]));
 	} else {
 		for (i = 0; i < config.nb_lookup_ips; i++)
-			fprintf(f, RTE_IPV6_ADDR_FMT"\n", RTE_IPV6_ADDR_SPLIT(&tbl6[i * 16]));
+			fprintf(f, RTE_IPV6_ADDR_FMT"\n", RTE_IPV6_ADDR_SPLIT(&tbl6[i]));
 	}
 	fclose(f);
 	return 0;
