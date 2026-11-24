@@ -518,7 +518,7 @@ packet_drop_count(int sockfd)
 		return 0;
 
 	if (getsockopt(sockfd, SOL_PACKET, PACKET_STATISTICS, &pkt_stats,
-		&pkt_stats_len) < -1)
+		&pkt_stats_len) < 0)
 		return 0;
 
 	return pkt_stats.tp_drops;
