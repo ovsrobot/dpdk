@@ -150,6 +150,16 @@ When the pool is shared and the FIB has an RCU defer queue,
 to report a quiescent state, so that the groups waiting in the queue
 also return to the pool.
 
+A pool created with a ``max_tbl8`` greater than ``num_tbl8`` grows on demand,
+doubling its capacity up to ``max_tbl8``. It never grows while an update
+holds a pointer into the tbl8 array: the TRIE algorithm grows it before
+writing the dataplane, DIR-24-8 right before taking a group.
+Growing needs an RCU QSBR
+variable, attached with ``rte_fib_tbl8_pool_rcu_qsbr_add()``, or by the first
+``rte_fib_rcu_qsbr_add()`` or ``rte_fib6_rcu_qsbr_add()`` of a FIB using the pool.
+The previous array is freed once the readers are done with it.
+The pool never shrinks.
+
 The pool is not thread safe: the updates of all the FIBs sharing it,
 their creation and their destruction must be serialized by the caller.
 
