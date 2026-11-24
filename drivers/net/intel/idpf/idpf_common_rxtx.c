@@ -659,12 +659,12 @@ idpf_dp_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	volatile struct virtchnl2_rx_flex_desc_adv_nic_3 *rx_desc_ring;
 	volatile struct virtchnl2_rx_flex_desc_adv_nic_3 *rx_desc;
 	uint16_t pktlen_gen_bufq_id;
-	struct idpf_rx_queue *rxq = rx_queue;
+	struct idpf_rx_queue *rxq;
 	const uint32_t *ptype_tbl;
 	uint8_t status_err0_qw1;
 	struct idpf_adapter *ad;
-	struct rte_mbuf *first_seg = rxq->pkt_first_seg;
-	struct rte_mbuf *last_seg = rxq->pkt_last_seg;
+	struct rte_mbuf *first_seg;
+	struct rte_mbuf *last_seg;
 	struct rte_mbuf *rxm;
 	uint16_t rx_id_bufq1;
 	uint16_t rx_id_bufq2;
@@ -678,11 +678,13 @@ idpf_dp_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 	nb_rx = 0;
 	rxq = rx_queue;
-	ad = rxq->adapter;
 
 	if (unlikely(rxq == NULL) || unlikely(!rxq->q_started))
 		return nb_rx;
 
+	ad = rxq->adapter;
+	first_seg = rxq->pkt_first_seg;
+	last_seg = rxq->pkt_last_seg;
 	rx_id = rxq->rx_tail;
 	rx_id_bufq1 = rxq->bufq1->rx_next_avail;
 	rx_id_bufq2 = rxq->bufq2->rx_next_avail;
@@ -1189,11 +1191,10 @@ idpf_dp_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	nb_hold = 0;
 	rxq = rx_queue;
 
-	ad = rxq->adapter;
-
 	if (unlikely(rxq == NULL) || unlikely(!rxq->q_started))
 		return nb_rx;
 
+	ad = rxq->adapter;
 	rx_id = rxq->rx_tail;
 	rx_ring = rxq->rx_ring;
 	ptype_tbl = rxq->adapter->ptype_tbl;
@@ -1293,29 +1294,38 @@ uint16_t
 idpf_dp_singleq_recv_scatter_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			       uint16_t nb_pkts)
 {
-	struct idpf_rx_queue *rxq = rx_queue;
-	volatile union virtchnl2_rx_desc *rx_ring = rxq->rx_ring;
+	struct idpf_rx_queue *rxq;
+	volatile union virtchnl2_rx_desc *rx_ring;
 	volatile union virtchnl2_rx_desc *rxdp;
 	union virtchnl2_rx_desc rxd;
 	struct idpf_adapter *ad;
-	struct rte_mbuf *first_seg = rxq->pkt_first_seg;
-	struct rte_mbuf *last_seg = rxq->pkt_last_seg;
+	struct rte_mbuf *first_seg;
+	struct rte_mbuf *last_seg;
 	struct rte_mbuf *rxm;
 	struct rte_mbuf *nmb;
-	const uint32_t *ptype_tbl = rxq->adapter->ptype_tbl;
-	uint16_t rx_id = rxq->rx_tail;
+	const uint32_t *ptype_tbl;
+	uint16_t rx_id;
 	uint16_t rx_packet_len;
-	uint16_t nb_hold = 0;
+	uint16_t nb_hold;
 	uint16_t rx_status0;
-	uint16_t nb_rx = 0;
+	uint16_t nb_rx;
 	uint64_t pkt_flags;
 	uint64_t dma_addr;
 	uint64_t ts_ns;
 
-	ad = rxq->adapter;
+	nb_rx = 0;
+	nb_hold = 0;
+	rxq = rx_queue;
 
 	if (unlikely(!rxq) || unlikely(!rxq->q_started))
 		return nb_rx;
+
+	rx_ring = rxq->rx_ring;
+	ad = rxq->adapter;
+	first_seg = rxq->pkt_first_seg;
+	last_seg = rxq->pkt_last_seg;
+	ptype_tbl = rxq->adapter->ptype_tbl;
+	rx_id = rxq->rx_tail;
 
 	if ((rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP) != 0)
 		rxq->hw_register_set = 1;
