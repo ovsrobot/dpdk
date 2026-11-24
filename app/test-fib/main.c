@@ -525,6 +525,7 @@ parse_lookup(FILE *f, int af)
 {
 	int ret, i = 0;
 	uint8_t *tbl = (uint8_t *)config.lookup_tbl;
+	uint32_t *tbl4 = config.lookup_tbl;
 	int step = (af == AF_INET) ? 4 : 16;
 	char *s;
 
@@ -535,6 +536,8 @@ parse_lookup(FILE *f, int af)
 		ret = inet_pton(af, s, &tbl[i]);
 		if (ret != 1)
 			return -EINVAL;
+		if (af == AF_INET)
+			tbl4[i / step] = rte_be_to_cpu_32(tbl4[i / step]);
 		i += step;
 	}
 	return 0;
