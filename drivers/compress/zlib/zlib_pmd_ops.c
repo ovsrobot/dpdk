@@ -209,6 +209,7 @@ zlib_pmd_qp_setup(struct rte_compressdev *dev, uint16_t qp_id,
 qp_setup_cleanup:
 	if (qp) {
 		rte_free(qp);
+		dev->data->queue_pairs[qp_id] = NULL;
 		qp = NULL;
 	}
 	return -1;
