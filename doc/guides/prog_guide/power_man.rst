@@ -249,6 +249,21 @@ Additionally, the EPYC System Management Interface In-band Library for Linux
 offers essential API, enabling user-space software
 to effectively manage system functions.
 
+HiSilicon Uncore
+~~~~~~~~~~~~~~~~
+
+On HiSilicon platforms, the uncore frequency is managed through the Linux
+devfreq subsystem. The kernel ``hisi_uncore_freq`` module exposes the
+uncore device (HID ``HISI04F1:``) under ``/sys/devices/platform/``,
+providing devfreq sysfs entries for frequency control.
+
+Please ensure that the ``hisi_uncore_freq`` kernel module is loaded.
+The driver switches the devfreq governor to ``userspace`` during
+initialization to allow manual frequency setting, and restores the
+original governor on exit.
+
+This driver is only supported on Linux and aarch64.
+
 Uncore API Overview
 ~~~~~~~~~~~~~~~~~~~
 

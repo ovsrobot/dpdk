@@ -22,7 +22,8 @@ const char *uncore_env_str[] = {
 	"not set",
 	"auto-detect",
 	"intel-uncore",
-	"amd-hsmp"
+	"amd-hsmp",
+	"hisi-uncore"
 };
 
 /* register the ops struct in rte_power_uncore_ops, return 0 on success. */

@@ -297,6 +297,11 @@ New Features
   when using ``RTE_UNCORE_PM_ENV_AUTO_DETECT``,
   instead of defaulting only to the Intel uncore driver.
 
+* **Added Hisilicon uncore power driver.**
+
+  Added the ``hisi_uncore`` driver for managing uncore frequency on
+  Hisilicon platforms via the Linux devfreq sysfs interface.
+
 * **Added graph profiling.**
 
   Added build time configurable graph node profiling statistics

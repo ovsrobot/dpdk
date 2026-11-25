@@ -9,6 +9,7 @@ drivers = [
         'intel_pstate',
         'intel_uncore',
         'kvm_vm',
+        'hisi_uncore'
 ]
 
 std_deps = ['power']
