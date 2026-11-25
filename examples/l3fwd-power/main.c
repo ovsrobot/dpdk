@@ -2289,34 +2289,26 @@ uninit_uncore:
 	return ret;
 }
 
-static int
+static void
 power_uncore_uninit(void)
 {
 	unsigned int max_pkg, max_die, die, pkg;
-	int ret, res = 0;
+	int ret;
 
 	if (enabled_uncore == -1)
-		return 0;
+		return;
 
 	max_pkg = rte_power_uncore_get_num_pkgs();
-	if (max_pkg == 0)
-		return -1;
 	for (pkg = 0; pkg < max_pkg; pkg++) {
 		max_die = rte_power_uncore_get_num_dies(pkg);
-		if (max_die == 0)
-			return -1;
 		for (die = 0; die < max_die; die++) {
 			ret = rte_power_uncore_exit(pkg, die);
-			if (ret < 0) {
+			if (ret < 0)
 				RTE_LOG(ERR, L3FWD_POWER,
 					"Failed to exit uncore for pkg %02u die %02u, ret = %d.\n",
 					pkg, die, ret);
-				res = -1;
-			}
 		}
 	}
-
-	return res;
 }
 
 static int power_cpufreq_init(void)
@@ -2373,27 +2365,23 @@ uninit_cpufreq:
 	return ret;
 }
 
-static int power_cpufreq_uninit(void)
+static void power_cpufreq_uninit(void)
 {
 	unsigned int lcore_id;
-	int ret, res = 0;
+	int ret;
 
 	/* only legacy mode relies on the initialization of cpufreq library */
 	if (app_mode != APP_MODE_LEGACY)
-		return 0;
+		return;
 
 	RTE_LCORE_FOREACH(lcore_id) {
 		/* deinit power management library */
 		ret = rte_power_exit(lcore_id);
-		if (ret != 0) {
+		if (ret != 0)
 			RTE_LOG(ERR, L3FWD_POWER,
 				"uninit cpufreq on core-%u failed, ret = %d.\n",
 				lcore_id, ret);
-			res = ret;
-		}
 	}
-
-	return res;
 }
 
 static int
@@ -2476,39 +2464,31 @@ init_power_library(void)
 	}
 
 	ret = power_uncore_init();
-	if (ret != 0)
+	if (ret != 0) {
+		RTE_LOG(ERR, L3FWD_POWER,
+			"Initialize power uncore failed, ret = %d.\n", ret);
+		power_cpufreq_uninit();
 		return ret;
+	}
 
 	ret = power_qos_init();
-	if (ret != 0)
+	if (ret != 0) {
 		RTE_LOG(ERR, L3FWD_POWER,
 			"Initialize power QoS lib failed, ret = %d.\n", ret);
+		power_uncore_uninit();
+		power_cpufreq_uninit();
+		return ret;
+	}
 
-	return ret;
+	return 0;
 }
 
-static int
+static void
 deinit_power_library(void)
 {
-	int ret = 0;
-
-	ret = power_cpufreq_uninit();
-	if (ret != 0) {
-		RTE_LOG(ERR, L3FWD_POWER,
-			"Uninit cpufreq lib failed, ret = %d.\n", ret);
-		return ret;
-	}
-
-	ret = power_uncore_uninit();
-	if (ret != 0) {
-		RTE_LOG(ERR, L3FWD_POWER, "Uninit power uncore failed, ret = %d.\n",
-			ret);
-		return ret;
-	}
-
 	power_qos_uninit();
-
-	return ret;
+	power_uncore_uninit();
+	power_cpufreq_uninit();
 }
 
 static void
@@ -3114,8 +3094,7 @@ main(int argc, char **argv)
 		rte_eth_dev_close(portid);
 	}
 
-	if (deinit_power_library())
-		rte_exit(EXIT_FAILURE, "deinit_power_library failed\n");
+	deinit_power_library();
 
 	if (rte_eal_cleanup() < 0)
 		RTE_LOG(ERR, L3FWD_POWER, "EAL cleanup failed\n");
