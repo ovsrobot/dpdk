@@ -210,6 +210,75 @@ test_sched(void)
 
 	rte_sched_port_free(port);
 
+	static struct rte_sched_cman_params cman_red_bad = {
+		.cman_mode = RTE_SCHED_CMAN_RED,
+		.red_params[0][RTE_COLOR_GREEN] = {
+			.min_th = 1, .max_th = 1, .maxp_inv = 10, .wq_log2 = 9,
+		},
+	};
+	static struct rte_sched_cman_params cman_pie_bad = {
+		.cman_mode = RTE_SCHED_CMAN_PIE,
+		.pie_params[0] = {
+			.qdelay_ref = 0,
+			.dp_update_interval = 100,
+			.max_burst = 10,
+			.tailq_th = 1,
+		},
+	};
+	static struct rte_sched_cman_params cman_pie_tailq_bad = {
+		.cman_mode = RTE_SCHED_CMAN_PIE,
+		.pie_params[0] = {
+			.qdelay_ref = 10,
+			.dp_update_interval = 100,
+			.max_burst = 10,
+			.tailq_th = 64,
+		},
+	};
+	static struct rte_sched_cman_params cman_red_ok = {
+		.cman_mode = RTE_SCHED_CMAN_RED,
+		.red_params[0][RTE_COLOR_GREEN] = {
+			.min_th = 1, .max_th = 1023, .maxp_inv = 10, .wq_log2 = 9,
+		},
+	};
+	struct rte_sched_subport_params sp = subport_param[0];
+
+	port_param.rate = (uint64_t) 10000 * 1000 * 1000 / 8;
+
+	/* Invalid RED (min_th == max_th) is rejected without crashing */
+	sp.cman_params = &cman_red_bad;
+	port = rte_sched_port_config(&port_param);
+	TEST_ASSERT_NOT_NULL(port, "Error config sched port\n");
+	err = rte_sched_subport_config(port, SUBPORT, &sp, 0);
+	TEST_ASSERT_FAIL(err, "Invalid RED configuration accepted\n");
+	port = NULL;
+
+	/* Invalid PIE (qdelay_ref == 0) is rejected without crashing */
+	sp.cman_params = &cman_pie_bad;
+	port = rte_sched_port_config(&port_param);
+	TEST_ASSERT_NOT_NULL(port, "Error config sched port\n");
+	err = rte_sched_subport_config(port, SUBPORT, &sp, 0);
+	TEST_ASSERT_FAIL(err, "Invalid PIE configuration accepted\n");
+	port = NULL;
+
+	/*
+	 * PIE tailq threshold above qsize keeps the half-initialized
+	 * subport registered; freeing the port must not fault
+	 */
+	sp.cman_params = &cman_pie_tailq_bad;
+	port = rte_sched_port_config(&port_param);
+	TEST_ASSERT_NOT_NULL(port, "Error config sched port\n");
+	err = rte_sched_subport_config(port, SUBPORT, &sp, 0);
+	TEST_ASSERT_FAIL(err, "Invalid PIE tailq threshold accepted\n");
+	rte_sched_port_free(port);
+
+	/* Valid RED configuration succeeds and the port frees cleanly */
+	sp.cman_params = &cman_red_ok;
+	port = rte_sched_port_config(&port_param);
+	TEST_ASSERT_NOT_NULL(port, "Error config sched port\n");
+	err = rte_sched_subport_config(port, SUBPORT, &sp, 0);
+	TEST_ASSERT_SUCCESS(err, "Valid RED configuration rejected\n");
+	rte_sched_port_free(port);
+
 	return 0;
 }
 

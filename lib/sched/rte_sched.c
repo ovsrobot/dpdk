@@ -1280,18 +1280,6 @@ rte_sched_subport_config(struct rte_sched_port *port,
 		/* TC oversubscription is enabled by default */
 		s->tc_ov_enabled = 1;
 
-		if (params->cman_params != NULL) {
-			s->cman_enabled = true;
-			status = rte_sched_cman_config(port, s, params, n_subports);
-			if (status) {
-				SCHED_LOG(NOTICE,
-					"%s: CMAN configuration fails", __func__);
-				return status;
-			}
-		} else {
-			s->cman_enabled = false;
-		}
-
 		/* Scheduling loop detection */
 		s->pipe_loop = RTE_SCHED_PIPE_INVALID;
 		s->pipe_exhaustion = 0;
@@ -1320,6 +1308,18 @@ rte_sched_subport_config(struct rte_sched_port *port,
 		s->queue_array = (struct rte_mbuf **)
 			(s->memory + rte_sched_subport_get_array_base(params,
 			e_RTE_SCHED_SUBPORT_ARRAY_QUEUE_ARRAY));
+
+		if (params->cman_params != NULL) {
+			s->cman_enabled = true;
+			status = rte_sched_cman_config(port, s, params, n_subports);
+			if (status) {
+				SCHED_LOG(NOTICE,
+					"%s: CMAN configuration fails", __func__);
+				return status;
+			}
+		} else {
+			s->cman_enabled = false;
+		}
 
 		/* Pipe profile table */
 		rte_sched_subport_config_pipe_profile_table(s, params,
