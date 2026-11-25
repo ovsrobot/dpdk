@@ -1780,6 +1780,11 @@ rte_sched_queue_read_stats(struct rte_sched_port *port,
 
 	s = port->subports[subport_id];
 	subport_qindex = ((1 << subport_qmask) - 1) & queue_id;
+	if (subport_qindex >= rte_sched_subport_pipe_queues(s)) {
+		SCHED_LOG(ERR,
+			"%s: Incorrect value for queue id", __func__);
+		return -EINVAL;
+	}
 	q = s->queue + subport_qindex;
 	qe = s->queue_extra + subport_qindex;
 
