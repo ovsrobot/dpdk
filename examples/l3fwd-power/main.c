@@ -211,10 +211,15 @@ enum uncore_choice {
 
 /* flag to check if uncore option enabled */
 int enabled_uncore = -1;
+#define MAX_UNCORE_CFG 32
 static struct uncore_cfg {
+	uint16_t pkg;
+	uint16_t die;
 	enum uncore_choice uncore_choice;
 	uint32_t freq_idx;
-} uncore_cfg;
+} uncore_cfg[MAX_UNCORE_CFG];
+static uint32_t nb_uncore_cfg;
+static bool uncore_legacy;
 
 struct __rte_cache_aligned lcore_rx_queue {
 	uint16_t port_id;
@@ -1494,6 +1499,7 @@ print_usage(const char *prgname)
 {
 	printf ("%s [EAL options] -- -p PORTMASK -P"
 		"  [--config (port,queue,lcore)[,(port,queue,lcore]]"
+		"  [--uncore-freq (pkg,die,freq)[,(pkg,die,freq]]"
 		"  [--high-perf-cores CORELIST"
 		"  [--perf-config (port,queue,hi_perf,lcore_index)[,(port,queue,hi_perf,lcore_index]]"
 		"  [--max-pkt-len PKTLEN]\n"
@@ -1502,6 +1508,8 @@ print_usage(const char *prgname)
 		"  -u: set min/max frequency for uncore to minimum value\n"
 		"  -U: set min/max frequency for uncore to maximum value\n"
 		"  -i (frequency index): set target frequency for uncore by specified frequency index\n"
+		"  --uncore-freq (pkg,die,freq)[,(pkg,die,freq)]: set target frequency for the"
+		" specified uncore where freq is min, max or a frequency index\n"
 		"  --config (port,queue,lcore): rx queues configuration\n"
 		"  --eth-link-speed: force link speed\n"
 		"  --cpu-resume-latency LATENCY: set CPU resume latency to control C-state selection,"
@@ -1567,6 +1575,66 @@ parse_portmask(const char *portmask)
 		return 0;
 
 	return pm;
+}
+
+static int
+parse_uncore_freq(const char *q_arg)
+{
+	unsigned long  pkg, die, freq_idx = 0;
+	const char *p, *p0 = q_arg;
+	enum uncore_choice choice;
+	char s[64];
+	char *end;
+	int i;
+
+	while ((p = strchr(p0, '(')) != NULL) {
+		++p;
+		p0 = strchr(p, ')');
+		if (p0 == NULL)
+			return -1;
+
+		if ((uint32_t)(p0 - p) >= sizeof(s))
+			return -1;
+		snprintf(s, sizeof(s), "%.*s", (int)(p0 - p), p);
+
+		end = s;
+		pkg = strtoul(end, &end, 0);
+		if (*end != ',' || pkg > UINT16_MAX)
+			return -1;
+		die = strtoul(++end, &end, 0);
+		if (*end != ',' || die > UINT16_MAX)
+			return -1;
+		end++;
+		if (strncmp(end, "min", 3) == 0) {
+			choice = UNCORE_MIN;
+			end += 3;
+		} else if (strncmp(end, "max", 3) == 0) {
+			choice = UNCORE_MAX;
+			end += 3;
+		} else {
+			freq_idx = strtoul(end, &end, 0);
+			if (end == s || freq_idx > UINT32_MAX)
+				return -1;
+			choice = UNCORE_IDX;
+		}
+		if (*end != '\0')
+			return -1;
+
+		if (nb_uncore_cfg >= MAX_UNCORE_CFG) {
+			RTE_LOG(INFO, L3FWD_POWER, "Too many uncore freq options,"
+				" max is %d\n", MAX_UNCORE_CFG);
+			return -1;
+		}
+
+		i = nb_uncore_cfg;
+		uncore_cfg[i].pkg = pkg;
+		uncore_cfg[i].die = die;
+		uncore_cfg[i].uncore_choice = choice;
+		uncore_cfg[i].freq_idx = freq_idx;
+		nb_uncore_cfg++;
+	}
+
+	return 0;
 }
 
 static int
@@ -1671,6 +1739,7 @@ parse_pmd_mgmt_config(const char *name)
 #define CMD_LINE_OPT_SCALE_FREQ_MIN "scale-freq-min"
 #define CMD_LINE_OPT_SCALE_FREQ_MAX "scale-freq-max"
 #define CMD_LINE_OPT_CPU_RESUME_LATENCY "cpu-resume-latency"
+#define CMD_LINE_OPT_UNCORE_FREQ "uncore-freq"
 #define CMD_LINK_OPT_ETH_LINK_SPEED "eth-link-speed"
 
 /* Parse the argument given in the command line of the application */
@@ -1699,6 +1768,7 @@ parse_args(int argc, char **argv)
 		{CMD_LINE_OPT_SCALE_FREQ_MIN, 1, 0, 0},
 		{CMD_LINE_OPT_SCALE_FREQ_MAX, 1, 0, 0},
 		{CMD_LINK_OPT_ETH_LINK_SPEED, 1, 0, 0},
+		{CMD_LINE_OPT_UNCORE_FREQ, 1, 0, 0},
 		{NULL, 0, 0, 0}
 	};
 
@@ -1722,21 +1792,42 @@ parse_args(int argc, char **argv)
 			promiscuous_on = 1;
 			break;
 		case 'u':
-			enabled_uncore = 0;
-			uncore_cfg.uncore_choice = UNCORE_MIN;
-			break;
-		case 'U':
-			enabled_uncore = 0;
-			uncore_cfg.uncore_choice = UNCORE_MAX;
-			break;
-		case 'i':
-			enabled_uncore = 0;
-			if (parse_uint(optarg, UINT32_MAX, &uncore_cfg.freq_idx) != 0) {
-				RTE_LOG(INFO, L3FWD_POWER, "Index given is not a valid number.");
+			if (nb_uncore_cfg > 0) {
+				RTE_LOG(INFO, L3FWD_POWER,
+					"Option -u cannot be used together with --uncore-freq\n");
 				print_usage(prgname);
 				return -1;
 			}
-			uncore_cfg.uncore_choice = UNCORE_IDX;
+			enabled_uncore = 0;
+			uncore_legacy = true;
+			uncore_cfg[0].uncore_choice = UNCORE_MIN;
+			break;
+		case 'U':
+			if (nb_uncore_cfg > 0) {
+				RTE_LOG(INFO, L3FWD_POWER,
+					"Option -U cannot be used together with --uncore-freq\n");
+				print_usage(prgname);
+				return -1;
+			}
+			enabled_uncore = 0;
+			uncore_legacy = true;
+			uncore_cfg[0].uncore_choice = UNCORE_MAX;
+			break;
+		case 'i':
+			if (nb_uncore_cfg > 0) {
+				RTE_LOG(INFO, L3FWD_POWER,
+					"Option -i cannot be used together with --uncore-freq\n");
+				print_usage(prgname);
+				return -1;
+			}
+			enabled_uncore = 0;
+			uncore_legacy = true;
+			if (parse_uint(optarg, UINT32_MAX, &uncore_cfg[0].freq_idx) != 0) {
+				RTE_LOG(INFO, L3FWD_POWER, "Invalid freq index");
+				print_usage(prgname);
+				return -1;
+			}
+			uncore_cfg[0].uncore_choice = UNCORE_IDX;
 			break;
 		/* long options */
 		case 0:
@@ -1891,6 +1982,26 @@ parse_args(int argc, char **argv)
 				}
 				if (speed_num >= 0 && rte_eth_speed_bitflag(speed_num, 0) > 0)
 					port_conf.link_speeds = rte_eth_speed_bitflag(speed_num, 0);
+			}
+
+			if (!strncmp(lgopts[option_index].name,
+					CMD_LINE_OPT_UNCORE_FREQ,
+					sizeof(CMD_LINE_OPT_UNCORE_FREQ))) {
+				if (uncore_legacy) {
+					RTE_LOG(INFO, L3FWD_POWER,
+						"Option --uncore-freq cannot be used together"
+						" with -u/-U/-i\n");
+					print_usage(prgname);
+					return -1;
+				}
+				if (parse_uncore_freq(optarg) != 0) {
+					RTE_LOG(INFO, L3FWD_POWER,
+						"Invalid uncore freq, expected <package>,<domain>,<frequency>\n");
+					print_usage(prgname);
+					return -1;
+				}
+				enabled_uncore = 0;
+				uncore_legacy = false;
 			}
 
 			break;
@@ -2190,11 +2301,59 @@ static int check_ptype(uint16_t portid)
 }
 
 static int
+set_uncore_freq(uint32_t pkg, uint32_t die, struct uncore_cfg *cfg)
+{
+	int freq_array_len;
+	int ret;
+
+	if (cfg->uncore_choice == UNCORE_MIN) {
+		ret = rte_power_uncore_freq_min(pkg, die);
+		if (ret == -1) {
+			RTE_LOG(INFO, L3FWD_POWER,
+			"Unable to set the uncore frequency to minimum value for pkg %u die %u\n"
+			, pkg, die);
+			return -1;
+		}
+	} else if (cfg->uncore_choice == UNCORE_MAX) {
+		ret = rte_power_uncore_freq_max(pkg, die);
+		if (ret == -1) {
+			RTE_LOG(INFO, L3FWD_POWER,
+			"Unable to set uncore frequency to maximum value for pkg %u die %u\n"
+			, pkg, die);
+			return -1;
+		}
+	} else if (cfg->uncore_choice == UNCORE_IDX) {
+		freq_array_len = rte_power_uncore_get_num_freqs(pkg, die);
+		if (freq_array_len <= 0) {
+			RTE_LOG(INFO, L3FWD_POWER, "Get uncore frequency number failed.\n");
+			return -1;
+		}
+		if (cfg->freq_idx > (uint32_t)(freq_array_len - 1)) {
+			RTE_LOG(INFO, L3FWD_POWER,
+			"Invalid freq index, please choose a value from 0 to %d.\n",
+			freq_array_len - 1);
+			return -1;
+		}
+		ret = rte_power_set_uncore_freq(pkg, die, cfg->freq_idx);
+		if (ret == -1) {
+			RTE_LOG(INFO, L3FWD_POWER,
+			"Unable to set specified frequency index for pkg %u die %u\n",
+			pkg, die);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int
 power_uncore_init(void)
 {
-	unsigned int die, pkg, max_pkg, max_die;
-	unsigned int init_pkg = 0, init_die = 0;
+	uint32_t max_pkg, max_die, die, pkg;
+	uint32_t init_pkg = 0, init_die = 0;
 	bool init_done = false;
+	uint32_t init_nb = 0;
+	uint32_t i;
 	int ret;
 
 	if (enabled_uncore == -1)
@@ -2206,65 +2365,70 @@ power_uncore_init(void)
 		return ret;
 	}
 
-	max_pkg = rte_power_uncore_get_num_pkgs();
-	if (max_pkg == 0)
-		return -1;
+	if (uncore_legacy) {
+		/* No specific uncore targeted, apply to all pkg/die. */
+		max_pkg = rte_power_uncore_get_num_pkgs();
+		if (max_pkg == 0)
+			return -1;
 
-	for (pkg = 0; pkg < max_pkg; pkg++) {
-		max_die = rte_power_uncore_get_num_dies(pkg);
-		if (max_die == 0) {
-			ret = -1;
-			goto uninit_uncore;
+		for (pkg = 0; pkg < max_pkg; pkg++) {
+			max_die = rte_power_uncore_get_num_dies(pkg);
+			if (max_die == 0) {
+				ret = -1;
+				goto uninit_uncore;
+			}
+			for (die = 0; die < max_die; die++) {
+				ret = rte_power_uncore_init(pkg, die);
+				if (ret == -1) {
+					RTE_LOG(INFO, L3FWD_POWER, "Unable to initialize uncore for pkg %u die %u\n"
+					, pkg, die);
+					goto uninit_uncore;
+				}
+				init_pkg = pkg;
+				init_die = die;
+				init_done = true;
+
+				ret = set_uncore_freq(pkg, die, &uncore_cfg[0]);
+				if (ret == -1)
+					goto uninit_uncore;
+			}
 		}
-		for (die = 0; die < max_die; die++) {
+	} else {
+		max_pkg = rte_power_uncore_get_num_pkgs();
+		if (max_pkg == 0)
+			return -1;
+
+		for (i = 0; i < nb_uncore_cfg; i++) {
+			pkg = uncore_cfg[i].pkg;
+			die = uncore_cfg[i].die;
+
+			if (pkg >= max_pkg) {
+				RTE_LOG(INFO, L3FWD_POWER,
+					"Invalid package id %u, must be less than %u\n",
+					pkg, max_pkg);
+				ret = -1;
+				goto uninit_uncore;
+			}
+			max_die = rte_power_uncore_get_num_dies(pkg);
+			if (die >= max_die) {
+				RTE_LOG(INFO, L3FWD_POWER,
+					"Invalid die id %u for pkg %u, must be less than %u\n",
+					die, pkg, max_die);
+				ret = -1;
+				goto uninit_uncore;
+			}
+
 			ret = rte_power_uncore_init(pkg, die);
 			if (ret == -1) {
-				RTE_LOG(INFO, L3FWD_POWER, "Unable to initialize uncore for pkg %02u die %02u\n"
+				RTE_LOG(INFO, L3FWD_POWER, "Unable to initialize uncore for pkg %u die %u\n"
 				, pkg, die);
 				goto uninit_uncore;
 			}
-			init_pkg = pkg;
-			init_die = die;
-			init_done = true;
+			init_nb = i + 1;
 
-			if (uncore_cfg.uncore_choice == UNCORE_MIN) {
-				ret = rte_power_uncore_freq_min(pkg, die);
-				if (ret == -1) {
-					RTE_LOG(INFO, L3FWD_POWER,
-					"Unable to set the uncore frequency to minimum value for pkg %02u die %02u\n"
-					, pkg, die);
-					goto uninit_uncore;
-				}
-			} else if (uncore_cfg.uncore_choice == UNCORE_MAX) {
-				ret = rte_power_uncore_freq_max(pkg, die);
-				if (ret == -1) {
-					RTE_LOG(INFO, L3FWD_POWER,
-					"Unable to set uncore frequency to maximum value for pkg %02u die %02u\n"
-					, pkg, die);
-					goto uninit_uncore;
-				}
-			} else if (uncore_cfg.uncore_choice == UNCORE_IDX) {
-				int freq_array_len = rte_power_uncore_get_num_freqs(pkg, die);
-				if (freq_array_len <= 0) {
-					RTE_LOG(INFO, L3FWD_POWER, "Get uncore frequency number failed.\n");
-					ret = -1;
-					goto uninit_uncore;
-				}
-				if (uncore_cfg.freq_idx > (uint32_t)(freq_array_len - 1)) {
-					RTE_LOG(INFO, L3FWD_POWER,
-					"Frequency index given out of range, please choose a value from 0 to %d.\n",
-					freq_array_len - 1);
-					ret = -1;
-					goto uninit_uncore;
-				}
-				ret = rte_power_set_uncore_freq(pkg, die, uncore_cfg.freq_idx);
-				if (ret == -1) {
-					RTE_LOG(INFO, L3FWD_POWER,
-					"Unable to set specified frequency index for pkg %02u die %02u\n",
-					pkg, die);
-					goto uninit_uncore;
-				}
-			}
+			ret = set_uncore_freq(pkg, die, &uncore_cfg[i]);
+			if (ret == -1)
+				goto uninit_uncore;
 		}
 	}
 
@@ -2272,18 +2436,25 @@ power_uncore_init(void)
 
 uninit_uncore:
 	/* Roll back the pkg/die that were initialized before the failure. */
-	if (init_done) {
-		for (pkg = 0; pkg <= init_pkg; pkg++) {
-			if (pkg == init_pkg)
-				max_die = init_die + 1;
-			else {
-				max_die = rte_power_uncore_get_num_dies(pkg);
-				if (max_die == 0)
-					break;
+	if (uncore_legacy) {
+		if (init_done) {
+			for (pkg = 0; pkg <= init_pkg; pkg++) {
+				if (pkg == init_pkg)
+					max_die = init_die + 1;
+				else {
+					max_die = rte_power_uncore_get_num_dies(pkg);
+					if (max_die == 0)
+						break;
+				}
+				for (die = 0; die < max_die; die++)
+					rte_power_uncore_exit(pkg, die);
 			}
-			for (die = 0; die < max_die; die++)
-				rte_power_uncore_exit(pkg, die);
 		}
+	} else {
+		/* Only uninit the targeted uncore that were initialized. */
+		for (i = 0; i < init_nb; i++)
+			rte_power_uncore_exit(uncore_cfg[i].pkg,
+				uncore_cfg[i].die);
 	}
 
 	return ret;
@@ -2305,7 +2476,7 @@ power_uncore_uninit(void)
 			ret = rte_power_uncore_exit(pkg, die);
 			if (ret < 0)
 				RTE_LOG(ERR, L3FWD_POWER,
-					"Failed to exit uncore for pkg %02u die %02u, ret = %d.\n",
+					"Failed to exit uncore for pkg %u die %u, ret = %d.\n",
 					pkg, die, ret);
 		}
 	}

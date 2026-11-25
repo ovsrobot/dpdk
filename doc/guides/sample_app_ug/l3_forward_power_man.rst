@@ -108,6 +108,8 @@ where,
 
 *   -i (frequency index): set target frequency for uncore by specified frequency index.
 
+*   --uncore-freq=(\\(package,\\domain,\\frequency\\))(\\(package,\\domain,\\frequency\\)): optional, set target frequency for the specified uncore. <frequency> is min, max or a frequency index. If not given, -u/-U/-i apply to all uncore. May be specified multiple times.
+
 *   --config (port,queue,lcore)[,(port,queue,lcore)]: determines which queues from which ports are mapped to which cores.
 
 *   --cpu-resume-latency LATENCY: set CPU resume latency to control C-state selection, 0 : just allow entering C0-state.
@@ -333,6 +335,17 @@ Three options are available for setting uncore frequency:
   Frequency index values are in descending order,
   i.e., index 0 is maximum frequency index.
 
+``--uncore-freq``
+  This will allow you to set the uncore frequency for specific packages and dies.
+  Each ``(package,domain,frequency)`` group targets one uncore, where ``frequency``
+  is ``min``, ``max`` or a frequency index. Multiple groups can be given in a single
+  option. The ``-u``, ``-U`` and ``-i`` options apply to all packages and dies and
+  cannot be used together with ``--uncore-freq``.
+
 .. code-block:: console
 
    dpdk-l3fwd-power -l 1-3 -- -p 0x0f --config="(0,0,2),(0,1,3)" -i 1
+
+.. code-block:: console
+
+   dpdk-l3fwd-power -l 1-3 -- -p 0x0f --config="(0,0,2),(0,1,3)" --uncore-freq="(0,0,max)(0,1,1)"
