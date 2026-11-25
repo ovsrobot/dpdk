@@ -100,7 +100,24 @@ s32 ngbe_write_phy_reg_sds_ext_yt(struct ngbe_hw *hw,
 
 s32 ngbe_init_phy_yt(struct ngbe_hw *hw)
 {
+	u16 value = 0;
+
 	rte_spinlock_init(&hw->phy_lock);
+
+	rte_spinlock_lock(&hw->phy_lock);
+	ngbe_write_phy_reg_ext_yt(hw, YT_SPEC_CONF, 0,
+				  YT_SPEC_CONF_8531SH_CA);
+	ngbe_write_phy_reg_ext_yt(hw, YT_SMI_PHY, 0, 0);
+	ngbe_read_phy_reg_mdi(hw, YT_INTR, 0, &value);
+
+	if (value != 0x31 && value != 0x32) {
+		ngbe_write_phy_reg_ext_yt(hw, 0xa071, 0, 0x9007);
+		ngbe_write_phy_reg_ext_yt(hw, 0x52, 0, 0x231d);
+		ngbe_write_phy_reg_ext_yt(hw, 0x51, 0, 0x04a9);
+		ngbe_write_phy_reg_ext_yt(hw, 0x57, 0, 0x274c);
+		ngbe_write_phy_reg_ext_yt(hw, YT_MISC, 0, 0x10d);
+	}
+	rte_spinlock_unlock(&hw->phy_lock);
 
 	if (hw->lsc) {
 		rte_spinlock_lock(&hw->phy_lock);
