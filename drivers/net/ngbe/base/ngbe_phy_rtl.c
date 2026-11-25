@@ -178,6 +178,8 @@ s32 ngbe_init_phy_rtl(struct ngbe_hw *hw)
 	hw->phy.write_reg(hw, 0xd, 0x0, 0x4007);
 	hw->phy.write_reg(hw, 0xe, 0x0, 0x0000);
 
+	hw->phy.write_reg(hw, RTL_INER, 0xa42, RTL_INER_LSC | RTL_INER_ANC);
+
 	hw->init_phy = false;
 
 	return 0;
