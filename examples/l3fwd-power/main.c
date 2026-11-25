@@ -2369,9 +2369,75 @@ static int power_cpufreq_uninit(void)
 }
 
 static int
-init_power_library(void)
+power_qos_init(void)
+{
+	int lcore_init[RTE_MAX_LCORE] = {0};
+	unsigned int lcore_id;
+	int ret;
+
+	if (cpu_resume_latency == -1)
+		return 0;
+
+	RTE_LCORE_FOREACH(lcore_id) {
+		/* Back old CPU resume latency. */
+		ret = rte_power_qos_get_cpu_resume_latency(lcore_id);
+		if (ret < 0) {
+			RTE_LOG(ERR, L3FWD_POWER,
+				"Failed to get cpu resume latency on lcore-%u, ret=%d.\n",
+				lcore_id, ret);
+			goto uninit_qos;
+		}
+		resume_latency_bk[lcore_id] = ret;
+
+		/*
+		 * Set the cpu resume latency of the worker lcore based
+		 * on user's request. If set strict latency (0), just
+		 * allow the CPU to enter the shallowest idle state to
+		 * improve performance.
+		 */
+		ret = rte_power_qos_set_cpu_resume_latency(lcore_id, cpu_resume_latency);
+		if (ret != 0) {
+			RTE_LOG(ERR, L3FWD_POWER,
+				"Failed to set cpu resume latency on lcore-%u, ret=%d.\n",
+				lcore_id, ret);
+			goto uninit_qos;
+		}
+		lcore_init[lcore_id] = 1;
+	}
+
+	return 0;
+
+uninit_qos:
+	RTE_LCORE_FOREACH(lcore_id) {
+		if (lcore_init[lcore_id] == 0)
+			break;
+
+		/* Restore the original value. */
+		rte_power_qos_set_cpu_resume_latency(lcore_id,
+						     resume_latency_bk[lcore_id]);
+	}
+
+	return ret;
+}
+
+static void
+power_qos_uninit(void)
 {
 	unsigned int lcore_id;
+
+	if (cpu_resume_latency == -1)
+		return;
+
+	RTE_LCORE_FOREACH(lcore_id) {
+		/* Restore the original value. */
+		rte_power_qos_set_cpu_resume_latency(lcore_id,
+						     resume_latency_bk[lcore_id]);
+	}
+}
+
+static int
+init_power_library(void)
+{
 	int ret;
 
 	ret = power_cpufreq_init();
@@ -2385,34 +2451,10 @@ init_power_library(void)
 	if (ret != 0)
 		return ret;
 
-	if (cpu_resume_latency != -1) {
-		RTE_LCORE_FOREACH(lcore_id) {
-			/* Back old CPU resume latency. */
-			ret = rte_power_qos_get_cpu_resume_latency(lcore_id);
-			if (ret < 0) {
-				RTE_LOG(ERR, L3FWD_POWER,
-					"Failed to get cpu resume latency on lcore-%u, ret=%d.\n",
-					lcore_id, ret);
-				return ret;
-			}
-			resume_latency_bk[lcore_id] = ret;
-
-			/*
-			 * Set the cpu resume latency of the worker lcore based
-			 * on user's request. If set strict latency (0), just
-			 * allow the CPU to enter the shallowest idle state to
-			 * improve performance.
-			 */
-			ret = rte_power_qos_set_cpu_resume_latency(lcore_id,
-							cpu_resume_latency);
-			if (ret != 0) {
-				RTE_LOG(ERR, L3FWD_POWER,
-					"Failed to set cpu resume latency on lcore-%u, ret=%d.\n",
-					lcore_id, ret);
-				return ret;
-			}
-		}
-	}
+	ret = power_qos_init();
+	if (ret != 0)
+		RTE_LOG(ERR, L3FWD_POWER,
+			"Initialize power QoS lib failed, ret = %d.\n", ret);
 
 	return ret;
 }
@@ -2420,7 +2462,6 @@ init_power_library(void)
 static int
 deinit_power_library(void)
 {
-	unsigned int lcore_id, max_pkg, max_die, die, pkg;
 	int ret = 0;
 
 	ret = power_cpufreq_uninit();
@@ -2437,13 +2478,7 @@ deinit_power_library(void)
 		return ret;
 	}
 
-	if (cpu_resume_latency != -1) {
-		RTE_LCORE_FOREACH(lcore_id) {
-			/* Restore the original value. */
-			rte_power_qos_set_cpu_resume_latency(lcore_id,
-						resume_latency_bk[lcore_id]);
-		}
-	}
+	power_qos_uninit();
 
 	return ret;
 }
