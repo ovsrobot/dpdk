@@ -183,11 +183,28 @@ typedef unsigned int (*rte_power_uncore_get_num_pkgs_t)(void);
 typedef unsigned int (*rte_power_uncore_get_num_dies_t)(unsigned int pkg);
 typedef void (*rte_power_uncore_driver_cb_t)(void);
 
+/**
+ * Detect if the current platform supports this uncore frequency management driver.
+ *
+ * This callback is used during automatic driver detection to check whether
+ * the platform has the necessary hardware/software support (e.g., sysfs
+ * entries, device nodes) without performing a full initialization that may
+ * have side effects.
+ *
+ * This function should NOT be called in the fast path.
+ *
+ * @return
+ *  - 0 on success, the platform supports this driver.
+ *  - Negative on error, the platform does not support this driver.
+ */
+typedef int (*rte_power_uncore_detect_t)(void);
+
 /** Structure defining uncore power operations structure */
 struct rte_power_uncore_ops {
 	RTE_TAILQ_ENTRY(rte_power_uncore_ops) next;     /**< Next in list. */
 	char name[RTE_POWER_UNCORE_DRIVER_NAMESZ];      /**< power mgmt driver. */
 	rte_power_uncore_driver_cb_t cb;                /**< Driver specific callbacks. */
+	rte_power_uncore_detect_t detect;               /**< Detect platform support. */
 	rte_power_uncore_init_t init;                   /**< Initialize power management. */
 	rte_power_uncore_exit_t exit;                   /**< Exit power management. */
 	rte_power_uncore_get_num_pkgs_t get_num_pkgs;

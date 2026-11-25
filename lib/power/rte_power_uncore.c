@@ -66,11 +66,16 @@ power_uncore_probe_driver(void)
 	int ret;
 
 	global_uncore_ops = NULL;
-	/* Use package-0 and die-0 to probe uncore driver. */
 	RTE_TAILQ_FOREACH(ops, &uncore_ops_list, next) {
-		ret = ops->init(0, 0);
+		if (ops->detect) {
+			ret = ops->detect();
+		} else {
+			/* Use package-0 and die-0 to probe uncore driver. */
+			ret = ops->init(0, 0);
+			if (ret == 0)
+				ops->exit(0, 0);
+		}
 		if (ret == 0) {
-			ops->exit(0, 0);
 			env = power_uncore_driver_name2env(ops->name);
 			if (env == UINT32_MAX)
 				continue;
