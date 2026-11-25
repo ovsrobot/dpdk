@@ -302,6 +302,29 @@ Get Num Pkgs
 Get Num Dies
   Get the number of dies on a given package.
 
+Uncore Telemetry
+~~~~~~~~~~~~~~~~
+
+The power library provides telemetry commands to query uncore frequency
+information for a given package and die.
+The uncore power management environment must be initialized before using
+these commands. The parameters are specified as a comma-separated pair
+``pkg,die`` (e.g. ``0,0``).
+
+#. Get the current frequency index for a given package and die::
+
+     --> /power/uncore/curr_freq,0,0
+     {"/power/uncore/curr_freq": {"pkg": 0, "die": 0, "curr_freq_idx": 3}}
+
+#. Get the available frequencies for a given package and die::
+
+     --> /power/uncore/avail_freqs,0,0
+     {"/power/uncore/avail_freqs": {"pkg": 0, "die": 0, "num_freqs": 4,
+      "0": 1800000000, "1": 2000000000, "2": 2200000000, "3": 2400000000}}
+
+For more information on how to use the Telemetry interface, see
+the :doc:`../howto/telemetry`.
+
 References
 ----------
 

@@ -302,6 +302,12 @@ New Features
   Added the ``hisi_uncore`` driver for managing uncore frequency on
   Hisilicon platforms via the Linux devfreq sysfs interface.
 
+* **Added uncore frequency telemetry.**
+
+  Added ``/power/uncore/curr_freq`` and ``/power/uncore/avail_freqs``
+  telemetry commands to query the current frequency index and the
+  available frequencies of a given uncore package and die.
+
 * **Added graph profiling.**
 
   Added build time configurable graph node profiling statistics

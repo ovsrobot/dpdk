@@ -20,6 +20,7 @@ sources = files(
         'rte_power_pmd_mgmt.c',
         'rte_power_qos.c',
         'rte_power_uncore.c',
+        'rte_power_telemetry.c',
 )
 headers = files(
         'rte_power_cpufreq.h',
@@ -33,4 +34,4 @@ driver_sdk_headers = files(
         'power_uncore_ops.h',
 )
 
-deps += ['timer', 'ethdev']
+deps += ['timer', 'ethdev', 'telemetry']
