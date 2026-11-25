@@ -2291,35 +2291,94 @@ power_uncore_uninit(void)
 	return res;
 }
 
+static int power_cpufreq_init(void)
+{
+	int lcore_init[RTE_MAX_LCORE] = {0};
+	enum power_management_env env;
+	unsigned int lcore_id;
+	int ret, res;
+
+	/* only legacy mode relies on the initialization of cpufreq library */
+	if (app_mode != APP_MODE_LEGACY)
+		return 0;
+
+	RTE_LCORE_FOREACH(lcore_id) {
+		/* init power management library */
+		ret = rte_power_init(lcore_id);
+		if (ret != 0) {
+			RTE_LOG(ERR, L3FWD_POWER,
+				"Library initialization failed on core %u\n",
+				lcore_id);
+			goto uninit_cpufreq;
+		}
+
+		/* we're not supporting the VM channel mode */
+		env = rte_power_get_env();
+		if (env != PM_ENV_ACPI_CPUFREQ &&
+				env != PM_ENV_PSTATE_CPUFREQ &&
+				env != PM_ENV_AMD_PSTATE_CPUFREQ &&
+				env != PM_ENV_CPPC_CPUFREQ) {
+			RTE_LOG(ERR, L3FWD_POWER,
+				"Only ACPI and PSTATE mode are supported\n");
+			rte_power_exit(lcore_id);
+			ret = -1;
+			goto uninit_cpufreq;
+		}
+		lcore_init[lcore_id] = 1;
+	}
+
+	return 0;
+
+uninit_cpufreq:
+	RTE_LCORE_FOREACH(lcore_id) {
+		/* deinit power management library */
+		if (lcore_init[lcore_id] == 0)
+			break;
+
+		res = rte_power_exit(lcore_id);
+		if (res != 0)
+			RTE_LOG(ERR, L3FWD_POWER,
+				"uninit cpufreq on core-%u failed, ret = %d.\n",
+				lcore_id, res);
+	}
+
+	return ret;
+}
+
+static int power_cpufreq_uninit(void)
+{
+	unsigned int lcore_id;
+	int ret, res = 0;
+
+	/* only legacy mode relies on the initialization of cpufreq library */
+	if (app_mode != APP_MODE_LEGACY)
+		return 0;
+
+	RTE_LCORE_FOREACH(lcore_id) {
+		/* deinit power management library */
+		ret = rte_power_exit(lcore_id);
+		if (ret != 0) {
+			RTE_LOG(ERR, L3FWD_POWER,
+				"uninit cpufreq on core-%u failed, ret = %d.\n",
+				lcore_id, ret);
+			res = ret;
+		}
+	}
+
+	return res;
+}
+
 static int
 init_power_library(void)
 {
-	enum power_management_env env;
 	unsigned int lcore_id;
-	int ret = 0;
+	int ret;
 
-	/* only legacy mode relies on the initialization of cpufreq library */
-	if (app_mode == APP_MODE_LEGACY) {
-		RTE_LCORE_FOREACH(lcore_id) {
-			/* init power management library */
-			ret = rte_power_init(lcore_id);
-			if (ret) {
-				RTE_LOG(ERR, L3FWD_POWER,
-					"Library initialization failed on core %u\n",
-					lcore_id);
-				return ret;
-			}
-			/* we're not supporting the VM channel mode */
-			env = rte_power_get_env();
-			if (env != PM_ENV_ACPI_CPUFREQ &&
-					env != PM_ENV_PSTATE_CPUFREQ &&
-					env != PM_ENV_AMD_PSTATE_CPUFREQ &&
-					env != PM_ENV_CPPC_CPUFREQ) {
-				RTE_LOG(ERR, L3FWD_POWER,
-					"Only ACPI and PSTATE mode are supported\n");
-				return -1;
-			}
-		}
+	ret = power_cpufreq_init();
+	if (ret != 0) {
+		RTE_LOG(ERR, L3FWD_POWER,
+			"Initialize cpufreq lib failed, ret = %d.\n", ret);
+		return ret;
 	}
 
 	ret = power_uncore_init();
@@ -2364,17 +2423,11 @@ deinit_power_library(void)
 	unsigned int lcore_id, max_pkg, max_die, die, pkg;
 	int ret = 0;
 
-	if (app_mode == APP_MODE_LEGACY) {
-		RTE_LCORE_FOREACH(lcore_id) {
-			/* deinit power management library */
-			ret = rte_power_exit(lcore_id);
-			if (ret) {
-				RTE_LOG(ERR, L3FWD_POWER,
-					"Library deinitialization failed on core %u\n",
-					lcore_id);
-				return ret;
-			}
-		}
+	ret = power_cpufreq_uninit();
+	if (ret != 0) {
+		RTE_LOG(ERR, L3FWD_POWER,
+			"Uninit cpufreq lib failed, ret = %d.\n", ret);
+		return ret;
 	}
 
 	ret = power_uncore_uninit();
