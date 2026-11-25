@@ -2262,6 +2262,36 @@ power_uncore_init(void)
 }
 
 static int
+power_uncore_uninit(void)
+{
+	unsigned int max_pkg, max_die, die, pkg;
+	int ret, res = 0;
+
+	if (enabled_uncore == -1)
+		return 0;
+
+	max_pkg = rte_power_uncore_get_num_pkgs();
+	if (max_pkg == 0)
+		return -1;
+	for (pkg = 0; pkg < max_pkg; pkg++) {
+		max_die = rte_power_uncore_get_num_dies(pkg);
+		if (max_die == 0)
+			return -1;
+		for (die = 0; die < max_die; die++) {
+			ret = rte_power_uncore_exit(pkg, die);
+			if (ret < 0) {
+				RTE_LOG(ERR, L3FWD_POWER,
+					"Failed to exit uncore for pkg %02u die %02u, ret = %d.\n",
+					pkg, die, ret);
+				res = -1;
+			}
+		}
+	}
+
+	return res;
+}
+
+static int
 init_power_library(void)
 {
 	enum power_management_env env;
@@ -2347,24 +2377,11 @@ deinit_power_library(void)
 		}
 	}
 
-	/* if uncore option was set */
-	if (enabled_uncore == 0) {
-		max_pkg = rte_power_uncore_get_num_pkgs();
-		if (max_pkg == 0)
-			return -1;
-		for (pkg = 0; pkg < max_pkg; pkg++) {
-			max_die = rte_power_uncore_get_num_dies(pkg);
-			if (max_die == 0)
-				return -1;
-			for (die = 0; die < max_die; die++) {
-				ret = rte_power_uncore_exit(pkg, die);
-				if (ret < 0) {
-					RTE_LOG(ERR, L3FWD_POWER, "Failed to exit uncore deinit successfully for pkg %02u die %02u\n"
-						, pkg, die);
-					return -1;
-				}
-			}
-		}
+	ret = power_uncore_uninit();
+	if (ret != 0) {
+		RTE_LOG(ERR, L3FWD_POWER, "Uninit power uncore failed, ret = %d.\n",
+			ret);
+		return ret;
 	}
 
 	if (cpu_resume_latency != -1) {
