@@ -110,9 +110,8 @@ err:
 static int
 prepare_vec_eddsa(void)
 {
-	/*
-	 * Generate EdDSA values.
-	 */
+	RTE_LOG(WARNING, USER1,
+		"EdDSA sigGen/keyGen skipped: OpenSSL not available at build time\n");
 	return -ENOTSUP;
 }
 #endif /* USE_OPENSSL */

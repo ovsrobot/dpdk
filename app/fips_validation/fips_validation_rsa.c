@@ -297,9 +297,8 @@ err:
 static int
 prepare_vec_rsa(void)
 {
-	/*
-	 * Generate RSA values.
-	 */
+	RTE_LOG(WARNING, USER1,
+		"RSA key parameters not generated: OpenSSL not available at build time\n");
 	return -ENOTSUP;
 }
 #endif /* USE_OPENSSL */

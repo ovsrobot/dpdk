@@ -200,18 +200,16 @@ err:
 static int
 prepare_vec_ecdsa(void)
 {
-	/*
-	 * Generate ECDSA values.
-	 */
+	RTE_LOG(WARNING, USER1,
+		"ECDSA sigGen/keyGen skipped: OpenSSL not available at build time\n");
 	return -ENOTSUP;
 }
 
 static int
 prepare_vec_ecdsa_k(void)
 {
-	/*
-	 * Generate ECDSA values.
-	 */
+	RTE_LOG(WARNING, USER1,
+		"ECDSA secret number generation skipped: OpenSSL not available at build time\n");
 	return -ENOTSUP;
 }
 #endif /* USE_OPENSSL */
