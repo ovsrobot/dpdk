@@ -701,7 +701,7 @@ alloc_unlock:
 static unsigned int
 malloc_get_numa_socket(void)
 {
-	const struct internal_config *conf = eal_get_internal_configuration();
+	const struct eal_user_cfg *conf = eal_get_user_configuration();
 	unsigned int socket_id = rte_socket_id();
 	unsigned int idx;
 
