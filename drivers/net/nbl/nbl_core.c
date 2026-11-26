@@ -4,17 +4,6 @@
 
 #include "nbl_core.h"
 
-static int nbl_res_init_draco(void *adapter __rte_unused,
-			      struct rte_eth_dev *eth_dev __rte_unused)
-{
-	/* Keep probing disabled until the Draco resource layer is implemented. */
-	return -ENOTSUP;
-}
-
-static void nbl_res_remove_draco(void *adapter __rte_unused)
-{
-}
-
 const struct nbl_product_core_ops nbl_product_core_ops[NBL_PRODUCT_MAX] = {
 	[NBL_LEONIS_TYPE] = {
 		.hw_init	= nbl_hw_init_leonis_snic,
@@ -62,6 +51,7 @@ int nbl_core_init(struct nbl_adapter *adapter, struct rte_eth_dev *eth_dev)
 	adapter->pci_dev = pci_dev;
 	common->eth_dev = eth_dev;
 	nbl_init_func_caps(pci_dev, &adapter->caps);
+	common->mgt_pf = 0;
 
 	common->is_vf = (pci_dev->id.device_id == NBL_DEVICE_ID_M18100_VF ||
 			 pci_dev->id.device_id == NBL_DEVICE_ID_M18305_VF);

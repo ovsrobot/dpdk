@@ -240,6 +240,10 @@ struct nbl_resource_mgt_leonis {
 	struct nbl_resource_mgt res_mgt;
 };
 
+struct nbl_resource_mgt_draco {
+	struct nbl_resource_mgt res_mgt;
+};
+
 int nbl_txrx_mgt_start(struct nbl_resource_mgt *res_mgt);
 void nbl_txrx_mgt_stop(struct nbl_resource_mgt *res_mgt);
 int nbl_txrx_setup_ops(struct nbl_resource_ops *resource_ops);

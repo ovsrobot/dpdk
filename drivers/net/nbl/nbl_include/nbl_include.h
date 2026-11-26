@@ -140,6 +140,7 @@ struct nbl_common_info {
 	int nl_socket_route;
 	int dma_limit_msb;
 	u8 eth_id;
+	u8 mgt_pf;
 	/* isolate 1 means kernel network, 0 means user network */
 	u8 isolate:1;
 	/* curr_network 0 means kernel network, 1 means user network */

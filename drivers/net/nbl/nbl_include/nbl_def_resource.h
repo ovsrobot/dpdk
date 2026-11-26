@@ -96,4 +96,7 @@ struct nbl_resource_ops_tbl {
 int nbl_res_init_leonis(void *p, struct rte_eth_dev *eth_dev);
 void nbl_res_remove_leonis(void *p);
 
+int nbl_res_init_draco(void *p, struct rte_eth_dev *eth_dev);
+void nbl_res_remove_draco(void *p);
+
 #endif

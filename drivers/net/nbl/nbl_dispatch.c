@@ -1429,10 +1429,27 @@ static int nbl_disp_leonis_uninit(void *p)
 	return 0;
 }
 
+static int nbl_disp_draco_init(void *p)
+{
+	RTE_SET_USED(p);
+	/* Keep probing disabled until the Draco dispatch layer is implemented. */
+	return -ENOTSUP;
+}
+
+static int nbl_disp_draco_uninit(void *p)
+{
+	RTE_SET_USED(p);
+	return 0;
+}
+
 static struct nbl_product_dispatch_ops nbl_product_dispatch_ops[NBL_PRODUCT_MAX] = {
-	{
+	[NBL_LEONIS_TYPE] = {
 		.dispatch_init		= nbl_disp_leonis_init,
 		.dispatch_uninit	= nbl_disp_leonis_uninit,
+	},
+	[NBL_DRACO_TYPE] = {
+		.dispatch_init		= nbl_disp_draco_init,
+		.dispatch_uninit	= nbl_disp_draco_uninit,
 	},
 };
 
