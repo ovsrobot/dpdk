@@ -990,6 +990,14 @@ static int nbl_disp_get_hw_xstats_cnt(void *priv, u16 *xstats_cnt)
 	return res_ops->get_hw_xstats_cnt(NBL_DISP_MGT_TO_RES_PRIV(disp_mgt), xstats_cnt);
 }
 
+static int nbl_disp_get_hw_xstats_bits(void *priv, u8 *bits, u16 count)
+{
+	struct nbl_dispatch_mgt *disp_mgt = priv;
+	struct nbl_resource_ops *res_ops = NBL_DISP_MGT_TO_RES_OPS(disp_mgt);
+
+	return res_ops->get_hw_xstats_bits(NBL_DISP_MGT_TO_RES_PRIV(disp_mgt), bits, count);
+}
+
 static int nbl_disp_get_hw_xstats_names(void *priv, struct rte_eth_xstat_name *xstats_names,
 					u16 need_xstats_cnt, u16 *xstats_cnt)
 {
@@ -1270,6 +1278,9 @@ do {									\
 			 NBL_DISP_CTRL_LVL_ALWAYS, -1,			\
 			 NULL, NULL);					\
 	NBL_DISP_SET_OPS(get_hw_xstats_cnt, nbl_disp_get_hw_xstats_cnt,	\
+			 NBL_DISP_CTRL_LVL_ALWAYS, -1,			\
+			 NULL, NULL);					\
+	NBL_DISP_SET_OPS(get_hw_xstats_bits, nbl_disp_get_hw_xstats_bits,	\
 			 NBL_DISP_CTRL_LVL_ALWAYS, -1,			\
 			 NULL, NULL);					\
 	NBL_DISP_SET_OPS(get_hw_xstats_names,				\

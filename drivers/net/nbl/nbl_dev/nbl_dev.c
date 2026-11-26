@@ -611,6 +611,13 @@ alloc_uvn_stat_pkt_drop_fail:
 	return ret;
 }
 
+static u64 nbl_counter_delta(u64 current, u64 baseline, u8 bits)
+{
+	if (bits == 64)
+		return current - baseline;
+	return (current - baseline) & ((UINT64_C(1) << bits) - 1);
+}
+
 static int nbl_dev_update_hw_xstats(struct nbl_dev_mgt *dev_mgt, struct rte_eth_xstat *xstats,
 				    u16 need_xstats_cnt, u16 *xstats_cnt)
 {
@@ -624,7 +631,8 @@ static int nbl_dev_update_hw_xstats(struct nbl_dev_mgt *dev_mgt, struct rte_eth_
 					common->eth_id, net_dev->hw_xstats,
 					net_dev->hw_xstats_size);
 	for (i = 0; i < need_xstats_cnt; i++) {
-		xstats[count].value = net_dev->hw_xstats[i] - dev_mgt->net_dev->hw_xstats_offset[i];
+		xstats[count].value = nbl_counter_delta(net_dev->hw_xstats[i],
+			net_dev->hw_xstats_offset[i], net_dev->hw_xstats_bits[i]);
 		xstats[count].id = count;
 		count++;
 	}
@@ -920,6 +928,7 @@ static int nbl_dev_common_start(struct nbl_dev_mgt *dev_mgt)
 	}
 
 	net_dev->hw_xstats_offset = NULL;
+	net_dev->hw_xstats_bits = NULL;
 	if (!dev_mgt->common->is_vf)
 		disp_ops->get_hw_xstats_cnt(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), &priv_cnt);
 	if (priv_cnt) {
@@ -930,6 +939,15 @@ static int nbl_dev_common_start(struct nbl_dev_mgt *dev_mgt)
 			ret = -ENOMEM;
 			goto alloc_xstats_offset_failed;
 		}
+		net_dev->hw_xstats_bits = rte_zmalloc("nbl_xstats_bits", priv_cnt, 0);
+		if (!net_dev->hw_xstats_bits) {
+			ret = -ENOMEM;
+			goto alloc_xstats_bits_failed;
+		}
+		ret = disp_ops->get_hw_xstats_bits(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt),
+						 net_dev->hw_xstats_bits, priv_cnt);
+		if (ret)
+			goto get_xstats_bits_failed;
 		disp_ops->get_private_stat_data(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt),
 						dev_mgt->common->eth_id,
 						net_dev->hw_xstats_offset, net_dev->hw_xstats_size);
@@ -944,6 +962,9 @@ static int nbl_dev_common_start(struct nbl_dev_mgt *dev_mgt)
 	return 0;
 
 alloc_hw_xstats_failed:
+get_xstats_bits_failed:
+	rte_free(net_dev->hw_xstats_bits);
+alloc_xstats_bits_failed:
 	rte_free(net_dev->hw_xstats_offset);
 alloc_xstats_offset_failed:
 add_multi_rule_failed:
@@ -1000,6 +1021,7 @@ static void nbl_dev_snic_stop(void *p)
 	u8 *mac;
 
 	free(net_dev->hw_xstats);
+	rte_free(net_dev->hw_xstats_bits);
 	rte_free(net_dev->hw_xstats_offset);
 
 	mac = net_dev->eth_dev->data->mac_addrs->addr_bytes;

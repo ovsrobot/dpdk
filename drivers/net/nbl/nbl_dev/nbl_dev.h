@@ -50,6 +50,7 @@ struct nbl_dev_net_mgt {
 	struct nbl_eth_link_info eth_link_info;
 	u64 *hw_xstats;
 	u64 *hw_xstats_offset;
+	u8 *hw_xstats_bits;
 	u32 hw_xstats_size;
 	u16 vsi_id;
 	u8 eth_mode;
@@ -92,7 +93,7 @@ int nbl_stats_reset(struct rte_eth_dev *eth_dev);
 int nbl_xstats_get(struct rte_eth_dev *eth_dev, struct rte_eth_xstat *xstats, unsigned int n);
 int nbl_xstats_get_names(struct rte_eth_dev *eth_dev,
 			 struct rte_eth_xstat_name *xstats_names,
-			 __rte_unused unsigned int limit);
+			 unsigned int limit);
 int nbl_xstats_reset(struct rte_eth_dev *eth_dev);
 int nbl_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu);
 int nbl_promiscuous_enable(struct rte_eth_dev *eth_dev);

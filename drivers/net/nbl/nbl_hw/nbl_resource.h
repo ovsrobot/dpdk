@@ -23,6 +23,11 @@
 #define NBL_RES_MGT_TO_RX_RING(res_mgt, index)	\
 	(NBL_RES_MGT_TO_TXRX_MGT(res_mgt)->rx_rings[(index)])
 
+struct nbl_xstats_name {
+	char name[RTE_ETH_XSTATS_NAME_SIZE];
+	u8 bits;
+};
+
 union nbl_tx_extend_head {
 	struct nbl_tx_ehdr_leonis {
 		/* DW0 */

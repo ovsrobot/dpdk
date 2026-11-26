@@ -87,6 +87,7 @@ struct nbl_dispatch_ops {
 	int (*get_txrx_xstats_names)(void *priv, struct rte_eth_xstat_name *xstats_names,
 				     u16 need_xstats_cnt, u16 *xstats_cnt);
 	int (*get_hw_xstats_cnt)(void *priv, u16 *xstats_cnt);
+	int (*get_hw_xstats_bits)(void *priv, u8 *bits, u16 count);
 	int (*get_hw_xstats_names)(void *priv, struct rte_eth_xstat_name *xstats_names,
 				   u16 need_xstats_cnt, u16 *xstats_cnt);
 	void (*get_private_stat_data)(void *priv, u32 eth_id, u64 *data, u32 data_len);
