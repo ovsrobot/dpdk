@@ -404,6 +404,7 @@ int nbl_rx_queue_setup(struct rte_eth_dev *eth_dev, u16 queue_idx,
 	param.conf = conf;
 	param.mempool = mempool;
 	param.product = adapter->caps.product_type;
+	param.rx_hash_en = 0;
 	ret =  disp_ops->start_rx_ring(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), &param, &rx_ring->dma);
 	if (ret) {
 		NBL_LOG(ERR, "start_rx_ring failed %d", ret);

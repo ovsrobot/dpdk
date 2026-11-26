@@ -111,6 +111,13 @@ static inline u16 nbl_prep_tx_ehdr_leonis(union nbl_tx_extend_head *head, struct
 	return 0;
 }
 
+static inline u16 nbl_prep_tx_ehdr_draco(union nbl_tx_extend_head *head, struct rte_mbuf *mbuf)
+{
+	RTE_SET_USED(head);
+	RTE_SET_USED(mbuf);
+	return 0;
+}
+
 static int nbl_res_txrx_start_tx_ring(void *priv,
 				      struct nbl_start_tx_ring_param *param,
 				      u64 *dma_addr)
@@ -125,6 +132,7 @@ static int nbl_res_txrx_start_tx_ring(void *priv,
 	const struct rte_memzone *net_hdr_mz;
 	char vq_hdr_name[NBL_VQ_HDR_NAME_MAXSIZE];
 	struct nbl_tx_ehdr_leonis ext_hdr = {0};
+	struct nbl_tx_ehdr_draco draco_hdr = {0};
 	uint64_t offloads;
 	u32 size;
 
@@ -148,6 +156,15 @@ static int nbl_res_txrx_start_tx_ring(void *priv,
 		tx_ring->prep_tx_ehdr = nbl_prep_tx_ehdr_leonis;
 		ext_hdr.fwd = NBL_TX_FWD_TYPE_NORMAL;
 		memcpy(&tx_ring->default_hdr, &ext_hdr, sizeof(struct nbl_tx_ehdr_leonis));
+		break;
+	case NBL_DRACO_TYPE:
+		tx_ring->exthdr_len = sizeof(struct nbl_tx_ehdr_draco);
+		tx_ring->prep_tx_ehdr = nbl_prep_tx_ehdr_draco;
+		draco_hdr.mac_len = RTE_ETHER_HDR_LEN >> 1;
+		draco_hdr.ip_len = sizeof(struct rte_ipv4_hdr) >> 2;
+		draco_hdr.l4_len = sizeof(struct rte_tcp_hdr) >> 2;
+		draco_hdr.fwd = NBL_TX_FWD_TYPE_NORMAL;
+		memcpy(&tx_ring->default_hdr, &draco_hdr, sizeof(draco_hdr));
 		break;
 	default:
 		tx_ring->exthdr_len = sizeof(union nbl_tx_extend_head);
@@ -358,6 +375,11 @@ static int nbl_res_txrx_start_rx_ring(void *priv,
 	case NBL_LEONIS_TYPE:
 		rx_ring->exthdr_len = sizeof(struct nbl_rx_ehdr_leonis);
 		break;
+	case NBL_DRACO_TYPE:
+		rx_ring->exthdr_len = sizeof(struct nbl_rx_ehdr_draco);
+		if (!param->rx_hash_en)
+			rx_ring->exthdr_len -= sizeof(u32);
+		break;
 	default:
 		rx_ring->exthdr_len = sizeof(union nbl_rx_extend_head);
 	};
@@ -563,14 +585,16 @@ nbl_res_txrx_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, u16 nb_pkts, u
 						    -required_headroom);
 		} else {
 			can_push = 0;
-			u = (union nbl_tx_extend_head *)(&tx_region[desc_index]);
+			u = RTE_PTR_ADD(tx_region,
+				       (size_t)desc_index * txq->exthdr_len);
 		}
 
 		if (tx_pkt->ol_flags & RTE_MBUF_F_TX_VLAN) {
 			if (likely(can_push)) {
 				if (rte_vlan_insert(&tx_pkt)) {
 					can_push = 0;
-					u = (union nbl_tx_extend_head *)(&tx_region[desc_index]);
+					u = RTE_PTR_ADD(tx_region,
+						       (size_t)desc_index * txq->exthdr_len);
 				}
 			}
 			if (unlikely(!can_push)) {
@@ -607,8 +631,7 @@ nbl_res_txrx_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, u16 nb_pkts, u
 			head_flags |= NBL_VRING_DESC_F_NEXT;
 			txe->mbuf = NULL;
 			/* padding */
-			head_desc->addr = net_hdr_mem +
-					RTE_PTR_DIFF(&tx_region[desc_index], tx_region);
+			head_desc->addr = net_hdr_mem + (size_t)desc_index * txq->exthdr_len;
 			head_desc->len = tx_extend_len;
 			txe->first_id = head_index;
 			desc_index++;

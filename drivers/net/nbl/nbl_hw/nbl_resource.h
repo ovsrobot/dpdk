@@ -75,6 +75,49 @@ union nbl_tx_extend_head {
 		u32 l3_csum_en :1;
 		u32 rsv1 :3;
 	} leonis;
+
+	struct nbl_tx_ehdr_draco {
+		/* DW0 */
+		u32 mac_len :5;
+		u32 ip_len :5;
+		u32 l4_len :4;
+		u32 l4_type :2;
+		u32 inner_ip_type :2;
+		u32 external_ip_type :2;
+		u32 external_ip_len :5;
+		u32 l4_tunnel_len :7;
+		/* DW1 */
+		u32 l4_tunnel_type :2;
+		u32 l4s_sid :15;
+		u32 l4s_sync_ind :1;
+		u32 l4s_redun_ind :1;
+		u32 l4s_redun_head_ind :1;
+		u32 l4s_hdl_ind :1;
+		u32 l4s_pbrac_mode :1;
+		u32 rsv0 :2;
+		u32 acl_tag :8;
+		/* DW2 */
+		u32 dport_info :9;
+		u32 dport_id :9;
+#define NBL_TX_DPORT_ID_LAG_OFT_DRACO	(2)
+		u32 dport :2;
+		u32 fwd :2;
+		u32 rss_lag_en :1;
+		u32 inner_l4_csum_en :1;
+		u32 inner_l3_csum_en :1;
+		u32 outer_l4_csum_en :1;
+		u32 outer_l3_csum_en :1;
+		u32 sc_idx :3;
+		u32 sc_vld :1;
+		u32 mc_en :1;
+		/* DW3 */
+		u32 vlan_tag :16;
+		u32 vlan_etype :1;
+#define NBL_TX_VLAN_ETYPE_0X8100	(0)
+#define NBL_TX_VLAN_ETYPE_0X88A8	(1)
+		u32 vlan_vld :1;
+		u32 rsv1 :14;
+	} draco;
 };
 
 union nbl_rx_extend_head {
@@ -108,6 +151,34 @@ union nbl_rx_extend_head {
 		u32 rsv2 :4;
 		u32 num_buffers :8;
 	} leonis;
+	struct nbl_rx_ehdr_draco {
+		/* DW0 */
+		/* 0x0:eth, 0x1:host, 0x2:emp, 0x3:bmc */
+		u32 sport :2;
+		u32 dport_info :9;
+		/* sport = 0, sport_id[3:0] = eth id,
+		 * sport = 1, sport_id[9:0] = host vsi_id,
+		 */
+		u32 sport_id :9;
+		u32 ptype :8;
+		u32 checksum_report :4;
+		/* DW1 */
+		u32 checksum_status :1;
+		u32 rsv0 :2;
+		u32 l4s_sid :11;
+		u32 l4s_hdl_ind :1;
+		u32 l4s_tcp_offset :14;
+		u32 l4s_resync_ind :1;
+		u32 l4s_check_ind :1;
+		u32 l4s_dec_ind :1;
+		/* DW2 */
+		u32 error_code :4;
+		u32 rsv1 :4;
+		u32 vlan:16;
+		u32 num_buffers :8;
+		/* DW3 */
+		u32 udf_value_l :32;
+	} draco;
 	struct nbl_rx_ehdr_common {
 		u32 dw0;
 		u32 dw1;

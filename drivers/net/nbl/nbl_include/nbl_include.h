@@ -87,6 +87,7 @@ struct nbl_start_rx_ring_param {
 	enum nbl_product_type product;
 	const struct rte_eth_rxconf *conf;
 	struct rte_mempool *mempool;
+	bool rx_hash_en;
 };
 
 struct nbl_start_tx_ring_param {
