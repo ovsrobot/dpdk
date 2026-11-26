@@ -464,7 +464,7 @@ struct nbl_channel_ops_tbl {
 	void *priv;
 };
 
-int nbl_chan_init_leonis(void *p);
-void nbl_chan_remove_leonis(void *p);
+int nbl_chan_init(void *p);
+void nbl_chan_remove(void *p);
 
 #endif

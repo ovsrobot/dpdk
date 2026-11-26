@@ -21,7 +21,7 @@ static void nbl_chan_init_queue_param(union nbl_chan_info *chan_info,
 static int nbl_chan_init_tx_queue(union nbl_chan_info *chan_info)
 {
 	struct nbl_chan_ring *txq = &chan_info->mailbox.txq;
-	size_t size = chan_info->mailbox.num_txq_entries * sizeof(struct nbl_chan_tx_desc);
+	size_t size = chan_info->mailbox.num_txq_entries * sizeof(union nbl_chan_tx_desc);
 	int i;
 
 	txq->desc = nbl_alloc_dma_mem(&txq->desc_mem, size);
@@ -63,7 +63,7 @@ req_wait_queue_failed:
 static int nbl_chan_init_rx_queue(union nbl_chan_info *chan_info)
 {
 	struct nbl_chan_ring *rxq = &chan_info->mailbox.rxq;
-	size_t size = chan_info->mailbox.num_rxq_entries * sizeof(struct nbl_chan_rx_desc);
+	size_t size = chan_info->mailbox.num_rxq_entries * sizeof(union nbl_chan_rx_desc);
 
 	rxq->desc = nbl_alloc_dma_mem(&rxq->desc_mem, size);
 	if (!rxq->desc) {
@@ -158,7 +158,7 @@ static int nbl_chan_prepare_rx_bufs(struct nbl_channel_mgt *chan_mgt,
 {
 	const struct nbl_hw_ops *hw_ops;
 	struct nbl_chan_ring *rxq = &chan_info->mailbox.rxq;
-	struct nbl_chan_rx_desc *desc;
+	union nbl_chan_rx_desc *desc;
 	void *hw_priv;
 	u16 rx_tail_ptr;
 	u32 retry_times = 0;
@@ -167,9 +167,10 @@ static int nbl_chan_prepare_rx_bufs(struct nbl_channel_mgt *chan_mgt,
 	hw_ops = NBL_CHAN_MGT_TO_HW_OPS(chan_mgt);
 	desc = rxq->desc;
 	for (i = 0; i < chan_info->mailbox.num_rxq_entries - 1; i++) {
-		desc[i].flags = NBL_CHAN_RX_DESC_AVAIL;
-		desc[i].buf_addr = rxq->buf_mem.pa + (u64)i * (u64)chan_info->mailbox.rxq_buf_size;
-		desc[i].buf_len = chan_info->mailbox.rxq_buf_size;
+		DESC_W(&desc[i], flags, NBL_CHAN_RX_DESC_AVAIL);
+		DESC_W(&desc[i], buf_addr, rxq->buf_mem.pa +
+		       (u64)i * (u64)chan_info->mailbox.rxq_buf_size);
+		DESC_W(&desc[i], buf_len, chan_info->mailbox.rxq_buf_size);
 	}
 
 	rxq->next_to_clean = 0;
@@ -217,7 +218,7 @@ static int nbl_chan_kick_tx_ring(struct nbl_channel_mgt *chan_mgt,
 {
 	const struct nbl_hw_ops *hw_ops;
 	struct nbl_chan_ring *txq;
-	struct nbl_chan_tx_desc *tx_desc;
+	union nbl_chan_tx_desc *tx_desc;
 	int i;
 
 	hw_ops = NBL_CHAN_MGT_TO_HW_OPS(chan_mgt);
@@ -230,7 +231,7 @@ static int nbl_chan_kick_tx_ring(struct nbl_channel_mgt *chan_mgt,
 	tx_desc = NBL_CHAN_TX_DESC(txq, txq->next_to_clean);
 
 	i = 0;
-	while (!(tx_desc->flags & NBL_CHAN_TX_DESC_USED)) {
+	while (!(DESC_R(tx_desc, flags) & NBL_CHAN_TX_DESC_USED)) {
 		rte_delay_us(NBL_CHAN_TX_WAIT_US);
 		i++;
 
@@ -239,7 +240,7 @@ static int nbl_chan_kick_tx_ring(struct nbl_channel_mgt *chan_mgt,
 
 		if (i == NBL_CHAN_TX_WAIT_TIMES) {
 			NBL_LOG(ERR, "chan send message type: %d timeout",
-				tx_desc->msg_type);
+				DESC_R(tx_desc, msg_type));
 			return -1;
 		}
 	}
@@ -312,27 +313,28 @@ static void nbl_chan_recv_ack_msg(void *priv, uint16_t srcid, uint16_t msgid,
 static void nbl_chan_recv_msg(struct nbl_channel_mgt *chan_mgt, void *data)
 {
 	struct nbl_chan_ack_info chan_ack;
-	struct nbl_chan_tx_desc *tx_desc;
+	union nbl_chan_info *chan_info = NBL_CHAN_MGT_TO_CHAN_INFO(chan_mgt);
+	union nbl_chan_tx_desc *tx_desc;
 	struct nbl_chan_msg_handler *msg_handler;
 	u16 msg_type, payload_len, srcid, msgid;
 	void *payload;
 
 	tx_desc = data;
-	msg_type = tx_desc->msg_type;
+	msg_type = DESC_R(tx_desc, msg_type);
 
-	srcid = tx_desc->srcid;
-	msgid = tx_desc->msgid;
+	srcid = DESC_R(tx_desc, srcid);
+	msgid = DESC_R(tx_desc, msgid);
 	if (msg_type >= NBL_CHAN_MSG_MAX) {
 		NBL_LOG(ERR, "Invalid chan message type %hu", msg_type);
 		return;
 	}
 
-	if (tx_desc->data_len) {
-		payload = (void *)tx_desc->data;
-		payload_len = tx_desc->data_len;
+	if (DESC_R(tx_desc, data_len)) {
+		payload = (void *)DESC_R(tx_desc, data);
+		payload_len = DESC_R(tx_desc, data_len);
 	} else {
 		payload = (void *)(tx_desc + 1);
-		payload_len = tx_desc->buf_len;
+		payload_len = DESC_R(tx_desc, buf_len);
 	}
 
 	msg_handler = &chan_mgt->msg_handler[msg_type];
@@ -351,7 +353,7 @@ static void nbl_chan_advance_rx_ring(struct nbl_channel_mgt *chan_mgt,
 				     struct nbl_chan_ring *rxq)
 {
 	const struct nbl_hw_ops *hw_ops;
-	struct nbl_chan_rx_desc *rx_desc;
+	union nbl_chan_rx_desc *rx_desc;
 	u16 next_to_use;
 
 	hw_ops = NBL_CHAN_MGT_TO_HW_OPS(chan_mgt);
@@ -359,10 +361,10 @@ static void nbl_chan_advance_rx_ring(struct nbl_channel_mgt *chan_mgt,
 	next_to_use = rxq->next_to_use;
 	rx_desc = NBL_CHAN_RX_DESC(rxq, next_to_use);
 
-	rx_desc->flags = NBL_CHAN_RX_DESC_AVAIL;
-	rx_desc->buf_addr = rxq->buf_mem.pa +
-				(u64)chan_info->mailbox.rxq_buf_size * (u64)next_to_use;
-	rx_desc->buf_len = chan_info->mailbox.rxq_buf_size;
+	DESC_W(rx_desc, flags, NBL_CHAN_RX_DESC_AVAIL);
+	DESC_W(rx_desc, buf_addr, rxq->buf_mem.pa +
+				(u64)chan_info->mailbox.rxq_buf_size * (u64)next_to_use);
+	DESC_W(rx_desc, buf_len, chan_info->mailbox.rxq_buf_size);
 
 	rte_wmb();
 	rxq->next_to_use++;
@@ -378,14 +380,14 @@ static void nbl_chan_clean_queue(void *priv)
 	struct nbl_channel_mgt *chan_mgt = (struct nbl_channel_mgt *)priv;
 	union nbl_chan_info *chan_info = NBL_CHAN_MGT_TO_CHAN_INFO(chan_mgt);
 	struct nbl_chan_ring *rxq = &chan_info->mailbox.rxq;
-	struct nbl_chan_rx_desc *rx_desc;
+	union nbl_chan_rx_desc *rx_desc;
 	u8 *data;
 	u16 next_to_clean;
 
 	next_to_clean = rxq->next_to_clean;
 	rx_desc = NBL_CHAN_RX_DESC(rxq, next_to_clean);
 	data = (u8 *)rxq->buf + (u64)next_to_clean * (u64)chan_info->mailbox.rxq_buf_size;
-	while (rx_desc->flags & NBL_CHAN_RX_DESC_USED) {
+	while (DESC_R(rx_desc, flags) & NBL_CHAN_RX_DESC_USED) {
 		rte_rmb();
 		nbl_chan_recv_msg(chan_mgt, data);
 
@@ -406,7 +408,7 @@ static uint16_t nbl_chan_update_txqueue(union nbl_chan_info *chan_info,
 					void *arg, size_t arg_len)
 {
 	struct nbl_chan_ring *txq;
-	struct nbl_chan_tx_desc *tx_desc;
+	union nbl_chan_tx_desc *tx_desc;
 	struct nbl_chan_waitqueue_head *wait_head;
 	uint64_t pa;
 	void *va;
@@ -432,21 +434,21 @@ static uint16_t nbl_chan_update_txqueue(union nbl_chan_info *chan_info,
 	pa = txq->buf_mem.pa + (u64)next_to_use * (u64)chan_info->mailbox.txq_buf_size;
 	tx_desc = NBL_CHAN_TX_DESC(txq, next_to_use);
 
-	tx_desc->dstid = dstid;
-	tx_desc->msg_type = msg_type;
-	tx_desc->msgid = next_to_use;
+	DESC_W(tx_desc, dstid, dstid);
+	DESC_W(tx_desc, msg_type, msg_type);
+	DESC_W(tx_desc, msgid, next_to_use);
 
 	if (arg_len > NBL_CHAN_TX_DESC_EMBEDDED_DATA_LEN) {
 		memcpy(va, arg, arg_len);
-		tx_desc->buf_addr = pa;
-		tx_desc->buf_len = arg_len;
-		tx_desc->data_len = 0;
+		DESC_W(tx_desc, buf_addr, pa);
+		DESC_W(tx_desc, buf_len, arg_len);
+		DESC_W(tx_desc, data_len, 0);
 	} else {
-		memcpy(tx_desc->data, arg, arg_len);
-		tx_desc->buf_len = 0;
-		tx_desc->data_len = arg_len;
+		memcpy(DESC_R(tx_desc, data), arg, arg_len);
+		DESC_W(tx_desc, buf_len, 0);
+		DESC_W(tx_desc, data_len, arg_len);
 	}
-	tx_desc->flags = NBL_CHAN_TX_DESC_AVAIL;
+	DESC_W(tx_desc, flags, NBL_CHAN_TX_DESC_AVAIL);
 
 	rte_wmb();
 	txq->next_to_use++;
@@ -926,7 +928,7 @@ static void nbl_chan_remove_state_bitmap(void *priv)
 }
 
 static int nbl_chan_setup_chan_mgt(struct nbl_adapter *adapter,
-				   struct nbl_channel_mgt_leonis **chan_mgt_leonis)
+				   struct nbl_channel_mgt **chan_mgt)
 {
 	struct nbl_hw_ops_tbl *hw_ops_tbl;
 	union nbl_chan_info *mailbox;
@@ -934,38 +936,41 @@ static int nbl_chan_setup_chan_mgt(struct nbl_adapter *adapter,
 
 	hw_ops_tbl = NBL_ADAPTER_TO_HW_OPS_TBL(adapter);
 
-	*chan_mgt_leonis = rte_zmalloc("nbl_chan_mgt", sizeof(struct nbl_channel_mgt_leonis), 0);
-	if (!*chan_mgt_leonis)
-		goto alloc_channel_mgt_leonis_fail;
+	*chan_mgt = rte_zmalloc("nbl_chan_mgt", sizeof(struct nbl_channel_mgt), 0);
+	if (!*chan_mgt)
+		goto alloc_channel_mgt_fail;
 
-	(*chan_mgt_leonis)->chan_mgt.hw_ops_tbl = hw_ops_tbl;
+	(*chan_mgt)->hw_ops_tbl = hw_ops_tbl;
 
 	mailbox = rte_zmalloc("nbl_mailbox", sizeof(union nbl_chan_info), 0);
 	if (!mailbox)
 		goto alloc_mailbox_fail;
 
-	NBL_CHAN_MGT_TO_CHAN_INFO(&(*chan_mgt_leonis)->chan_mgt) = mailbox;
-	NBL_CHAN_MGT_TO_COMMON(&(*chan_mgt_leonis)->chan_mgt) = &adapter->common;
+	NBL_CHAN_MGT_TO_CHAN_INFO(*chan_mgt) = mailbox;
+	NBL_CHAN_MGT_TO_COMMON(*chan_mgt) = &adapter->common;
+	mailbox->mailbox.product_type = adapter->caps.product_type;
 
-	ret = nbl_chan_init_state_bitmap(*chan_mgt_leonis);
+	ret = nbl_chan_init_state_bitmap(*chan_mgt);
 	if (ret)
 		goto state_bitmap_init_fail;
 
 	return 0;
 
 state_bitmap_init_fail:
+	rte_free(mailbox);
 alloc_mailbox_fail:
-	rte_free(*chan_mgt_leonis);
-alloc_channel_mgt_leonis_fail:
+	rte_free(*chan_mgt);
+	*chan_mgt = NULL;
+alloc_channel_mgt_fail:
 	return -ENOMEM;
 }
 
-static void nbl_chan_remove_chan_mgt(struct nbl_channel_mgt_leonis **chan_mgt_leonis)
+static void nbl_chan_remove_chan_mgt(struct nbl_channel_mgt **chan_mgt)
 {
-	nbl_chan_remove_state_bitmap(*chan_mgt_leonis);
-	rte_free(NBL_CHAN_MGT_TO_CHAN_INFO(&(*chan_mgt_leonis)->chan_mgt));
-	rte_free(*chan_mgt_leonis);
-	*chan_mgt_leonis = NULL;
+	nbl_chan_remove_state_bitmap(*chan_mgt);
+	rte_free(NBL_CHAN_MGT_TO_CHAN_INFO(*chan_mgt));
+	rte_free(*chan_mgt);
+	*chan_mgt = NULL;
 }
 
 static void nbl_chan_remove_ops(struct nbl_channel_ops_tbl **chan_ops_tbl)
@@ -975,7 +980,7 @@ static void nbl_chan_remove_ops(struct nbl_channel_ops_tbl **chan_ops_tbl)
 }
 
 static int nbl_chan_setup_ops(struct nbl_channel_ops_tbl **chan_ops_tbl,
-			      struct nbl_channel_mgt_leonis *chan_mgt_leonis)
+			      struct nbl_channel_mgt *chan_mgt)
 {
 	struct nbl_common_info *common;
 
@@ -983,54 +988,54 @@ static int nbl_chan_setup_ops(struct nbl_channel_ops_tbl **chan_ops_tbl,
 	if (!*chan_ops_tbl)
 		return -ENOMEM;
 
-	common = NBL_CHAN_MGT_TO_COMMON(&chan_mgt_leonis->chan_mgt);
+	common = NBL_CHAN_MGT_TO_COMMON(chan_mgt);
 	if (NBL_IS_NOT_COEXISTENCE(common))
 		NBL_CHAN_OPS_TBL_TO_OPS(*chan_ops_tbl) = &nbl_chan_ops;
 	else
 		NBL_CHAN_OPS_TBL_TO_OPS(*chan_ops_tbl) = &nbl_userdev_ops;
-	NBL_CHAN_OPS_TBL_TO_PRIV(*chan_ops_tbl) = chan_mgt_leonis;
+	NBL_CHAN_OPS_TBL_TO_PRIV(*chan_ops_tbl) = chan_mgt;
 
-	chan_mgt_leonis->chan_mgt.msg_handler[NBL_CHAN_MSG_ACK].func = nbl_chan_recv_ack_msg;
-	chan_mgt_leonis->chan_mgt.msg_handler[NBL_CHAN_MSG_ACK].priv = chan_mgt_leonis;
+	chan_mgt->msg_handler[NBL_CHAN_MSG_ACK].func = nbl_chan_recv_ack_msg;
+	chan_mgt->msg_handler[NBL_CHAN_MSG_ACK].priv = chan_mgt;
 
 	return 0;
 }
 
-int nbl_chan_init_leonis(void *p)
+int nbl_chan_init(void *p)
 {
 	struct nbl_adapter *adapter = (struct nbl_adapter *)p;
-	struct nbl_channel_mgt_leonis **chan_mgt_leonis;
+	struct nbl_channel_mgt **chan_mgt;
 	struct nbl_channel_ops_tbl **chan_ops_tbl;
 	int ret = 0;
 
-	chan_mgt_leonis = (struct nbl_channel_mgt_leonis **)&NBL_ADAPTER_TO_CHAN_MGT(adapter);
+	chan_mgt = (struct nbl_channel_mgt **)&NBL_ADAPTER_TO_CHAN_MGT(adapter);
 	chan_ops_tbl = &NBL_ADAPTER_TO_CHAN_OPS_TBL(adapter);
 
-	ret = nbl_chan_setup_chan_mgt(adapter, chan_mgt_leonis);
+	ret = nbl_chan_setup_chan_mgt(adapter, chan_mgt);
 	if (ret)
 		goto setup_mgt_fail;
 
-	ret = nbl_chan_setup_ops(chan_ops_tbl, *chan_mgt_leonis);
+	ret = nbl_chan_setup_ops(chan_ops_tbl, *chan_mgt);
 	if (ret)
 		goto setup_ops_fail;
 
 	return 0;
 
 setup_ops_fail:
-	nbl_chan_remove_chan_mgt(chan_mgt_leonis);
+	nbl_chan_remove_chan_mgt(chan_mgt);
 setup_mgt_fail:
 	return ret;
 }
 
-void nbl_chan_remove_leonis(void *p)
+void nbl_chan_remove(void *p)
 {
 	struct nbl_adapter *adapter = (struct nbl_adapter *)p;
-	struct nbl_channel_mgt_leonis **chan_mgt_leonis;
+	struct nbl_channel_mgt **chan_mgt;
 	struct nbl_channel_ops_tbl **chan_ops_tbl;
 
-	chan_mgt_leonis = (struct nbl_channel_mgt_leonis **)&NBL_ADAPTER_TO_CHAN_MGT(adapter);
+	chan_mgt = (struct nbl_channel_mgt **)&NBL_ADAPTER_TO_CHAN_MGT(adapter);
 	chan_ops_tbl = &NBL_ADAPTER_TO_CHAN_OPS_TBL(adapter);
 
-	nbl_chan_remove_chan_mgt(chan_mgt_leonis);
+	nbl_chan_remove_chan_mgt(chan_mgt);
 	nbl_chan_remove_ops(chan_ops_tbl);
 }

@@ -7,20 +7,11 @@
 static int nbl_res_init_draco(void *adapter __rte_unused,
 			      struct rte_eth_dev *eth_dev __rte_unused)
 {
-	return 0;
-}
-
-static void nbl_res_remove_draco(void *adapter __rte_unused)
-{
-}
-
-static int nbl_chan_init_draco(void *adapter __rte_unused)
-{
-	/* Keep probing disabled until the Draco channel layer is implemented. */
+	/* Keep probing disabled until the Draco resource layer is implemented. */
 	return -ENOTSUP;
 }
 
-static void nbl_chan_remove_draco(void *adapter __rte_unused)
+static void nbl_res_remove_draco(void *adapter __rte_unused)
 {
 }
 
@@ -30,16 +21,16 @@ const struct nbl_product_core_ops nbl_product_core_ops[NBL_PRODUCT_MAX] = {
 		.hw_remove	= nbl_hw_remove_leonis_snic,
 		.res_init	= nbl_res_init_leonis,
 		.res_remove	= nbl_res_remove_leonis,
-		.chan_init	= nbl_chan_init_leonis,
-		.chan_remove	= nbl_chan_remove_leonis,
+		.chan_init	= nbl_chan_init,
+		.chan_remove	= nbl_chan_remove,
 	},
 	[NBL_DRACO_TYPE] = {
 		.hw_init	= nbl_hw_init_draco_snic,
 		.hw_remove	= nbl_hw_remove_draco_snic,
 		.res_init	= nbl_res_init_draco,
 		.res_remove	= nbl_res_remove_draco,
-		.chan_init	= nbl_chan_init_draco,
-		.chan_remove	= nbl_chan_remove_draco,
+		.chan_init	= nbl_chan_init,
+		.chan_remove	= nbl_chan_remove,
 	},
 };
 
