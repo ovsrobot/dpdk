@@ -279,17 +279,6 @@ struct rte_sched_subport *subport, uint32_t qindex)
 	return subport->qsize[tc];
 }
 
-static inline uint32_t
-rte_sched_port_queues_per_port(struct rte_sched_port *port)
-{
-	uint32_t n_queues = 0, i;
-
-	for (i = 0; i < port->n_subports_per_port; i++)
-		n_queues += rte_sched_subport_pipe_queues(port->subports[i]);
-
-	return n_queues;
-}
-
 static inline uint16_t
 rte_sched_port_pipe_queue(struct rte_sched_port *port, uint32_t traffic_class)
 {
@@ -1758,12 +1747,6 @@ rte_sched_queue_read_stats(struct rte_sched_port *port,
 		return -EINVAL;
 	}
 
-	if (queue_id >= rte_sched_port_queues_per_port(port)) {
-		SCHED_LOG(ERR,
-			"%s: Incorrect value for queue id", __func__);
-		return -EINVAL;
-	}
-
 	if (stats == NULL) {
 		SCHED_LOG(ERR,
 			"%s: Incorrect value for parameter stats", __func__);
@@ -1776,10 +1759,21 @@ rte_sched_queue_read_stats(struct rte_sched_port *port,
 		return -EINVAL;
 	}
 	subport_qmask = port->n_pipes_per_subport_log2 + 4;
-	subport_id = (queue_id >> subport_qmask) & (port->n_subports_per_port - 1);
+	subport_id = queue_id >> subport_qmask;
+	if (subport_id >= port->n_subports_per_port) {
+		SCHED_LOG(ERR,
+			"%s: Incorrect value for queue id", __func__);
+		return -EINVAL;
+	}
 
 	s = port->subports[subport_id];
 	subport_qindex = ((1 << subport_qmask) - 1) & queue_id;
+	if (subport_qindex >= rte_sched_subport_pipe_queues(s)) {
+		SCHED_LOG(ERR,
+			"%s: Incorrect value for queue id", __func__);
+		return -EINVAL;
+	}
+
 	q = s->queue + subport_qindex;
 	qe = s->queue_extra + subport_qindex;
 

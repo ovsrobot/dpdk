@@ -22,6 +22,13 @@ test_sched(void)
 	printf("sched not supported on Windows, skipping test\n");
 	return TEST_SKIPPED;
 }
+
+static int
+test_sched_hetero_subports(void)
+{
+	printf("sched not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
 #else
 
 #include <rte_sched.h>
@@ -213,6 +220,115 @@ test_sched(void)
 	return 0;
 }
 
+/*
+ * Port with mixed subports: subport 0 enables 1 pipe, subport 1 enables
+ * 8. Queue IDs valid for the queue stats API follow the subport shift
+ * layout of rte_sched_port_pkt_write().
+ */
+static int
+test_sched_hetero_subports(void)
+{
+	struct rte_sched_port_params port_params = port_param;
+	struct rte_sched_subport_params sp[2];
+	struct rte_sched_queue_stats queue_stats;
+	struct rte_mbuf *mbufs[1];
+	struct rte_mempool *mp;
+	struct rte_sched_port *port;
+	uint16_t qlen;
+	uint32_t i;
+	int err;
+
+	port_params.rate = (uint64_t) 10000 * 1000 * 1000 / 8;
+	port_params.n_subports_per_port = 2;
+	port_params.n_pipes_per_subport = 8;
+
+	sp[0] = subport_param[0];
+	sp[0].n_pipes_per_subport_enabled = 1;
+	sp[1] = sp[0];
+	sp[1].n_pipes_per_subport_enabled = 8;
+
+	mp = create_mempool();
+	TEST_ASSERT_NOT_NULL(mp, "Error creating mempool\n");
+
+	port = rte_sched_port_config(&port_params);
+	TEST_ASSERT_NOT_NULL(port, "Error config sched port\n");
+
+	for (i = 0; i < 2; i++) {
+		err = rte_sched_subport_config(port, i, &sp[i], 0);
+		TEST_ASSERT_SUCCESS(err,
+			"Error config sched subport %u, err=%d\n", i, err);
+	}
+
+	for (i = 0; i < sp[0].n_pipes_per_subport_enabled; i++) {
+		err = rte_sched_pipe_config(port, 0, i, 0);
+		TEST_ASSERT_SUCCESS(err,
+			"Error config sched subport 0 pipe %u, err=%d\n",
+			i, err);
+	}
+
+	for (i = 0; i < sp[1].n_pipes_per_subport_enabled; i++) {
+		err = rte_sched_pipe_config(port, 1, i, 0);
+		TEST_ASSERT_SUCCESS(err,
+			"Error config sched subport 1 pipe %u, err=%d\n",
+			i, err);
+	}
+
+	/* Queue ID in the hole of the small subport 0 is rejected */
+	err = rte_sched_queue_read_stats(port, 92, &queue_stats, &qlen);
+	TEST_ASSERT_FAIL(err, "Queue ID 92 accepted, err=%d\n", err);
+
+	/* Queue ID beyond the last subport is rejected */
+	err = rte_sched_queue_read_stats(port, 256, &queue_stats, &qlen);
+	TEST_ASSERT_FAIL(err, "Queue ID 256 accepted, err=%d\n", err);
+
+	/* First and last queue of the small subport 0 read cleanly */
+	err = rte_sched_queue_read_stats(port, 0, &queue_stats, &qlen);
+	TEST_ASSERT_SUCCESS(err, "Queue ID 0 rejected, err=%d\n", err);
+	err = rte_sched_queue_read_stats(port, 15, &queue_stats, &qlen);
+	TEST_ASSERT_SUCCESS(err, "Queue ID 15 rejected, err=%d\n", err);
+
+	/* First queue of the large subport 1, past the cumulative total */
+	err = rte_sched_queue_read_stats(port, 128, &queue_stats, &qlen);
+	TEST_ASSERT_SUCCESS(err, "Queue ID 128 rejected, err=%d\n", err);
+
+	/* First queue of pipe 1 of subport 1, past the cumulative total */
+	err = rte_sched_queue_read_stats(port, 144, &queue_stats, &qlen);
+	TEST_ASSERT_SUCCESS(err, "Queue ID 144 rejected, err=%d\n", err);
+
+	/* Last queue of the large subport 1 */
+	err = rte_sched_queue_read_stats(port, 255, &queue_stats, &qlen);
+	TEST_ASSERT_SUCCESS(err, "Queue ID 255 rejected, err=%d\n", err);
+
+	/*
+	 * A packet through the first queue of pipe 1 of subport 1
+	 * (queue ID 144) shows up in the queue that the stats API reads
+	 * for that ID
+	 */
+	mbufs[0] = rte_pktmbuf_alloc(mp);
+	TEST_ASSERT_NOT_NULL(mbufs[0], "Packet allocation failed\n");
+	mbufs[0]->pkt_len = 60;
+	mbufs[0]->data_len = 60;
+	rte_sched_port_pkt_write(port, mbufs[0], 1, 1, 0, 0, RTE_COLOR_GREEN);
+
+	err = rte_sched_port_enqueue(port, mbufs, 1);
+	TEST_ASSERT_EQUAL(err, 1, "Wrong enqueue, err=%d\n", err);
+
+	err = rte_sched_port_dequeue(port, mbufs, 1);
+	TEST_ASSERT_EQUAL(err, 1, "Wrong dequeue, err=%d\n", err);
+	rte_pktmbuf_free(mbufs[0]);
+
+	err = rte_sched_queue_read_stats(port, 144, &queue_stats, &qlen);
+	TEST_ASSERT_SUCCESS(err, "Queue ID 144 rejected, err=%d\n", err);
+	TEST_ASSERT_EQUAL(queue_stats.n_pkts, 1, "Wrong queue stats\n");
+	TEST_ASSERT_EQUAL(qlen, 0, "Wrong queue length\n");
+
+	rte_sched_port_free(port);
+	rte_mempool_free(mp);
+
+	return 0;
+}
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
 REGISTER_FAST_TEST(sched_autotest, NOHUGE_OK, ASAN_OK, test_sched);
+REGISTER_FAST_TEST(sched_hetero_subports_autotest, NOHUGE_OK,
+	ASAN_OK, test_sched_hetero_subports);
