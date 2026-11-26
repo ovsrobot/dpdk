@@ -1046,6 +1046,9 @@ iavf_dev_start(struct rte_eth_dev *dev)
 	wb_on_itr = (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_WB_ON_ITR) != 0;
 
 	vf->max_pkt_len = dev->data->mtu + IAVF_ETH_OVERHEAD;
+	/* the PF reports its max frame size in max_mtu, 0 if unknown */
+	if (vf->vf_res->max_mtu != 0 && vf->vf_res->max_mtu < vf->max_pkt_len)
+		vf->max_pkt_len = vf->vf_res->max_mtu;
 	vf->num_queue_pairs = RTE_MAX(dev->data->nb_rx_queues,
 				      dev->data->nb_tx_queues);
 	num_queue_pairs = vf->num_queue_pairs;
