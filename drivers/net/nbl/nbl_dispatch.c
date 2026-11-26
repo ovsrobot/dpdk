@@ -1046,6 +1046,32 @@ static int nbl_disp_set_mtu(void *priv, u16 vsi_id, u16 mtu)
 	return ret;
 }
 
+static int nbl_disp_cfg_rx_vlan_parse(void *priv, u16 vsi_id, u16 rx_vlan_mode)
+{
+	struct nbl_dispatch_mgt *disp_mgt = (struct nbl_dispatch_mgt *)priv;
+	struct nbl_resource_ops *res_ops;
+	int ret = 0;
+
+	res_ops = NBL_DISP_MGT_TO_RES_OPS(disp_mgt);
+	ret = NBL_OPS_CALL(res_ops->cfg_rx_vlan_parse,
+			   (NBL_DISP_MGT_TO_RES_PRIV(disp_mgt), vsi_id, rx_vlan_mode));
+	return ret;
+}
+
+static int nbl_disp_chan_cfg_rx_vlan_parse_req(void *priv, u16 vsi_id, u16 rx_vlan_mode)
+{
+	struct nbl_dispatch_mgt *disp_mgt = priv;
+	const struct nbl_channel_ops *chan_ops = NBL_DISP_MGT_TO_CHAN_OPS(disp_mgt);
+	struct nbl_chan_param_cfg_rx_vlan_parse param = {0};
+	struct nbl_chan_send_info chan_send = {0};
+
+	param.vsi_id = vsi_id;
+	param.rx_vlan_mode = rx_vlan_mode;
+	NBL_CHAN_SEND(chan_send, NBL_DISP_MGT_GET_DST_ID(disp_mgt),
+		      NBL_CHAN_MSG_CFG_RX_VLAN_PARSE, &param, sizeof(param), NULL, 0, 1);
+	return chan_ops->send_msg(NBL_DISP_MGT_TO_CHAN_PRIV(disp_mgt), &chan_send);
+}
+
 static int nbl_disp_chan_set_mtu_req(void *priv, u16 vsi_id, u16 mtu)
 {
 	struct nbl_dispatch_mgt *disp_mgt = (struct nbl_dispatch_mgt *)priv;
@@ -1296,6 +1322,10 @@ do {									\
 			 NBL_DISP_CTRL_LVL_MGT,				\
 			 NBL_CHAN_MSG_SET_PROSISC_MODE,			\
 			 nbl_disp_chan_set_promisc_mode_req, NULL);	\
+	NBL_DISP_SET_OPS(cfg_rx_vlan_parse, nbl_disp_cfg_rx_vlan_parse,	\
+			 NBL_DISP_CTRL_LVL_MGT,				\
+			 NBL_CHAN_MSG_CFG_RX_VLAN_PARSE,			\
+			 nbl_disp_chan_cfg_rx_vlan_parse_req, NULL);	\
 	NBL_DISP_SET_OPS(set_mtu, nbl_disp_set_mtu,			\
 			 NBL_DISP_CTRL_LVL_MGT,	NBL_CHAN_MSG_MTU_SET,	\
 			 nbl_disp_chan_set_mtu_req,			\

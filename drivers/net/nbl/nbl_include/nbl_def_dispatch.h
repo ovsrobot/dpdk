@@ -19,6 +19,7 @@ enum {
 };
 
 struct nbl_dispatch_ops {
+	int (*cfg_rx_vlan_parse)(void *priv, u16 vsi_id, u16 rx_vlan_mode);
 	int (*configure_msix_map)(void *priv, u16 num_net_msix, u16 num_others_msix,
 				  bool net_msix_mask_en);
 	int (*destroy_msix_map)(void *priv);

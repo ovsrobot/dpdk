@@ -80,6 +80,13 @@ struct nbl_func_caps {
 	u32 rsv:31;
 };
 
+enum nbl_rx_vlan_parse_mode {
+	NBL_RX_VLAN_PARSE_OFF = 1,
+	NBL_RX_VLAN_PARSE_CVLAN,
+	NBL_RX_VLAN_PARSE_SVLAN,
+	NBL_RX_VLAN_PARSE_CVLAN_OR_SVLAN,
+};
+
 struct nbl_start_rx_ring_param {
 	u16 queue_idx;
 	u16 nb_desc;

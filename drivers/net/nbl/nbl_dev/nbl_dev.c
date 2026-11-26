@@ -81,7 +81,8 @@ static int nbl_dev_txrx_start(struct rte_eth_dev *eth_dev)
 		param.local_queue_id = i + ring_mgt->queue_offset;
 		param.intr_en = 0;
 		param.intr_mask = 0;
-		param.half_offload_en = 0;
+		/* Draco needs the extended header to report stripped VLAN tags. */
+		param.half_offload_en = adapter->caps.product_type == NBL_DRACO_TYPE;
 		param.extend_header = 1;
 		param.split = 0;
 		param.rxcsum = 1;
@@ -400,7 +401,7 @@ int nbl_rx_queue_setup(struct rte_eth_dev *eth_dev, u16 queue_idx,
 	param.conf = conf;
 	param.mempool = mempool;
 	param.product = adapter->caps.product_type;
-	param.rx_hash_en = 0;
+	param.rx_hash_en = adapter->caps.product_type == NBL_DRACO_TYPE;
 	ret =  disp_ops->start_rx_ring(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), &param, &rx_ring->dma);
 	if (ret) {
 		NBL_LOG(ERR, "start_rx_ring failed %d", ret);
@@ -466,7 +467,7 @@ int nbl_dev_infos_get(struct rte_eth_dev *eth_dev, struct rte_eth_dev_info *dev_
 	dev_info->default_txportconf.nb_queues = ring_mgt->tx_ring_num;
 	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
 	dev_info->rx_offload_capa = RTE_ETH_RX_OFFLOAD_SCATTER;
-	if (adapter->caps.product_type == NBL_LEONIS_TYPE && !common->is_vf) {
+	if (!common->is_vf) {
 		dev_info->tx_offload_capa |= RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
 		dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
 	}
@@ -815,12 +816,26 @@ int nbl_promiscuous_disable(struct rte_eth_dev *eth_dev)
 	return 0;
 }
 
-int nbl_vlan_offload_set(__rte_unused struct rte_eth_dev *dev, __rte_unused int mask)
+int nbl_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 {
-	/*
-	 * No hardware or state change needed since
-	 * receive does VLAN in software based on rxmode.offload
-	 */
+	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
+	struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(dev);
+	struct nbl_dev_mgt *dev_mgt = NBL_ADAPTER_TO_DEV_MGT(adapter);
+	struct nbl_dispatch_ops *disp_ops = NBL_DEV_MGT_TO_DISP_OPS(dev_mgt);
+	uint64_t offloads = dev_conf->rxmode.offloads;
+	void *disp_priv = NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt);
+	u16 vsi_id = dev_mgt->net_dev->vsi_id;
+
+	if (mask & RTE_ETH_VLAN_STRIP_MASK) {
+		if (adapter->caps.product_type == NBL_DRACO_TYPE) {
+			if (offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+				return disp_ops->cfg_rx_vlan_parse(disp_priv, vsi_id,
+								   NBL_RX_VLAN_PARSE_CVLAN);
+			else
+				return disp_ops->cfg_rx_vlan_parse(disp_priv, vsi_id,
+								   NBL_RX_VLAN_PARSE_OFF);
+		}
+	}
 	return 0;
 }
 

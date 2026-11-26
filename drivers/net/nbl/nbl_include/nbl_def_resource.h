@@ -87,6 +87,7 @@ struct nbl_resource_ops {
 	void (*get_link_state)(void *priv, u8 eth_id, struct nbl_eth_link_info *eth_link_info);
 	int (*set_promisc_mode)(void *priv, u16 vsi_id, u16 mode);
 	int (*set_mtu)(void *priv, u16 vsi_id, u16 mtu);
+	int (*cfg_rx_vlan_parse)(void *priv, u16 vsi_id, u16 rx_vlan_mode);
 };
 
 struct nbl_resource_ops_tbl {

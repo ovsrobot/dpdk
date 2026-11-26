@@ -258,6 +258,7 @@ enum nbl_chan_msg_type {
 	NBL_CHAN_GET_USTORE_PKT_DROP_STATS,
 	NBL_CHAN_GET_USTORE_TOTAL_PKT_DROP_STATS,
 
+	NBL_CHAN_MSG_CFG_RX_VLAN_PARSE = 500,
 	NBL_CHAN_MSG_MTU_SET = 501,
 	NBL_CHAN_MSG_SET_RXFH_INDIR = 506,
 
@@ -441,6 +442,11 @@ enum nbl_chan_queue_state {
 struct nbl_chan_param_set_promisc_mode {
 	u16 vsi_id;
 	u16 mode;
+};
+
+struct nbl_chan_param_cfg_rx_vlan_parse {
+	u16 vsi_id;
+	u16 rx_vlan_mode;
 };
 
 struct nbl_chan_param_set_mtu {

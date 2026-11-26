@@ -119,8 +119,11 @@ static inline u16 nbl_prep_tx_ehdr_leonis(union nbl_tx_extend_head *head, struct
 
 static inline u16 nbl_prep_tx_ehdr_draco(union nbl_tx_extend_head *head, struct rte_mbuf *mbuf)
 {
-	RTE_SET_USED(head);
-	RTE_SET_USED(mbuf);
+	if (mbuf->ol_flags & RTE_MBUF_F_TX_VLAN) {
+		head->draco.vlan_tag = mbuf->vlan_tci;
+		head->draco.vlan_etype = NBL_TX_VLAN_ETYPE_0X8100;
+		head->draco.vlan_vld = 1;
+	}
 	return 0;
 }
 
@@ -751,6 +754,15 @@ nbl_res_txrx_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, u16 nb_pkts)
 			rx_mbuf->data_len = rx_desc->len - rxq->exthdr_len;
 			rx_mbuf->pkt_len = rx_desc->len - rxq->exthdr_len;
 			rx_mbuf->port = rxq->port_id;
+			if (rxq->product == NBL_DRACO_TYPE) {
+				rx_mbuf->ol_flags = 0;
+				rx_mbuf->vlan_tci = 0;
+				if (rx_ext_hdr->draco.vlan & 0xFFF) {
+					rx_mbuf->vlan_tci = rx_ext_hdr->draco.vlan;
+					rx_mbuf->ol_flags = RTE_MBUF_F_RX_VLAN |
+						RTE_MBUF_F_RX_VLAN_STRIPPED;
+				}
+			}
 			rx_mbuf->data_off = RTE_PKTMBUF_HEADROOM + rxq->exthdr_len;
 		} else {
 			last_mbuf->next = rx_entry->mbuf;
