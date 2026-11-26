@@ -14,6 +14,7 @@
 #include <rte_flow.h>
 #include <rte_flow_driver.h>
 #include <rte_tm_driver.h>
+#include <rte_spinlock.h>
 #include "rte_pmd_i40e.h"
 #include <rte_vect.h>
 
@@ -1157,6 +1158,13 @@ struct i40e_mbuf_stats {
 	uint64_t tx_pkt_errors;
 };
 
+/* Position of an Rx queue in a vector's interrupt cause list */
+struct i40e_rxq_intr_node {
+	uint16_t vec;
+	uint16_t prev;
+	uint16_t next;
+};
+
 /*
  * Structure to store private data specific for PF instance.
  */
@@ -1239,6 +1247,16 @@ struct i40e_pf {
 	bool mac_config_on_link_up;
 	/* true when interrupt path unavailable */
 	bool use_aq_polling;
+
+	/*
+	 * MSI-X vector with no eventfd, holding Rx queues whose interrupt is disabled.
+	 * It keeps firing internally so partial descriptor write-back still happens.
+	 * Zero when not in use.
+	 */
+	uint16_t rxq_intr_sink;
+	rte_spinlock_t rxq_intr_lock;
+	struct i40e_rxq_intr_node *rxq_intr_nodes; /* indexed by ethdev Rx queue id */
+	uint16_t *rxq_intr_heads; /* first Rx queue id per vector */
 
 	struct i40e_vf_msg_cfg vf_msg_cfg;
 	uint64_t prev_rx_bytes;
