@@ -723,10 +723,9 @@ eal_nohuge_init(void)
 int
 rte_eal_hugepage_init(void)
 {
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	return internal_conf->no_hugetlbfs ?
+	return user_cfg->no_hugetlbfs ?
 		eal_nohuge_init() : eal_dynmem_hugepage_init();
 }
 

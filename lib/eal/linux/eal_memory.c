@@ -683,6 +683,7 @@ static int
 remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
 	int cur_page, seg_len;
@@ -691,9 +692,7 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 	uint64_t page_sz;
 	size_t memseg_len;
 	int socket_id;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-	const bool dirty = !internal_conf->hugepage_file.unlink_existing;
+	const bool dirty = !user_cfg->hugepage_file.unlink_existing;
 
 	page_sz = hugepages[seg_start].size;
 	socket_id = hugepages[seg_start].socket_id;
@@ -794,7 +793,7 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 		/* we have a new address, so unmap previous one */
 #ifndef RTE_ARCH_64
 		/* in 32-bit legacy mode, we have already unmapped the page */
-		if (!internal_conf->legacy_mem)
+		if (!eal_get_internal_configuration()->legacy_mem)
 			munmap(hfile->orig_va, page_sz);
 #else
 		munmap(hfile->orig_va, page_sz);
@@ -1156,7 +1155,7 @@ eal_legacy_hugepage_init(void)
 	mcfg = rte_eal_get_configuration()->mem_config;
 
 	/* hugetlbfs can be disabled */
-	if (internal_conf->no_hugetlbfs) {
+	if (user_cfg->no_hugetlbfs) {
 		void *prealloc_addr;
 		size_t mem_sz;
 		struct rte_memseg_list *msl;
@@ -1453,7 +1452,7 @@ eal_legacy_hugepage_init(void)
 	}
 
 	/* free the hugepage backing files */
-	if (internal_conf->hugepage_file.unlink_before_mapping &&
+	if (user_cfg->hugepage_file.unlink_before_mapping &&
 		unlink_hugepage_files(tmp_hp, internal_conf->num_hugepage_sizes) < 0) {
 		EAL_LOG(ERR, "Unlinking hugepage files failed!");
 		goto fail;
@@ -1715,7 +1714,7 @@ memseg_primary_init_32(void)
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* no-huge does not need this at all */
-	if (internal_conf->no_hugetlbfs)
+	if (user_cfg->no_hugetlbfs)
 		return 0;
 
 	/* this is a giant hack, but desperate times call for desperate

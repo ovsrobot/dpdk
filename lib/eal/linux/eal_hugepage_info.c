@@ -215,22 +215,21 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 	static uint64_t default_size = 0;
 	const char pagesize_opt[] = "pagesize=";
 	const size_t pagesize_opt_len = sizeof(pagesize_opt) - 1;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct mntent *mnt;
 	FILE *fp;
 
 	/* Fast path: hugepage_dir explicitly specified */
-	if (internal_conf->hugepage_dir != NULL) {
+	if (user_cfg->hugepage_dir != NULL) {
 		struct statfs sfs;
 
 		/* Query info about mounted filesystem */
-		if (statfs(internal_conf->hugepage_dir, &sfs) != 0 ||
+		if (statfs(user_cfg->hugepage_dir, &sfs) != 0 ||
 				(uint32_t)sfs.f_type != HUGETLBFS_MAGIC ||
 				(uint64_t)sfs.f_bsize != hugepage_sz)
 			return -1;
 
-		strlcpy(hugedir, internal_conf->hugepage_dir, len);
+		strlcpy(hugedir, user_cfg->hugepage_dir, len);
 		return 0;
 	}
 
@@ -457,6 +456,7 @@ hugepage_info_init(void)
 	struct dirent *dirent;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	dir = opendir(sys_dir_path);
 	if (dir == NULL) {
@@ -527,7 +527,7 @@ hugepage_info_init(void)
 		 * or count how many of them can be reused.
 		 */
 		reusable_pages = 0;
-		if (!internal_conf->hugepage_file.unlink_existing) {
+		if (!user_cfg->hugepage_file.unlink_existing) {
 			reusable_bytes = 0;
 			if (inspect_hugedir(hpi->hugedir,
 					&reusable_bytes) < 0)

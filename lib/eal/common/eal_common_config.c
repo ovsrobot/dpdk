@@ -131,7 +131,7 @@ RTE_EXPORT_SYMBOL(rte_eal_has_hugepages)
 int
 rte_eal_has_hugepages(void)
 {
-	return !internal_config.no_hugetlbfs;
+	return !eal_user_cfg.no_hugetlbfs;
 }
 
 RTE_EXPORT_SYMBOL(rte_eal_has_pci)
