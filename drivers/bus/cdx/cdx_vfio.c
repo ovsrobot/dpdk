@@ -268,7 +268,7 @@ cdx_vfio_setup_device(struct rte_cdx_device *dev, int vfio_dev_fd,
 	 * Enable Bus mastering for the device. errno is set as ENOTTY if
 	 * device does not support configuring bus master.
 	 */
-	if (rte_cdx_vfio_bm_enable(dev) && (errno != -ENOTTY)) {
+	if (rte_cdx_vfio_bm_enable(dev) && (errno != ENOTTY)) {
 		CDX_BUS_ERR("Bus master enable failure! Error: %d (%s)", errno,
 			strerror(errno));
 		return -1;
