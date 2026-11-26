@@ -29,7 +29,7 @@ RTE_TAILQ_HEAD(rte_tailq_entry_head, rte_tailq_entry);
 
 /**
  * The structure defining a tailq header entry for storing
- * in the rte_config structure in shared memory. Each tailq
+ * in shared memory. Each tailq
  * is identified by name.
  * Any library storing a set of objects e.g. rings, mempools, hash-tables,
  * is recommended to use an entry here, so as to make it easy for

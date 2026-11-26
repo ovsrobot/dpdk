@@ -13,8 +13,8 @@
  * portions of physical memory. These zones are identified by a name.
  *
  * The memzone descriptors are shared by all partitions and are
- * located in a known place of physical memory. This zone is accessed
- * using rte_eal_get_configuration(). The lookup (by name) of a
+ * located in a known place of physical memory accessible via the
+ * shared memory config. The lookup (by name) of a
  * memory zone can be done in any partition and returns the same
  * physical address.
  *
@@ -137,7 +137,7 @@ size_t rte_memzone_max_get(void);
  *   A pointer to a correctly-filled read-only memzone descriptor, or NULL
  *   on error.
  *   On error case, rte_errno will be set appropriately:
- *    - E_RTE_NO_CONFIG - function could not get pointer to rte_config structure
+ *    - E_RTE_NO_CONFIG - function could not get pointer to shared memory config
  *    - ENOSPC - the maximum number of memzones has already been allocated
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
@@ -202,7 +202,7 @@ const struct rte_memzone *rte_memzone_reserve(const char *name,
  *   A pointer to a correctly-filled read-only memzone descriptor, or NULL
  *   on error.
  *   On error case, rte_errno will be set appropriately:
- *    - E_RTE_NO_CONFIG - function could not get pointer to rte_config structure
+ *    - E_RTE_NO_CONFIG - function could not get pointer to shared memory config
  *    - ENOSPC - the maximum number of memzones has already been allocated
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
@@ -273,7 +273,7 @@ const struct rte_memzone *rte_memzone_reserve_aligned(const char *name,
  *   A pointer to a correctly-filled read-only memzone descriptor, or NULL
  *   on error.
  *   On error case, rte_errno will be set appropriately:
- *    - E_RTE_NO_CONFIG - function could not get pointer to rte_config structure
+ *    - E_RTE_NO_CONFIG - function could not get pointer to shared memory config
  *    - ENOSPC - the maximum number of memzones has already been allocated
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone

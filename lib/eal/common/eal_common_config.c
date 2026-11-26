@@ -20,9 +20,6 @@ static struct rte_mem_config early_mem_config = {
 	.memory_hotplug_lock = RTE_RWLOCK_INITIALIZER,
 };
 
-/* Address of global and public configuration */
-static struct rte_config rte_config;
-
 /* platform-specific runtime dir */
 static char runtime_dir[UNIX_PATH_MAX];
 
@@ -54,13 +51,6 @@ eal_set_runtime_dir(const char *run_dir)
 	}
 
 	return 0;
-}
-
-/* Return a pointer to the configuration structure */
-struct rte_config *
-rte_eal_get_configuration(void)
-{
-	return &rte_config;
 }
 
 /* Return a pointer to the memory config structure */
