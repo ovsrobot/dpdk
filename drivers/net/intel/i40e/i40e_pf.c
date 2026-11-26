@@ -693,7 +693,7 @@ i40e_pf_host_process_cmd_config_irq_map(struct i40e_pf_vf *vf,
 		 * Link all VF RX queues together. Only did mapping work.
 		 * VF can disable/enable the intr by itself.
 		 */
-		i40e_vsi_queues_bind_intr(vf->vsi, itr_idx);
+		i40e_vsi_queues_bind_intr(vf->vsi, itr_idx, -1);
 		goto send_msg;
 	}
 

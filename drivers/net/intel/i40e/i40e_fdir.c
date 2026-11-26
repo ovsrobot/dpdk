@@ -219,7 +219,7 @@ i40e_fdir_setup(struct i40e_pf *pf)
 
 	/* enable FDIR MSIX interrupt */
 	vsi->nb_used_qps = 1;
-	i40e_vsi_queues_bind_intr(vsi, I40E_ITR_INDEX_NONE);
+	i40e_vsi_queues_bind_intr(vsi, I40E_ITR_INDEX_NONE, -1);
 	i40e_vsi_enable_queues_intr(vsi);
 
 	/* reserve memory for the fdir programming packet */

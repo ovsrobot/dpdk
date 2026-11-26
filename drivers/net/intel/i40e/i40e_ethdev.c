@@ -1928,7 +1928,7 @@ __vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t msix_vect,
 }
 
 int
-i40e_vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t itr_idx)
+i40e_vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t itr_idx, int ethdev_queue_base)
 {
 	struct rte_eth_dev *dev = I40E_VSI_TO_ETH_DEV(vsi);
 	struct rte_pci_device *pci_dev = RTE_CLASS_TO_BUS_DEVICE(dev, *pci_dev);
@@ -1937,8 +1937,7 @@ i40e_vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t itr_idx)
 	uint16_t msix_vect = vsi->msix_intr;
 	uint16_t nb_msix = RTE_MIN(vsi->nb_msix,
 				   rte_intr_nb_efd_get(intr_handle));
-	uint16_t queue_idx = 0;
-	int record = 0;
+	const bool record = ethdev_queue_base >= 0 && rte_intr_dp_is_en(intr_handle);
 	int i;
 
 	for (i = 0; i < vsi->nb_qps; i++) {
@@ -1959,18 +1958,6 @@ i40e_vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t itr_idx)
 	}
 
 	/* PF & VMDq bind interrupt */
-	if (rte_intr_dp_is_en(intr_handle)) {
-		if (vsi->type == I40E_VSI_MAIN) {
-			queue_idx = 0;
-			record = 1;
-		} else if (vsi->type == I40E_VSI_VMDQ2) {
-			struct i40e_vsi *main_vsi =
-				I40E_DEV_PRIVATE_TO_MAIN_VSI(vsi->adapter);
-			queue_idx = vsi->base_queue - main_vsi->nb_qps;
-			record = 1;
-		}
-	}
-
 	for (i = 0; i < vsi->nb_used_qps; i++) {
 		if (vsi->nb_msix == 0) {
 			PMD_DRV_LOG(ERR, "No msix resource");
@@ -1985,19 +1972,20 @@ i40e_vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t itr_idx)
 					       vsi->base_queue + i,
 					       vsi->nb_used_qps - i,
 					       itr_idx);
-			for (; !!record && i < vsi->nb_used_qps; i++)
-				rte_intr_vec_list_index_set(intr_handle,
-						queue_idx + i, msix_vect);
+			for (; record && i < vsi->nb_used_qps; i++) {
+				if (rte_intr_vec_list_index_set(intr_handle,
+						ethdev_queue_base + i, msix_vect) != 0)
+					return -rte_errno;
+			}
 			break;
 		}
 		/* 1:1 queue/msix_vect mapping */
 		__vsi_queues_bind_intr(vsi, msix_vect,
 				       vsi->base_queue + i, 1,
 				       itr_idx);
-		if (!!record)
-			if (rte_intr_vec_list_index_set(intr_handle,
-						queue_idx + i, msix_vect))
-				return -rte_errno;
+		if (record && rte_intr_vec_list_index_set(intr_handle,
+				ethdev_queue_base + i, msix_vect) != 0)
+			return -rte_errno;
 
 		msix_vect++;
 		nb_msix--;
@@ -2245,7 +2233,7 @@ i40e_dev_start(struct rte_eth_dev *dev)
 	/* Map queues with MSIX interrupt */
 	main_vsi->nb_used_qps = dev->data->nb_rx_queues -
 		pf->nb_cfg_vmdq_vsi * RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM;
-	ret = i40e_vsi_queues_bind_intr(main_vsi, I40E_ITR_INDEX_DEFAULT);
+	ret = i40e_vsi_queues_bind_intr(main_vsi, I40E_ITR_INDEX_DEFAULT, 0);
 	if (ret < 0)
 		return ret;
 	i40e_vsi_enable_queues_intr(main_vsi);
@@ -2253,8 +2241,8 @@ i40e_dev_start(struct rte_eth_dev *dev)
 	/* Map VMDQ VSI queues with MSIX interrupt */
 	for (i = 0; i < pf->nb_cfg_vmdq_vsi; i++) {
 		pf->vmdq[i].vsi->nb_used_qps = RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM;
-		ret = i40e_vsi_queues_bind_intr(pf->vmdq[i].vsi,
-						I40E_ITR_INDEX_DEFAULT);
+		ret = i40e_vsi_queues_bind_intr(pf->vmdq[i].vsi, I40E_ITR_INDEX_DEFAULT,
+				main_vsi->nb_qps + i * pf->vmdq_nb_qps);
 		if (ret < 0)
 			return ret;
 		i40e_vsi_enable_queues_intr(pf->vmdq[i].vsi);
