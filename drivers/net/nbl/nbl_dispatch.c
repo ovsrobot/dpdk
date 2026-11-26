@@ -1469,7 +1469,7 @@ static int nbl_disp_draco_init(void *p)
 	struct nbl_common_info *common = disp_mgt->common;
 	int ret;
 
-	if (common->devfd == -1 && !common->is_vf)
+	if (!NBL_IS_COEXISTENCE(common) && !common->is_vf)
 		nbl_disp_setup_ctrl_lvl(disp_mgt, NBL_DISP_CTRL_LVL_MGT);
 	else
 		nbl_disp_setup_ctrl_lvl(disp_mgt, NBL_DISP_CTRL_LVL_NET);

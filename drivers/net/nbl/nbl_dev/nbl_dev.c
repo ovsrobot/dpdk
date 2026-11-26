@@ -20,6 +20,10 @@ int nbl_dev_configure(struct rte_eth_dev *eth_dev)
 	if (dev_data == NULL || adapter == NULL)
 		return -EINVAL;
 
+	/* Keep the draco datapath disabled until its extended headers are supported. */
+	if (adapter->caps.product_type == NBL_DRACO_TYPE)
+		return -ENOTSUP;
+
 	NBL_LOG(DEBUG, "Begin to configure the device, state: %d", adapter->state);
 
 	dev_data->dev_conf.intr_conf.lsc = 0;
@@ -837,12 +841,21 @@ static int nbl_dev_teardown_chan_queue(struct nbl_adapter *adapter)
 	return ret;
 }
 
-static int nbl_dev_leonis_init(void *adapter)
+static int nbl_dev_snic_init(void *p)
 {
-	return nbl_dev_setup_chan_queue((struct nbl_adapter *)adapter);
+	struct nbl_adapter *adapter = (struct nbl_adapter *)p;
+	struct nbl_common_info *common = NBL_ADAPTER_TO_COMMON(adapter);
+
+	if (adapter->caps.product_type == NBL_DRACO_TYPE &&
+	    !NBL_IS_COEXISTENCE(common) && !common->is_vf) {
+		NBL_LOG(ERR, "draco PF only supports coexistence");
+		return -ENOTSUP;
+	}
+
+	return nbl_dev_setup_chan_queue(adapter);
 }
 
-static void nbl_dev_leonis_uninit(void *adapter)
+static void nbl_dev_snic_uninit(void *adapter)
 {
 	nbl_dev_teardown_chan_queue((struct nbl_adapter *)adapter);
 }
@@ -959,7 +972,7 @@ configure_msix_map_failed:
 	return ret;
 }
 
-static int nbl_dev_leonis_start(void *p)
+static int nbl_dev_snic_start(void *p)
 {
 	struct nbl_adapter *adapter = (struct nbl_adapter *)p;
 	struct nbl_dev_mgt *dev_mgt = NBL_ADAPTER_TO_DEV_MGT(adapter);
@@ -977,7 +990,7 @@ static int nbl_dev_leonis_start(void *p)
 	return 0;
 }
 
-static void nbl_dev_leonis_stop(void *p)
+static void nbl_dev_snic_stop(void *p)
 {
 	struct nbl_adapter *adapter = (struct nbl_adapter *)p;
 	struct nbl_dev_mgt *dev_mgt = NBL_ADAPTER_TO_DEV_MGT(adapter);
@@ -1326,41 +1339,18 @@ int nbl_dev_start(void *p)
 	return 0;
 }
 
-static int nbl_dev_draco_init(void *adapter)
-{
-	RTE_SET_USED(adapter);
-	/* Keep probing disabled until the Draco device layer is implemented. */
-	return -ENOTSUP;
-}
-
-static void nbl_dev_draco_uninit(void *adapter)
-{
-	RTE_SET_USED(adapter);
-}
-
-static int nbl_dev_draco_start(void *adapter)
-{
-	RTE_SET_USED(adapter);
-	return 0;
-}
-
-static void nbl_dev_draco_stop(void *adapter)
-{
-	RTE_SET_USED(adapter);
-}
-
 const struct nbl_product_dev_ops nbl_product_dev_ops[NBL_PRODUCT_MAX] = {
 	[NBL_LEONIS_TYPE] = {
-		.dev_init	= nbl_dev_leonis_init,
-		.dev_uninit	= nbl_dev_leonis_uninit,
-		.dev_start	= nbl_dev_leonis_start,
-		.dev_stop	= nbl_dev_leonis_stop,
+		.dev_init	= nbl_dev_snic_init,
+		.dev_uninit	= nbl_dev_snic_uninit,
+		.dev_start	= nbl_dev_snic_start,
+		.dev_stop	= nbl_dev_snic_stop,
 	},
 	[NBL_DRACO_TYPE] = {
-		.dev_init	= nbl_dev_draco_init,
-		.dev_uninit	= nbl_dev_draco_uninit,
-		.dev_start	= nbl_dev_draco_start,
-		.dev_stop	= nbl_dev_draco_stop,
+		.dev_init	= nbl_dev_snic_init,
+		.dev_uninit	= nbl_dev_snic_uninit,
+		.dev_start	= nbl_dev_snic_start,
+		.dev_stop	= nbl_dev_snic_stop,
 	},
 };
 
