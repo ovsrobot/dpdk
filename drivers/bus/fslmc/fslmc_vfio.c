@@ -1322,7 +1322,9 @@ static intptr_t vfio_map_mcp_obj(const char *mcp_obj)
 	struct vfio_device_info d_info = { .argsz = sizeof(d_info) };
 	struct vfio_region_info reg_info = { .argsz = sizeof(reg_info) };
 
-	fslmc_vfio_setup_device(mcp_obj, &mc_fd, &d_info);
+	ret = fslmc_vfio_setup_device(mcp_obj, &mc_fd, &d_info);
+	if (ret != 0)
+		return v_addr;
 
 	/* getting device region info*/
 	ret = ioctl(mc_fd, VFIO_DEVICE_GET_REGION_INFO, &reg_info);
