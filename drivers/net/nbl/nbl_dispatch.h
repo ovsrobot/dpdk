@@ -17,6 +17,7 @@
 #define NBL_DISP_MGT_TO_DISP_OPS(disp_mgt)	(NBL_DISP_MGT_TO_DISP_OPS_TBL(disp_mgt)->ops)
 #define NBL_DISP_MGT_TO_DISP_PRIV(disp_mgt)	(NBL_DISP_MGT_TO_DISP_OPS_TBL(disp_mgt)->priv)
 #define NBL_DISP_MGT_TO_COMMON(disp_mgt)	((disp_mgt)->common)
+#define NBL_DISP_MGT_GET_DST_ID(disp_mgt)	((disp_mgt)->common->mgt_pf)
 
 struct nbl_dispatch_mgt {
 	struct nbl_resource_ops_tbl *res_ops_tbl;

@@ -1326,12 +1326,41 @@ int nbl_dev_start(void *p)
 	return 0;
 }
 
+static int nbl_dev_draco_init(void *adapter)
+{
+	RTE_SET_USED(adapter);
+	/* Keep probing disabled until the Draco device layer is implemented. */
+	return -ENOTSUP;
+}
+
+static void nbl_dev_draco_uninit(void *adapter)
+{
+	RTE_SET_USED(adapter);
+}
+
+static int nbl_dev_draco_start(void *adapter)
+{
+	RTE_SET_USED(adapter);
+	return 0;
+}
+
+static void nbl_dev_draco_stop(void *adapter)
+{
+	RTE_SET_USED(adapter);
+}
+
 const struct nbl_product_dev_ops nbl_product_dev_ops[NBL_PRODUCT_MAX] = {
 	[NBL_LEONIS_TYPE] = {
 		.dev_init	= nbl_dev_leonis_init,
 		.dev_uninit	= nbl_dev_leonis_uninit,
 		.dev_start	= nbl_dev_leonis_start,
 		.dev_stop	= nbl_dev_leonis_stop,
+	},
+	[NBL_DRACO_TYPE] = {
+		.dev_init	= nbl_dev_draco_init,
+		.dev_uninit	= nbl_dev_draco_uninit,
+		.dev_start	= nbl_dev_draco_start,
+		.dev_stop	= nbl_dev_draco_stop,
 	},
 };
 
