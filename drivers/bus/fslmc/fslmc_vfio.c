@@ -1317,6 +1317,7 @@ static intptr_t vfio_map_mcp_obj(const char *mcp_obj)
 {
 	intptr_t v_addr = (intptr_t)MAP_FAILED;
 	int32_t ret, mc_fd;
+	int vfio_group_fd;
 	struct vfio_group_status status = { .argsz = sizeof(status) };
 
 	struct vfio_device_info d_info = { .argsz = sizeof(d_info) };
@@ -1338,7 +1339,10 @@ static intptr_t vfio_map_mcp_obj(const char *mcp_obj)
 		mc_fd, reg_info.offset);
 
 MC_FAILURE:
-	close(mc_fd);
+	/* the group tracks this fd, removing the device also closes it */
+	vfio_group_fd = fslmc_vfio_group_fd_by_name(fslmc_vfio_get_group_name());
+	if (fslmc_vfio_group_remove_dev(vfio_group_fd, mcp_obj) != 0)
+		DPAA2_BUS_ERR("Failed to remove %s from vfio", mcp_obj);
 
 	return v_addr;
 }
