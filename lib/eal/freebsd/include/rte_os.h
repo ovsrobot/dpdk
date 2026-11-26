@@ -75,4 +75,6 @@ typedef cpuset_t rte_cpuset_t;
 
 #endif /* RTE_EAL_FREEBSD_CPUSET_LEGACY */
 
+#define RTE_CPU_FFS CPU_FFS
+
 #endif /* _RTE_OS_H_ */
