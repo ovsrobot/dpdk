@@ -4204,6 +4204,7 @@ cryptodev_openssl_create(const char *name,
 	 * unless the legacy provider explicitly loaded. e.g. DES
 	 */
 	ossl_legacy_provider_load();
+	openssl_pmd_caps_init();
 
 	return 0;
 

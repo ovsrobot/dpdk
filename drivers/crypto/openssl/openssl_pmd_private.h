@@ -261,4 +261,6 @@ extern struct rte_cryptodev_ops *rte_openssl_pmd_ops;
 /** ML parameter type names */
 extern const char *ml_kem_type_names[];
 extern const char *ml_dsa_type_names[];
+/** Initialize filtered capability list based on legacy provider availability */
+extern void openssl_pmd_caps_init(void);
 #endif /* _OPENSSL_PMD_PRIVATE_H_ */
