@@ -4,7 +4,10 @@
 
 #include <unistd.h>
 #include <limits.h>
+#include <stdio.h>
+#include <string.h>
 
+#include <rte_argparse.h>
 #include <rte_log.h>
 
 #include "eal_private.h"
@@ -12,8 +15,30 @@
 #include "eal_thread.h"
 
 #define SYS_CPU_DIR "/sys/devices/system/cpu/cpu%u"
+#define SYS_CPU_POSSIBLE_PATH "/sys/devices/system/cpu/possible"
 #define CORE_ID_FILE "topology/core_id"
 #define NUMA_NODE_PATH "/sys/devices/system/node"
+
+static int
+eal_cpu_possible(rte_cpuset_t *cpuset)
+{
+	char cpu_list[BUFSIZ];
+	FILE *f;
+
+	f = fopen(SYS_CPU_POSSIBLE_PATH, "r");
+	if (f == NULL)
+		return -1;
+	if (fgets(cpu_list, sizeof(cpu_list), f) == NULL ||
+			strchr(cpu_list, '\n') == NULL) {
+		fclose(f);
+		return -1;
+	}
+	fclose(f);
+	cpu_list[strcspn(cpu_list, "\n")] = '\0';
+
+	return rte_argparse_parse_type(cpu_list,
+		RTE_ARGPARSE_VALUE_TYPE_CORELIST, cpuset);
+}
 
 /* Check if a cpu is present by the presence of the cpu information for it */
 int
@@ -71,4 +96,22 @@ err:
 	EAL_LOG(ERR, "Error reading core id value from %s "
 			"for lcore %u - assuming core 0", SYS_CPU_DIR, lcore_id);
 	return 0;
+}
+
+size_t
+eal_cpu_max(void)
+{
+	rte_cpuset_t possible_cpus;
+	int cpu_id;
+
+	if (eal_cpu_possible(&possible_cpus) == 0) {
+		for (cpu_id = CPU_SETSIZE - 1; cpu_id >= 0; cpu_id--) {
+			if (CPU_ISSET(cpu_id, &possible_cpus))
+				return cpu_id + 1;
+		}
+	}
+
+	EAL_LOG(WARNING, "Cannot read possible CPU IDs from %s, falling back to CPU_SETSIZE",
+			SYS_CPU_POSSIBLE_PATH);
+	return CPU_SETSIZE;
 }
