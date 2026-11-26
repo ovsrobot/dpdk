@@ -30,14 +30,6 @@
 	EAL_LOG(DEBUG, "Windows: %s() is a stub", __func__)
 
 /**
- * Create a map of processors and cores on the system.
- *
- * @return
- *  0 on success, (-1) on failure and rte_errno is set.
- */
-int eal_create_cpu_map(void);
-
-/**
  * Get system NUMA node number for a socket ID.
  *
  * @param socket_id

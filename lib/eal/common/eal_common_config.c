@@ -10,6 +10,7 @@
 #include "eal_internal_cfg.h"
 #include "eal_private.h"
 #include "eal_filesystem.h"
+#include "eal_hugepages.h"
 #include "eal_memcfg.h"
 
 /* early configuration structure, when memory config is not mmapped */
@@ -27,15 +28,6 @@ static char runtime_dir[UNIX_PATH_MAX];
 
 /* user-provided EAL configuration */
 static struct eal_user_cfg eal_user_cfg;
-
-/* platform-discovered and runtime EAL state */
-static struct eal_platform_info eal_platform_info = {
-	.hugepage_info = {
-		[0] = {.lock_descriptor = -1 },
-		[1] = {.lock_descriptor = -1 },
-		[2] = {.lock_descriptor = -1 }
-	}
-};
 
 /* internal runtime configuration */
 static struct eal_runtime_state eal_runtime_state = {
@@ -76,9 +68,42 @@ eal_get_user_configuration(void)
 }
 
 /* Return a pointer to the platform state structure */
-struct eal_platform_info *
+const struct eal_platform_info *
 eal_get_platform_info(void)
 {
+	/* platform-discovered and runtime EAL state */
+	static struct eal_platform_info eal_platform_info;
+	static rte_spinlock_t init_lock = RTE_SPINLOCK_INITIALIZER;
+	static RTE_ATOMIC(bool) initialized;
+
+	if (unlikely(!rte_atomic_load_explicit(&initialized, rte_memory_order_acquire))) {
+		struct eal_platform_info discovered_info = { 0 };
+
+		rte_spinlock_lock(&init_lock);
+		if (rte_atomic_load_explicit(&initialized, rte_memory_order_relaxed)) {
+			rte_spinlock_unlock(&init_lock);
+			return &eal_platform_info;
+		}
+		if (rte_eal_cpu_init(&discovered_info) < 0) {
+			EAL_LOG(ERR, "Failed to initialise CPU information");
+			goto fail;
+		}
+		if (eal_get_platform_hp_info(&discovered_info) < 0) {
+			EAL_LOG(ERR, "Failed to get platform hugepage information");
+			goto fail;
+		}
+		eal_platform_info = discovered_info;
+		rte_atomic_store_explicit(&initialized, true, rte_memory_order_release);
+		rte_spinlock_unlock(&init_lock);
+		return &eal_platform_info;
+
+fail:
+		free(discovered_info.cpu_info);
+		free(discovered_info.numa_nodes);
+		rte_spinlock_unlock(&init_lock);
+		return NULL;
+	}
+
 	return &eal_platform_info;
 }
 
@@ -212,6 +237,9 @@ eal_apply_runtime_state(void)
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
+	for (unsigned int i = 0; i < MAX_HUGEPAGE_SIZES; i++)
+		runtime_state->hugepage_info[i].lock_descriptor = -1;
+
 	if (eal_apply_lcore_config() < 0)
 		return -1;
 
@@ -283,7 +311,7 @@ eal_apply_hugepage_mem_sz_limits(void)
 
 	for (i = 0; i < platform_info->num_hugepage_sizes; i++) {
 		unsigned int j;
-		const uint64_t pagesz = platform_info->hugepage_info[i].hugepage_sz;
+		const uint64_t pagesz = platform_info->hugepage_sizes[i].size;
 		uint64_t limit;
 
 		/* assign default limits */
