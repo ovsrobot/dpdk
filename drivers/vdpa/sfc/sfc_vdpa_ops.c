@@ -815,6 +815,7 @@ sfc_vdpa_get_notify_area(int vid, int qid, uint64_t *offset, uint64_t *size)
 	struct vfio_region_info reg = { .argsz = sizeof(reg) };
 	const efx_nic_cfg_t *encp;
 	int max_vring_cnt;
+	uint64_t bar_offset;
 	int64_t len;
 	void *dev;
 
@@ -847,7 +848,8 @@ sfc_vdpa_get_notify_area(int vid, int qid, uint64_t *offset, uint64_t *size)
 	}
 
 	/* Use bar_offset that was cached during sfc_vdpa_virtq_start() */
-	*offset = reg.offset + (uint64_t)ops_data->vq_cxt[qid].doorbell;
+	bar_offset = (uintptr_t)ops_data->vq_cxt[qid].doorbell;
+	*offset = reg.offset + bar_offset;
 
 	len = (1U << encp->enc_vi_window_shift) / 2;
 	if (len >= sysconf(_SC_PAGESIZE)) {
@@ -861,7 +863,11 @@ sfc_vdpa_get_notify_area(int vid, int qid, uint64_t *offset, uint64_t *size)
 		      *offset);
 
 	pci_dev = sfc_vdpa_adapter_by_dev_handle(dev)->pdev;
-	doorbell = (uint8_t *)pci_dev->mem_resource[reg.index].addr + *offset;
+	if (bar_offset + sizeof(uint16_t) > pci_dev->mem_resource[reg.index].len) {
+		sfc_vdpa_err(dev, "invalid doorbell offset : 0x%" PRIx64, bar_offset);
+		return -1;
+	}
+	doorbell = (uint8_t *)pci_dev->mem_resource[reg.index].addr + bar_offset;
 
 	/*
 	 * virtio-net driver in VM sends queue notifications before
