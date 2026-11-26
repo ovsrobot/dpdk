@@ -623,6 +623,11 @@ parse_arg_corelist(const struct rte_argparse_arg *arg, const char *value)
 				/* range from low to high */
 				max = idx;
 			}
+			if (max >= CPU_SETSIZE) {
+				ARGPARSE_LOG(ERR, "argument %s contains a core outside the CPU set range!",
+					arg->name_long);
+				return -EINVAL;
+			}
 
 			for (; min <= max; min++)
 				CPU_SET(min, cpuset);
