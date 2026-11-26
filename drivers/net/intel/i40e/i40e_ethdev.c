@@ -10346,9 +10346,11 @@ i40e_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 	struct rte_pci_device *pci_dev = RTE_CLASS_TO_BUS_DEVICE(dev, *pci_dev);
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint16_t msix_intr;
+	const int msix_intr = rte_intr_vec_list_index_get(intr_handle, queue_id);
 
-	msix_intr = rte_intr_vec_list_index_get(intr_handle, queue_id);
+	if (msix_intr < 0)
+		return msix_intr;
+
 	if (msix_intr == I40E_MISC_VEC_ID)
 		I40E_WRITE_REG(hw, I40E_PFINT_DYN_CTL0,
 			       I40E_PFINT_DYN_CTL0_INTENA_MASK |
@@ -10374,9 +10376,11 @@ i40e_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 	struct rte_pci_device *pci_dev = RTE_CLASS_TO_BUS_DEVICE(dev, *pci_dev);
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint16_t msix_intr;
+	const int msix_intr = rte_intr_vec_list_index_get(intr_handle, queue_id);
 
-	msix_intr = rte_intr_vec_list_index_get(intr_handle, queue_id);
+	if (msix_intr < 0)
+		return msix_intr;
+
 	if (msix_intr == I40E_MISC_VEC_ID)
 		I40E_WRITE_REG(hw, I40E_PFINT_DYN_CTL0,
 			       I40E_PFINT_DYN_CTL0_ITR_INDX_MASK);
