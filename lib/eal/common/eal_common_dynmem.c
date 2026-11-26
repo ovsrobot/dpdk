@@ -20,7 +20,7 @@
 int
 eal_dynmem_memseg_lists_init(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct memtype {
 		uint64_t page_sz;
 		int socket_id;

@@ -21,9 +21,7 @@ static struct rte_mem_config early_mem_config = {
 };
 
 /* Address of global and public configuration */
-static struct rte_config rte_config = {
-	.mem_config = &early_mem_config,
-};
+static struct rte_config rte_config;
 
 /* platform-specific runtime dir */
 static char runtime_dir[UNIX_PATH_MAX];
@@ -35,7 +33,9 @@ static struct eal_user_cfg eal_user_cfg;
 static struct eal_platform_info eal_platform_info;
 
 /* internal runtime configuration */
-static struct eal_runtime_state eal_runtime_state;
+static struct eal_runtime_state eal_runtime_state = {
+	.mem_config = &early_mem_config,
+};
 
 RTE_EXPORT_SYMBOL(rte_eal_get_runtime_dir)
 const char *
@@ -61,6 +61,13 @@ struct rte_config *
 rte_eal_get_configuration(void)
 {
 	return &rte_config;
+}
+
+/* Return a pointer to the memory config structure */
+struct rte_mem_config *
+eal_get_mcfg(void)
+{
+	return eal_get_runtime_state()->mem_config;
 }
 
 /* Return a pointer to the user configuration structure */

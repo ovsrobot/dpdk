@@ -14,8 +14,7 @@
 void
 eal_mcfg_complete(void)
 {
-	struct rte_config *cfg = rte_eal_get_configuration();
-	struct rte_mem_config *mcfg = cfg->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 
 	/* ALL shared mem_config related INIT DONE */
@@ -28,7 +27,7 @@ eal_mcfg_complete(void)
 void
 eal_mcfg_wait_complete(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 
 	/* wait until shared mem_config finish initialising */
 	rte_wait_until_equal_32(&mcfg->magic, RTE_MAGIC, rte_memory_order_relaxed);
@@ -37,7 +36,7 @@ eal_mcfg_wait_complete(void)
 int
 eal_mcfg_check_version(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 
 	/* check if version from memconfig matches compiled in macro */
 	if (mcfg->version != RTE_VERSION)
@@ -49,7 +48,7 @@ eal_mcfg_check_version(void)
 void
 eal_mcfg_update_internal(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	user_cfg->legacy_mem = mcfg->legacy_mem;
@@ -60,7 +59,7 @@ void
 eal_mcfg_update_from_internal(void)
 {
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 
 	mcfg->legacy_mem = user_cfg->legacy_mem;
 	mcfg->single_file_segments = user_cfg->single_file_segments;
@@ -74,7 +73,7 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_mem_get_lock)
 rte_rwlock_t *
 rte_mcfg_mem_get_lock(void)
 {
-	return &rte_eal_get_configuration()->mem_config->memory_hotplug_lock;
+	return &eal_get_mcfg()->memory_hotplug_lock;
 }
 
 RTE_EXPORT_SYMBOL(rte_mcfg_mem_read_lock)
@@ -109,7 +108,7 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_tailq_get_lock)
 rte_rwlock_t *
 rte_mcfg_tailq_get_lock(void)
 {
-	return &rte_eal_get_configuration()->mem_config->qlock;
+	return &eal_get_mcfg()->qlock;
 }
 
 RTE_EXPORT_SYMBOL(rte_mcfg_tailq_read_lock)
@@ -144,7 +143,7 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_mempool_get_lock)
 rte_rwlock_t *
 rte_mcfg_mempool_get_lock(void)
 {
-	return &rte_eal_get_configuration()->mem_config->mplock;
+	return &eal_get_mcfg()->mplock;
 }
 
 RTE_EXPORT_SYMBOL(rte_mcfg_mempool_read_lock)
@@ -179,7 +178,7 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_timer_get_lock)
 rte_spinlock_t *
 rte_mcfg_timer_get_lock(void)
 {
-	return &rte_eal_get_configuration()->mem_config->tlock;
+	return &eal_get_mcfg()->tlock;
 }
 
 RTE_EXPORT_SYMBOL(rte_mcfg_timer_lock)
@@ -200,13 +199,13 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_ethdev_get_lock)
 rte_spinlock_t *
 rte_mcfg_ethdev_get_lock(void)
 {
-	return &rte_eal_get_configuration()->mem_config->ethdev_lock;
+	return &eal_get_mcfg()->ethdev_lock;
 }
 
 RTE_EXPORT_SYMBOL(rte_mcfg_get_single_file_segments)
 bool
 rte_mcfg_get_single_file_segments(void)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	return (bool)mcfg->single_file_segments;
 }

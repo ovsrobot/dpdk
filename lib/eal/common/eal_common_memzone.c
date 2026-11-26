@@ -39,7 +39,7 @@ rte_memzone_max_set(size_t max)
 		return -1;
 	}
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	if (mcfg == NULL) {
 		EAL_LOG(ERR, "Failed to set max memzone count");
 		return -1;
@@ -56,7 +56,7 @@ rte_memzone_max_get(void)
 {
 	struct rte_mem_config *mcfg;
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	if (mcfg == NULL || mcfg->max_memzone == 0)
 		return DEFAULT_MAX_MEMZONE_COUNT;
 
@@ -72,7 +72,7 @@ memzone_lookup_thread_unsafe(const char *name)
 	int i = 0;
 
 	/* get pointer to global configuration */
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	arr = &mcfg->memzones;
 
 	/*
@@ -116,7 +116,7 @@ memzone_reserve_aligned_thread_unsafe(const char *name, size_t len,
 	bool contig;
 
 	/* get pointer to global configuration */
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	arr = &mcfg->memzones;
 
 	/* no more room in config */
@@ -248,7 +248,7 @@ rte_memzone_reserve_thread_safe(const char *name, size_t len, int socket_id,
 	const struct rte_memzone *mz = NULL;
 
 	/* get pointer to global configuration */
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 
 	rte_rwlock_write_lock(&mcfg->mlock);
 
@@ -319,7 +319,7 @@ rte_memzone_free(const struct rte_memzone *mz)
 		return -EINVAL;
 
 	rte_strlcpy(name, mz->name, RTE_MEMZONE_NAMESIZE);
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	arr = &mcfg->memzones;
 
 	rte_rwlock_write_lock(&mcfg->mlock);
@@ -357,7 +357,7 @@ rte_memzone_lookup(const char *name)
 	struct rte_mem_config *mcfg;
 	const struct rte_memzone *memzone = NULL;
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 
 	rte_rwlock_read_lock(&mcfg->mlock);
 
@@ -377,7 +377,7 @@ struct memzone_info {
 static void
 dump_memzone(const struct rte_memzone *mz, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	struct rte_memseg_list *msl = NULL;
 	struct memzone_info *info = arg;
 	void *cur_addr, *mz_end;
@@ -448,7 +448,7 @@ rte_eal_memzone_init(void)
 	int ret = 0;
 
 	/* get pointer to global configuration */
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 
 	rte_rwlock_write_lock(&mcfg->mlock);
 
@@ -477,7 +477,7 @@ void rte_memzone_walk(void (*func)(const struct rte_memzone *, void *),
 	struct rte_fbarray *arr;
 	int i;
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	arr = &mcfg->memzones;
 
 	rte_rwlock_read_lock(&mcfg->mlock);

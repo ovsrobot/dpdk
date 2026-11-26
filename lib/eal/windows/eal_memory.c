@@ -677,7 +677,7 @@ eal_nohuge_init(void)
 	uint64_t mem_sz, page_sz;
 	void *addr;
 
-	mcfg = rte_eal_get_configuration()->mem_config;
+	mcfg = eal_get_mcfg();
 	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* nohuge mode is legacy mode */

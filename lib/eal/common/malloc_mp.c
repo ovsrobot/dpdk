@@ -217,7 +217,7 @@ static int
 handle_alloc_request(const struct malloc_mp_req *m,
 		struct mp_request *req)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_mem_config *mcfg = eal_get_mcfg();
 	const struct malloc_req_alloc *ar = &m->alloc_req;
 	struct malloc_heap *heap;
 	struct malloc_elem *elem;
