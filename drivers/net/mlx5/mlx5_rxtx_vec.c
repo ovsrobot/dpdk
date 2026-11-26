@@ -561,7 +561,22 @@ rxq_burst_mprq_v(struct mlx5_rxq_data *rxq, struct rte_mbuf **pkts,
 decompress:
 	/* Decompress the last CQE if compressed. */
 	if (comp_idx < MLX5_VPMD_DESCS_PER_LOOP) {
+		volatile struct mlx5_cqe *tcqe = &cq[nocmp_n];
+		uint32_t mcqe_n;
+
 		MLX5_ASSERT(comp_idx == (nocmp_n % MLX5_VPMD_DESCS_PER_LOOP));
+		/*
+		 * MPRQ HW completes packets regardless of how many elts were
+		 * replenished, and unzipping always writes the whole session.
+		 * Leave the session in the CQ until it fits.
+		 */
+		mcqe_n = rxq->cqe_comp_layout ?
+			 (MLX5_CQE_NUM_MINIS(tcqe->op_own) + 1U) :
+			 rte_be_to_cpu_32(tcqe->byte_cnt);
+		if (unlikely(mcqe_n > rxq->elts_ci - rxq->rq_pi)) {
+			*no_cq = !rcvd_pkt;
+			return rcvd_pkt;
+		}
 		rxq->decompressed = rxq_cq_decompress_v(rxq, &cq[nocmp_n],
 							&elts[nocmp_n], false);
 		/* Return more packets if needed. */
