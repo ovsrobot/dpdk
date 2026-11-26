@@ -6,6 +6,12 @@
 #include "nbl_include.h"
 #include "nbl_txrx_ops.h"
 
+static inline u32 nbl_res_txrx_notify_value(u16 qid, u16 next_to_use, u16 flags)
+{
+	return qid | ((u32)next_to_use << 16) |
+		((u32)!!(flags & NBL_PACKED_DESC_F_AVAIL_BIT) << 31);
+}
+
 static int nbl_res_txrx_alloc_rings(void *priv, u16 tx_num, u16 rx_num, u16 queue_offset)
 {
 	struct nbl_resource_mgt *res_mgt = (struct nbl_resource_mgt *)priv;
@@ -467,11 +473,13 @@ static void nbl_res_txrx_update_rx_ring(void *priv, u16 index)
 	struct nbl_resource_mgt *res_mgt = (struct nbl_resource_mgt *)priv;
 	const struct nbl_hw_ops *hw_ops = NBL_RES_MGT_TO_HW_OPS(res_mgt);
 	struct nbl_res_rx_ring *rx_ring = NBL_RES_MGT_TO_RX_RING(res_mgt, index);
+	u16 tail_ptr;
+
+	tail_ptr = rx_ring->next_to_use |
+		   ((u16)!!(rx_ring->avail_used_flags & NBL_PACKED_DESC_F_AVAIL_BIT) << 15);
 
 	hw_ops->update_tail_ptr(NBL_RES_MGT_TO_HW_PRIV(res_mgt),
-				 rx_ring->notify_qid,
-				 ((!!(rx_ring->avail_used_flags & NBL_PACKED_DESC_F_AVAIL_BIT)) |
-				 rx_ring->next_to_use));
+				 rx_ring->notify_qid, tail_ptr);
 }
 
 static inline void nbl_fill_rx_ring(struct nbl_res_rx_ring *rxq,
@@ -508,6 +516,9 @@ static inline void nbl_fill_rx_ring(struct nbl_res_rx_ring *rxq,
 		rte_io_wmb();
 		rx_desc->flags = flags;
 	}
+
+	rte_write32(nbl_res_txrx_notify_value(rxq->notify_qid, desc_index,
+					    rxq->avail_used_flags), rxq->notify);
 
 	rxq->vq_free_cnt -= fill_num;
 	rxq->next_to_use = desc_index;
@@ -551,6 +562,7 @@ nbl_res_txrx_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, u16 nb_pkts, u
 	u16 required_headroom;
 	u16 tx_extend_len;
 	u16 addr_offset;
+	u32 notify_val;
 
 	txq = tx_queue;
 	tx_ring = txq->desc;
@@ -570,7 +582,8 @@ nbl_res_txrx_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, u16 nb_pkts, u
 
 		tx_pkt = *tx_pkts++;
 
-		if (tx_pkt->ol_flags & RTE_MBUF_F_TX_VLAN) {
+		if (txq->product == NBL_LEONIS_TYPE &&
+		    (tx_pkt->ol_flags & RTE_MBUF_F_TX_VLAN)) {
 			required_headroom += sizeof(struct rte_vlan_hdr);
 			/* extend_hdr + ether_hdr + vlan_hdr */
 			tx_extend_len = required_headroom + sizeof(struct rte_ether_hdr);
@@ -589,7 +602,8 @@ nbl_res_txrx_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, u16 nb_pkts, u
 				       (size_t)desc_index * txq->exthdr_len);
 		}
 
-		if (tx_pkt->ol_flags & RTE_MBUF_F_TX_VLAN) {
+		if (txq->product == NBL_LEONIS_TYPE &&
+		    (tx_pkt->ol_flags & RTE_MBUF_F_TX_VLAN)) {
 			if (likely(can_push)) {
 				if (rte_vlan_insert(&tx_pkt)) {
 					can_push = 0;
@@ -680,7 +694,9 @@ nbl_res_txrx_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, u16 nb_pkts, u
 
 exit:
 	/* kick hw_notify_addr */
-	rte_write32(txq->notify_qid, txq->notify);
+	notify_val = nbl_res_txrx_notify_value(txq->notify_qid, txq->next_to_use,
+					      txq->avail_used_flags);
+	rte_write32(notify_val, txq->notify);
 	txq->txq_stats.tx_packets += nb_xmit_pkts;
 	return nb_xmit_pkts;
 }
@@ -757,7 +773,8 @@ nbl_res_txrx_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, u16 nb_pkts)
 		if (--num_sg)
 			continue;
 
-		if (rxq->eth_dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+		if (rxq->product == NBL_LEONIS_TYPE &&
+		    (rxq->eth_dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP))
 			rte_vlan_strip(rx_mbuf);
 
 		if (drop) {

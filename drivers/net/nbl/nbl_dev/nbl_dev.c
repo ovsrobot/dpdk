@@ -20,10 +20,6 @@ int nbl_dev_configure(struct rte_eth_dev *eth_dev)
 	if (dev_data == NULL || adapter == NULL)
 		return -EINVAL;
 
-	/* Keep the draco datapath disabled until its extended headers are supported. */
-	if (adapter->caps.product_type == NBL_DRACO_TYPE)
-		return -ENOTSUP;
-
 	NBL_LOG(DEBUG, "Begin to configure the device, state: %d", adapter->state);
 
 	dev_data->dev_conf.intr_conf.lsc = 0;
@@ -470,7 +466,7 @@ int nbl_dev_infos_get(struct rte_eth_dev *eth_dev, struct rte_eth_dev_info *dev_
 	dev_info->default_txportconf.nb_queues = ring_mgt->tx_ring_num;
 	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
 	dev_info->rx_offload_capa = RTE_ETH_RX_OFFLOAD_SCATTER;
-	if (!common->is_vf) {
+	if (adapter->caps.product_type == NBL_LEONIS_TYPE && !common->is_vf) {
 		dev_info->tx_offload_capa |= RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
 		dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
 	}
