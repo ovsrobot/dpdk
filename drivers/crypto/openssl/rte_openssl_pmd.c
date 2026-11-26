@@ -32,24 +32,26 @@ static uint8_t cryptodev_driver_id;
 OSSL_PROVIDER *legacy;
 OSSL_PROVIDER *deflt;
 
-static void ossl_legacy_provider_load(void)
+static int
+ossl_providers_load(void)
 {
-	/* Load Multiple providers into the default (NULL) library context */
-	legacy = OSSL_PROVIDER_load(NULL, "legacy");
-	if (legacy == NULL) {
-		OPENSSL_LOG(ERR, "Failed to load Legacy provider");
-		return;
-	}
-
+	/* Load default provider first -- always required */
 	deflt = OSSL_PROVIDER_load(NULL, "default");
 	if (deflt == NULL) {
 		OPENSSL_LOG(ERR, "Failed to load Default provider");
-		OSSL_PROVIDER_unload(legacy);
-		return;
+		return -ENOTSUP;
 	}
+
+	/* Load legacy provider -- optional, non-fatal if unavailable */
+	legacy = OSSL_PROVIDER_load(NULL, "legacy");
+	if (legacy == NULL)
+		OPENSSL_LOG(WARNING, "Legacy provider not available");
+
+	return 0;
 }
 
-static void ossl_legacy_provider_unload(void)
+static void
+ossl_providers_unload(void)
 {
 	OSSL_PROVIDER_unload(legacy);
 	OSSL_PROVIDER_unload(deflt);
@@ -4169,6 +4171,12 @@ cryptodev_openssl_create(const char *name,
 	struct rte_cryptodev *dev;
 	struct openssl_private *internals;
 
+	if (ossl_providers_load() < 0) {
+		ossl_providers_unload();
+		return -ENOTSUP;
+	}
+	openssl_pmd_caps_init();
+
 	dev = rte_cryptodev_pmd_create(name, &vdev->device, init_params);
 	if (dev == NULL) {
 		OPENSSL_LOG(ERR, "failed to create cryptodev vdev");
@@ -4199,20 +4207,12 @@ cryptodev_openssl_create(const char *name,
 
 	rte_cryptodev_pmd_probing_finish(dev);
 
-	/* Load legacy provider
-	 * Some algorithms are no longer available in earlier version of openssl,
-	 * unless the legacy provider explicitly loaded. e.g. DES
-	 */
-	ossl_legacy_provider_load();
-	openssl_pmd_caps_init();
-
 	return 0;
 
 init_error:
-	OPENSSL_LOG(ERR, "driver %s: create failed",
-			init_params->name);
-
+	OPENSSL_LOG(ERR, "driver %s: create failed", init_params->name);
 	cryptodev_openssl_remove(vdev);
+	ossl_providers_unload();
 	return -EFAULT;
 }
 
@@ -4254,7 +4254,7 @@ cryptodev_openssl_remove(struct rte_vdev_device *vdev)
 	if (cryptodev == NULL)
 		return -ENODEV;
 
-	ossl_legacy_provider_unload();
+	ossl_providers_unload();
 
 	return rte_cryptodev_pmd_destroy(cryptodev);
 }
