@@ -51,11 +51,10 @@ void
 eal_mcfg_update_internal(void)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
-	internal_conf->legacy_mem = mcfg->legacy_mem;
-	internal_conf->single_file_segments = mcfg->single_file_segments;
+	user_cfg->legacy_mem = mcfg->legacy_mem;
+	user_cfg->single_file_segments = mcfg->single_file_segments;
 }
 
 void
@@ -63,11 +62,9 @@ eal_mcfg_update_from_internal(void)
 {
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
 
-	mcfg->legacy_mem = internal_conf->legacy_mem;
-	mcfg->single_file_segments = internal_conf->single_file_segments;
+	mcfg->legacy_mem = user_cfg->legacy_mem;
+	mcfg->single_file_segments = user_cfg->single_file_segments;
 	if (user_cfg->no_shconf)
 		rte_mp_disable(); /* multi-process requires shared config */
 	/* record current DPDK version */

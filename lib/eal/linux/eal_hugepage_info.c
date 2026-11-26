@@ -401,8 +401,7 @@ calc_num_pages(struct hugepage_info *hpi, struct dirent *dirent,
 {
 	uint64_t total_pages = 0;
 	unsigned int i;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/*
 	 * first, try to put all hugepages into relevant sockets, but
@@ -418,7 +417,7 @@ calc_num_pages(struct hugepage_info *hpi, struct dirent *dirent,
 	 * This could be determined by mapping,
 	 * but it is precisely what hugepage file reuse is trying to avoid.
 	 */
-	if (!internal_conf->legacy_mem && reusable_pages == 0)
+	if (!user_cfg->legacy_mem && reusable_pages == 0)
 		for (i = 0; i < rte_socket_count(); i++) {
 			int socket = rte_socket_id_by_idx(i);
 			unsigned int num_pages =

@@ -678,12 +678,10 @@ eal_nohuge_init(void)
 	void *addr;
 
 	mcfg = rte_eal_get_configuration()->mem_config;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
+	struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	/* nohuge mode is legacy mode */
-	internal_conf->legacy_mem = 1;
+	user_cfg->legacy_mem = 1;
 
 	msl = &mcfg->memsegs[0];
 
