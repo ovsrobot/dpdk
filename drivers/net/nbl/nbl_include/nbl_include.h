@@ -70,6 +70,7 @@ enum {
 
 enum nbl_product_type {
 	NBL_LEONIS_TYPE,
+	NBL_DRACO_TYPE,
 	NBL_PRODUCT_MAX,
 };
 

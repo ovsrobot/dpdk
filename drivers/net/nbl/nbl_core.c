@@ -4,6 +4,35 @@
 
 #include "nbl_core.h"
 
+static int nbl_hw_init_draco_snic(void *adapter __rte_unused)
+{
+	/* Keep probing disabled until the Draco HW layer is implemented. */
+	return -ENOTSUP;
+}
+
+static void nbl_hw_remove_draco_snic(void *adapter __rte_unused)
+{
+}
+
+static int nbl_res_init_draco(void *adapter __rte_unused,
+			      struct rte_eth_dev *eth_dev __rte_unused)
+{
+	return 0;
+}
+
+static void nbl_res_remove_draco(void *adapter __rte_unused)
+{
+}
+
+static int nbl_chan_init_draco(void *adapter __rte_unused)
+{
+	return 0;
+}
+
+static void nbl_chan_remove_draco(void *adapter __rte_unused)
+{
+}
+
 const struct nbl_product_core_ops nbl_product_core_ops[NBL_PRODUCT_MAX] = {
 	[NBL_LEONIS_TYPE] = {
 		.hw_init	= nbl_hw_init_leonis_snic,
@@ -12,6 +41,14 @@ const struct nbl_product_core_ops nbl_product_core_ops[NBL_PRODUCT_MAX] = {
 		.res_remove	= nbl_res_remove_leonis,
 		.chan_init	= nbl_chan_init_leonis,
 		.chan_remove	= nbl_chan_remove_leonis,
+	},
+	[NBL_DRACO_TYPE] = {
+		.hw_init	= nbl_hw_init_draco_snic,
+		.hw_remove	= nbl_hw_remove_draco_snic,
+		.res_init	= nbl_res_init_draco,
+		.res_remove	= nbl_res_remove_draco,
+		.chan_init	= nbl_chan_init_draco,
+		.chan_remove	= nbl_chan_remove_draco,
 	},
 };
 
@@ -28,6 +65,9 @@ static void nbl_init_func_caps(const struct rte_pci_device *pci_dev, struct nbl_
 	if (pci_dev->id.device_id >= NBL_DEVICE_ID_M18110 &&
 	    pci_dev->id.device_id <= NBL_DEVICE_ID_M18100_VF)
 		caps->product_type = NBL_LEONIS_TYPE;
+	else if (pci_dev->id.device_id >= NBL_DEVICE_ID_M18305 &&
+		 pci_dev->id.device_id <= NBL_DEVICE_ID_M18305_VF)
+		caps->product_type = NBL_DRACO_TYPE;
 }
 
 int nbl_core_init(struct nbl_adapter *adapter, struct rte_eth_dev *eth_dev)
@@ -41,7 +81,8 @@ int nbl_core_init(struct nbl_adapter *adapter, struct rte_eth_dev *eth_dev)
 	common->eth_dev = eth_dev;
 	nbl_init_func_caps(pci_dev, &adapter->caps);
 
-	common->is_vf = (pci_dev->id.device_id == NBL_DEVICE_ID_M18100_VF);
+	common->is_vf = (pci_dev->id.device_id == NBL_DEVICE_ID_M18100_VF ||
+			 pci_dev->id.device_id == NBL_DEVICE_ID_M18305_VF);
 
 	product_base_ops = nbl_core_get_product_ops(adapter->caps.product_type);
 
