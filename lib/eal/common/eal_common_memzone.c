@@ -20,6 +20,7 @@
 
 #include "malloc_heap.h"
 #include "malloc_elem.h"
+#include "eal_internal_cfg.h"
 #include "eal_private.h"
 #include "eal_memcfg.h"
 
@@ -30,9 +31,10 @@ RTE_EXPORT_SYMBOL(rte_memzone_max_set)
 int
 rte_memzone_max_set(size_t max)
 {
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct rte_mem_config *mcfg;
 
-	if (eal_get_internal_configuration()->init_complete > 0) {
+	if (runtime_state->init_complete > 0) {
 		EAL_LOG(ERR, "Max memzone cannot be set after EAL init");
 		return -1;
 	}
