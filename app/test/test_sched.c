@@ -22,8 +22,16 @@ test_sched(void)
 	printf("sched not supported on Windows, skipping test\n");
 	return TEST_SKIPPED;
 }
+
+static int
+test_sched_approx(void)
+{
+	printf("sched not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
 #else
 
+#include <rte_approx.h>
 #include <rte_sched.h>
 
 #define SUBPORT         0
@@ -213,6 +221,33 @@ test_sched(void)
 	return 0;
 }
 
+static int
+test_sched_approx(void)
+{
+	uint32_t p32 = 0;
+	uint32_t q32 = 0;
+	int err;
+
+	/* denum wraps in uint32_t during scaling */
+	err = rte_approx(2.647139521348302e-23, 1.126263171287887e-23,
+		&p32, &q32);
+	TEST_ASSERT_FAIL(err, "rte_approx accepted unrepresentable d\n");
+
+	/* denum * denum does not fit in uint32_t */
+	err = rte_approx(0.333333333, 1.5e-9, &p32, &q32);
+	TEST_ASSERT_FAIL(err, "rte_approx accepted d = 1.5e-9\n");
+
+	/* Coarse precision still succeeds */
+	err = rte_approx(0.125, 0.01, &p32, &q32);
+	TEST_ASSERT_SUCCESS(err, "rte_approx rejected d = 0.01\n");
+	TEST_ASSERT_EQUAL(p32, 1, "Wrong approximation p\n");
+	TEST_ASSERT_EQUAL(q32, 8, "Wrong approximation q\n");
+
+	return 0;
+}
+
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
 REGISTER_FAST_TEST(sched_autotest, NOHUGE_OK, ASAN_OK, test_sched);
+REGISTER_FAST_TEST(sched_approx_autotest, NOHUGE_OK, ASAN_OK,
+	test_sched_approx);

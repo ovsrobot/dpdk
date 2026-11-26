@@ -34,7 +34,8 @@ extern "C" {
  *   Pointer to pre-allocated space where the denominator of the rational
  *   approximation will be stored when operation is successful
  * @return
- *   0 upon success, error code otherwise
+ *   0 upon success, error code otherwise. The smallest supported
+ *   precision is 1e-4; a request for a smaller d returns an error
  */
 int rte_approx(double alpha, double d, uint32_t *p, uint32_t *q);
 
@@ -52,7 +53,8 @@ int rte_approx(double alpha, double d, uint32_t *p, uint32_t *q);
  *   Pointer to pre-allocated space where the denominator of the rational
  *   approximation will be stored when operation is successful
  * @return
- *   0 upon success, error code otherwise
+ *   0 upon success, error code otherwise. The smallest supported
+ *   precision is 1e-9; a request for a smaller d returns an error
  */
 int rte_approx_64(double alpha, double d, uint64_t *p, uint64_t *q);
 
