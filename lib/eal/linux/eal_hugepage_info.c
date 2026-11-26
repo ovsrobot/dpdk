@@ -500,7 +500,7 @@ hugepage_info_init(void)
 			 * init process.
 			 */
 #ifdef MAP_HUGE_SHIFT
-			if (internal_conf->in_memory) {
+			if (user_cfg->in_memory) {
 				EAL_LOG(DEBUG, "In-memory mode enabled, "
 					"hugepages of size %" PRIu64 " bytes "
 					"will be allocated anonymously",
@@ -581,12 +581,13 @@ eal_hugepage_info_init(void)
 	unsigned int i;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (hugepage_info_init() < 0)
 		return -1;
 
 	/* for no shared files mode, we're done */
-	if (internal_conf->no_shconf)
+	if (user_cfg->no_shconf)
 		return 0;
 
 	hpi = &internal_conf->hugepage_info[0];
