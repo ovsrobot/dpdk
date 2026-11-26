@@ -622,9 +622,17 @@ parse_test_rsa_json_init(void)
 		return -EINVAL;
 	}
 
-	info.interim_info.rsa_data.privkey = RTE_RSA_KEY_TYPE_QT;
-	if (keyfmt_str != NULL && strcmp(keyfmt_str, "standard") == 0)
-		info.interim_info.rsa_data.privkey = RTE_RSA_KEY_TYPE_EXP;
+	/* sigVer uses EXP (public key only). */
+	info.interim_info.rsa_data.privkey = RTE_RSA_KEY_TYPE_EXP;
+	/* sigGen uses CRT by default for performance. */
+	if (info.op == FIPS_TEST_ASYM_SIGGEN)
+		info.interim_info.rsa_data.privkey = RTE_RSA_KEY_TYPE_QT;
+	if (info.op == FIPS_TEST_ASYM_KEYGEN && keyfmt_str != NULL) {
+		if (strcmp(keyfmt_str, "crt") == 0)
+			info.interim_info.rsa_data.privkey = RTE_RSA_KEY_TYPE_QT;
+		if (strcmp(keyfmt_str, "standard") == 0)
+			info.interim_info.rsa_data.privkey = RTE_RSA_KEY_TYPE_EXP;
+	}
 
 	return 0;
 }
