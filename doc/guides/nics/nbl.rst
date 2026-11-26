@@ -34,6 +34,13 @@ The following Nebulamatrix device models are supported by the same nbl driver:
 - S1205CQ-A00CSP
 - S1055AS-A00CSP
 - S1052AS-A00CSP
+- S2055AS-A00CHT
+- S2025XS-A00CHT
+- S2045XS-A00CHT
+- S2025XT-A00CHT-F
+- S2045XT-A00CHT-F
+- S2055AS-A00CSP
+- S2048XS-A00CFT
 
 
 Linux Prerequisites
@@ -79,6 +86,7 @@ to be mapped to physical address (PA)
 with the EAL command line option ``--iova-mode=pa``.
 
 Only PF supports coexistence between DPDK and kernel driver; VF does not.
+Draco PFs support coexistence mode only.
 
 
 Prerequisites
