@@ -22,5 +22,6 @@ sources = files(
         'nbl_hw/nbl_resource.c',
         'nbl_hw/nbl_txrx.c',
         'nbl_hw/nbl_hw_leonis/nbl_hw_leonis_snic.c',
+        'nbl_hw/nbl_hw_draco/nbl_hw_draco_snic.c',
         'nbl_hw/nbl_hw_leonis/nbl_res_leonis.c',
 )

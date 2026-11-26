@@ -11,6 +11,8 @@
 #define NBL_HW_OPS_TBL_TO_PRIV(hw_ops_tbl)	((hw_ops_tbl)->priv)
 
 struct nbl_hw_ops {
+	int (*capture_bdf)(void *priv, u16 *func_id, u16 *mgt_pf);
+
 	/* queue */
 	void (*update_tail_ptr)(void *priv, u16 notify_qid, u16 tail_ptr);
 	u8 *(*get_tail_ptr)(void *priv);
@@ -31,5 +33,8 @@ struct nbl_hw_ops_tbl {
 
 int nbl_hw_init_leonis_snic(void *adapter);
 void nbl_hw_remove_leonis_snic(void *adapter);
+
+int nbl_hw_init_draco_snic(void *adapter);
+void nbl_hw_remove_draco_snic(void *adapter);
 
 #endif

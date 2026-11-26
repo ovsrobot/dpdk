@@ -25,4 +25,8 @@ struct nbl_hw_mgt_leonis_snic {
 	struct nbl_hw_mgt hw_mgt;
 };
 
+struct nbl_hw_mgt_draco_snic {
+	struct nbl_hw_mgt hw_mgt;
+};
+
 #endif

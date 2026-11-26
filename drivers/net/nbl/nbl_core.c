@@ -4,16 +4,6 @@
 
 #include "nbl_core.h"
 
-static int nbl_hw_init_draco_snic(void *adapter __rte_unused)
-{
-	/* Keep probing disabled until the Draco HW layer is implemented. */
-	return -ENOTSUP;
-}
-
-static void nbl_hw_remove_draco_snic(void *adapter __rte_unused)
-{
-}
-
 static int nbl_res_init_draco(void *adapter __rte_unused,
 			      struct rte_eth_dev *eth_dev __rte_unused)
 {
@@ -26,7 +16,8 @@ static void nbl_res_remove_draco(void *adapter __rte_unused)
 
 static int nbl_chan_init_draco(void *adapter __rte_unused)
 {
-	return 0;
+	/* Keep probing disabled until the Draco channel layer is implemented. */
+	return -ENOTSUP;
 }
 
 static void nbl_chan_remove_draco(void *adapter __rte_unused)
