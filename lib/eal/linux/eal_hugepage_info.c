@@ -453,8 +453,7 @@ hugepage_info_init(void)
 	unsigned int reusable_pages;
 	DIR *dir;
 	struct dirent *dirent;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	dir = opendir(sys_dir_path);
@@ -475,7 +474,7 @@ hugepage_info_init(void)
 		if (num_sizes >= MAX_HUGEPAGE_SIZES)
 			break;
 
-		hpi = &internal_conf->hugepage_info[num_sizes];
+		hpi = &platform_info->hugepage_info[num_sizes];
 		hpi->hugepage_sz =
 			rte_str_to_size(&dirent->d_name[dirent_start_len]);
 
@@ -546,17 +545,17 @@ hugepage_info_init(void)
 	if (dirent != NULL)
 		return -1;
 
-	internal_conf->num_hugepage_sizes = num_sizes;
+	platform_info->num_hugepage_sizes = num_sizes;
 
 	/* sort the page directory entries by size, largest to smallest */
-	qsort(&internal_conf->hugepage_info[0], num_sizes,
-	      sizeof(internal_conf->hugepage_info[0]), compare_hpi);
+	qsort(&platform_info->hugepage_info[0], num_sizes,
+	      sizeof(platform_info->hugepage_info[0]), compare_hpi);
 
 	/* now we have all info, check we have at least one valid size */
 	for (i = 0; i < num_sizes; i++) {
 		/* pages may no longer all be on socket 0, so check all */
 		unsigned int j, num_pages = 0;
-		struct hugepage_info *hpi = &internal_conf->hugepage_info[i];
+		struct hugepage_info *hpi = &platform_info->hugepage_info[i];
 
 		for (j = 0; j < RTE_MAX_NUMA_NODES; j++)
 			num_pages += hpi->num_pages[j];
@@ -578,8 +577,7 @@ eal_hugepage_info_init(void)
 {
 	struct hugepage_info *hpi, *tmp_hpi;
 	unsigned int i;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	struct eal_platform_info *platform_info = eal_get_platform_info();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
 
 	if (hugepage_info_init() < 0)
@@ -589,26 +587,26 @@ eal_hugepage_info_init(void)
 	if (user_cfg->no_shconf)
 		return 0;
 
-	hpi = &internal_conf->hugepage_info[0];
+	hpi = &platform_info->hugepage_info[0];
 
 	tmp_hpi = create_shared_memory(eal_hugepage_info_path(),
-			sizeof(internal_conf->hugepage_info));
+			sizeof(platform_info->hugepage_info));
 	if (tmp_hpi == NULL) {
 		EAL_LOG(ERR, "Failed to create shared memory!");
 		return -1;
 	}
 
-	memcpy(tmp_hpi, hpi, sizeof(internal_conf->hugepage_info));
+	memcpy(tmp_hpi, hpi, sizeof(platform_info->hugepage_info));
 
 	/* we've copied file descriptors along with everything else, but they
 	 * will be invalid in secondary process, so overwrite them
 	 */
-	for (i = 0; i < RTE_DIM(internal_conf->hugepage_info); i++) {
+	for (i = 0; i < RTE_DIM(platform_info->hugepage_info); i++) {
 		struct hugepage_info *tmp = &tmp_hpi[i];
 		tmp->lock_descriptor = -1;
 	}
 
-	if (munmap(tmp_hpi, sizeof(internal_conf->hugepage_info)) < 0) {
+	if (munmap(tmp_hpi, sizeof(platform_info->hugepage_info)) < 0) {
 		EAL_LOG(ERR, "Failed to unmap shared memory!");
 		return -1;
 	}
@@ -617,21 +615,20 @@ eal_hugepage_info_init(void)
 
 int eal_hugepage_info_read(void)
 {
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-	struct hugepage_info *hpi = &internal_conf->hugepage_info[0];
+	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct hugepage_info *hpi = &platform_info->hugepage_info[0];
 	struct hugepage_info *tmp_hpi;
 
 	tmp_hpi = open_shared_memory(eal_hugepage_info_path(),
-				  sizeof(internal_conf->hugepage_info));
+				  sizeof(platform_info->hugepage_info));
 	if (tmp_hpi == NULL) {
 		EAL_LOG(ERR, "Failed to open shared memory!");
 		return -1;
 	}
 
-	memcpy(hpi, tmp_hpi, sizeof(internal_conf->hugepage_info));
+	memcpy(hpi, tmp_hpi, sizeof(platform_info->hugepage_info));
 
-	if (munmap(tmp_hpi, sizeof(internal_conf->hugepage_info)) < 0) {
+	if (munmap(tmp_hpi, sizeof(platform_info->hugepage_info)) < 0) {
 		EAL_LOG(ERR, "Failed to unmap shared memory!");
 		return -1;
 	}
