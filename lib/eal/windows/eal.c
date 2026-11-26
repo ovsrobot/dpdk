@@ -419,6 +419,7 @@ rte_eal_init(int argc, char **argv)
 
 	return fctret;
 err_out:
+	eal_cleanup_config();
 	eal_clean_saved_args();
 	return -1;
 }
