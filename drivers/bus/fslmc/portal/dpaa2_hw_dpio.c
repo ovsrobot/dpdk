@@ -489,6 +489,7 @@ dpaa2_close_dpio_device(int object_id)
 			rte_free(dpio_dev->dpio);
 		}
 		TAILQ_REMOVE(&dpio_dev_list, dpio_dev, next);
+		dpaa2_unmap_dpio_portal(dpio_dev);
 		rte_intr_fd_close(dpio_dev->intr_handle);
 		/* dev_fd is closed by caller, clear reference here. */
 		rte_intr_dev_fd_set(dpio_dev->intr_handle, -1);
@@ -710,6 +711,7 @@ err:
 				dpio_dev->token);
 			rte_free(dpio_dev->dpio);
 		}
+		dpaa2_unmap_dpio_portal(dpio_dev);
 		rte_intr_fd_close(dpio_dev->intr_handle);
 		/* dev_fd is closed by caller, clear reference here. */
 		rte_intr_dev_fd_set(dpio_dev->intr_handle, -1);
