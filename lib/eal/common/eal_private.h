@@ -31,8 +31,6 @@ struct lcore_config {
 	volatile int ret;          /**< return value of function */
 
 	volatile RTE_ATOMIC(enum rte_lcore_state_t) state; /**< lcore state */
-	unsigned int numa_id;      /**< NUMA node ID for this lcore */
-	unsigned int core_id;      /**< core number on socket for this lcore */
 	int core_index;            /**< relative index, starting from 0 */
 	uint8_t core_role;         /**< role of core eg: OFF, RTE, SERVICE */
 
@@ -95,6 +93,13 @@ int eal_collate_args(int argc, char **argv);
  *   String representation of the cpuset (caller must free), or NULL on error.
  */
 char *eal_cpuset_to_str(const rte_cpuset_t *cpuset);
+
+/**
+ * Resolve a cpuset to a NUMA socket id.
+ *
+ * Returns SOCKET_ID_ANY if cpuset is NULL, empty, or spans multiple sockets.
+ */
+int eal_cpuset_socket_id(const rte_cpuset_t *cpuset);
 
 /**
  * Initialize the memzone subsystem (private to eal).
