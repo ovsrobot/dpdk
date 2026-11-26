@@ -518,7 +518,7 @@ hugepage_info_init(void)
 	unsigned int reusable_pages;
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = rte_eal_get_platform_info();
 	int failed = 0;
 
 	/* platform_info->hugepage_sizes[] is already sorted largest to smallest */

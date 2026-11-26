@@ -68,8 +68,9 @@ eal_get_user_configuration(void)
 }
 
 /* Return a pointer to the platform state structure */
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_get_platform_info)
 const struct eal_platform_info *
-eal_get_platform_info(void)
+rte_eal_get_platform_info(void)
 {
 	/* platform-discovered and runtime EAL state */
 	static struct eal_platform_info eal_platform_info;
@@ -305,7 +306,7 @@ int
 eal_apply_hugepage_mem_sz_limits(void)
 {
 	const struct eal_user_cfg *user_cfg = eal_get_user_configuration();
-	const struct eal_platform_info *platform_info = eal_get_platform_info();
+	const struct eal_platform_info *platform_info = rte_eal_get_platform_info();
 	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	unsigned int i;
 
