@@ -157,10 +157,15 @@ int rte_approx(double alpha, double d, uint32_t *p, uint32_t *q)
 	/* Compute alpha_num, d_num and denum */
 	denum = 1;
 	while (d < 1) {
+		if (denum > UINT32_MAX / 10)
+			return -1;
 		alpha *= 10;
 		d *= 10;
 		denum *= 10;
 	}
+	/* the search products must fit in uint32_t */
+	if (denum > UINT32_MAX / denum)
+		return -1;
 	alpha_num = (uint32_t) alpha;
 	d_num = (uint32_t) d;
 
@@ -310,10 +315,15 @@ int rte_approx_64(double alpha, double d, uint64_t *p, uint64_t *q)
 	/* Compute alpha_num, d_num and denum */
 	denum = 1;
 	while (d < 1) {
+		if (denum > UINT64_MAX / 10)
+			return -1;
 		alpha *= 10;
 		d *= 10;
 		denum *= 10;
 	}
+	/* the search products must fit in uint64_t */
+	if (denum > UINT64_MAX / denum)
+		return -1;
 	alpha_num = (uint64_t) alpha;
 	d_num = (uint64_t) d;
 
