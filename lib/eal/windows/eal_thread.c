@@ -20,8 +20,9 @@
 int
 eal_thread_wake_worker(unsigned int worker_id)
 {
-	int m2w = lcore_config[worker_id].pipe_main2worker[1];
-	int w2m = lcore_config[worker_id].pipe_worker2main[0];
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+	int m2w = runtime_state->lcore_cfg[worker_id].pipe_main2worker[1];
+	int w2m = runtime_state->lcore_cfg[worker_id].pipe_worker2main[0];
 	char c = 0;
 	int n;
 
@@ -43,11 +44,12 @@ void
 eal_thread_wait_command(void)
 {
 	unsigned int lcore_id = rte_lcore_id();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	int m2w;
 	char c;
 	int n;
 
-	m2w = lcore_config[lcore_id].pipe_main2worker[0];
+	m2w = runtime_state->lcore_cfg[lcore_id].pipe_main2worker[0];
 	do {
 		n = _read(m2w, &c, 1);
 	} while (n < 0 && errno == EINTR);
@@ -59,11 +61,12 @@ void
 eal_thread_ack_command(void)
 {
 	unsigned int lcore_id = rte_lcore_id();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	char c = 0;
 	int w2m;
 	int n;
 
-	w2m = lcore_config[lcore_id].pipe_worker2main[1];
+	w2m = runtime_state->lcore_cfg[lcore_id].pipe_worker2main[1];
 	do {
 		n = _write(w2m, &c, 1);
 	} while (n == 0 || (n < 0 && errno == EINTR));

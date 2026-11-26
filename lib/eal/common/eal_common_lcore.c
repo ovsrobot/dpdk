@@ -36,6 +36,8 @@ unsigned int rte_lcore_count(void)
 RTE_EXPORT_SYMBOL(rte_lcore_index)
 int rte_lcore_index(int lcore_id)
 {
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+
 	if (unlikely(lcore_id >= RTE_MAX_LCORE))
 		return -1;
 
@@ -46,12 +48,13 @@ int rte_lcore_index(int lcore_id)
 		lcore_id = (int)rte_lcore_id();
 	}
 
-	return lcore_config[lcore_id].core_index;
+	return runtime_state->lcore_cfg[lcore_id].core_index;
 }
 
 RTE_EXPORT_SYMBOL(rte_lcore_to_cpu_id)
 int rte_lcore_to_cpu_id(int lcore_id)
 {
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	const struct eal_platform_info *platform_info = eal_get_platform_info();
 	unsigned int cpu;
 
@@ -65,17 +68,18 @@ int rte_lcore_to_cpu_id(int lcore_id)
 		lcore_id = (int)rte_lcore_id();
 	}
 
-	for (cpu = 0; cpu < CPU_SETSIZE && cpu < platform_info->cpu_count; cpu++) {
-		if (CPU_ISSET(cpu, &lcore_config[lcore_id].cpuset))
-			return (int)platform_info->cpu_info[cpu].core_id;
-	}
+	cpu = runtime_state->lcore_cfg[lcore_id].first_cpu;
+	if (cpu < platform_info->cpu_count)
+		return (int)platform_info->cpu_info[cpu].core_id;
 	return -1;
 }
 
 RTE_EXPORT_SYMBOL(rte_lcore_cpuset)
 rte_cpuset_t rte_lcore_cpuset(unsigned int lcore_id)
 {
-	return lcore_config[lcore_id].cpuset;
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+
+	return runtime_state->lcore_cfg[lcore_id].cpuset;
 }
 
 RTE_EXPORT_SYMBOL(rte_eal_lcore_role)
@@ -135,10 +139,11 @@ RTE_EXPORT_SYMBOL(rte_lcore_to_socket_id)
 unsigned int
 rte_lcore_to_socket_id(unsigned int lcore_id)
 {
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	if (unlikely(lcore_id >= RTE_MAX_LCORE))
 		return (unsigned int)SOCKET_ID_ANY;
 
-	return (unsigned int)eal_cpuset_socket_id(&lcore_config[lcore_id].cpuset);
+	return (unsigned int)eal_cpuset_socket_id(&runtime_state->lcore_cfg[lcore_id].cpuset);
 }
 
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cpu_socket_id, 26.11)
@@ -175,6 +180,7 @@ rte_eal_cpu_init(void)
 	/* pointer to global configuration */
 	struct rte_config *config = rte_eal_get_configuration();
 	struct eal_platform_info *platform_info = eal_get_platform_info();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	unsigned lcore_id;
 	unsigned count = 0;
 	unsigned int socket_id, prev_socket_id;
@@ -207,14 +213,15 @@ rte_eal_cpu_init(void)
 	 * ones and enable them by default.
 	 */
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
-		lcore_config[lcore_id].core_index = count;
+		runtime_state->lcore_cfg[lcore_id].core_index = count;
 
 		/* init cpuset for per lcore config */
-		CPU_ZERO(&lcore_config[lcore_id].cpuset);
+		CPU_ZERO(&runtime_state->lcore_cfg[lcore_id].cpuset);
+		runtime_state->lcore_cfg[lcore_id].first_cpu = UINT16_MAX;
 
 		if (eal_cpu_detected(lcore_id) == 0) {
 			config->lcore_role[lcore_id] = RTE_LCORE_ROLE_OFF;
-			lcore_config[lcore_id].core_index = -1;
+			runtime_state->lcore_cfg[lcore_id].core_index = -1;
 			continue;
 		}
 
@@ -223,14 +230,14 @@ rte_eal_cpu_init(void)
 		lcore_to_socket_id[lcore_id] = socket_id;
 
 		/* By default, lcore 1:1 map to cpu id */
-		CPU_SET(lcore_id, &lcore_config[lcore_id].cpuset);
+		CPU_SET(lcore_id, &runtime_state->lcore_cfg[lcore_id].cpuset);
+		runtime_state->lcore_cfg[lcore_id].first_cpu = lcore_id;
 
 		/* This is the first time we discover the lcores, so the bitset should be zeroed */
 		rte_bitset_set(config->core_indices, count);
 
 		/* By default, each detected core is enabled */
 		config->lcore_role[lcore_id] = RTE_LCORE_ROLE_RTE;
-		lcore_config[lcore_id].core_role = RTE_LCORE_ROLE_RTE;
 		EAL_LOG(DEBUG, "Detected lcore %u as "
 				"core %u on NUMA node %u",
 				lcore_id,
@@ -414,6 +421,7 @@ unsigned int
 eal_lcore_non_eal_allocate(void)
 {
 	struct rte_config *cfg = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct lcore_callback *callback;
 	struct lcore_callback *prev;
 	unsigned int lcore_id;
@@ -430,7 +438,7 @@ eal_lcore_non_eal_allocate(void)
 		if (cfg->lcore_role[lcore_id] != RTE_LCORE_ROLE_OFF)
 			continue;
 		rte_bitset_set(cfg->core_indices, core_index);
-		lcore_config[lcore_id].core_index = core_index;
+		runtime_state->lcore_cfg[lcore_id].core_index = core_index;
 		cfg->lcore_role[lcore_id] = RTE_LCORE_ROLE_NON_EAL;
 		cfg->lcore_count++;
 		break;
@@ -452,8 +460,8 @@ eal_lcore_non_eal_allocate(void)
 		}
 		EAL_LOG(DEBUG, "Initialization refused for lcore %u.",
 			lcore_id);
-		rte_bitset_clear(cfg->core_indices, lcore_config[lcore_id].core_index);
-		lcore_config[lcore_id].core_index = -1;
+		rte_bitset_clear(cfg->core_indices, runtime_state->lcore_cfg[lcore_id].core_index);
+		runtime_state->lcore_cfg[lcore_id].core_index = -1;
 		cfg->lcore_role[lcore_id] = RTE_LCORE_ROLE_OFF;
 		cfg->lcore_count--;
 		lcore_id = RTE_MAX_LCORE;
@@ -468,6 +476,7 @@ void
 eal_lcore_non_eal_release(unsigned int lcore_id)
 {
 	struct rte_config *cfg = rte_eal_get_configuration();
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct lcore_callback *callback;
 
 	rte_rwlock_write_lock(&lcore_lock);
@@ -475,8 +484,8 @@ eal_lcore_non_eal_release(unsigned int lcore_id)
 		goto out;
 	TAILQ_FOREACH(callback, &lcore_callbacks, next)
 		callback_uninit(callback, lcore_id);
-	rte_bitset_clear(cfg->core_indices, lcore_config[lcore_id].core_index);
-	lcore_config[lcore_id].core_index = -1;
+	rte_bitset_clear(cfg->core_indices, runtime_state->lcore_cfg[lcore_id].core_index);
+	runtime_state->lcore_cfg[lcore_id].core_index = -1;
 	cfg->lcore_role[lcore_id] = RTE_LCORE_ROLE_OFF;
 	cfg->lcore_count--;
 out:
@@ -537,6 +546,7 @@ calc_usage_ratio(const struct rte_lcore_usage *usage)
 static int
 lcore_dump_cb(unsigned int lcore_id, void *arg)
 {
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct rte_config *cfg = rte_eal_get_configuration();
 	char *cpuset;
 	struct rte_lcore_usage usage;
@@ -555,7 +565,7 @@ lcore_dump_cb(unsigned int lcore_id, void *arg)
 			return -ENOMEM;
 		}
 	}
-	cpuset = eal_cpuset_to_str(&lcore_config[lcore_id].cpuset);
+	cpuset = eal_cpuset_to_str(&runtime_state->lcore_cfg[lcore_id].cpuset);
 	fprintf(f, "lcore %u, socket %u, role %s, cpuset %s\n", lcore_id,
 		rte_lcore_to_socket_id(lcore_id),
 		lcore_role_str(cfg->lcore_role[lcore_id]),
@@ -610,6 +620,7 @@ format_usage_ratio(char *buf, uint16_t size, const struct rte_lcore_usage *usage
 static int
 lcore_telemetry_info_cb(unsigned int lcore_id, void *arg)
 {
+	const struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	struct rte_config *cfg = rte_eal_get_configuration();
 	struct lcore_telemetry_info *info = arg;
 	char ratio_str[RTE_TEL_MAX_STRING_LEN];
@@ -630,7 +641,7 @@ lcore_telemetry_info_cb(unsigned int lcore_id, void *arg)
 		return -ENOMEM;
 	rte_tel_data_start_array(cpuset, RTE_TEL_INT_VAL);
 	for (cpu = 0; cpu < CPU_SETSIZE; cpu++) {
-		if (CPU_ISSET(cpu, &lcore_config[lcore_id].cpuset))
+		if (CPU_ISSET(cpu, &runtime_state->lcore_cfg[lcore_id].cpuset))
 			rte_tel_data_add_array_int(cpuset, cpu);
 	}
 	rte_tel_data_add_dict_container(info->d, "cpuset", cpuset, 0);

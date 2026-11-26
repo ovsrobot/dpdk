@@ -20,11 +20,13 @@ RTE_EXPORT_SYMBOL(rte_eal_wait_lcore)
 int
 rte_eal_wait_lcore(unsigned worker_id)
 {
-	while (rte_atomic_load_explicit(&lcore_config[worker_id].state,
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+
+	while (rte_atomic_load_explicit(&runtime_state->lcore_cfg[worker_id].state,
 			rte_memory_order_acquire) != WAIT)
 		rte_pause();
 
-	return lcore_config[worker_id].ret;
+	return runtime_state->lcore_cfg[worker_id].ret;
 }
 
 /*
@@ -36,21 +38,23 @@ RTE_EXPORT_SYMBOL(rte_eal_remote_launch)
 int
 rte_eal_remote_launch(lcore_function_t *f, void *arg, unsigned int worker_id)
 {
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	int rc = -EBUSY;
 
 	/* Check if the worker is in 'WAIT' state. Use acquire order
 	 * since 'state' variable is used as the guard variable.
 	 */
-	if (rte_atomic_load_explicit(&lcore_config[worker_id].state,
+	if (rte_atomic_load_explicit(&runtime_state->lcore_cfg[worker_id].state,
 			rte_memory_order_acquire) != WAIT)
 		goto finish;
 
-	lcore_config[worker_id].arg = arg;
+	runtime_state->lcore_cfg[worker_id].arg = arg;
 	/* Ensure that all the memory operations are completed
 	 * before the worker thread starts running the function.
 	 * Use worker thread function as the guard variable.
 	 */
-	rte_atomic_store_explicit(&lcore_config[worker_id].f, f, rte_memory_order_release);
+	rte_atomic_store_explicit(&runtime_state->lcore_cfg[worker_id].f, f,
+			rte_memory_order_release);
 
 	rc = eal_thread_wake_worker(worker_id);
 
@@ -69,12 +73,13 @@ int
 rte_eal_mp_remote_launch(int (*f)(void *), void *arg,
 			 enum rte_rmt_call_main_t call_main)
 {
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	int lcore_id;
 	int main_lcore = rte_get_main_lcore();
 
 	/* check state of lcores */
 	RTE_LCORE_FOREACH_WORKER(lcore_id) {
-		if (lcore_config[lcore_id].state != WAIT)
+		if (runtime_state->lcore_cfg[lcore_id].state != WAIT)
 			return -EBUSY;
 	}
 
@@ -84,8 +89,8 @@ rte_eal_mp_remote_launch(int (*f)(void *), void *arg,
 	}
 
 	if (call_main == CALL_MAIN) {
-		lcore_config[main_lcore].ret = f(arg);
-		lcore_config[main_lcore].state = WAIT;
+		runtime_state->lcore_cfg[main_lcore].ret = f(arg);
+		runtime_state->lcore_cfg[main_lcore].state = WAIT;
 	}
 
 	return 0;
@@ -98,7 +103,9 @@ RTE_EXPORT_SYMBOL(rte_eal_get_lcore_state)
 enum rte_lcore_state_t
 rte_eal_get_lcore_state(unsigned lcore_id)
 {
-	return lcore_config[lcore_id].state;
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+
+	return runtime_state->lcore_cfg[lcore_id].state;
 }
 
 /*

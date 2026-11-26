@@ -69,9 +69,12 @@ thread_update_affinity(rte_cpuset_t *cpusetp)
 	memmove(&RTE_PER_LCORE(_cpuset), cpusetp, sizeof(rte_cpuset_t));
 
 	if (lcore_id != (unsigned)LCORE_ID_ANY) {
-		/* EAL thread: update lcore_config cpuset first then find numa based on that */
-		memmove(&lcore_config[lcore_id].cpuset, cpusetp,
+		struct eal_runtime_state *runtime_state = eal_get_runtime_state();
+
+		/* EAL thread: update lcore_runtime cpuset first then find numa based on that */
+		memmove(&runtime_state->lcore_cfg[lcore_id].cpuset, cpusetp,
 			sizeof(rte_cpuset_t));
+		runtime_state->lcore_cfg[lcore_id].first_cpu = (uint16_t)(RTE_CPU_FFS(cpusetp) - 1);
 		RTE_PER_LCORE(_numa_id) = rte_lcore_to_socket_id(lcore_id);
 	} else {
 		/* Non-EAL thread: preserve SOCKET_ID_ANY if cpuset spans NUMA nodes. */
@@ -149,10 +152,11 @@ __rte_noreturn uint32_t
 eal_thread_loop(void *arg)
 {
 	unsigned int lcore_id = (uintptr_t)arg;
+	struct eal_runtime_state *runtime_state = eal_get_runtime_state();
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 	int ret;
 
-	__rte_thread_init(lcore_id, &lcore_config[lcore_id].cpuset);
+	__rte_thread_init(lcore_id, &runtime_state->lcore_cfg[lcore_id].cpuset);
 
 	ret = eal_thread_dump_current_affinity(cpuset, sizeof(cpuset));
 	EAL_LOG(DEBUG, "lcore %u is ready (tid=%zx;cpuset=[%s%s])",
@@ -171,7 +175,7 @@ eal_thread_loop(void *arg)
 		/* Set the state to 'RUNNING'. Use release order
 		 * since 'state' variable is used as the guard variable.
 		 */
-		rte_atomic_store_explicit(&lcore_config[lcore_id].state, RUNNING,
+		rte_atomic_store_explicit(&runtime_state->lcore_cfg[lcore_id].state, RUNNING,
 			rte_memory_order_release);
 
 		eal_thread_ack_command();
@@ -181,25 +185,25 @@ eal_thread_loop(void *arg)
 		 * are accessed only after update to 'f' is visible.
 		 * Wait till the update to 'f' is visible to the worker.
 		 */
-		while ((f = rte_atomic_load_explicit(&lcore_config[lcore_id].f,
+		while ((f = rte_atomic_load_explicit(&runtime_state->lcore_cfg[lcore_id].f,
 				rte_memory_order_acquire)) == NULL)
 			rte_pause();
 
 		rte_eal_trace_thread_lcore_running(lcore_id, f);
 
 		/* call the function and store the return value */
-		fct_arg = lcore_config[lcore_id].arg;
+		fct_arg = runtime_state->lcore_cfg[lcore_id].arg;
 		ret = f(fct_arg);
-		lcore_config[lcore_id].ret = ret;
-		lcore_config[lcore_id].f = NULL;
-		lcore_config[lcore_id].arg = NULL;
+		runtime_state->lcore_cfg[lcore_id].ret = ret;
+		runtime_state->lcore_cfg[lcore_id].f = NULL;
+		runtime_state->lcore_cfg[lcore_id].arg = NULL;
 
 		/* Store the state with release order to ensure that
 		 * the memory operations from the worker thread
 		 * are completed before the state is updated.
 		 * Use 'state' as the guard variable.
 		 */
-		rte_atomic_store_explicit(&lcore_config[lcore_id].state, WAIT,
+		rte_atomic_store_explicit(&runtime_state->lcore_cfg[lcore_id].state, WAIT,
 			rte_memory_order_release);
 
 		rte_eal_trace_thread_lcore_stopped(lcore_id);

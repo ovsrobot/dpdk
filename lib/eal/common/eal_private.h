@@ -19,27 +19,6 @@
 #include "eal_internal_cfg.h"
 
 /**
- * Structure storing internal configuration (per-lcore)
- */
-struct lcore_config {
-	rte_thread_t thread_id;    /**< thread identifier */
-	int pipe_main2worker[2];   /**< communication pipe with main */
-	int pipe_worker2main[2];   /**< communication pipe with main */
-
-	RTE_ATOMIC(lcore_function_t *) volatile f; /**< function to call */
-	void * volatile arg;       /**< argument of function */
-	volatile int ret;          /**< return value of function */
-
-	volatile RTE_ATOMIC(enum rte_lcore_state_t) state; /**< lcore state */
-	int core_index;            /**< relative index, starting from 0 */
-	uint8_t core_role;         /**< role of core eg: OFF, RTE, SERVICE */
-
-	rte_cpuset_t cpuset;       /**< cpu set which the lcore affinity to */
-};
-
-extern struct lcore_config lcore_config[RTE_MAX_LCORE];
-
-/**
  * The global RTE configuration structure.
  */
 struct rte_config {
