@@ -493,57 +493,46 @@ rte_eal_get_runtime_dir(void);
 
 /**
  * @internal
- * Iterate to the next driver path.
+ * Iterate to the next user-provided driver path.
  *
- * This function iterates through the list of dynamically loaded drivers,
- * or driver paths that were specified via -d or --driver-path command-line
- * options during EAL initialization.
+ * This function iterates through the driver paths that were specified
+ * via -d or --driver-path command-line options during EAL initialization.
  *
  * @param start
  *   Starting iteration point. The iteration will start at the first driver path if NULL.
- * @param cmdline_only
- *   If true, only iterate paths from command line (-d flags).
- *   If false, iterate all paths including those expanded from directories.
  *
  * @return
  *   Next driver path string, NULL if there is none.
  */
 __rte_internal
 const char *
-rte_eal_driver_path_next(const char *start, bool cmdline_only);
+rte_eal_driver_path_next(const char *start);
 
 /**
  * @internal
- * Iterate over all driver paths.
+ * Iterate over all user-provided driver paths.
  *
  * This macro provides a convenient way to iterate through all driver paths
- * that were loaded via -d flags during EAL initialization.
+ * that were specified via -d flags during EAL initialization.
  *
  * @param path
  *   Iterator variable of type const char *
- * @param cmdline_only
- *   If true, only iterate paths from command line (-d flags).
- *   If false, iterate all paths including those expanded from directories.
  */
-#define RTE_EAL_DRIVER_PATH_FOREACH(path, cmdline_only) \
-	for (path = rte_eal_driver_path_next(NULL, cmdline_only); \
+#define RTE_EAL_DRIVER_PATH_FOREACH(path) \
+	for (path = rte_eal_driver_path_next(NULL); \
 	     path != NULL; \
-	     path = rte_eal_driver_path_next(path, cmdline_only))
+	     path = rte_eal_driver_path_next(path))
 
 /**
  * @internal
- * Get count of driver paths.
- *
- * @param cmdline_only
- *   If true, only count paths from command line (-d flags).
- *   If false, count all paths including those expanded from directories.
+ * Get count of user-provided driver paths.
  *
  * @return
- *   Number of driver paths.
+ *   Number of driver paths specified via -d flags during EAL initialization.
  */
 __rte_internal
 unsigned int
-rte_eal_driver_path_count(bool cmdline_only);
+rte_eal_driver_path_count(void);
 
 #ifdef __cplusplus
 }
