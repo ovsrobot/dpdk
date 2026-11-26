@@ -21,13 +21,6 @@
  * The global RTE configuration structure.
  */
 struct rte_config {
-
-	/** Primary or secondary configuration */
-	enum rte_proc_type_t process_type;
-
-	/** PA or VA mapping mode */
-	enum rte_iova_mode iova_mode;
-
 	/**
 	 * Pointer to memory configuration, which may be shared across multiple
 	 * DPDK instances
