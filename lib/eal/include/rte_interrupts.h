@@ -521,7 +521,7 @@ rte_intr_max_intr_get(const struct rte_intr_handle *intr_handle);
  * @param intr_handle
  *  pointer to the interrupt handle.
  * @param nb_efd
- *  Available event fd
+ *  Number of available event fds, from zero to the interrupt vector count.
  *
  * @return
  *  - On success, zero.
@@ -768,7 +768,8 @@ rte_intr_vec_list_free(struct rte_intr_handle *intr_handle);
  * @param intr_handle
  *  pointer to the interrupt handle.
  * @param size
- *  efds and elist array size.
+ *  efds and elist array size. Must be positive, no greater than UINT16_MAX,
+ *  and at least the number of available event fds and requested interrupts.
  *
  * @return
  *  - On success, zero

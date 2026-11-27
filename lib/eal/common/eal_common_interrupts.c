@@ -113,8 +113,10 @@ int rte_intr_event_list_update(struct rte_intr_handle *intr_handle, int size)
 
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
-	if (size == 0) {
-		EAL_LOG(DEBUG, "Size can't be zero");
+	if (size <= 0 || size > UINT16_MAX || (uint32_t)size < intr_handle->nb_efd ||
+			(uint32_t)size < intr_handle->max_intr) {
+		EAL_LOG(DEBUG, "Invalid event list size %d, eventfd count %u, max interrupts %u",
+			size, intr_handle->nb_efd, intr_handle->max_intr);
 		rte_errno = EINVAL;
 		goto fail;
 	}
@@ -154,9 +156,9 @@ int rte_intr_event_list_update(struct rte_intr_handle *intr_handle, int size)
 		free(intr_handle->efds);
 		free(intr_handle->elist);
 	}
+	intr_handle->efds = tmp_efds;
 	intr_handle->elist = tmp_elist;
 
-	intr_handle->efds = tmp_efds;
 	intr_handle->nb_intr = size;
 
 	return 0;
@@ -316,6 +318,13 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_intr_nb_efd_set)
 int rte_intr_nb_efd_set(struct rte_intr_handle *intr_handle, int nb_efd)
 {
 	CHECK_VALID_INTR_HANDLE(intr_handle);
+
+	if (nb_efd < 0 || nb_efd > intr_handle->nb_intr) {
+		EAL_LOG(DEBUG, "Invalid eventfd count %d, interrupt count %d",
+			nb_efd, intr_handle->nb_intr);
+		rte_errno = EINVAL;
+		goto fail;
+	}
 
 	intr_handle->nb_efd = nb_efd;
 

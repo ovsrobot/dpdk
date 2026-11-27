@@ -4,6 +4,7 @@
 
 #define ALLOW_INTERNAL_API
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -498,6 +499,79 @@ test_interrupt_full_path_check(enum test_interrupt_handle_type intr_type)
 	return 0;
 }
 
+static int
+test_interrupt_event_list_resize(struct rte_intr_handle *intr_handle)
+{
+	struct rte_epoll_event event = { .fd = 123 };
+
+	TEST_ASSERT_SUCCESS(rte_intr_event_list_update(intr_handle, 2),
+		"Failed to shrink interrupt event list");
+	TEST_ASSERT_SUCCESS(rte_intr_efds_index_set(intr_handle, 1, 123),
+		"Failed to set eventfd entry before growth");
+	TEST_ASSERT_SUCCESS(rte_intr_elist_index_set(intr_handle, 1, event),
+		"Failed to set epoll event before growth");
+	TEST_ASSERT_SUCCESS(rte_intr_event_list_update(intr_handle, 4),
+		"Failed to grow interrupt event list");
+	TEST_ASSERT_EQUAL(rte_intr_efds_index_get(intr_handle, 1), 123,
+		"Growth did not preserve eventfd entry");
+	TEST_ASSERT_EQUAL(rte_intr_elist_index_get(intr_handle, 1)->fd, 123,
+		"Growth did not preserve epoll event");
+	TEST_ASSERT_EQUAL(rte_intr_efds_index_get(intr_handle, 2), -1,
+		"Growth did not initialize new eventfd entry");
+	TEST_ASSERT_EQUAL(rte_atomic_load_explicit(&rte_intr_elist_index_get(intr_handle, 2)->status,
+			rte_memory_order_relaxed), RTE_EPOLL_INVALID,
+		"Growth did not initialize new epoll event");
+	TEST_ASSERT_SUCCESS(rte_intr_efds_index_set(intr_handle, 1, -1),
+		"Failed to clear eventfd entry");
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_interrupt_eventfd_counts(struct rte_intr_handle *intr_handle)
+{
+	TEST_ASSERT_SUCCESS(rte_intr_event_list_update(intr_handle, 4),
+		"Failed to resize interrupt event list");
+	TEST_ASSERT_SUCCESS(rte_intr_efds_index_set(intr_handle, 3, 123),
+		"Failed to set eventfd entry");
+	TEST_ASSERT_SUCCESS(rte_intr_nb_efd_set(intr_handle, 4),
+		"Failed to set eventfd count at capacity");
+	TEST_ASSERT_EQUAL(rte_intr_nb_efd_set(intr_handle, 5), -EINVAL,
+		"Accepted eventfd count above capacity");
+	TEST_ASSERT_EQUAL(rte_intr_nb_efd_set(intr_handle, -1), -EINVAL,
+		"Accepted negative eventfd count");
+	TEST_ASSERT_EQUAL(rte_intr_nb_efd_get(intr_handle), 4,
+		"Rejected eventfd count changed the handle");
+	TEST_ASSERT_EQUAL(rte_intr_event_list_update(intr_handle, 3), -EINVAL,
+		"Accepted resize below eventfd count");
+	TEST_ASSERT_EQUAL(rte_intr_event_list_update(intr_handle, 0), -EINVAL,
+		"Accepted zero event list size");
+	TEST_ASSERT_EQUAL(rte_intr_event_list_update(intr_handle, -1), -EINVAL,
+		"Accepted negative event list size");
+	TEST_ASSERT_EQUAL(rte_intr_event_list_update(intr_handle, UINT16_MAX + 1), -EINVAL,
+		"Accepted event list size above the interrupt count limit");
+	TEST_ASSERT_EQUAL(rte_intr_nb_intr_get(intr_handle), 4,
+		"Rejected resize changed the interrupt count");
+	TEST_ASSERT_EQUAL(rte_intr_efds_index_get(intr_handle, 3), 123,
+		"Rejected resize changed the eventfd list");
+	TEST_ASSERT_SUCCESS(rte_intr_event_list_update(intr_handle, 4),
+		"Failed to resize to the eventfd count");
+	TEST_ASSERT_SUCCESS(rte_intr_nb_efd_set(intr_handle, 0),
+		"Failed to clear eventfd count");
+	TEST_ASSERT_SUCCESS(rte_intr_max_intr_set(intr_handle, 3),
+		"Failed to set requested interrupt count");
+	TEST_ASSERT_EQUAL(rte_intr_event_list_update(intr_handle, 2), -EINVAL,
+		"Accepted resize below requested interrupt count");
+	TEST_ASSERT_EQUAL(rte_intr_nb_intr_get(intr_handle), 4,
+		"Rejected resize changed the interrupt count");
+	TEST_ASSERT_SUCCESS(rte_intr_max_intr_set(intr_handle, 0),
+		"Failed to clear requested interrupt count");
+	TEST_ASSERT_SUCCESS(rte_intr_event_list_update(intr_handle, 2),
+		"Failed to shrink after clearing eventfd count");
+
+	return TEST_SUCCESS;
+}
+
 /**
  * Main function of testing interrupt.
  */
@@ -505,6 +579,7 @@ static int
 test_interrupt(void)
 {
 	int ret = -1;
+	struct rte_intr_handle *shared_intr_handle;
 	struct rte_intr_handle *test_intr_handle;
 
 	if (RTE_EXEC_ENV_IS_WINDOWS || RTE_EXEC_ENV_IS_FREEBSD)
@@ -514,6 +589,20 @@ test_interrupt(void)
 		printf("fail to initialize for testing interrupt\n");
 		goto out;
 	}
+
+	if (test_interrupt_event_list_resize(intr_handles[TEST_INTERRUPT_HANDLE_INVALID]) != 0)
+		goto out;
+	shared_intr_handle = rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_SHARED);
+	if (shared_intr_handle == NULL)
+		goto out;
+	ret = test_interrupt_event_list_resize(shared_intr_handle);
+	rte_intr_instance_free(shared_intr_handle);
+	if (ret != 0)
+		goto out;
+	ret = -1;
+
+	if (test_interrupt_eventfd_counts(intr_handles[TEST_INTERRUPT_HANDLE_INVALID]) != 0)
+		goto out;
 
 	printf("Check unknown valid interrupt full path\n");
 	if (test_interrupt_full_path_check(TEST_INTERRUPT_HANDLE_VALID) < 0) {
