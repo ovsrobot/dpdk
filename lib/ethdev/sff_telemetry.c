@@ -48,6 +48,12 @@ sff_port_module_eeprom_parse(uint16_t port_id, struct rte_tel_data *d)
 	struct rte_dev_eeprom_info einfo;
 	int ret;
 
+	/* The module type is passed as is to the transceiver library. */
+	RTE_BUILD_BUG_ON(RTE_ETH_MODULE_SFF_8079 != RTE_TRANSCEIVER_SFF_8079);
+	RTE_BUILD_BUG_ON(RTE_ETH_MODULE_SFF_8472 != RTE_TRANSCEIVER_SFF_8472);
+	RTE_BUILD_BUG_ON(RTE_ETH_MODULE_SFF_8636 != RTE_TRANSCEIVER_SFF_8636);
+	RTE_BUILD_BUG_ON(RTE_ETH_MODULE_SFF_8436 != RTE_TRANSCEIVER_SFF_8436);
+
 	if (d == NULL) {
 		RTE_ETHDEV_LOG_LINE(ERR, "Dict invalid");
 		return;
