@@ -390,7 +390,12 @@ rte_sched_port_subport_profile_add(struct rte_sched_port *port,
  * @param subport_profile_id
  *   ID of subport bandwidth profile
  * @return
- *   0 upon success, error code otherwise
+ *   0 upon success, negative error code otherwise. On error, the port
+ *   scheduler instance stays valid and is released by
+ *   rte_sched_port_free() as usual. The subport whose configuration
+ *   failed stays unconfigured and the call can be repeated with
+ *   corrected parameters. The subports configured before the failed
+ *   call keep their configuration, statistics and queued packets.
  */
 int
 rte_sched_subport_config(struct rte_sched_port *port,
@@ -410,7 +415,12 @@ rte_sched_subport_config(struct rte_sched_port *port,
  * @param pipe_profile
  *   ID of subport-level pre-configured pipe profile
  * @return
- *   0 upon success, error code otherwise
+ *   0 upon success, negative error code otherwise. On error, the port
+ *   scheduler instance stays valid and is released by
+ *   rte_sched_port_free() as usual. The subport whose configuration
+ *   failed stays unconfigured and the call can be repeated with
+ *   corrected parameters. The subports configured before the failed
+ *   call keep their configuration, statistics and queued packets.
  */
 int
 rte_sched_pipe_config(struct rte_sched_port *port,
