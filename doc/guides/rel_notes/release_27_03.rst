@@ -56,6 +56,13 @@ New Features
      =======================================================
 
 
+* **Restructured module EEPROM transceiver support.**
+
+  Module EEPROM decoding moved from ethdev to the new transceiver library,
+  ``rte_eth_module_eeprom_parse()`` is replaced by
+  ``rte_transceiver_decode()``.
+
+
 Removed Items
 -------------
 
