@@ -20,9 +20,10 @@ extern "C" {
 /**
  * Seed the pseudo-random generator.
  *
- * The generator is automatically seeded by the EAL init with a timer
- * value. It may need to be re-seeded by the user with a real random
- * value.
+ * The generator is automatically seeded by the EAL init from the
+ * random source provided by the operating system, so there is no need
+ * to re-seed it to get unpredictable values. Seeding it explicitly is
+ * useful to make a run repeatable.
  *
  * This function is not multi-thread safe in regards to other
  * rte_srand() calls, nor is it in relation to concurrent rte_rand(),
