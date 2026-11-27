@@ -852,12 +852,16 @@ static void enable_pdump(struct rte_ring *r, struct rte_mempool *mp)
 		if (ret < 0) {
 			const struct interface *intf2;
 
-			/* unwind any previous enables */
+			/*
+			 * Unwind this interface too, enable can fail after
+			 * installing some callbacks. Promiscuous mode is
+			 * not set on it yet.
+			 */
 			TAILQ_FOREACH(intf2, &interfaces, next) {
-				if (intf == intf2)
-					break;
 				rte_pdump_disable(intf2->port,
 						  RTE_PDUMP_ALL_QUEUES, RTE_PDUMP_FLAG_RXTX);
+				if (intf2 == intf)
+					break;
 				if (intf2->opts.promisc_mode)
 					rte_eth_promiscuous_disable(intf2->port);
 			}
