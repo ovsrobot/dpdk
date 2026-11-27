@@ -22,6 +22,13 @@ test_sched(void)
 	printf("sched not supported on Windows, skipping test\n");
 	return TEST_SKIPPED;
 }
+
+static int
+test_sched_config_error(void)
+{
+	printf("sched not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
 #else
 
 #include <rte_sched.h>
@@ -213,6 +220,70 @@ test_sched(void)
 	return 0;
 }
 
+static int
+test_sched_config_error(void)
+{
+	struct rte_sched_subport_params sp = subport_param[0];
+	struct rte_sched_subport_stats subport_stats;
+	uint32_t tc_ov;
+	struct rte_sched_port *port;
+	int err;
+
+	port_param.rate = (uint64_t) 10000 * 1000 * 1000 / 8;
+
+	/* Out of range subport profile is rejected, port stays valid */
+	port = rte_sched_port_config(&port_param);
+	TEST_ASSERT_NOT_NULL(port, "Error config sched port\n");
+
+	err = rte_sched_subport_config(port, SUBPORT, &sp,
+			MAX_SCHED_SUBPORT_PROFILES);
+	TEST_ASSERT_FAIL(err, "Out of range subport profile accepted\n");
+
+	err = rte_sched_subport_read_stats(port, SUBPORT, &subport_stats,
+			&tc_ov);
+	TEST_ASSERT_FAIL(err, "Unconfigured subport stats read accepted\n");
+
+	/* Bad parameters are rejected, the same subport can be retried */
+	sp.qsize[0] = 33;
+	err = rte_sched_subport_config(port, SUBPORT, &sp, 0);
+	TEST_ASSERT_FAIL(err, "Invalid qsize accepted\n");
+
+	sp = subport_param[0];
+	err = rte_sched_subport_config(port, SUBPORT, &sp, 0);
+	TEST_ASSERT_SUCCESS(err, "Subport config retry rejected\n");
+
+	err = rte_sched_subport_read_stats(port, SUBPORT, &subport_stats,
+			&tc_ov);
+	TEST_ASSERT_SUCCESS(err, "Subport stats read rejected\n");
+
+	/*
+	 * Update call with out of range profile is rejected, nothing
+	 * changes (rollback sites live inside the first-invocation
+	 * branch only)
+	 */
+	err = rte_sched_subport_config(port, SUBPORT, &sp,
+			MAX_SCHED_SUBPORT_PROFILES);
+	TEST_ASSERT_FAIL(err, "Out of range profile accepted on update\n");
+
+	err = rte_sched_subport_read_stats(port, SUBPORT, &subport_stats,
+			&tc_ov);
+	TEST_ASSERT_SUCCESS(err, "Subport stats read rejected\n");
+
+	/* Out of range pipe profile is rejected, port stays valid */
+	err = rte_sched_pipe_config(port, SUBPORT, PIPE, 1);
+	TEST_ASSERT_FAIL(err, "Out of range pipe profile accepted\n");
+
+	err = rte_sched_subport_read_stats(port, SUBPORT, &subport_stats,
+			&tc_ov);
+	TEST_ASSERT_SUCCESS(err, "Subport stats read rejected\n");
+
+	rte_sched_port_free(port);
+
+	return 0;
+}
+
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
 REGISTER_FAST_TEST(sched_autotest, NOHUGE_OK, ASAN_OK, test_sched);
+REGISTER_FAST_TEST(sched_config_error_autotest, NOHUGE_OK, ASAN_OK,
+	test_sched_config_error);
