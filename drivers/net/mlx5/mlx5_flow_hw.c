@@ -17351,6 +17351,11 @@ flow_hw_validate_rule_pattern(struct rte_eth_dev *dev,
 		pt_item++;
 
 	for (; pt_item->type != RTE_FLOW_ITEM_TYPE_END; pt_item++, items++) {
+		const struct rte_flow_item_ethdev *ethdev;
+		const struct rte_flow_item_tx_queue *tx_queue;
+		const struct rte_flow_item_conntrack *spec;
+		struct mlx5_txq_ctrl *txq;
+
 		if (pt_item->type != items->type)
 			return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ITEM,
 						  items, "Item type does not match the template");
@@ -17375,11 +17380,6 @@ flow_hw_validate_rule_pattern(struct rte_eth_dev *dev,
 						  items, "Item spec is required");
 
 		switch (items->type) {
-		const struct rte_flow_item_ethdev *ethdev;
-		const struct rte_flow_item_tx_queue *tx_queue;
-		const struct rte_flow_item_conntrack *spec;
-		struct mlx5_txq_ctrl *txq;
-
 		case RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT:
 			ethdev = items->spec;
 			if (flow_hw_validate_target_port_id(dev, ethdev->port_id)) {
@@ -17486,7 +17486,10 @@ flow_hw_validate_rule_actions(struct rte_eth_dev *dev,
 	 * Configuration of masked actions is ignored.
 	 */
 	LIST_FOREACH(act_data, &hw_acts->act_list, next) {
+		const struct rte_flow_action_modify_field *mf;
+		const struct rte_flow_action_ethdev *ethdev;
 		const struct rte_flow_action *user_action;
+		enum rte_flow_action_type expected_type;
 
 		user_action = &actions[act_data->action_src];
 
@@ -17507,10 +17510,6 @@ flow_hw_validate_rule_actions(struct rte_eth_dev *dev,
 						  "Action requires configuration");
 
 		switch ((int)user_action->type) {
-		enum rte_flow_action_type expected_type;
-		const struct rte_flow_action_ethdev *ethdev;
-		const struct rte_flow_action_modify_field *mf;
-
 		case RTE_FLOW_ACTION_TYPE_INDIRECT:
 			expected_type = act_data->indirect.expected_type;
 			if (!flow_hw_valid_indirect_action_type(user_action, expected_type))

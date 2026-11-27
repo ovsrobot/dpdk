@@ -85,10 +85,15 @@ flow_verbs_discover_priorities(struct rte_eth_dev *dev,
 	int priority = 0;
 
 #if defined(HAVE_MLX5DV_DR_DEVX_PORT) || defined(HAVE_MLX5DV_DR_DEVX_PORT_V35)
+	RTE_SET_USED(flow_attr);
+	RTE_SET_USED(flow);
+	RTE_SET_USED(drop);
+	RTE_SET_USED(i);
+	RTE_SET_USED(vprio);
+	RTE_SET_USED(vprio_n);
 	/* If DevX supported, driver must support 16 verbs flow priorities. */
 	priority = 16;
-	goto out;
-#endif
+#else
 	if (!drop->qp) {
 		rte_errno = ENOTSUP;
 		return -rte_errno;
@@ -101,8 +106,6 @@ flow_verbs_discover_priorities(struct rte_eth_dev *dev,
 		claim_zero(mlx5_glue->destroy_flow(flow));
 		priority = vprio[i];
 	}
-#if defined(HAVE_MLX5DV_DR_DEVX_PORT) || defined(HAVE_MLX5DV_DR_DEVX_PORT_V35)
-out:
 #endif
 	DRV_LOG(INFO, "port %u supported flow priorities:"
 		" 0-%d for ingress or egress root table,"
