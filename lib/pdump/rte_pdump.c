@@ -468,7 +468,8 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 		PDUMP_LOG_LINE(ERR,
 			  "failed to get port id for device id=%s",
 			  p->device);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto free_filter;
 	}
 
 	ret = rte_eth_dev_info_get(port, &dev_info);
@@ -476,7 +477,7 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 		PDUMP_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
 			port, strerror(-ret));
-		return ret;
+		goto free_filter;
 	}
 
 	if (queue == RTE_PDUMP_ALL_QUEUES) {
@@ -485,25 +486,29 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 		if (nb_rx_q == 0 && flags & RTE_PDUMP_FLAG_RX) {
 			PDUMP_LOG_LINE(ERR,
 				"number of rx queues cannot be 0");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_filter;
 		}
 		if (nb_tx_q == 0 && flags & RTE_PDUMP_FLAG_TX) {
 			PDUMP_LOG_LINE(ERR,
 				"number of tx queues cannot be 0");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_filter;
 		}
 		if ((nb_tx_q == 0 || nb_rx_q == 0) &&
 			flags == RTE_PDUMP_FLAG_RXTX) {
 			PDUMP_LOG_LINE(ERR,
 				"both tx&rx queues must be non zero");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_filter;
 		}
 	} else {
 		if (((flags & RTE_PDUMP_FLAG_RX) && queue >= dev_info.nb_rx_queues) ||
 		    ((flags & RTE_PDUMP_FLAG_TX) && queue >= dev_info.nb_tx_queues)) {
 			PDUMP_LOG_LINE(ERR,
 				"invalid queue %u for port %u", queue, port);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_filter;
 		}
 		nb_rx_q = nb_tx_q = queue + 1;
 	}
@@ -512,12 +517,12 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 	if (flags & RTE_PDUMP_FLAG_RX) {
 		ret = pdump_check_queues(port, queue, nb_rx_q, true, operation);
 		if (ret < 0)
-			return ret;
+			goto free_filter;
 	}
 	if (flags & RTE_PDUMP_FLAG_TX) {
 		ret = pdump_check_queues(port, queue, nb_tx_q, false, operation);
 		if (ret < 0)
-			return ret;
+			goto free_filter;
 	}
 
 	/* register RX callback */
@@ -556,6 +561,10 @@ undo:
 						    ring, mp, filter,
 						    DISABLE, p->snaplen);
 	}
+
+free_filter:
+	if (filter != NULL)
+		rte_bpf_destroy(filter);
 
 	return ret;
 }
