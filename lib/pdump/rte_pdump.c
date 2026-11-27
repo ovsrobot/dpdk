@@ -8,6 +8,7 @@
 #include <rte_alarm.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
+#include <ethdev_driver.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_memzone.h>
@@ -250,6 +251,64 @@ pdump_tx(uint16_t port, uint16_t queue,
 }
 
 
+/*
+ * Check all queues before changing any. Unusable queues are skipped
+ * when capturing all queues, but rejected if asked for explicitly.
+ */
+static int
+pdump_check_queues(uint16_t port, uint16_t queue, uint16_t end_q,
+		   bool rx, uint16_t operation)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port];
+	bool all = queue == RTE_PDUMP_ALL_QUEUES;
+	const char *dir = rx ? "rx" : "tx";
+	uint16_t qid, count = 0;
+
+	qid = all ? 0 : queue;
+	for (; qid < end_q; qid++) {
+		const struct pdump_rxtx_cbs *cbs =
+			rx ? &rx_cbs[port][qid] : &tx_cbs[port][qid];
+
+		/* hairpin queues do not pass through rx/tx burst */
+		if (rx ? rte_eth_dev_is_rx_hairpin_queue(dev, qid) :
+			 rte_eth_dev_is_tx_hairpin_queue(dev, qid)) {
+			if (all)
+				continue;
+			PDUMP_LOG_LINE(ERR,
+				"cannot capture on hairpin %s queue port=%u queue=%u",
+				dir, port, qid);
+			return -EINVAL;
+		}
+
+		if (operation == ENABLE && cbs->cb != NULL) {
+			if (all)
+				continue;
+			PDUMP_LOG_LINE(ERR,
+				"%s callback for port=%u queue=%u, already exists",
+				dir, port, qid);
+			return -EEXIST;
+		}
+		if (operation == DISABLE && cbs->cb == NULL) {
+			if (all)
+				continue;
+			PDUMP_LOG_LINE(ERR,
+				"no existing %s callback for port=%u queue=%u",
+				dir, port, qid);
+			return -EINVAL;
+		}
+		++count;
+	}
+
+	/* Enabling nothing would capture nothing, silently */
+	if (count == 0 && operation == ENABLE) {
+		PDUMP_LOG_LINE(ERR, "no %s queue available on port=%u",
+			dir, port);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int
 pdump_register_rx_callbacks(enum pdump_version ver,
 			    uint16_t end_q, uint16_t port, uint16_t queue,
@@ -257,19 +316,20 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 			    struct rte_bpf *filter,
 			    uint16_t operation, uint32_t snaplen)
 {
+	struct rte_eth_dev *dev = &rte_eth_devices[port];
 	uint16_t qid;
 
 	qid = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
 	for (; qid < end_q; qid++) {
 		struct pdump_rxtx_cbs *cbs = &rx_cbs[port][qid];
 
+		if (rte_eth_dev_is_rx_hairpin_queue(dev, qid))
+			continue;
+
+		if (operation == ENABLE ? cbs->cb != NULL : cbs->cb == NULL)
+			continue;
+
 		if (operation == ENABLE) {
-			if (cbs->cb) {
-				PDUMP_LOG_LINE(ERR,
-					"rx callback for port=%d queue=%d, already exists",
-					port, qid);
-				return -EEXIST;
-			}
 			cbs->use_count = 0;
 			cbs->ver = ver;
 			cbs->ring = ring;
@@ -281,8 +341,8 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 								pdump_rx, cbs);
 			if (cbs->cb == NULL) {
 				PDUMP_LOG_LINE(ERR,
-					"failed to add rx callback, errno=%d",
-					rte_errno);
+					"failed to add rx callback port=%u queue=%u: %s",
+					port, qid, rte_strerror(rte_errno));
 				return -rte_errno;
 			}
 
@@ -290,12 +350,6 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 		} else if (operation == DISABLE) {
 			int ret;
 
-			if (cbs->cb == NULL) {
-				PDUMP_LOG_LINE(ERR,
-					"no existing rx callback for port=%d queue=%d",
-					port, qid);
-				return -EINVAL;
-			}
 			ret = rte_eth_remove_rx_callback(port, qid, cbs->cb);
 			if (ret < 0) {
 				PDUMP_LOG_LINE(ERR,
@@ -318,20 +372,20 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 			    struct rte_bpf *filter,
 			    uint16_t operation, uint32_t snaplen)
 {
-
+	struct rte_eth_dev *dev = &rte_eth_devices[port];
 	uint16_t qid;
 
 	qid = (queue == RTE_PDUMP_ALL_QUEUES) ? 0 : queue;
 	for (; qid < end_q; qid++) {
 		struct pdump_rxtx_cbs *cbs = &tx_cbs[port][qid];
 
+		if (rte_eth_dev_is_tx_hairpin_queue(dev, qid))
+			continue;
+
+		if (operation == ENABLE ? cbs->cb != NULL : cbs->cb == NULL)
+			continue;
+
 		if (operation == ENABLE) {
-			if (cbs->cb) {
-				PDUMP_LOG_LINE(ERR,
-					"tx callback for port=%d queue=%d, already exists",
-					port, qid);
-				return -EEXIST;
-			}
 			cbs->use_count = 0;
 			cbs->ver = ver;
 			cbs->ring = ring;
@@ -343,20 +397,14 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 								cbs);
 			if (cbs->cb == NULL) {
 				PDUMP_LOG_LINE(ERR,
-					"failed to add tx callback, errno=%d",
-					rte_errno);
+					"failed to add tx callback port=%u queue=%u: %s",
+					port, qid, rte_strerror(rte_errno));
 				return -rte_errno;
 			}
 			memset(&pdump_stats->tx[port][qid], 0, sizeof(struct rte_pdump_stats));
 		} else if (operation == DISABLE) {
 			int ret;
 
-			if (cbs->cb == NULL) {
-				PDUMP_LOG_LINE(ERR,
-					"no existing tx callback for port=%d queue=%d",
-					port, qid);
-				return -EINVAL;
-			}
 			ret = rte_eth_remove_tx_callback(port, qid, cbs->cb);
 			if (ret < 0) {
 				PDUMP_LOG_LINE(ERR,
@@ -376,7 +424,8 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 static int
 set_pdump_rxtx_cbs(const struct pdump_request *p)
 {
-	uint16_t nb_rx_q = 0, nb_tx_q = 0, end_q, queue;
+	struct rte_eth_dev_info dev_info;
+	uint16_t nb_rx_q, nb_tx_q, queue;
 	uint16_t port;
 	int ret = 0;
 	struct rte_bpf *filter = NULL;
@@ -422,18 +471,15 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 		return -EINVAL;
 	}
 
-	/* validation if packet capture is for all queues */
+	ret = rte_eth_dev_info_get(port, &dev_info);
+	if (ret != 0) {
+		PDUMP_LOG_LINE(ERR,
+			"Error during getting device (port %u) info: %s",
+			port, strerror(-ret));
+		return ret;
+	}
+
 	if (queue == RTE_PDUMP_ALL_QUEUES) {
-		struct rte_eth_dev_info dev_info;
-
-		ret = rte_eth_dev_info_get(port, &dev_info);
-		if (ret != 0) {
-			PDUMP_LOG_LINE(ERR,
-				"Error during getting device (port %u) info: %s",
-				port, strerror(-ret));
-			return ret;
-		}
-
 		nb_rx_q = dev_info.nb_rx_queues;
 		nb_tx_q = dev_info.nb_tx_queues;
 		if (nb_rx_q == 0 && flags & RTE_PDUMP_FLAG_RX) {
@@ -452,26 +498,63 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 				"both tx&rx queues must be non zero");
 			return -EINVAL;
 		}
+	} else {
+		if (((flags & RTE_PDUMP_FLAG_RX) && queue >= dev_info.nb_rx_queues) ||
+		    ((flags & RTE_PDUMP_FLAG_TX) && queue >= dev_info.nb_tx_queues)) {
+			PDUMP_LOG_LINE(ERR,
+				"invalid queue %u for port %u", queue, port);
+			return -EINVAL;
+		}
+		nb_rx_q = nb_tx_q = queue + 1;
+	}
+
+	/* check all queues before changing any */
+	if (flags & RTE_PDUMP_FLAG_RX) {
+		ret = pdump_check_queues(port, queue, nb_rx_q, true, operation);
+		if (ret < 0)
+			return ret;
+	}
+	if (flags & RTE_PDUMP_FLAG_TX) {
+		ret = pdump_check_queues(port, queue, nb_tx_q, false, operation);
+		if (ret < 0)
+			return ret;
 	}
 
 	/* register RX callback */
 	if (flags & RTE_PDUMP_FLAG_RX) {
-		end_q = (queue == RTE_PDUMP_ALL_QUEUES) ? nb_rx_q : queue + 1;
-		ret = pdump_register_rx_callbacks(p->ver, end_q, port, queue,
+		ret = pdump_register_rx_callbacks(p->ver, nb_rx_q, port, queue,
 						  ring, mp, filter,
 						  operation, p->snaplen);
 		if (ret < 0)
-			return ret;
+			goto undo;
 	}
 
 	/* register TX callback */
 	if (flags & RTE_PDUMP_FLAG_TX) {
-		end_q = (queue == RTE_PDUMP_ALL_QUEUES) ? nb_tx_q : queue + 1;
-		ret = pdump_register_tx_callbacks(p->ver, end_q, port, queue,
+		ret = pdump_register_tx_callbacks(p->ver, nb_tx_q, port, queue,
 						  ring, mp, filter,
 						  operation, p->snaplen);
 		if (ret < 0)
-			return ret;
+			goto undo;
+	}
+
+	return 0;
+
+undo:
+	/*
+	 * Remove the callbacks already installed, they reference a ring the
+	 * client is about to free. Registration is called directly here
+	 * because the checks above reject this half enabled state.
+	 */
+	if (operation == ENABLE) {
+		if (flags & RTE_PDUMP_FLAG_RX)
+			pdump_register_rx_callbacks(p->ver, nb_rx_q, port, queue,
+						    ring, mp, filter,
+						    DISABLE, p->snaplen);
+		if (flags & RTE_PDUMP_FLAG_TX)
+			pdump_register_tx_callbacks(p->ver, nb_tx_q, port, queue,
+						    ring, mp, filter,
+						    DISABLE, p->snaplen);
 	}
 
 	return ret;
