@@ -747,6 +747,13 @@ fill:
 	}
 	/* Go over actions list. */
 	for (action = actions; action->type; ++action) {
+		const struct rte_flow_action_queue *queue;
+		const struct rte_flow_action_rss *rss;
+		const uint8_t *rss_key;
+		uint32_t rss_key_len;
+		uint64_t fields;
+		unsigned int i;
+
 		/* This one may appear anywhere multiple times. */
 		if (action->type == RTE_FLOW_ACTION_TYPE_VOID)
 			continue;
@@ -758,13 +765,6 @@ fill:
 		}
 		overlap = 1;
 		switch (action->type) {
-			const struct rte_flow_action_queue *queue;
-			const struct rte_flow_action_rss *rss;
-			const uint8_t *rss_key;
-			uint32_t rss_key_len;
-			uint64_t fields;
-			unsigned int i;
-
 		case RTE_FLOW_ACTION_TYPE_DROP:
 			flow->drop = 1;
 			break;
