@@ -863,6 +863,7 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 					sizeof(*maps[i].areas) * maps[i].nr_areas, 0);
 				if (maps[i].areas == NULL) {
 					PCI_LOG(ERR, "Cannot alloc memory for sparse map areas");
+					free(reg);
 					goto err_map;
 				}
 				memcpy(maps[i].areas, sparse->areas,
@@ -913,6 +914,9 @@ err_map:
 		if (maps[j].nr_areas > 0)
 			rte_free(maps[j].areas);
 	}
+	/* the loop above stops short of the BAR that failed to map */
+	if (i < vfio_res->nb_maps)
+		rte_free(maps[i].areas);
 err_vfio_res:
 	rte_free(vfio_res);
 err_vfio_dev_fd:
