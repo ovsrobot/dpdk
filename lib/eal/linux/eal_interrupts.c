@@ -278,7 +278,7 @@ vfio_enable_msix(const struct rte_intr_handle *intr_handle) {
 	int len, ret;
 	char irq_set_buf[MSIX_IRQ_SET_BUF_LEN];
 	struct vfio_irq_set *irq_set;
-	int *fd_ptr, vfio_dev_fd, i;
+	int *fd_ptr, vfio_dev_fd, i, nb_rxtx_vectors;
 
 	len = sizeof(irq_set_buf);
 
@@ -289,6 +289,8 @@ vfio_enable_msix(const struct rte_intr_handle *intr_handle) {
 		(rte_intr_max_intr_get(intr_handle) >
 		 RTE_MAX_RXTX_INTR_VEC_ID + 1 ?	RTE_MAX_RXTX_INTR_VEC_ID + 1 :
 		 rte_intr_max_intr_get(intr_handle)) : 1;
+	/* skip the first vector */
+	nb_rxtx_vectors = (int)irq_set->count - RTE_INTR_VEC_RXTX_OFFSET;
 
 	irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER;
 	irq_set->index = VFIO_PCI_MSIX_IRQ_INDEX;
@@ -300,6 +302,9 @@ vfio_enable_msix(const struct rte_intr_handle *intr_handle) {
 		fd_ptr[RTE_INTR_VEC_RXTX_OFFSET + i] =
 			rte_intr_efds_index_get(intr_handle, i);
 	}
+	/* vectors that have no eventfd must not be left uninitialized */
+	for (; i < nb_rxtx_vectors; i++)
+		fd_ptr[RTE_INTR_VEC_RXTX_OFFSET + i] = -1;
 
 	vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
 	ret = ioctl(vfio_dev_fd, VFIO_DEVICE_SET_IRQS, irq_set);
