@@ -107,6 +107,7 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_intr_event_list_update)
 int rte_intr_event_list_update(struct rte_intr_handle *intr_handle, int size)
 {
 	struct rte_epoll_event *tmp_elist;
+	size_t copy_count;
 	bool uses_rte_memory;
 	int *tmp_efds;
 
@@ -121,34 +122,41 @@ int rte_intr_event_list_update(struct rte_intr_handle *intr_handle, int size)
 	uses_rte_memory =
 		RTE_INTR_INSTANCE_USES_RTE_MEMORY(intr_handle->alloc_flags);
 	if (uses_rte_memory) {
-		tmp_efds = rte_realloc(intr_handle->efds, size * sizeof(int),
-			0);
+		tmp_efds = rte_calloc(NULL, size, sizeof(*tmp_efds), 0);
+		tmp_elist = rte_calloc(NULL, size, sizeof(*tmp_elist), 0);
 	} else {
-		tmp_efds = realloc(intr_handle->efds, size * sizeof(int));
+		tmp_efds = calloc(size, sizeof(*tmp_efds));
+		tmp_elist = calloc(size, sizeof(*tmp_elist));
 	}
-	if (tmp_efds == NULL) {
-		EAL_LOG(ERR, "Failed to realloc the efds list");
+	if (tmp_efds == NULL || tmp_elist == NULL) {
+		EAL_LOG(ERR, "Failed to allocate interrupt event lists");
+		if (uses_rte_memory) {
+			rte_free(tmp_efds);
+			rte_free(tmp_elist);
+		} else {
+			free(tmp_efds);
+			free(tmp_elist);
+		}
 		rte_errno = ENOMEM;
 		goto fail;
 	}
-	intr_handle->efds = tmp_efds;
+
+	copy_count = RTE_MIN((size_t)size, (size_t)intr_handle->nb_intr);
+	memcpy(tmp_efds, intr_handle->efds, copy_count * sizeof(*tmp_efds));
+	memcpy(tmp_elist, intr_handle->elist, copy_count * sizeof(*tmp_elist));
 	for (int i = intr_handle->nb_intr; i < size; i++)
-		intr_handle->efds[i] = -1;
+		tmp_efds[i] = -1;
 
 	if (uses_rte_memory) {
-		tmp_elist = rte_realloc(intr_handle->elist,
-			size * sizeof(struct rte_epoll_event), 0);
+		rte_free(intr_handle->efds);
+		rte_free(intr_handle->elist);
 	} else {
-		tmp_elist = realloc(intr_handle->elist,
-			size * sizeof(struct rte_epoll_event));
-	}
-	if (tmp_elist == NULL) {
-		EAL_LOG(ERR, "Failed to realloc the event list");
-		rte_errno = ENOMEM;
-		goto fail;
+		free(intr_handle->efds);
+		free(intr_handle->elist);
 	}
 	intr_handle->elist = tmp_elist;
 
+	intr_handle->efds = tmp_efds;
 	intr_handle->nb_intr = size;
 
 	return 0;
