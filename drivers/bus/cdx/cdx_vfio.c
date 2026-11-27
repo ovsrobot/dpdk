@@ -573,26 +573,41 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_vfio_intr_enable)
 int
 rte_cdx_vfio_intr_enable(const struct rte_intr_handle *intr_handle)
 {
-	char irq_set_buf[MSI_IRQ_SET_BUF_LEN];
+	int nb_intr = rte_intr_nb_intr_get(intr_handle);
+	int nb_efd = rte_intr_nb_efd_get(intr_handle);
 	struct vfio_irq_set *irq_set;
 	int *fd_ptr, vfio_dev_fd, i;
+	size_t len;
 	int ret;
 
-	irq_set = (struct vfio_irq_set *) irq_set_buf;
-	irq_set->count = rte_intr_nb_intr_get(intr_handle);
-	irq_set->argsz = sizeof(struct vfio_irq_set) +
-			 (sizeof(int) * irq_set->count);
+	if (nb_intr <= 0) {
+		CDX_BUS_ERR("Invalid number of interrupts for fd %d",
+			rte_intr_fd_get(intr_handle));
+		return -1;
+	}
 
+	len = sizeof(*irq_set) + sizeof(int) * (size_t)nb_intr;
+	irq_set = calloc(1, len);
+	if (irq_set == NULL) {
+		CDX_BUS_ERR("Cannot allocate MSI interrupt request");
+		return -1;
+	}
+
+	irq_set->argsz = len;
+	irq_set->count = nb_intr;
 	irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER;
 	irq_set->index = 0;
 	irq_set->start = 0;
 	fd_ptr = (int *) &irq_set->data;
 
-	for (i = 0; i < rte_intr_nb_efd_get(intr_handle); i++)
+	for (i = 0; i < nb_efd; i++)
 		fd_ptr[i] = rte_intr_efds_index_get(intr_handle, i);
+	for (; i < nb_intr; i++)
+		fd_ptr[i] = -1;
 
 	vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
 	ret = ioctl(vfio_dev_fd, VFIO_DEVICE_SET_IRQS, irq_set);
+	free(irq_set);
 
 	if (ret) {
 		CDX_BUS_ERR("Error enabling MSI interrupts for fd %d",
