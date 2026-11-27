@@ -1057,9 +1057,6 @@ find_and_unmap_vfio_resource(struct mapped_pci_res_list *vfio_res_list,
 				pci_addr, maps[i].addr);
 			pci_unmap_resource(maps[i].addr, maps[i].size);
 		}
-
-		if (maps[i].nr_areas > 0)
-			rte_free(maps[i].areas);
 	}
 
 	return vfio_res;
@@ -1072,7 +1069,7 @@ pci_vfio_unmap_resource_primary(struct rte_pci_device *dev)
 	struct rte_pci_addr *loc = &dev->addr;
 	struct mapped_pci_resource *vfio_res = NULL;
 	struct mapped_pci_res_list *vfio_res_list;
-	int ret, vfio_dev_fd;
+	int i, ret, vfio_dev_fd;
 
 	/* store PCI address string */
 	snprintf(pci_addr, sizeof(pci_addr), PCI_PRI_FMT,
@@ -1112,6 +1109,10 @@ pci_vfio_unmap_resource_primary(struct rte_pci_device *dev)
 		PCI_LOG(ERR, "%s cannot find TAILQ entry for PCI device!", pci_addr);
 		return -1;
 	}
+
+	/* area lists are shared with secondaries, so only the primary frees them */
+	for (i = 0; i < vfio_res->nb_maps; i++)
+		rte_free(vfio_res->maps[i].areas);
 
 	TAILQ_REMOVE(vfio_res_list, vfio_res, next);
 	rte_free(vfio_res);
