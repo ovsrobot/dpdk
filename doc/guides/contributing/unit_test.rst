@@ -114,6 +114,21 @@ via the ``DPDK_TEST_PARAMS`` argument,
 in case some tests need additional configuration.
 This is not currently used in the Meson test suites.
 
+Many tests build their input data with ``rte_rand()``,
+which produces a different sequence on every run.
+This is useful for coverage, but it adds noise when comparing results.
+Setting ``DPDK_TEST_SEED`` to an integer seeds the generator with that
+value before each test command is run, so that a test gets the same input
+data no matter what ran before it::
+
+   $ DPDK_TEST_SEED=42 ./build/app/test/dpdk-test lpm_perf_autotest
+
+This also works when running the tests via Meson::
+
+   $ DPDK_TEST_SEED=42 meson test -C build --suite perf-tests
+
+When the variable is not set, the generator keeps its default random seeding.
+
 
 Running test cases via Meson
 ----------------------------
