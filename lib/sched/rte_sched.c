@@ -1159,6 +1159,11 @@ rte_sched_subport_tc_ov_config(struct rte_sched_port *port,
 	}
 
 	s = port->subports[subport_id];
+	if (s == NULL) {
+		SCHED_LOG(ERR,
+			"%s: Subport is not configured", __func__);
+		return -EINVAL;
+	}
 	s->tc_ov_enabled = tc_ov_enable ? 1 : 0;
 
 	return 0;
@@ -1378,6 +1383,11 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 	}
 
 	s = port->subports[subport_id];
+	if (s == NULL) {
+		SCHED_LOG(ERR,
+			"%s: Subport is not configured", __func__);
+		return -EINVAL;
+	}
 	if (pipe_id >= s->n_pipes_per_subport_enabled) {
 		SCHED_LOG(ERR,
 			"%s: Incorrect value for parameter pipe id", __func__);
@@ -1483,13 +1493,18 @@ rte_sched_subport_pipe_profile_add(struct rte_sched_port *port,
 	}
 
 	/* Subport id not exceeds the max limit */
-	if (subport_id > port->n_subports_per_port) {
+	if (subport_id >= port->n_subports_per_port) {
 		SCHED_LOG(ERR,
 			"%s: Incorrect value for subport id", __func__);
 		return -EINVAL;
 	}
 
 	s = port->subports[subport_id];
+	if (s == NULL) {
+		SCHED_LOG(ERR,
+			"%s: Subport is not configured", __func__);
+		return -EINVAL;
+	}
 
 	/* Pipe profiles exceeds the max limit */
 	if (s->n_pipe_profiles >= s->n_max_pipe_profiles) {
@@ -1683,6 +1698,11 @@ rte_sched_subport_read_stats(struct rte_sched_port *port,
 	}
 
 	s = port->subports[subport_id];
+	if (s == NULL) {
+		SCHED_LOG(ERR,
+			"%s: Subport is not configured", __func__);
+		return -EINVAL;
+	}
 
 	/* Copy subport stats and clear */
 	memcpy(stats, &s->stats, sizeof(struct rte_sched_subport_stats));
@@ -1734,6 +1754,11 @@ rte_sched_queue_read_stats(struct rte_sched_port *port,
 	subport_id = (queue_id >> subport_qmask) & (port->n_subports_per_port - 1);
 
 	s = port->subports[subport_id];
+	if (s == NULL) {
+		SCHED_LOG(ERR,
+			"%s: Subport is not configured", __func__);
+		return -EINVAL;
+	}
 	subport_qindex = ((1 << subport_qmask) - 1) & queue_id;
 	q = s->queue + subport_qindex;
 	qe = s->queue_extra + subport_qindex;

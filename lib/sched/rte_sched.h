@@ -420,7 +420,8 @@ rte_sched_subport_config(struct rte_sched_port *port,
  *   rte_sched_port_free() as usual. The subport whose configuration
  *   failed stays unconfigured and the call can be repeated with
  *   corrected parameters. The subports configured before the failed
- *   call keep their configuration, statistics and queued packets.
+ *   call keep their configuration, statistics and queued packets. A
+ *   call on a subport that is not configured returns -EINVAL.
  */
 int
 rte_sched_pipe_config(struct rte_sched_port *port,
@@ -461,7 +462,8 @@ rte_sched_port_get_memory_footprint(struct rte_sched_port_params *port_params,
  *   where the oversubscription status for each of the subport traffic classes
  *   should be stored.
  * @return
- *   0 upon success, error code otherwise
+ *   0 upon success, error code otherwise; -EINVAL if the subport
+ *   is not configured
  */
 int
 rte_sched_subport_read_stats(struct rte_sched_port *port,
@@ -483,7 +485,8 @@ rte_sched_subport_read_stats(struct rte_sched_port *port,
  *   Pointer to pre-allocated variable where the current queue length
  *   should be stored.
  * @return
- *   0 upon success, error code otherwise
+ *   0 upon success, error code otherwise; -EINVAL if the subport
+ *   is not configured
  */
 int
 rte_sched_queue_read_stats(struct rte_sched_port *port,
