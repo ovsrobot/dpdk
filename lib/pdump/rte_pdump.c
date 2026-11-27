@@ -569,12 +569,13 @@ free_filter:
 	return ret;
 }
 
-static void
+static int
 pdump_request_to_secondary(const struct pdump_request *req)
 {
 	struct rte_mp_msg mp_req = { };
 	struct rte_mp_reply mp_reply;
 	struct timespec ts = {.tv_sec = MP_TIMEOUT_S, .tv_nsec = 0};
+	int ret = 0, i;
 
 	PDUMP_LOG_LINE(DEBUG, "forward req %s to secondary", pdump_opname(req->op));
 
@@ -582,14 +583,34 @@ pdump_request_to_secondary(const struct pdump_request *req)
 	strlcpy(mp_req.name, PDUMP_MP, sizeof(mp_req.name));
 	mp_req.len_param = sizeof(*req);
 
-	if (rte_mp_request_sync(&mp_req, &mp_reply, &ts) != 0)
+	if (rte_mp_request_sync(&mp_req, &mp_reply, &ts) != 0) {
 		PDUMP_LOG_LINE(ERR, "rte_mp_request_sync failed");
+		return -rte_errno;
+	}
 
-	else if (mp_reply.nb_sent != mp_reply.nb_received)
+	if (mp_reply.nb_sent != mp_reply.nb_received) {
 		PDUMP_LOG_LINE(ERR, "not all secondary's replied (sent %u recv %u)",
 			       mp_reply.nb_sent, mp_reply.nb_received);
+		ret = -ETIMEDOUT;
+	}
+
+	/* Report the first failure, a secondary has already undone its own */
+	for (i = 0; i < mp_reply.nb_received; i++) {
+		const struct pdump_response *resp =
+			(const struct pdump_response *)mp_reply.msgs[i].param;
+
+		if (resp->err_value != 0) {
+			PDUMP_LOG_LINE(ERR, "secondary failed to %s: %s",
+				       pdump_opname(req->op),
+				       rte_strerror(-resp->err_value));
+			if (ret == 0)
+				ret = resp->err_value;
+		}
+	}
 
 	free(mp_reply.msgs);
+
+	return ret;
 }
 
 /* Allocate temporary storage for passing state to the alarm thread for deferred handling */
@@ -668,10 +689,23 @@ __pdump_request(void *param)
 	PDUMP_LOG_LINE(DEBUG, "primary pdump %s", pdump_opname(req->op));
 
 	ret = set_pdump_rxtx_cbs(req);
+	if (ret != 0)
+		goto respond;
 
 	/* Primary process is responsible for broadcasting request to all secondaries */
-	if (ret == 0)
-		pdump_request_to_secondary(req);
+	ret = pdump_request_to_secondary(req);
+
+	/* Undo the processes that did enable, disable ignores the rest */
+	if (ret != 0 && req->op == ENABLE) {
+		struct pdump_request undo = *req;
+
+		undo.op = DISABLE;
+		undo.prm = NULL;	/* no filter needed to remove callbacks */
+		set_pdump_rxtx_cbs(&undo);
+		pdump_request_to_secondary(&undo);
+	}
+
+respond:
 
 	pdump_send_response(req, ret, bundle->peer);
 	free(bundle);
