@@ -283,7 +283,7 @@ pdump_register_rx_callbacks(enum pdump_version ver,
 				PDUMP_LOG_LINE(ERR,
 					"failed to add rx callback, errno=%d",
 					rte_errno);
-				return rte_errno;
+				return -rte_errno;
 			}
 
 			memset(&pdump_stats->rx[port][qid], 0, sizeof(struct rte_pdump_stats));
@@ -345,7 +345,7 @@ pdump_register_tx_callbacks(enum pdump_version ver,
 				PDUMP_LOG_LINE(ERR,
 					"failed to add tx callback, errno=%d",
 					rte_errno);
-				return rte_errno;
+				return -rte_errno;
 			}
 			memset(&pdump_stats->tx[port][qid], 0, sizeof(struct rte_pdump_stats));
 		} else if (operation == DISABLE) {
