@@ -461,6 +461,19 @@ static void dpaa2_portal_finish(void *arg)
 }
 
 static void
+dpaa2_unmap_dpio_portal(struct dpaa2_dpio_dev *dpio_dev)
+{
+	if (dpio_dev->qbman_portal_ce_paddr != 0) {
+		munmap((void *)dpio_dev->qbman_portal_ce_paddr, dpio_dev->ce_size);
+		dpio_dev->qbman_portal_ce_paddr = 0;
+	}
+	if (dpio_dev->qbman_portal_ci_paddr != 0) {
+		munmap((void *)dpio_dev->qbman_portal_ci_paddr, dpio_dev->ci_size);
+		dpio_dev->qbman_portal_ci_paddr = 0;
+	}
+}
+
+static void
 dpaa2_close_dpio_device(int object_id)
 {
 	struct dpaa2_dpio_dev *dpio_dev = NULL;
@@ -495,6 +508,7 @@ dpaa2_create_dpio_device(int vdev_fd,
 	struct qbman_swp_desc p_des;
 	struct dpio_attr attr;
 	int ret, object_id = obj->object_id;
+	void *addr;
 
 	if (obj_info->num_regions < NUM_DPIO_REGIONS) {
 		DPAA2_BUS_ERR("Not sufficient number of DPIO regions");
@@ -589,10 +603,14 @@ dpaa2_create_dpio_device(int vdev_fd,
 		goto err;
 	}
 
+	addr = mmap(NULL, reg_info.size, PROT_WRITE | PROT_READ, MAP_SHARED,
+			vdev_fd, reg_info.offset);
+	if (addr == MAP_FAILED) {
+		DPAA2_BUS_ERR("Failed to map DPIO CENA region: %s", strerror(errno));
+		goto err;
+	}
 	dpio_dev->ce_size = reg_info.size;
-	dpio_dev->qbman_portal_ce_paddr = (size_t)mmap(NULL, reg_info.size,
-				PROT_WRITE | PROT_READ, MAP_SHARED,
-				vdev_fd, reg_info.offset);
+	dpio_dev->qbman_portal_ce_paddr = (size_t)addr;
 
 	reg_info.index = DPAA2_SWP_CINH_REGION;
 	if (ioctl(vdev_fd, VFIO_DEVICE_GET_REGION_INFO, &reg_info)) {
@@ -600,10 +618,14 @@ dpaa2_create_dpio_device(int vdev_fd,
 		goto err;
 	}
 
+	addr = mmap(NULL, reg_info.size, PROT_WRITE | PROT_READ, MAP_SHARED,
+			vdev_fd, reg_info.offset);
+	if (addr == MAP_FAILED) {
+		DPAA2_BUS_ERR("Failed to map DPIO CINH region: %s", strerror(errno));
+		goto err;
+	}
 	dpio_dev->ci_size = reg_info.size;
-	dpio_dev->qbman_portal_ci_paddr = (size_t)mmap(NULL, reg_info.size,
-				PROT_WRITE | PROT_READ, MAP_SHARED,
-				vdev_fd, reg_info.offset);
+	dpio_dev->qbman_portal_ci_paddr = (size_t)addr;
 
 	/* Configure & setup SW portal */
 	p_des.block = NULL;
@@ -672,6 +694,7 @@ err:
 		rte_free(dpio_dev->dpio);
 	}
 
+	dpaa2_unmap_dpio_portal(dpio_dev);
 	rte_intr_fd_close(dpio_dev->intr_handle);
 	/* dev_fd is closed by caller, clear reference here. */
 	rte_intr_dev_fd_set(dpio_dev->intr_handle, -1);
