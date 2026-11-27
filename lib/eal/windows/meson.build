@@ -37,7 +37,11 @@ ws2_32_dep = cc.find_library('ws2_32')
 if not cc.links(min_c_code, dependencies: ws2_32_dep)
     error('broken dependency, "ws2_32"')
 endif
-ext_deps += [dbghelp_dep, setupapi_dep, ws2_32_dep]
+bcrypt_dep = cc.find_library('bcrypt')
+if not cc.links(min_c_code, dependencies: bcrypt_dep)
+    error('broken dependency, "bcrypt"')
+endif
+ext_deps += [dbghelp_dep, setupapi_dep, ws2_32_dep, bcrypt_dep]
 if is_ms_linker
         # Contrary to docs, VirtualAlloc2() is exported by mincore.lib.
         mincore_dep = cc.find_library('mincore')

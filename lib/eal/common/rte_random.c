@@ -17,6 +17,7 @@
 #include <rte_random.h>
 
 #include <eal_export.h>
+#include <rte_os_shim.h>
 #include "eal_private.h"
 
 struct __rte_cache_aligned rte_rand_state {

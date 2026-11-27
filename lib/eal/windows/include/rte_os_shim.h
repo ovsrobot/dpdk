@@ -3,11 +3,15 @@
 #ifndef _RTE_OS_SHIM_
 #define _RTE_OS_SHIM_
 
+#include <errno.h>
 #include <time.h>
 
 #include <rte_os.h>
 #include <rte_windows.h>
 #include <getline.h>
+
+/* Needs Windows SDK types, so must come after rte_windows.h. */
+#include <bcrypt.h>
 
 /**
  * @file
@@ -123,5 +127,31 @@ rte_localtime_r(const time_t *timep, struct tm *result)
 		return NULL;
 }
 #define localtime_r(timep, result) rte_localtime_r(timep, result)
+
+/*
+ * Windows has no getentropy(), use the system preferred random
+ * generator which does not require a provider handle.
+ */
+static inline int
+rte_getentropy(void *buffer, size_t length)
+{
+	NTSTATUS status;
+
+	/* Match the POSIX limit so callers behave the same everywhere. */
+	if (length > 256) {
+		errno = EIO;
+		return -1;
+	}
+
+	status = BCryptGenRandom(NULL, (PUCHAR)buffer, (ULONG)length,
+				 BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+	if (!BCRYPT_SUCCESS(status)) {
+		errno = EIO;
+		return -1;
+	}
+
+	return 0;
+}
+#define getentropy(buffer, length) rte_getentropy(buffer, length)
 
 #endif /* _RTE_OS_SHIM_ */
