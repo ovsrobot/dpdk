@@ -18,6 +18,7 @@
 #include "qat_logs.h"
 #include "qat_comp.h"
 #include "qat_comp_pmd.h"
+#include "dev/qat_comp_pmd_gens.h"
 
 static void
 qat_comp_fallback_to_fixed(struct icp_qat_fw_comp_req *comp_req)
@@ -814,7 +815,7 @@ qat_comp_create_req_hdr(struct icp_qat_fw_comn_req_hdr *header,
 }
 
 static int
-qat_comp_create_templates(struct qat_comp_xform *qat_xform,
+qat_comp_create_templates_genx(struct qat_comp_xform *qat_xform,
 			  const struct rte_memzone *interm_buff_mz,
 			  const struct rte_comp_xform *xform,
 			  const struct qat_comp_stream *stream,
@@ -931,6 +932,24 @@ qat_comp_create_templates(struct qat_comp_xform *qat_xform,
 		    sizeof(struct icp_qat_fw_comp_req));
 #endif
 	return 0;
+}
+
+static int
+qat_comp_create_templates(struct qat_comp_xform *qat_xform,
+			  const struct rte_memzone *interm_buff_mz,
+			  const struct rte_comp_xform *xform,
+			  const struct qat_comp_stream *stream,
+			  enum rte_comp_op_type op_type,
+			  enum qat_device_gen qat_dev_gen)
+{
+	if (qat_dev_gen == QAT_GEN6)
+		return qat_comp_create_templates_gen6(qat_xform,
+			interm_buff_mz, xform, stream, op_type,
+			qat_dev_gen);
+
+	return qat_comp_create_templates_genx(qat_xform,
+			interm_buff_mz, xform, stream, op_type,
+			qat_dev_gen);
 }
 
 /**

@@ -20,6 +20,11 @@ enum icp_qat_fw_comp_cmd_id {
 	/**< Delimiter type */
 };
 
+enum icp_qat_fw_comp_cmd_id_gen6 {
+	ICP_QAT_GEN6_FW_COMP_CMD_DEFLATE_COMP = 1,
+	ICP_QAT_GEN6_FW_COMP_CMD_DEFLATE_DECOMP = 2,
+};
+
 /**< Flag usage */
 
 #define ICP_QAT_FW_COMP_STATELESS_SESSION 0

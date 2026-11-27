@@ -123,6 +123,7 @@ if qat_compress
             'dev/qat_comp_pmd_gen3.c',
             'dev/qat_comp_pmd_gen4.c',
             'dev/qat_comp_pmd_gen5.c',
+            'dev/qat_comp_pmd_gen6.c',
         ]
         sources += files(join_paths(qat_compress_relpath, f))
     endforeach

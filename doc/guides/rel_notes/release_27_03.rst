@@ -54,6 +54,9 @@ New Features
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
      =======================================================
+* **Updated Intel QuickAssist Technology (QAT) compression driver.**
+
+  * Added support for Gen 6 QAT devices.
 
 
 Removed Items

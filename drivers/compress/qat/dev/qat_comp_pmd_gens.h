@@ -41,4 +41,12 @@ qat_comp_dev_config_gen4(struct rte_compressdev *dev,
 
 extern struct rte_compressdev_ops qat_comp_ops_gen1;
 
+int
+qat_comp_create_templates_gen6(struct qat_comp_xform *qat_xform,
+		const struct rte_memzone *interm_buff_mz,
+		const struct rte_comp_xform *xform,
+		const struct qat_comp_stream *stream,
+		enum rte_comp_op_type op_type,
+		enum qat_device_gen qat_dev_gen);
+
 #endif /* _QAT_COMP_PMD_GENS_H_ */
