@@ -594,21 +594,17 @@ pci_vfio_sparse_mmap_bar(int vfio_dev_fd, struct mapped_pci_resource *vfio_res,
 				if (map_addr == NULL) {
 					munmap(bar_addr, bar->size);
 					PCI_LOG(ERR, "Failed to map pci BAR%d", bar_index);
-					goto err_map;
+					return -1;
 				}
 			}
 		}
 	} else {
 		PCI_LOG(ERR, "Failed to create inaccessible mapping for BAR%d", bar_index);
-		goto err_map;
+		return -1;
 	}
 
 	bar->addr = bar_addr;
 	return 0;
-
-err_map:
-	bar->nr_areas = 0;
-	return -1;
 }
 
 /*
