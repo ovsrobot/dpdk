@@ -447,6 +447,12 @@ F: app/test/test_ethdev*
 F: devtools/test-null.sh
 F: doc/guides/prog_guide/ethdev/switch_representation.rst
 
+Transceiver module EEPROM
+M: Roman Khromenok <roma55592@yandex.ru>
+T: git://dpdk.org/next/dpdk-next-net
+F: lib/transceiver/
+F: doc/guides/prog_guide/transceiver_lib.rst
+
 Flow API
 M: Ori Kam <orika@nvidia.com>
 T: git://dpdk.org/next/dpdk-next-net

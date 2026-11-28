@@ -22,6 +22,7 @@ libraries = [
         'mbuf',
         'net',
         'meter',
+        'transceiver',
         'ethdev',
         'pci', # core
         'cmdline',
@@ -85,6 +86,7 @@ always_enable = [
         'rcu',
         'ring',
         'telemetry',
+        'transceiver',
 ]
 
 enable_deprecated_libs = []

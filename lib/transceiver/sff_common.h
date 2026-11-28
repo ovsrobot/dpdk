@@ -10,14 +10,18 @@
 
 #include <stdio.h>
 
-#include "rte_ethdev.h"
+#include <rte_bitops.h>
+#include <rte_common.h>
+#include <rte_string_fns.h>
+
+#include "rte_transceiver.h"
 
 #define SFF_ITEM_VAL_COMPOSE_SIZE 64
 
 /* Consumer of decoded module EEPROM fields */
 struct sff_output {
 	/* Called once per decoded field, name may repeat */
-	rte_eth_module_eeprom_field_cb field_cb;
+	rte_transceiver_field_cb field_cb;
 	void *arg;
 };
 
@@ -35,7 +39,7 @@ void sff_8472_show_all(const uint8_t *data, struct sff_output *d);
 void sff_8636_show_all(const uint8_t *data, uint32_t eeprom_len, struct sff_output *d);
 
 /*
- * Decode module EEPROM of the given type (RTE_ETH_MODULE_SFF_*).
+ * Decode module EEPROM of the given type (RTE_TRANSCEIVER_SFF_*).
  * Returns 0 on success, -EINVAL if the data is too short for the type,
  * -ENOTSUP if the type is unknown.
  */

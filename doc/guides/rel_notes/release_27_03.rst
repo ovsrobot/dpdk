@@ -56,6 +56,12 @@ New Features
      =======================================================
 
 
+* **Added transceiver library.**
+
+  Added a library for decoding module EEPROM data with
+  ``rte_transceiver_decode()``. The SFF decoders moved from ethdev.
+
+
 Removed Items
 -------------
 

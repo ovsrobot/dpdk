@@ -236,7 +236,7 @@ static void sff_8079_show_transceiver(const uint8_t *data, struct sff_output *d)
 
 static void sff_8079_show_encoding(const uint8_t *data, struct sff_output *d)
 {
-	sff_8024_show_encoding(data, 11, RTE_ETH_MODULE_SFF_8472, d);
+	sff_8024_show_encoding(data, 11, RTE_TRANSCEIVER_SFF_8472, d);
 }
 
 static void sff_8079_show_rate_identifier(const uint8_t *data, struct sff_output *d)

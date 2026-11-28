@@ -76,6 +76,7 @@ Device Libraries
     devargs
     device_hotplug
     ethdev/index
+    transceiver_lib
     link_bonding_poll_mode_drv_lib
     vhost_lib
     cryptodev_lib
