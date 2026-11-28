@@ -75,6 +75,12 @@ Removed Items
    =======================================================
 
 
+* ethdev: Removed the experimental function
+  ``rte_eth_module_eeprom_parse()``
+  and the type ``rte_eth_module_eeprom_field_cb``,
+  use ``rte_transceiver_decode()`` from the transceiver library instead.
+
+
 API Changes
 -----------
 

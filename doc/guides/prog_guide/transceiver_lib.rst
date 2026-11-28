@@ -19,6 +19,9 @@ ethdev ports
 Kernel ports
    The Linux ethtool ioctls ``ETHTOOL_GMODULEINFO`` and ``ETHTOOL_GMODULEEEPROM``
    give the same module types and EEPROM layout.
+   The ethtool netlink request ``ETHTOOL_MSG_MODULE_EEPROM_GET``
+   is page addressed and does not report the module type,
+   so its data has to be assembled into this layout first.
 
 
 Supported Specifications

@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include <rte_common.h>
-#include <rte_ethdev.h>
 #include <rte_transceiver.h>
 #include <rte_string_fns.h>
 
@@ -636,30 +635,6 @@ test_module_eeprom_invalid(void)
 	return TEST_SUCCESS;
 }
 
-/* rte_eth_module_eeprom_parse() is kept as a wrapper of the library */
-static int
-test_module_eeprom_ethdev_wrapper(void)
-{
-	uint8_t data[RTE_ETH_MODULE_SFF_8472_LEN];
-	int ret;
-
-	fill_sfp(data);
-	memset(&fields, 0, sizeof(fields));
-	TEST_ASSERT_SUCCESS(rte_eth_module_eeprom_parse(RTE_ETH_MODULE_SFF_8472, data,
-		sizeof(data), collect_field, &fields),
-		"Failed to parse SFF-8472 data with the ethdev API");
-	TEST_ASSERT_SUCCESS(check_sfp_identity(), "Wrong SFF-8472 base information");
-	CHECK_FIELD("Laser bias current", "39.580 mA");
-
-	ret = rte_eth_module_eeprom_parse(RTE_ETH_MODULE_SFF_8472, NULL,
-		sizeof(data), collect_field, &fields);
-	TEST_ASSERT_EQUAL(ret, -EINVAL, "NULL data: expected %d, got %d", -EINVAL, ret);
-	ret = rte_eth_module_eeprom_parse(RTE_ETH_MODULE_SFF_8472, data,
-		sizeof(data), NULL, NULL);
-	TEST_ASSERT_EQUAL(ret, -EINVAL, "NULL callback: expected %d, got %d", -EINVAL, ret);
-	return TEST_SUCCESS;
-}
-
 static struct unit_test_suite module_eeprom_testsuite = {
 	.suite_name = "transceiver module EEPROM decoding",
 	.setup = NULL,
@@ -681,7 +656,6 @@ static struct unit_test_suite module_eeprom_testsuite = {
 		TEST_CASE(test_module_eeprom_qsfp_8636_signals_not_implemented),
 		TEST_CASE(test_module_eeprom_qsfp_8636_signals),
 		TEST_CASE(test_module_eeprom_invalid),
-		TEST_CASE(test_module_eeprom_ethdev_wrapper),
 		TEST_CASES_END()
 	}
 };
