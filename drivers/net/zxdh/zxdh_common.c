@@ -183,13 +183,14 @@ zxdh_fill_res_para(struct rte_eth_dev *dev, struct zxdh_res_para *param)
 }
 
 static int
-zxdh_get_res_info(struct zxdh_res_para *dev, uint8_t field, uint8_t *res, uint16_t *len)
+zxdh_get_res_info(struct zxdh_res_para *dev, uint8_t field,
+		  uint8_t *res, uint16_t max_len, uint16_t *len)
 {
 	struct zxdh_pci_bar_msg in = {0};
 	uint8_t recv_buf[ZXDH_RSC_TBL_CONTENT_LEN_MAX + 8] = {0};
 	int ret = 0;
 
-	if (!res || !dev)
+	if (!res || !dev || !len)
 		return ZXDH_BAR_MSG_ERR_NULL;
 
 	struct zxdh_tbl_msg_header tbl_msg = {
@@ -224,11 +225,18 @@ zxdh_get_res_info(struct zxdh_res_para *dev, uint8_t field, uint8_t *res, uint16
 
 	if (tbl_reps->check != ZXDH_TBL_MSG_PRO_SUCCESS) {
 		PMD_DRV_LOG(ERR,
-			"get resource_field failed. pcieid: 0x%x, ret: %d", dev->pcie_id, ret);
-		return ret;
+			"get resource_field failed. pcieid: 0x%x, check: %u",
+			dev->pcie_id, tbl_reps->check);
+		return ZXDH_BAR_MSG_ERR_REPLY;
+	}
+	if (tbl_reps->len > max_len || tbl_reps->len > ZXDH_RSC_TBL_CONTENT_LEN_MAX) {
+		PMD_DRV_LOG(ERR,
+			"invalid resource_field len: %u (max: %u). pcieid: 0x%x",
+			tbl_reps->len, max_len, dev->pcie_id);
+		return -EINVAL;
 	}
 	*len = tbl_reps->len;
-	rte_memcpy(res, (recv_buf + ZXDH_REPS_HEADER_OFFSET +
+	memcpy(res, (recv_buf + ZXDH_REPS_HEADER_OFFSET +
 		sizeof(struct zxdh_tbl_msg_reps_header)), *len);
 	return ret;
 }
@@ -239,7 +247,8 @@ zxdh_get_res_panel_id(struct zxdh_res_para *in, uint8_t *panel_id)
 	uint8_t reps = 0;
 	uint16_t reps_len = 0;
 
-	if (zxdh_get_res_info(in, ZXDH_TBL_FIELD_PNLID, &reps, &reps_len) != ZXDH_BAR_MSG_OK)
+	if (zxdh_get_res_info(in, ZXDH_TBL_FIELD_PNLID, &reps, sizeof(reps),
+			      &reps_len) != ZXDH_BAR_MSG_OK)
 		return -1;
 
 	*panel_id = reps;
@@ -262,7 +271,8 @@ zxdh_get_res_hash_id(struct zxdh_res_para *in, uint8_t *hash_id)
 	uint8_t reps = 0;
 	uint16_t reps_len = 0;
 
-	if (zxdh_get_res_info(in, ZXDH_TBL_FIELD_HASHID, &reps, &reps_len) != ZXDH_BAR_MSG_OK)
+	if (zxdh_get_res_info(in, ZXDH_TBL_FIELD_HASHID, &reps, sizeof(reps),
+			      &reps_len) != ZXDH_BAR_MSG_OK)
 		return -1;
 
 	*hash_id = reps;
