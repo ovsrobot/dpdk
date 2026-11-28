@@ -1238,7 +1238,8 @@ static int fd_flow_parse_pattern(struct rte_eth_dev *dev, const struct rte_flow_
 			 struct rte_flow_error *error, struct zxdh_flow *dh_flow)
 {
 	struct zxdh_hw *priv = dev->data->dev_private;
-	struct zxdh_flow_info *flow = NULL;
+	struct zxdh_flow_info local_flow = {0};
+	struct zxdh_flow_info *flow = dh_flow ? &dh_flow->flowentry : &local_flow;
 	const struct rte_flow_item *item;
 	const struct rte_flow_item_eth *eth_spec, *eth_mask;
 	const struct rte_flow_item_vlan *vlan_spec, *vlan_mask;
@@ -1249,18 +1250,6 @@ static int fd_flow_parse_pattern(struct rte_eth_dev *dev, const struct rte_flow_
 	const struct rte_flow_item_sctp *sctp_spec, *sctp_mask;
 	const struct rte_flow_item_vxlan *vxlan_spec, *vxlan_mask;
 	struct fd_flow_key *key, *key_mask;
-
-	if (dh_flow) {
-		flow = &dh_flow->flowentry;
-	} else {
-		flow = rte_zmalloc("dh_flow", sizeof(*flow), 0);
-		if (flow == NULL) {
-			rte_flow_error_set(error, EINVAL,
-						 RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
-						 "Failed to allocate memory ");
-			return -rte_errno;
-		}
-	}
 
 	key = &flow->fd_flow.key;
 	key_mask = &flow->fd_flow.key_mask;
@@ -1648,7 +1637,8 @@ static int
 fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *actions,
 			 struct rte_flow_error *error, struct zxdh_flow *dh_flow)
 {
-	struct zxdh_flow_info *flow = NULL;
+	struct zxdh_flow_info local_flow = {0};
+	struct zxdh_flow_info *flow = dh_flow ? &dh_flow->flowentry : &local_flow;
 	struct fd_flow_result *result = NULL;
 	const struct rte_flow_item *enc_item = NULL;
 	uint8_t action_bitmap = 0;
@@ -1658,17 +1648,6 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 	int ret;
 
 	rte_errno = 0;
-	if (dh_flow) {
-		flow = &dh_flow->flowentry;
-	} else {
-		flow = rte_zmalloc("dh_flow", sizeof(*flow), 0);
-		if (flow == NULL) {
-			rte_flow_error_set(error, EINVAL,
-					 RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
-					 "Failed to allocate memory ");
-			return -rte_errno;
-		}
-	}
 	result = &flow->fd_flow.result;
 	action_bitmap = result->action_idx;
 
@@ -1681,11 +1660,11 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"rss action does no support.");
-				goto free_flow;
+				return -rte_errno;
 			}
 			ret = validate_action_rss(dev, actions, error);
 			if (ret)
-				goto free_flow;
+				return -rte_errno;
 			action_bitmap |= (1 << FD_ACTION_RSS_BIT);
 			break;
 		}
@@ -1696,7 +1675,7 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"multi mark action no support.");
-				goto free_flow;
+				return -rte_errno;
 			}
 			const struct rte_flow_action_mark *act_mark = actions->conf;
 			result->mark_fd_id = rte_cpu_to_le_32(act_mark->id);
@@ -1710,14 +1689,14 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"multi count action no support.");
-				goto free_flow;
+				return -rte_errno;
 			}
 			const struct rte_flow_action_count *act_count = actions->conf;
 			if (act_count->id > MAX_FLOW_COUNT_NUM) {
 				rte_flow_error_set(error, EINVAL,
 							RTE_FLOW_ERROR_TYPE_ACTION, actions,
 							"count action id no support.");
-				goto free_flow;
+				return -rte_errno;
 			};
 			result->countid = act_count->id;
 			action_bitmap |= (1 << FD_ACTION_COUNT_BIT);
@@ -1730,7 +1709,7 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"multi queue action no support.");
-				goto free_flow;
+				return -rte_errno;
 			}
 			const struct rte_flow_action_queue *act_q;
 			act_q = actions->conf;
@@ -1738,14 +1717,14 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"Invalid queue ID");
-				goto free_flow;
+				return -rte_errno;
 			}
 			ret = zxdh_hw_qid_to_logic_qid(dev, act_q->index << 1);
 			if (ret < 0) {
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"Invalid phy queue ID .");
-				goto free_flow;
+				return -rte_errno;
 			}
 			result->qid = rte_cpu_to_le_16(ret);
 			action_bitmap |= (1 << FD_ACTION_QUEUE_BIT);
@@ -1760,7 +1739,7 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"multi drop action no support.");
-				goto free_flow;
+				return -rte_errno;
 			}
 			action_bitmap |= (1 << FD_ACTION_DROP_BIT);
 			break;
@@ -1772,7 +1751,7 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"multi drop action no support.");
-				goto free_flow;
+				return -rte_errno;
 			}
 			action_bitmap |= (1 << FD_ACTION_VXLAN_DECAP);
 			break;
@@ -1787,7 +1766,7 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 				rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION, actions,
 						"multi drop action no support.");
-				goto free_flow;
+				return -rte_errno;
 			}
 			action_bitmap |= (1 << FD_ACTION_VXLAN_ENCAP);
 			break;
@@ -1795,7 +1774,7 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 			rte_flow_error_set(error, EINVAL,
 				RTE_FLOW_ERROR_TYPE_ACTION, actions,
 				"Invalid action.");
-			goto free_flow;
+			return -rte_errno;
 		}
 	}
 
@@ -1829,11 +1808,6 @@ fd_flow_parse_action(struct rte_eth_dev *dev, const struct rte_flow_action *acti
 
 	result->action_idx = action_bitmap;
 	return 0;
-
-free_flow:
-	if (!dh_flow)
-		rte_free(flow);
-	return -rte_errno;
 }
 
 static int
